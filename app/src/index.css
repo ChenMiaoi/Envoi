@@ -7,6 +7,9 @@
   :root,
   :root[data-theme="graphite"] {
     color-scheme: dark;
+    --prose-h12: hsl(213 45% 83%);
+    --prose-h2-rule: hsl(var(--border) / 0.8);
+    --prose-strong: hsl(var(--hue-orange));
     --background: 218 13.6% 15.9%; /* #23272e */
     --foreground: 213 16.7% 76.5%;
     --card: 217 14% 18.2%;
@@ -59,6 +62,9 @@
   /* ---------- 主题：经典夜色（原有配色，深色） ---------- */
   :root[data-theme="classic"] {
     color-scheme: dark;
+    --prose-h12: hsl(var(--foreground));
+    --prose-h2-rule: transparent;
+    --prose-strong: hsl(var(--foreground));
     --background: 240 5.9% 10.6%; /* #18181b */
     --foreground: 0 0% 96%;
     --card: 240 5% 12.5%;
@@ -111,6 +117,9 @@
   /* ---------- 主题：午夜蓝（深色） ---------- */
   :root[data-theme="midnight"] {
     color-scheme: dark;
+    --prose-h12: hsl(217 55% 83%);
+    --prose-h2-rule: hsl(var(--border) / 0.8);
+    --prose-strong: hsl(var(--hue-orange));
     --background: 223 21.2% 12.9%; /* #1a1e28 */
     --foreground: 221 23% 76.1%;
     --card: 222 21.5% 15.5%;
@@ -163,6 +172,9 @@
   /* ---------- 主题：松林（深色，暖绿调） ---------- */
   :root[data-theme="forest"] {
     color-scheme: dark;
+    --prose-h12: hsl(106 28% 80%);
+    --prose-h2-rule: hsl(var(--border) / 0.8);
+    --prose-strong: hsl(var(--hue-orange));
     --background: 132 7.7% 12.7%; /* #1e231f */
     --foreground: 110 9.5% 75.3%;
     --card: 130 7.9% 14.9%;
@@ -215,6 +227,9 @@
   /* ---------- 主题：纸墨（浅色，暖纸调） ---------- */
   :root[data-theme="paper"] {
     color-scheme: light;
+    --prose-h12: hsl(30 35% 26%);
+    --prose-h2-rule: hsl(var(--border) / 0.9);
+    --prose-strong: hsl(var(--hue-orange));
     --background: 40 27.3% 95.7%; /* #f7f5f1 */
     --foreground: 40 7% 16.9%;
     --card: 40 42.9% 98.6%;
@@ -267,6 +282,9 @@
   /* ---------- 主题：雾白（浅色，冷灰蓝调） ---------- */
   :root[data-theme="mist"] {
     color-scheme: light;
+    --prose-h12: hsl(215 40% 30%);
+    --prose-h2-rule: hsl(var(--border) / 0.9);
+    --prose-strong: hsl(var(--hue-orange));
     --background: 216 23.8% 95.9%; /* #f2f4f7 */
     --foreground: 217 13.1% 19.4%;
     --card: 210 25% 98.4%;
@@ -390,14 +408,16 @@
   margin: 0.6em 0 0.55em;
   padding-bottom: 0.35em;
   border-bottom: 1px solid hsl(var(--border));
-  color: var(--prose-heading);
+  color: var(--prose-h12);
 }
 .markdown-body h2 {
   font-size: 1.32em;
   font-weight: 650;
   letter-spacing: -0.005em;
   margin: 1.5em 0 0.5em;
-  color: var(--prose-heading);
+  padding-bottom: 0.28em;
+  border-bottom: 1px solid var(--prose-h2-rule);
+  color: var(--prose-h12);
 }
 .markdown-body h3 {
   font-size: 1.12em;
@@ -432,17 +452,26 @@
   color: hsl(var(--primary));
 }
 .markdown-body strong {
-  color: var(--prose-heading);
+  color: var(--prose-strong);
   font-weight: 650;
 }
-.markdown-body a {
+.markdown-body .markdown-doclink {
+  font: inherit;
+  padding: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+.markdown-body a,
+.markdown-body .markdown-doclink {
   color: var(--prose-link);
   text-decoration: underline;
   text-decoration-color: color-mix(in hsl, var(--prose-link) 40%, transparent);
   text-underline-offset: 3px;
   transition: text-decoration-color 0.15s;
 }
-.markdown-body a:hover {
+.markdown-body a:hover,
+.markdown-body .markdown-doclink:hover {
   text-decoration-color: var(--prose-link);
 }
 .markdown-body blockquote {
@@ -519,6 +548,33 @@
   accent-color: hsl(var(--primary));
   margin-right: 0.45em;
 }
+/* ---------- Callout（> [!type]，Obsidian / GitHub 语法） ---------- */
+.markdown-body .callout,
+.chat-markdown .callout {
+  border: 1px solid hsl(var(--border) / 0.55);
+  border-left: 3px solid var(--callout-color);
+  border-radius: 10px;
+  background: color-mix(in hsl, var(--callout-color) 7%, transparent);
+  color: hsl(var(--foreground) / 0.92);
+  padding: 0.55em 1em;
+}
+.callout > .callout-title {
+  margin: 0;
+  font-size: 0.92em;
+  font-weight: 650;
+  color: var(--callout-color);
+}
+.callout-note { --callout-color: hsl(var(--hue-blue)); }
+.callout-tip { --callout-color: hsl(var(--hue-green)); }
+.callout-question { --callout-color: hsl(var(--hue-violet)); }
+.callout-warning { --callout-color: hsl(var(--hue-yellow)); }
+.callout-important { --callout-color: hsl(var(--hue-pink)); }
+.callout-example { --callout-color: hsl(var(--hue-orange)); }
+.callout-quote { --callout-color: hsl(var(--hue-sage)); }
+.callout-abstract { --callout-color: hsl(var(--hue-cyan)); }
+.callout-danger { --callout-color: hsl(var(--hue-red)); }
+.callout-todo { --callout-color: hsl(var(--hue-pink)); }
+
 
 /* ---------- 数据表格（CSV / TSV 预览编辑） ---------- */
 .data-table-frame {

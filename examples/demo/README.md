@@ -17,3 +17,7 @@ The numeric model uses F=4N²d, materialized bytes=8N²+8Nd, tiled bytes=0.5N²+
 This example belongs to the repository-root Git project on branch `main`. Its former standalone Git metadata was backed up outside the repository during migration; no nested repository remains. No commit, configured project identity, remote, or push was created. The `.gitignore` excludes build outputs and TeX auxiliary files while allowing manuscript sources, input PNG/PDF figures, and CSV data to be tracked. A release PDF can be distributed separately if desired.
 
 Envoi's initial view is a bundled snapshot of this directory, explicitly labelled as a snapshot. To edit and save the real files, use Open Project and select this `demo` folder in the native authorization picker. Browser automation has not bypassed that picker.
+
+## Showcase
+
+Open [SHOWCASE.md](SHOWCASE.md) in the reader to see every styled markdown element (headings, callouts, tables, math, code) under the active theme.
