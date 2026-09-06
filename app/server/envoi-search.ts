@@ -1,10 +1,10 @@
-// PaperDesk web_search extension for pi, loaded by the agent relay via `pi --mode rpc -e <this file>`.
-// Keyless academic search: Semantic Scholar with Crossref fallback; Brave web search when PAPERDESK_SEARCH_KEY is set.
+// Envoi web_search extension for pi, loaded by the agent relay via `pi --mode rpc -e <this file>`.
+// Keyless academic search: Semantic Scholar with Crossref fallback; Brave web search when ENVOI_SEARCH_KEY is set.
 import { Type } from "typebox";
 
 async function searchScholar(query, limit) {
   const url = `https://api.semanticscholar.org/graph/v1/paper/search?query=${encodeURIComponent(query)}&limit=${limit}&fields=title,authors,year,venue,url,externalIds,openAccessPdf,abstract`;
-  const response = await fetch(url, { headers: { "User-Agent": "PaperDesk/1.0" } });
+  const response = await fetch(url, { headers: { "User-Agent": "Envoi/1.0" } });
   if (!response.ok) throw Error(`Semantic Scholar 返回 ${response.status}`);
   const data = await response.json();
   return (data.data ?? []).map(p => ({
@@ -18,7 +18,7 @@ async function searchScholar(query, limit) {
 }
 
 async function searchCrossref(query, limit) {
-  const response = await fetch(`https://api.crossref.org/works?query.bibliographic=${encodeURIComponent(query)}&rows=${limit}`, { headers: { "User-Agent": "PaperDesk/1.0 (mailto:paperdesk@localhost)" } });
+  const response = await fetch(`https://api.crossref.org/works?query.bibliographic=${encodeURIComponent(query)}&rows=${limit}`, { headers: { "User-Agent": "Envoi/1.0 (mailto:envoi@localhost)" } });
   if (!response.ok) throw Error(`Crossref 返回 ${response.status}`);
   const data = await response.json();
   return (data.message?.items ?? []).map(w => ({
@@ -30,8 +30,8 @@ async function searchCrossref(query, limit) {
 }
 
 async function searchBrave(query, limit) {
-  const key = process.env.PAPERDESK_SEARCH_KEY;
-  if (!key) throw Error("未配置 Brave Search key（环境变量 PAPERDESK_SEARCH_KEY）");
+  const key = process.env.ENVOI_SEARCH_KEY ?? process.env.PAPERDESK_SEARCH_KEY;
+  if (!key) throw Error("未配置 Brave Search key（环境变量 ENVOI_SEARCH_KEY）");
   const response = await fetch(`https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(query)}&count=${limit}`, { headers: { "X-Subscription-Token": key, Accept: "application/json" } });
   if (!response.ok) throw Error(`Brave Search 返回 ${response.status}`);
   const data = await response.json();
@@ -42,7 +42,7 @@ export default function (pi) {
   pi.registerTool({
     name: "web_search",
     label: "Web Search",
-    description: "Search the web for academic papers (Semantic Scholar or Crossref, no key needed) or general web pages (Brave, needs PAPERDESK_SEARCH_KEY). Returns titles, authors, venues, DOIs and links.",
+    description: "Search the web for academic papers (Semantic Scholar or Crossref, no key needed) or general web pages (Brave, needs ENVOI_SEARCH_KEY). Returns titles, authors, venues, DOIs and links.",
     promptSnippet: "Search the web for papers and sources",
     promptGuidelines: [
       "Use web_search whenever the user asks about recent work, references, related papers, or facts you are unsure about.",
@@ -67,7 +67,7 @@ export default function (pi) {
           catch (error) { scholarError = error.message; }
           if (!papers) papers = await searchCrossref(params.query, limit);
           results = { papers, ...(scholarError ? { note: `Semantic Scholar 不可用(${scholarError}),结果来自 Crossref` } : {}) };
-          if (papers.length === 0 && source === "auto" && process.env.PAPERDESK_SEARCH_KEY) results.web = await searchBrave(params.query, limit);
+          if (papers.length === 0 && source === "auto" && (process.env.ENVOI_SEARCH_KEY ?? process.env.PAPERDESK_SEARCH_KEY)) results.web = await searchBrave(params.query, limit);
         }
         return { content: [{ type: "text", text: JSON.stringify(results, null, 2) }], details: results };
       } catch (error) {

@@ -30,7 +30,7 @@ export function validateSnapshot(input) {
 export function runtimeInfo() {
   if (process.platform !== 'darwin') return { available: false, error: '当前本地编译适配器需要 macOS sandbox-exec；未启用无隔离编译。' };
   try {
-    const located=detectTool('kpsewhich');const bin=process.env.PAPERDESK_TEX_BIN??(located?path.dirname(located):'');if(!path.isAbsolute(bin))throw Error('TeX bin directory unavailable');
+    const located=detectTool('kpsewhich');const bin=process.env.ENVOI_TEX_BIN??process.env.PAPERDESK_TEX_BIN??(located?path.dirname(located):'');if(!path.isAbsolute(bin))throw Error('TeX bin directory unavailable');
     const programs=['kpsewhich','pdflatex','pdftex','xelatex','xetex','bibtex','xdvipdfmx'];const executables=programs.map(name=>{const selected=path.join(bin,name);accessSync(selected,constants.X_OK);return realpathSync(selected);});
     const root=realpathSync(execFileSync(path.join(bin,'kpsewhich'),['-var-value=TEXMFROOT'],{encoding:'utf8',timeout:5000}).trim());
     const prefixes=[...new Set(executables.map(executable=>executable.match(/^(.*)\/Cellar\//)?.[1]).filter(Boolean))];
@@ -40,7 +40,7 @@ export function runtimeInfo() {
 export async function compileSnapshot(input, { signal, timeoutMs = 90000 } = {}) {
   validateSnapshot(input);
   const runtime = runtimeInfo(); if (!runtime.available) throw Error(runtime.error);
-  const directory = await realpath(await mkdtemp(path.join(tmpdir(),'paperdesk-tex-')));
+  const directory = await realpath(await mkdtemp(path.join(tmpdir(),'envoi-tex-')));
   let log = '', child;
   const controller = new AbortController();
   const cancel = () => controller.abort(signal?.reason ?? Error('编译已取消'));
@@ -79,45 +79,45 @@ export async function compileSnapshot(input, { signal, timeoutMs = 90000 } = {})
     const buildDirectory = path.join(cwd, 'build');
     await mkdir(buildDirectory,{recursive:true});
     const main = './' + path.basename(input.main);
-    const args=['-no-shell-escape','-interaction=nonstopmode','-halt-on-error','-file-line-error','-synctex=1','-jobname=paperdesk','-output-directory=build',...(input.engine==='xelatex'?['-no-pdf']:[]),main];
+    const args=['-no-shell-escape','-interaction=nonstopmode','-halt-on-error','-file-line-error','-synctex=1','-jobname=envoi','-output-directory=build',...(input.engine==='xelatex'?['-no-pdf']:[]),main];
     await run(input.engine,args);
-    const aux=await readFile(path.join(buildDirectory,'paperdesk.aux'),'utf8').catch(()=> '');
-    if (/\\bibdata\{/.test(aux) && /\\citation\{/.test(aux)) await run('bibtex',['paperdesk'],buildDirectory);
-    if (await readFile(path.join(buildDirectory,'paperdesk.bcf')).then(()=>true,()=>false)) throw Error('当前适配器尚不支持 Biber；请使用 BibTeX 或外部编译。');
+    const aux=await readFile(path.join(buildDirectory,'envoi.aux'),'utf8').catch(()=> '');
+    if (/\\bibdata\{/.test(aux) && /\\citation\{/.test(aux)) await run('bibtex',['envoi'],buildDirectory);
+    if (await readFile(path.join(buildDirectory,'envoi.bcf')).then(()=>true,()=>false)) throw Error('当前适配器尚不支持 Biber；请使用 BibTeX 或外部编译。');
     await run(input.engine,args); await run(input.engine,args);
-    if(input.engine==='xelatex')await run('xdvipdfmx',['-o','paperdesk.pdf','paperdesk.xdv'],buildDirectory);
-    const pdf=await readFile(path.join(buildDirectory,'paperdesk.pdf'));
+    if(input.engine==='xelatex')await run('xdvipdfmx',['-o','envoi.pdf','envoi.xdv'],buildDirectory);
+    const pdf=await readFile(path.join(buildDirectory,'envoi.pdf'));
     if(!pdf.subarray(0,5).equals(Buffer.from('%PDF-')))throw Error('编译没有产生有效PDF');
-    const synctex=await readFile(path.join(buildDirectory,'paperdesk.synctex.gz')).catch(()=>null);
+    const synctex=await readFile(path.join(buildDirectory,'envoi.synctex.gz')).catch(()=>null);
     return { ok:true, pdf:pdf.toString('base64'), synctex:synctex?synctex.toString('base64'):null, log };
   } catch(error) { return {ok:false,error:error.message,log}; }
   finally { clearTimeout(timer); signal?.removeEventListener('abort',cancel); await rm(directory,{recursive:true,force:true}); }
 }
 export function compilerPlugin() {
   const token=randomBytes(32).toString('hex'); let running=false;
-  return { name:'paperdesk-local-compiler', configureServer(server) {
+  return { name:'envoi-local-compiler', configureServer(server) {
     server.middlewares.use(async(req,res,next)=>{
-      if(!req.url?.startsWith('/api/paperdesk/'))return next();
-      if(req.url.startsWith('/api/paperdesk/agent'))return next();
+      if(!req.url?.startsWith('/api/envoi/'))return next();
+      if(req.url.startsWith('/api/envoi/agent'))return next();
       const host=req.headers.host ?? '';
       const sameOrigin=req.headers.origin===`http://${host}` || (!req.headers.origin && req.headers['sec-fetch-site']==='same-origin');
       if(!/^(127\.0\.0\.1|localhost|\[::1\]):\d+$/.test(host)||!sameOrigin){res.statusCode=403;res.end('Local same-origin requests only');return;}
       res.setHeader('Content-Type','application/json');res.setHeader('Cache-Control','no-store');
-      if(req.method==='GET'&&req.url==='/api/paperdesk/tools'){res.end(JSON.stringify({...toolInfo(),latex:runtimeInfo(),token}));return;}
-      if(req.method==='POST'&&req.url==='/api/paperdesk/tools'&&req.headers['x-paperdesk-token']===token){try{let body='';for await(const chunk of req){body+=chunk;if(body.length>8192)throw Error('Request too large');}res.end(JSON.stringify({...await configureTools(JSON.parse(body)),latex:runtimeInfo(),token}));}catch(error){res.statusCode=400;res.end(JSON.stringify({error:error.message}));}return;}
-      if(req.method==='GET' && req.url==='/api/paperdesk/compiler'){res.end(JSON.stringify({...runtimeInfo(),token}));return;}
-      if(req.method==='GET' && req.url==='/api/paperdesk/git'){res.end(JSON.stringify({...gitRuntime(),token}));return;}
-      if(req.method==='POST' && req.headers['x-paperdesk-token']===token){
-        const gitHandlers={'/api/paperdesk/git-init':initializeBoundGit,'/api/paperdesk/git-status':readBoundGitStatus,'/api/paperdesk/git-log':readBoundGitLog,'/api/paperdesk/git-show':readBoundGitShow,'/api/paperdesk/project-bind':verifyProjectBinding};
+      if(req.method==='GET'&&req.url==='/api/envoi/tools'){res.end(JSON.stringify({...toolInfo(),latex:runtimeInfo(),token}));return;}
+      if(req.method==='POST'&&req.url==='/api/envoi/tools'&&req.headers['x-envoi-token']===token){try{let body='';for await(const chunk of req){body+=chunk;if(body.length>8192)throw Error('Request too large');}res.end(JSON.stringify({...await configureTools(JSON.parse(body)),latex:runtimeInfo(),token}));}catch(error){res.statusCode=400;res.end(JSON.stringify({error:error.message}));}return;}
+      if(req.method==='GET' && req.url==='/api/envoi/compiler'){res.end(JSON.stringify({...runtimeInfo(),token}));return;}
+      if(req.method==='GET' && req.url==='/api/envoi/git'){res.end(JSON.stringify({...gitRuntime(),token}));return;}
+      if(req.method==='POST' && req.headers['x-envoi-token']===token){
+        const gitHandlers={'/api/envoi/git-init':initializeBoundGit,'/api/envoi/git-status':readBoundGitStatus,'/api/envoi/git-log':readBoundGitLog,'/api/envoi/git-show':readBoundGitShow,'/api/envoi/project-bind':verifyProjectBinding};
         const handler=gitHandlers[req.url];if(!handler){res.statusCode=403;res.end(JSON.stringify({error:'Invalid compile request'}));return;}
         try {let body='';for await(const chunk of req){body+=chunk;if(body.length>8192)throw Error('Request too large');}res.end(JSON.stringify(await handler(JSON.parse(body))));}
         catch(error){res.statusCode=400;res.end(JSON.stringify({ok:false,error:error.message}));}return;
       }
-      if(req.method==='POST'&&req.url==='/api/paperdesk/lint'&&req.headers['x-paperdesk-token']===token){
+      if(req.method==='POST'&&req.url==='/api/envoi/lint'&&req.headers['x-envoi-token']===token){
         const controller=new AbortController();res.on('close',()=>{if(!res.writableEnded)controller.abort();});
         try{let body='';for await(const chunk of req){body+=chunk;if(body.length>800000)throw Error('检查文本过大');}res.end(JSON.stringify(await lintText(JSON.parse(body),{signal:controller.signal})));}catch(error){res.statusCode=400;res.end(JSON.stringify({error:error.message}));}return;
       }
-      if(req.method!=='POST'||req.url!=='/api/paperdesk/compile'||req.headers['x-paperdesk-token']!==token){res.statusCode=403;res.end(JSON.stringify({error:'Invalid compile request'}));return;}
+      if(req.method!=='POST'||req.url!=='/api/envoi/compile'||req.headers['x-envoi-token']!==token){res.statusCode=403;res.end(JSON.stringify({error:'Invalid compile request'}));return;}
       if(running){res.statusCode=409;res.end(JSON.stringify({error:'已有编译正在运行，请稍后再试。'}));return;}
       running=true;
       const controller=new AbortController();res.on('close',()=>{if(!res.writableEnded)controller.abort(Error('编译已取消'));});

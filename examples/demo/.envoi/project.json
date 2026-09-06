@@ -14,5 +14,11 @@
     "overrides": {
       "engine": "pdflatex"
     }
+  },
+  "projectId": "99a8c763-ea8d-411d-98fb-474265dbf77f",
+  "ai": {
+    "provider": "opencode",
+    "model": "opencode/mimo-v2.5-free",
+    "thinking": null
   }
 }

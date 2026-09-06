@@ -33,8 +33,8 @@ export function ProjectMenu() {
   const [folders, setFolders] = useState<FileSystemDirectoryHandle[]>([]);
   const [discard, setDiscard] = useState(false);
   useEffect(() => { if(mode!=="new") return; void localGitRuntime().then(result=>{setGitAvailable(result.available);if(!result.available)setEnableGit(false);setGitStatus(result.available?result.version!:`${result.error} 已自动关闭 Git，可继续创建项目。`);}).catch(error=>{setGitAvailable(false);setGitStatus(error.message);}); }, [mode]);
-  useEffect(()=>{const listener=()=>setConnectionOpen(true);const open=()=>setMode('open');window.addEventListener('paperdesk:open-project',open);window.addEventListener('paperdesk:connect-project',listener);return()=>{window.removeEventListener('paperdesk:connect-project',listener);window.removeEventListener('paperdesk:open-project',open);};},[]);
-  useEffect(()=>{const refresh=()=>{void recentProjects().then(setRecent);};window.addEventListener('paperdesk:recent-updated',refresh);return()=>window.removeEventListener('paperdesk:recent-updated',refresh);},[]);
+  useEffect(()=>{const listener=()=>setConnectionOpen(true);const open=()=>setMode('open');window.addEventListener('envoi:open-project',open);window.addEventListener('envoi:connect-project',listener);return()=>{window.removeEventListener('envoi:connect-project',listener);window.removeEventListener('envoi:open-project',open);};},[]);
+  useEffect(()=>{const refresh=()=>{void recentProjects().then(setRecent);};window.addEventListener('envoi:recent-updated',refresh);return()=>window.removeEventListener('envoi:recent-updated',refresh);},[]);
   const changed = dirtyFiles(project).length;
   const location = trail[trail.length - 1];
   useEffect(()=>{let active=true;if(location)void gitPath(location).then(path=>{if(active)setLocalPath(path??'');});return()=>{active=false;};},[location]);
@@ -77,16 +77,16 @@ export function ProjectMenu() {
   const openDialog = (next: "new" | "open" | "file") => { setMode(next); if(next==='new')setEnableGit(preferences.defaultGit); setName(""); setDiscard(false); setMessage(""); };
   return <>
     <ProjectManagement />
-    <DropdownMenu><DropdownMenuTrigger aria-label="PaperDesk 项目菜单" className="flex items-center gap-2 rounded focus-visible:outline focus-visible:outline-primary">
-      <span className="flex h-5 w-5 items-center justify-center rounded-md bg-primary font-editor text-[11px] font-bold text-primary-foreground">P</span><span className="text-[12.5px] font-semibold">PaperDesk</span>
+    <DropdownMenu><DropdownMenuTrigger aria-label="Envoi 项目菜单" className="flex items-center gap-2 rounded focus-visible:outline focus-visible:outline-primary">
+      <span className="flex h-5 w-5 items-center justify-center rounded-md bg-primary font-editor text-[11px] font-bold text-primary-foreground">P</span><span className="text-[12.5px] font-semibold">Envoi</span>
     </DropdownMenuTrigger><DropdownMenuContent align="start" className="w-64">
       <DropdownMenuLabel>项目 / 文件 {changed ? `· ${changed} 个未保存` : ""}</DropdownMenuLabel>
       <DropdownMenuItem disabled={busy} onSelect={() => openDialog("new")}>新建项目…</DropdownMenuItem>
       <DropdownMenuItem disabled={busy} onSelect={() => openDialog("open")}>打开项目 / 文件夹…</DropdownMenuItem>
       <DropdownMenuItem disabled={busy || !project.directory} onSelect={() => openDialog("file")}>新建文件…</DropdownMenuItem>
       <DropdownMenuItem disabled={busy || saving || !changed} onSelect={() => void saveAll()}>保存全部</DropdownMenuItem>
-      <DropdownMenuItem disabled={busy||saving||project.id==='empty'} onSelect={()=>window.dispatchEvent(new Event('paperdesk:close-project'))}>关闭当前项目…</DropdownMenuItem>
-      <DropdownMenuItem disabled={busy||saving} onSelect={()=>window.dispatchEvent(new Event('paperdesk:manage-projects'))}>管理项目 / 移除 / 删除…</DropdownMenuItem>
+      <DropdownMenuItem disabled={busy||saving||project.id==='empty'} onSelect={()=>window.dispatchEvent(new Event('envoi:close-project'))}>关闭当前项目…</DropdownMenuItem>
+      <DropdownMenuItem disabled={busy||saving} onSelect={()=>window.dispatchEvent(new Event('envoi:manage-projects'))}>管理项目 / 移除 / 删除…</DropdownMenuItem>
       <DropdownMenuItem disabled={!project.directory} onSelect={()=>setConnectionOpen(true)}>项目本地连接…</DropdownMenuItem><DropdownMenuSeparator /><DropdownMenuItem onSelect={() => openDialog("open")}>最近项目…（{recent.length}）</DropdownMenuItem>
     </DropdownMenuContent></DropdownMenu>
     <Dialog open={mode !== null} onOpenChange={(open) => { if (!open && !busy) setMode(null); }}>

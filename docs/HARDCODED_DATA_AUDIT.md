@@ -16,7 +16,7 @@ No browser databases, real files, bibliography entries or personal settings were
 
 Project files come from granted directory handles and shared draft buffers. Saves report actual write/conflict outcomes. Compiles, editor diagnostics and Git status use existing local adapters. PDFs report the parsed page count. Library records and attachments come from the user's IndexedDB collection. Global preferences and shortcuts come from personal browser storage, while project overrides come from the hidden project configuration. AI and the experimental tracking action remain unavailable.
 
-TeX, ChkTeX, TexLab and Git detection use service PATH plus conventional installation locations. `PAPERDESK_TEX_BIN` explicitly selects a TeX tool directory; the sandbox derives real executable, binary and library paths. Fixed system sandbox restrictions, supported-format lists, timeouts and route names are safety/configuration constants, not fabricated business records. The local compiler still requires macOS isolation; other platforms report unavailable.
+TeX, ChkTeX, TexLab and Git detection use service PATH plus conventional installation locations. `ENVOI_TEX_BIN` explicitly selects a TeX tool directory; the sandbox derives real executable, binary and library paths. Fixed system sandbox restrictions, supported-format lists, timeouts and route names are safety/configuration constants, not fabricated business records. The local compiler still requires macOS isolation; other platforms report unavailable.
 
 ## Intentionally retained
 

@@ -11,8 +11,8 @@ coverage/
 # Example build products remain on disk; the bundled app snapshot is intentional.
 /examples/*/build/
 /examples/*/output/
-.paperdesk/*
-!.paperdesk/project.json
+.envoi/*
+!.envoi/project.json
 __pycache__/
 *.pyc
 .venv/

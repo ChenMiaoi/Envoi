@@ -45,4 +45,4 @@ export function createModelDiscovery({directory,fetcher=fetch,now=Date.now,ttl=3
  }
  return {discover};
 }
-export function registerDiscoveredModels(registry,provider,result){if(result.models?.length)registry.registerProvider(provider,{baseUrl:discoveryAdapters[provider].baseUrl,apiKey:'PAPERDESK_AUTH_FROM_PRIVATE_STORAGE',models:result.models});}
+export function registerDiscoveredModels(registry,provider,result){if(result.models?.length)registry.registerProvider(provider,{baseUrl:discoveryAdapters[provider].baseUrl,apiKey:'ENVOI_AUTH_FROM_PRIVATE_STORAGE',models:result.models});}

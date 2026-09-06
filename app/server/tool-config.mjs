@@ -1,6 +1,6 @@
 import {readFileSync,realpathSync,accessSync,constants} from 'node:fs';import {mkdir,writeFile} from 'node:fs/promises';import {execFileSync} from 'node:child_process';import {homedir} from 'node:os';import path from 'node:path';
-const configPath=path.join(homedir(),'.config/paperdesk/tools.json');
-function config(){try{return JSON.parse(readFileSync(configPath,'utf8'));}catch{return {};}}
+const configPath=path.join(homedir(),'.config/envoi/tools.json'),legacyConfigPath=path.join(homedir(),'.config/paperdesk/tools.json');
+function config(){for(const file of [configPath,legacyConfigPath])try{return JSON.parse(readFileSync(file,'utf8'));}catch{/* try legacy location */}return {};}
 export function detectTool(name){return [...(process.env.PATH??'').split(path.delimiter),'/opt/homebrew/bin','/Library/TeX/texbin','/usr/local/bin','/usr/bin'].filter(prefix=>path.isAbsolute(prefix)).map(prefix=>path.join(prefix,name)).find(candidate=>{try{accessSync(candidate,constants.X_OK);return true;}catch{return false;}});}
 export function chktexPath(){return config().chktexPath??detectTool('chktex');}
 export function validateChktexPath(value){

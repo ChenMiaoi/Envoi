@@ -6,7 +6,7 @@ export async function lintText(input,{signal}={}){
  if(typeof input?.text!=='string'||Buffer.byteLength(input.text)>500000||typeof input.path!=='string'||input.path.startsWith('/')||input.path.split('/').some(p=>!p||p==='..'||p==='.'||/[\\:\u0000-\u001f]/u.test(p))||!input.path.endsWith('.tex'))throw Error('Invalid editor snapshot');
  if(input.disabledRules!==undefined&&(!Array.isArray(input.disabledRules)||input.disabledRules.length>42||input.disabledRules.some(n=>!Number.isInteger(n)||n<1||n>42)))throw Error('Invalid ChkTeX rule list');
  const runtime=lintRuntime();if(!runtime.available)return runtime;
- const cwd=await mkdtemp(path.join(tmpdir(),'paperdesk-lint-'));
+ const cwd=await mkdtemp(path.join(tmpdir(),'envoi-lint-'));
  try{
   const output=await new Promise((resolve,reject)=>{
    const child=spawn(runtime.path,['-q','-v0','-I0','-g0',...(input.disabledRules??[]).flatMap(n=>['-n',String(n)]),'-p',input.path],{cwd,env:{PATH:'/usr/bin:/bin',HOME:cwd,LANG:'en_US.UTF-8'},stdio:['pipe','pipe','pipe']});let stdout='',stderr='';const kill=()=>child.kill('SIGKILL');const timer=setTimeout(kill,5000);signal?.addEventListener('abort',kill,{once:true});if(signal?.aborted)kill();

@@ -2,8 +2,8 @@
 import assert from 'node:assert/strict';
 import {mkdtemp,realpath,mkdir,writeFile,readFile,rename,cp,rm,symlink,readdir,stat} from 'node:fs/promises';
 import os from 'node:os';import path from 'node:path';import http from 'node:http';import {randomBytes} from 'node:crypto';
-const fixture=await realpath(await mkdtemp(path.join(os.tmpdir(),'paperdesk-native-test-')));
-process.env.PAPERDESK_DATA_DIR=path.join(fixture,'data');
+const fixture=await realpath(await mkdtemp(path.join(os.tmpdir(),'envoi-native-test-')));
+process.env.ENVOI_DATA_DIR=path.join(fixture,'data');
 const local=await import('../server/local-data.mjs');
 const agent=await import('../server/agent.mjs');
 const servers=[];
@@ -14,10 +14,10 @@ const transport=await serve(async(req,res)=>{let raw='';for await(const chunk of
 let middleware=[];
 const app=await serve((req,res)=>{let index=0;const next=()=>{const fn=middleware[index++];if(fn)void fn(req,res,next);else {res.statusCode=404;res.end();}};next();});
 for(const plugin of [local.localDataPlugin(),agent.agentPlugin()])plugin.configureServer({httpServer:app.server,middlewares:{use(fn){middleware.push(fn);}}});
-async function get(api){const response=await fetch(app.url+'/api/paperdesk/'+api,{headers:{Origin:app.url}});assert.equal(response.status,200);return response.json();}
+async function get(api){const response=await fetch(app.url+'/api/envoi/'+api,{headers:{Origin:app.url}});assert.equal(response.status,200);return response.json();}
 const ai=await get('agent'),data=await get('data');const {getProviders}=await import('@mariozechner/pi-ai');assert(getProviders().every(id=>ai.providers.some(provider=>provider.id===id)));assert.equal(new Set(ai.providers.map(provider=>provider.id)).size,ai.providers.length);
-async function post(api,body,token=api.startsWith('data')?data.token:ai.token){const response=await fetch(app.url+'/api/paperdesk/'+api,{method:'POST',headers:{Origin:app.url,'Content-Type':'application/json','X-PaperDesk-Token':token},body:JSON.stringify(body)});return {response,body:response.headers.get('content-type')?.includes('ndjson')?await response.text():await response.json()};}
-async function bind(root,copy=false){await mkdir(path.join(root,'.paperdesk'),{recursive:true});const proof=randomBytes(32).toString('hex'),file=path.join(root,'.paperdesk','agent-proof-'+proof);await writeFile(file,proof);try{return await post('agent/bind',{directory:root,proof,proofKind:'agent',copy});}finally{await rm(file,{force:true});}}
+async function post(api,body,token=api.startsWith('data')?data.token:ai.token){const response=await fetch(app.url+'/api/envoi/'+api,{method:'POST',headers:{Origin:app.url,'Content-Type':'application/json','X-Envoi-Token':token},body:JSON.stringify(body)});return {response,body:response.headers.get('content-type')?.includes('ndjson')?await response.text():await response.json()};}
+async function bind(root,copy=false){await mkdir(path.join(root,'.envoi'),{recursive:true});const proof=randomBytes(32).toString('hex'),file=path.join(root,'.envoi','agent-proof-'+proof);await writeFile(file,proof);try{return await post('agent/bind',{directory:root,proof,proofKind:'agent',copy});}finally{await rm(file,{force:true});}}
 try{
  assert.equal(agent.normalizeAi({}).tools,'read');
  assert.equal((await post('agent/sessions',{projectId:'global'})).response.status,400);
@@ -29,8 +29,8 @@ try{
  const moved=path.join(fixture,'moved');await rename(first,moved);assert.equal((await bind(moved)).body.project.id,id);assert.equal(await local.projectRoot(id),moved);
  const read=agent.projectTools(moved,'read',false);assert.deepEqual(read.map(tool=>tool.name),['project_list','project_read']);assert.equal((await read[1].execute('r',{path:'main.tex'})).content[0].text,'source one');
  assert((await read[0].execute('l',{path:'.'})).content[0].text.includes('main.tex'));
- await writeFile(path.join(moved,'.paperdesk','secret'),'hidden');await symlink(path.join(moved,'.paperdesk','secret'),path.join(moved,'alias'));await symlink(fixture,path.join(moved,'external'));
- for(const selected of ['../outside','.paperdesk/secret','alias','external/data'])await assert.rejects(()=>agent.safeToolPath(moved,selected));
+ await writeFile(path.join(moved,'.envoi','secret'),'hidden');await symlink(path.join(moved,'.envoi','secret'),path.join(moved,'alias'));await symlink(fixture,path.join(moved,'external'));
+ for(const selected of ['../outside','.envoi/secret','alias','external/data'])await assert.rejects(()=>agent.safeToolPath(moved,selected));
  const write=agent.projectTools(moved,'write',false).find(tool=>tool.name==='project_write');await write.execute('w',{path:'created.tex',content:'written'});assert.equal(await readFile(path.join(moved,'created.tex'),'utf8'),'written');assert(!agent.projectTools(moved,'write',true).some(tool=>tool.name==='project_write'));
  const s=await post('data/store',{store:'preferences',action:'put',value:{font:'a'},expectedRevision:0});assert.equal(s.body.revision,1);
  const race=await Promise.all(['b','c'].map(font=>post('data/store',{store:'preferences',action:'put',value:{font},expectedRevision:1})));assert.deepEqual(race.map(result=>result.response.status).sort(),[200,409]);
@@ -49,12 +49,16 @@ try{
  const freshConversation=(await post('agent/new',{projectId:id})).body;assert.equal(freshConversation.messages.length,0);assert.notEqual(freshConversation.id,sessionId);assert.equal((await post('agent/sessions',{projectId:id})).body.activeId,freshConversation.id);const searched=(await post('agent/sessions',{projectId:id,query:'Second turn'})).body;assert.deepEqual(searched.sessions.map(row=>row.id),[sessionId]);assert.equal((await post('agent/session',{projectId:id,sessionId})).body.messages.length,4);assert.equal((await post('agent/sessions',{projectId:id})).body.activeId,sessionId);
  const rejected=await post('agent/chat',{projectId:copyId,message:'MODEL_REJECT_REQUEST',dirty:false});assert.match(rejected.body,/Model hy3-preview-free is not supported/);await post('agent/new',{projectId:copyId});
  const failed=await post('agent/chat',{projectId:copyId,message:'FAIL_REQUEST',dirty:false});assert(failed.body.includes('error'));const failedList=(await post('agent/sessions',{projectId:copyId})).body;assert.equal(failedList.sessions[0].status,'failed');await post('agent/new',{projectId:copyId});
- const controller=new AbortController();const waiting=fetch(app.url+'/api/paperdesk/agent/chat',{method:'POST',signal:controller.signal,headers:{Origin:app.url,'Content-Type':'application/json','X-PaperDesk-Token':ai.token},body:JSON.stringify({projectId:id,sessionId,message:'HOLD_REQUEST',dirty:false})});const stream=await waiting;
+ const controller=new AbortController();const waiting=fetch(app.url+'/api/envoi/agent/chat',{method:'POST',signal:controller.signal,headers:{Origin:app.url,'Content-Type':'application/json','X-Envoi-Token':ai.token},body:JSON.stringify({projectId:id,sessionId,message:'HOLD_REQUEST',dirty:false})});const stream=await waiting;
  assert.equal((await post('agent/new',{projectId:id})).response.status,400);assert.equal((await post('agent/session',{projectId:id,sessionId:freshConversation.id})).response.status,400);
  const concurrent=await post('agent/chat',{projectId:id,message:'cannot overlap',dirty:false});assert.match(concurrent.body.error,/已有任务/);
  const other=await post('agent/chat',{projectId:copyId,message:'Independent project',dirty:false});assert(other.body.includes('Protocol verified'));
  await post('agent/abort',{projectId:id,sessionId});await stream.text();const stopped=(await post('agent/session',{projectId:id,sessionId})).body;assert.equal(stopped.status,'cancelled');
  assert((await post('agent/history/delete',{projectId:id,sessionId,confirm:true})).response.ok);assert.equal((await post('agent/sessions',{projectId:id})).body.activeId,freshConversation.id);assert.equal(await readFile(path.join(moved,'main.tex'),'utf8'),'source one');
- const replacement=path.join(fixture,'replacement');await rename(moved,replacement);await mkdir(moved);await mkdir(path.join(moved,'.paperdesk'));await writeFile(path.join(moved,'.paperdesk/project.json'),JSON.stringify({projectId:id}));await assert.rejects(()=>local.projectRoot(id),/替换/);
+ // Pre-rename projects keep their identity through the legacy management directory.
+ const legacyConfig=await readFile(path.join(moved,'.envoi/project.json'),'utf8');await rename(path.join(moved,'.envoi'),path.join(moved,'.paperdesk'));
+ assert.equal(await local.projectRoot(id),await realpath(moved));
+ await rename(path.join(moved,'.paperdesk'),path.join(moved,'.envoi'));assert.equal(await readFile(path.join(moved,'.envoi/project.json'),'utf8'),legacyConfig);
+ const replacement=path.join(fixture,'replacement');await rename(moved,replacement);await mkdir(moved);await mkdir(path.join(moved,'.envoi'));await writeFile(path.join(moved,'.envoi/project.json'),JSON.stringify({projectId:id}));await assert.rejects(()=>local.projectRoot(id),/替换/);
  console.log('PASS native AI: identity/move/copy/concurrent proof, actual SDK read/write/path guard, CAS/migration, private credentials, real SDK loopback streaming/history/tools, project isolation and cancellation');
 }finally{for(const response of held)response.end();for(const server of servers){server.closeAllConnections();await new Promise(resolve=>server.close(resolve));}await rm(fixture,{recursive:true,force:true});}

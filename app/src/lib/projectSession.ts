@@ -7,7 +7,7 @@ export function saveSession(project:PaperProject){const write=sessionWrites.catc
 async function writeSession(project:PaperProject){
  let nativeError:unknown;
  if(typeof window!=='undefined'&&typeof fetch==='function'){
-  try{const encoded=await encodeNative(project);for(const key of [...(project.id!=='empty'?[project.id.replace(/[^a-zA-Z0-9_-]/g,'_')]:[]),'current']){if(!revisions.has(key))revisions.set(key,(await nativeGet('session',key))?.revision??0);try{const result=await nativePut('session',encoded,key,{expectedRevision:revisions.get(key)});revisions.set(key,result.revision);}catch(error){await nativePut('session',encoded,key,{migrate:true}).catch(()=>{});throw error;}}}catch(error){nativeError=error;window.dispatchEvent(new CustomEvent('paperdesk:storage-warning',{detail:'项目恢复数据尚未写入本机，浏览器备份仍保留：'+(error as Error).message}));}
+  try{const encoded=await encodeNative(project);for(const key of [...(project.id!=='empty'?[project.id.replace(/[^a-zA-Z0-9_-]/g,'_')]:[]),'current']){if(!revisions.has(key))revisions.set(key,(await nativeGet('session',key))?.revision??0);try{const result=await nativePut('session',encoded,key,{expectedRevision:revisions.get(key)});revisions.set(key,result.revision);}catch(error){await nativePut('session',encoded,key,{migrate:true}).catch(()=>{});throw error;}}}catch(error){nativeError=error;window.dispatchEvent(new CustomEvent('envoi:storage-warning',{detail:'项目恢复数据尚未写入本机，浏览器备份仍保留：'+(error as Error).message}));}
  }
 
  const db=await database();try{await new Promise<void>((resolve,reject)=>{const tx=db.transaction('current','readwrite');tx.objectStore('current').put({...project,files:project.files.map(file=>({...file,url:file.url?.startsWith('blob:')?undefined:file.url}))},'project');tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error);});}finally{db.close();}
@@ -37,6 +37,6 @@ export async function restoreProjectCache(cached:PaperProject):Promise<{project:
 
 export async function restoreProjectSession(fresh:PaperProject):Promise<PaperProject>{
  if(typeof window==='undefined')return fresh;
- try{const key=fresh.id.replace(/[^a-zA-Z0-9_-]/g,'_'),record=await nativeGet<unknown>('session',key);revisions.set(key,record?.revision??0);if(record){const cached=decodeNative(record.value) as PaperProject;if(cached.id===fresh.id)return mergeDrafts(fresh,cached);}}catch(error){window.dispatchEvent(new CustomEvent('paperdesk:storage-warning',{detail:'此项目的恢复版本暂不可用，磁盘文件已打开：'+(error as Error).message}));}
+ try{const key=fresh.id.replace(/[^a-zA-Z0-9_-]/g,'_'),record=await nativeGet<unknown>('session',key);revisions.set(key,record?.revision??0);if(record){const cached=decodeNative(record.value) as PaperProject;if(cached.id===fresh.id)return mergeDrafts(fresh,cached);}}catch(error){window.dispatchEvent(new CustomEvent('envoi:storage-warning',{detail:'此项目的恢复版本暂不可用，磁盘文件已打开：'+(error as Error).message}));}
  return fresh;
 }

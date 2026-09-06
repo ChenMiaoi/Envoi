@@ -14,11 +14,11 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   const [restored,setRestored] = useState(!!import.meta.hot?.data.project&&import.meta.hot.data.project.id!=='demo');
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
-  useEffect(()=>{const listener=(event:Event)=>setMessage((event as CustomEvent<string>).detail);window.addEventListener('paperdesk:storage-warning',listener);return()=>window.removeEventListener('paperdesk:storage-warning',listener);},[]);
+  useEffect(()=>{const listener=(event:Event)=>setMessage((event as CustomEvent<string>).detail);window.addEventListener('envoi:storage-warning',listener);return()=>window.removeEventListener('envoi:storage-warning',listener);},[]);
   // createProjectSaver stores this getter; it reads the ref only when a save is requested.
   const saveAll=useMemo(()=>createProjectSaver({getProject:()=>latest.current,setProject,message:setMessage,saving:setSaving}),[setProject]);
   const closeProject=useCallback(async(discard=false)=>{const current=latest.current;assertCanClose(current,busy,saving,discard);setBusy(true);try{const empty=emptyProject();await saveSession(empty);if(latest.current!==current){await saveSession(latest.current);throw Error('项目在关闭过程中发生变化，未关闭。');}if(import.meta.hot)import.meta.hot.data.project=empty;setProject(empty);setMessage('项目已关闭；磁盘文件与最近记录保留。');}finally{setBusy(false);}},[busy,saving,setProject]);
-  useEffect(()=>{const save=()=>{void saveAll();};window.addEventListener('paperdesk:save',save);return()=>window.removeEventListener('paperdesk:save',save);},[saveAll]);
+  useEffect(()=>{const save=()=>{void saveAll();};window.addEventListener('envoi:save',save);return()=>window.removeEventListener('envoi:save',save);},[saveAll]);
   useEffect(() => {
     if(restored)return;
     let active=true;

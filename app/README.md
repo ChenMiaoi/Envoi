@@ -1,4 +1,4 @@
-# PaperDesk application
+# Envoi application
 
 This directory contains the React/Vite interface, local Node adapters, and tests. See the [root README](../README.md) and [contribution guide](../CONTRIBUTING.md) for setup.
 

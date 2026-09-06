@@ -1,5 +1,6 @@
 import {nativeMigrate,nativePut,nativeGet,encodeNative} from "./localData";
 import {gitPath} from './gitBinding';
+import {projectConfigFile} from './managementDir';
 export interface RecentProject { id: string; name: string; projectId?: string; directory?: FileSystemDirectoryHandle; path?: string; updated: number }
 async function database() {
   return await new Promise<IDBDatabase>((resolve, reject) => {
@@ -15,7 +16,7 @@ async function cachedRecentProjects(): Promise<RecentProject[]> {
 export async function rememberProject(directory: FileSystemDirectoryHandle) {
   const previous = await recentProjects(); let existing: RecentProject | undefined;
   for (const entry of previous) if (entry.directory && await directory.isSameEntry(entry.directory)) { existing = entry; break; }
-  let identity:string|undefined;try{identity=JSON.parse(await(await(await(await directory.getDirectoryHandle('.paperdesk')).getFileHandle('project.json')).getFile()).text()).projectId;}catch{/* Authorized roots need not be projects. */}
+  let identity:string|undefined;try{identity=JSON.parse((await projectConfigFile(directory))?.text??'{}').projectId;}catch{/* Authorized roots need not be projects. */}
   existing??=previous.find(entry=>identity&&entry.projectId===identity);
   const id=existing?.id??identity??crypto.randomUUID(),path=await gitPath(directory);
   const db = await database();
@@ -30,7 +31,7 @@ async function cachedAuthorizedRoots(): Promise<RecentProject[]> {
 export async function rememberRoot(directory: FileSystemDirectoryHandle) {
   const previous = await authorizedRoots(); let existing: RecentProject | undefined;
   for (const entry of previous) if (entry.directory && await directory.isSameEntry(entry.directory)) { existing = entry; break; }
-  let identity:string|undefined;try{identity=JSON.parse(await(await(await(await directory.getDirectoryHandle('.paperdesk')).getFileHandle('project.json')).getFile()).text()).projectId;}catch{/* Authorized roots need not be projects. */}
+  let identity:string|undefined;try{identity=JSON.parse((await projectConfigFile(directory))?.text??'{}').projectId;}catch{/* Authorized roots need not be projects. */}
   existing??=previous.find(entry=>identity&&entry.projectId===identity);
   const id=existing?.id??identity??crypto.randomUUID(),path=await gitPath(directory);
   const db = await database();
@@ -58,7 +59,7 @@ await syncRegistry('recent',ids.filter(item=>item.store==='recent').map(item=>it
 async function records(store:'recent'|'roots'):Promise<RecentProject[]> {
  const cached=await (store==='recent'?cachedRecentProjects():cachedAuthorizedRoots());
  if(typeof window==='undefined')return cached;
- try{const native=await nativeMigrate(store,await encodeNative(cached));return (native.value as RecentProject[]).map(entry=>({...entry,directory:cached.find(item=>item.id===entry.id)?.directory})).sort((a,b)=>b.updated-a.updated);}catch(error){window.dispatchEvent(new CustomEvent('paperdesk:storage-warning',{detail:'本机项目列表未连接，浏览器记录仍保留：'+(error as Error).message}));return cached;}
+ try{const native=await nativeMigrate(store,await encodeNative(cached));return (native.value as RecentProject[]).map(entry=>({...entry,directory:cached.find(item=>item.id===entry.id)?.directory})).sort((a,b)=>b.updated-a.updated);}catch(error){window.dispatchEvent(new CustomEvent('envoi:storage-warning',{detail:'本机项目列表未连接，浏览器记录仍保留：'+(error as Error).message}));return cached;}
 }
 export const recentProjects=()=>records('recent');
 export const authorizedRoots=()=>records('roots');

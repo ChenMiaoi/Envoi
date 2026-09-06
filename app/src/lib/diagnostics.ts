@@ -1,7 +1,7 @@
 import type {ProjectFile} from './projectFiles';
 export interface Diagnostic {id:string;column?:number;source?:'compile'|'lint';severity:'error'|'warning';message:string;path?:string;line?:number}
 export interface CompileDiagnostics {items:Diagnostic[];timestamp?:number;engine?:string;signature:string;rootId:string;status:'running'|'success'|'failed'|'cancelled';log:string}
-export function safeDiagnosticText(text:string){return text.replace(/(?:\/(?:[^\s()]+\/)*paperdesk-tex-[^/\s]+\/project\/)/g,'').replace(/\/(?:[^\s()]+\/)+([^\s()]+)/g,'$1');}
+export function safeDiagnosticText(text:string){return text.replace(/(?:\/(?:[^\s()]+\/)*envoi-tex-[^/\s]+\/project\/)/g,'').replace(/\/(?:[^\s()]+\/)+([^\s()]+)/g,'$1');}
 export function parseDiagnostics(log:string,files:Pick<ProjectFile,'path'|'text'>[],failed=false):Diagnostic[]{
  const parts=log.split(/\n\[(pdflatex|xelatex|bibtex|xdvipdfmx)\]\n/);let lastTex='',bib='';
  for(let i=1;i<parts.length;i+=2){if(['pdflatex','xelatex'].includes(parts[i]))lastTex=parts[i+1];if(parts[i]==='bibtex')bib+=parts[i+1]+'\n';}

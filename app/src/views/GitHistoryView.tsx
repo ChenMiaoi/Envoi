@@ -71,7 +71,7 @@ export function GitHistoryView(){
   }catch(error){if(identity.current===id)setMessage((error as Error).message);}finally{if(identity.current===id)setBusy(false);}
  },[project.id,project.directory]);
  useEffect(()=>{void refresh();},[refresh]);
- useEffect(()=>{const listener=()=>void refresh();window.addEventListener('paperdesk:connection-updated',listener);return()=>window.removeEventListener('paperdesk:connection-updated',listener);},[refresh]);
+ useEffect(()=>{const listener=()=>void refresh();window.addEventListener('envoi:connection-updated',listener);return()=>window.removeEventListener('envoi:connection-updated',listener);},[refresh]);
  const select=useCallback(async(hash:string)=>{
   setSelected(hash);if(details[hash])return;
   const id=project.id,directory=project.directory;if(!directory)return;

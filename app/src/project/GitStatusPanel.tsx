@@ -20,13 +20,13 @@ export function GitStatusPanel(){
  },[project.id,project.directory]);
  const savedRevision=project.files.map(file=>file.saved??'').join('\u0000');
  useEffect(()=>{void refresh();},[refresh,savedRevision]);
- useEffect(()=>{const listener=()=>void refresh();window.addEventListener('paperdesk:connection-updated',listener);return()=>window.removeEventListener('paperdesk:connection-updated',listener);},[refresh]);
- useEffect(()=>{const listener=()=>{setOpen(true);void refresh();};window.addEventListener('paperdesk:show-git',listener);return()=>window.removeEventListener('paperdesk:show-git',listener);},[refresh]);
+ useEffect(()=>{const listener=()=>void refresh();window.addEventListener('envoi:connection-updated',listener);return()=>window.removeEventListener('envoi:connection-updated',listener);},[refresh]);
+ useEffect(()=>{const listener=()=>{setOpen(true);void refresh();};window.addEventListener('envoi:show-git',listener);return()=>window.removeEventListener('envoi:show-git',listener);},[refresh]);
  const branch=status?.state==='not-initialized'?'Git 未初始化':status?.state==='ready'?(status.detached?'分离 HEAD · ':'')+status.branch:busy?'Git 检测中':'Git 未连接';
  return <><button className="flex items-center gap-1 text-primary hover:text-primary/80" title={message} onClick={()=>setOpen(true)}><GitBranch className="h-3 w-3" />{branch}</button>
  <Dialog open={open} onOpenChange={setOpen}><DialogContent className="sm:max-w-xl"><DialogHeader><DialogTitle>Git 状态{status?.branch?` · ${status.branch}`:''}</DialogTitle><DialogDescription>{project.name} · 只读状态，不提交或暂存文件</DialogDescription></DialogHeader>
  <div className="flex items-center justify-between gap-3"><p role="status" className="text-xs text-muted-foreground">{message}</p><button disabled={busy} aria-label="刷新 Git 状态" onClick={()=>void refresh()} className="rounded border border-border p-2"><RefreshCw className={`h-3.5 w-3.5 ${busy?'animate-spin':''}`} /></button></div>
- {!status&&project.directory&&<button className="text-left text-xs text-primary" onClick={()=>{setOpen(false);window.dispatchEvent(new Event('paperdesk:connect-project'));}}>在项目菜单完善本地连接…</button>}
+ {!status&&project.directory&&<button className="text-left text-xs text-primary" onClick={()=>{setOpen(false);window.dispatchEvent(new Event('envoi:connect-project'));}}>在项目菜单完善本地连接…</button>}
  {status?.state==='ready'&&<div className="max-h-80 overflow-auto rounded border border-border">{!status.files.length?<p className="p-5 text-center text-xs text-muted-foreground">工作区干净，没有待提交的磁盘更改。</p>:status.files.map((file,index)=><div key={`${file.path}:${index}`} className="flex items-start gap-3 border-b border-border/50 px-3 py-2 text-xs last:border-0"><span className="min-w-16 shrink-0 text-muted-foreground">{file.conflict?'冲突':file.untracked?'未跟踪':`${file.index!==' '?'已暂存 ':''}${file.worktree!==' '?'工作区修改':''}`}</span><span className="min-w-0 break-all">{file.originalPath?`${file.originalPath} → `:''}{file.path}</span><code className="ml-auto whitespace-pre text-[10px] text-muted-foreground">{file.index}{file.worktree}</code></div>)}</div>}
  </DialogContent></Dialog></>;
 }

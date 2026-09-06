@@ -3,6 +3,7 @@ import {parseDiagnostics} from "./diagnostics";
 import {projectSignature} from "./compileClient";
 import {verifyPreview} from "./pdfSync";
 import type {CompileDiagnostics, Diagnostic} from "./diagnostics";
+import { managementDirName, legacyDirName, projectConfigPath, legacyProjectConfigPath, projectConfigFile } from "./managementDir";
 import { templateFiles } from "./paperTemplates";
 import type { FileKind, FileNode } from "@/data/workspace";
 export interface ProjectFile { id: string; path: string; kind: FileKind; text?: string; saved?: string; file?: File; handle?: FileSystemFileHandle; url?: string }
@@ -41,7 +42,7 @@ export async function readProject(directory: FileSystemDirectoryHandle): Promise
   const files: ProjectFile[] = [], directories: string[] = [];
   async function walk(handle: FileSystemDirectoryHandle, prefix = "") {
     for await (const [name, child] of handle.entries()) {
-      if ([".git", ".paperdesk", "node_modules", ".DS_Store"].includes(name)) continue;
+      if ([".git", managementDirName, legacyDirName, "node_modules", ".DS_Store"].includes(name)) continue;
       const path = prefix + name;
       if (child.kind === "directory") { directories.push(path); await walk(child, path + "/"); }
       else {
@@ -55,10 +56,10 @@ export async function readProject(directory: FileSystemDirectoryHandle): Promise
     }
   }
   await walk(directory);
-  try{const management=await directory.getDirectoryHandle('.paperdesk');const handle=await management.getFileHandle('project.json');const text=await (await handle.getFile()).text();files.push({id:'.paperdesk/project.json',path:'.paperdesk/project.json',kind:'text',text,saved:text,handle});}catch(error){if((error as Error).name!=='NotFoundError')throw error;}
+  try{const config=await projectConfigFile(directory);if(config)files.push({id:config.path,path:config.path,kind:'text',text:config.text,saved:config.text,handle:config.handle});}catch(error){if((error as Error).name!=='NotFoundError')throw error;}
   files.sort((a, b) => a.path.localeCompare(b.path));
   let metadata: {projectId?:string;settings?:ProjectConfiguration;main?: string; engine?: "pdflatex" | "xelatex"} = {};
-  try { metadata = JSON.parse((files.find(file=>file.path==='.paperdesk/project.json')??files.find(file => file.path === 'paperdesk.json'))?.text ?? '{}');if(!metadata||Array.isArray(metadata)||typeof metadata!=='object')throw Error(); } catch { throw Error('项目配置格式无效，请修复后重新打开；未覆盖配置。'); }
+  try { metadata = JSON.parse((files.find(file=>file.path===projectConfigPath)??files.find(file=>file.path===legacyProjectConfigPath)??files.find(file => file.path === 'paperdesk.json'))?.text ?? '{}');if(!metadata||Array.isArray(metadata)||typeof metadata!=='object')throw Error(); } catch { throw Error('项目配置格式无效，请修复后重新打开；未覆盖配置。'); }
   let diagnostics:CompileDiagnostics|undefined;try{const record=JSON.parse(files.find(file=>file.path==='build/diagnostics.json')?.text??'null');if(record&&Array.isArray(record.items)&&typeof record.signature==='string'&&['success','failed','cancelled'].includes(record.status))diagnostics=record;}catch{/* Optional last-build diagnostics. */}
   const root = files.find(file => file.path === metadata.main) ?? files.find((file) => /(^|\/)main\.tex$/i.test(file.path)) ?? files.find((file) => file.kind === "latex");
   const project:PaperProject = { settings:projectConfiguration(metadata.settings,metadata.engine),diagnostics,compileLog:diagnostics?.log,compileStatus:diagnostics?`已恢复上次编译${diagnostics.status==='success'?'成功':diagnostics.status==='failed'?'失败':'取消'}记录`:undefined,engine: ["pdflatex", "xelatex"].includes(metadata.engine ?? "") ? metadata.engine : undefined, id: metadata.projectId??crypto.randomUUID(), name: directory.name, directory, files: files.map((file) => ({ ...file, url: file.file && ["pdf", "image"].includes(file.kind) ? URL.createObjectURL(file.file) : undefined })), directories, rootId: root?.id ?? "" };

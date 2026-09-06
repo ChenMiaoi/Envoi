@@ -4,7 +4,7 @@ import {extractIdentifiers,crossrefToPaper,dataciteToPaper,xmpToPaper,pickTitleH
 import type {LibraryPaper} from './paperLibrary';
 GlobalWorkerOptions.workerSrc=workerUrl;
 export interface Enrichment {fields:Partial<Pick<LibraryPaper,'title'|'author'|'year'|'venue'>>;bib?:string;citationKey?:string;source:string}
-const headers={'User-Agent':'PaperDesk/1.0 (mailto:paperdesk@localhost)'};
+const headers={'User-Agent':'Envoi/1.0 (mailto:envoi@localhost)'};
 async function fetchJson(url:string){const response=await fetch(url,{headers});if(!response.ok)throw Error(`元数据服务返回 ${response.status}`);return response.json();}
 async function lookupDoi(doi:string):Promise<Enrichment|null>{
  const work=(await fetchJson(`https://api.crossref.org/works/${encodeURIComponent(doi)}`)).message as CrossrefWork;

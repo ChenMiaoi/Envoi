@@ -4,7 +4,7 @@ import os from 'node:os';import path from 'node:path';
 import {AuthStorage,ModelRegistry} from '@mariozechner/pi-coding-agent';
 import {getSupportedThinkingLevels} from '@mariozechner/pi-ai';
 import {createModelDiscovery,parseDirectory,registerDiscoveredModels} from '../server/model-discovery.mjs';
-const directory=await mkdtemp(path.join(os.tmpdir(),'paperdesk-model-discovery-'));
+const directory=await mkdtemp(path.join(os.tmpdir(),'envoi-model-discovery-'));
 try{
  let calls=0,fail=false,empty=false,ids=['actual-new-model'],clock=100;
  const metadata={opencode:{npm:'@ai-sdk/openai-compatible',models:{'actual-new-model':{name:'Actual new model',reasoning:true,reasoning_options:[{type:'effort',values:['low','high']}],modalities:{input:['text']},limit:{context:8000,output:1000},cost:{input:1,output:2}}}}};

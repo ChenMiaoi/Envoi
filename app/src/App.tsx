@@ -74,7 +74,7 @@ function ProjectApp() {
   const runCommand=useCallback((command:Command)=>{
     if(command.id==='palette'){setPaletteOpen(v=>!v);return;}
     if(command.view){setView(command.view);return;}
-    if(command.id==='compile'){setView('writer');setTimeout(()=>window.dispatchEvent(new Event('paperdesk:compile')),0);return;}
+    if(command.id==='compile'){setView('writer');setTimeout(()=>window.dispatchEvent(new Event('envoi:compile')),0);return;}
     if(command.event)window.dispatchEvent(new CustomEvent(command.event,{detail:command.detail}));
   },[setView]);
   useEffect(() => {
@@ -89,7 +89,7 @@ function ProjectApp() {
     return () => window.removeEventListener("keydown", onKey,true);
   }, [runCommand,effective.bindings,view]);
 
-  const openLibraryPaper=(paper:LibraryPaper)=>{if(paper.status==='待读')void paperLibrary.put([{...paper,status:'在读'}]).then(()=>window.dispatchEvent(new Event('paperdesk:library-updated')));const file=libraryAttachment(paper),id=`library:${paper.id}`;setLibraryFiles(current=>[...current.filter(item=>item.id!==id),{id,path:paper.attachmentName??file.name,kind:'pdf',file}]);setOpenFiles(current=>current.some(item=>item.id===id)?current:[...current,{id,name:paper.title||file.name,kind:'pdf'}]);setActiveId(id);setView('reader');};
+  const openLibraryPaper=(paper:LibraryPaper)=>{if(paper.status==='待读')void paperLibrary.put([{...paper,status:'在读'}]).then(()=>window.dispatchEvent(new Event('envoi:library-updated')));const file=libraryAttachment(paper),id=`library:${paper.id}`;setLibraryFiles(current=>[...current.filter(item=>item.id!==id),{id,path:paper.attachmentName??file.name,kind:'pdf',file}]);setOpenFiles(current=>current.some(item=>item.id===id)?current:[...current,{id,name:paper.title||file.name,kind:'pdf'}]);setActiveId(id);setView('reader');};
   const openFromPalette = (f: { node: FileNode; path: string }) => {
     setPaletteOpen(false);
     if(f.node.kind==='latex'){openTex(f.node.id);return;}

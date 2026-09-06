@@ -7,7 +7,7 @@ function encode(bytes: Uint8Array) {
  return btoa(binary);
 }
 export async function compileProject(project: PaperProject, engine: string, signal: AbortSignal) {
- const runtimeResponse = await fetch('/api/paperdesk/compiler', { signal });
+ const runtimeResponse = await fetch('/api/envoi/compiler', { signal });
  if (!runtimeResponse.ok || !runtimeResponse.headers.get('content-type')?.includes('application/json')) throw new Error('本地编译服务不可用，请通过项目开发服务启动。');
  const runtime = await runtimeResponse.json(); if (!runtime.available) throw new Error(runtime.error);
  const main = project.files.find(file => file.id === project.rootId)?.path;
@@ -23,7 +23,7 @@ export async function compileProject(project: PaperProject, engine: string, sign
   const bytes = file.text !== undefined ? new TextEncoder().encode(file.text) : file.file ? new Uint8Array(await file.file.arrayBuffer()) : file.url ? new Uint8Array(await (await fetch(file.url,{signal})).arrayBuffer()) : file.url ? new Uint8Array(await (await fetch(file.url,{signal})).arrayBuffer()) : file.url ? new Uint8Array(await (await fetch(file.url,{signal})).arrayBuffer()) : file.url ? new Uint8Array(await (await fetch(file.url,{signal})).arrayBuffer()) : null;
   if (bytes) files.push({ path:file.path,base64:encode(bytes) });
  }
- const response = await fetch('/api/paperdesk/compile', { method:'POST',signal,headers:{'Content-Type':'application/json','X-PaperDesk-Token':runtime.token},body:JSON.stringify({main,engine,files}) });
+ const response = await fetch('/api/envoi/compile', { method:'POST',signal,headers:{'Content-Type':'application/json','X-Envoi-Token':runtime.token},body:JSON.stringify({main,engine,files}) });
  const result = await response.json();
  if (!response.ok || !result.ok) return { ok:false as const,error:result.error ?? '编译失败',log:result.log ?? '' };
  return { ok:true as const,file:new File([Uint8Array.from(atob(result.pdf),(character)=>character.charCodeAt(0))], 'compiled.pdf', {type:'application/pdf'}),synctex:typeof result.synctex==='string'?Uint8Array.from(atob(result.synctex),(character)=>character.charCodeAt(0)):undefined,log:result.log as string };

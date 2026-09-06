@@ -1,4 +1,4 @@
-# PaperDesk
+# Envoi
 
 A local academic writing workspace with a LaTeX editor, automatic outline, paper PDF preview, bibliography and assets, a personal PDF/Bib library, native Git status, and compilation/editor diagnostics. The current interface is a browser-based desktop prototype.
 
@@ -11,9 +11,9 @@ npm run setup
 npm run dev
 ```
 
-Open [PaperDesk](http://127.0.0.1:3000/). Page URLs are `/reader`, `/writer`, `/library`, and `/settings`; the root opens `/writer`. Startup restores a real saved project or shows an empty workspace. No example project, paper library or chat conversation is loaded automatically. To use the explicit example, open `examples/demo/` through the project menu. Settings use `/settings/{global|project}/{general|editor|compile|references}` with a separate `/settings/global/shortcuts` page.
+Open [Envoi](http://127.0.0.1:3000/). Page URLs are `/reader`, `/writer`, `/library`, and `/settings`; the root opens `/writer`. Startup restores a real saved project or shows an empty workspace. No example project, paper library or chat conversation is loaded automatically. To use the explicit example, open `examples/demo/` through the project menu. Settings use `/settings/{global|project}/{general|editor|compile|references}` with a separate `/settings/global/shortcuts` page.
 
-Local compilation currently targets macOS with an installed TeX toolchain and `sandbox-exec`. TeX and Git executables are detected from the service environment; `PAPERDESK_TEX_BIN` can select a TeX binary directory. Git status uses the detected Git executable; editor checks auto-detect ChkTeX and support a validated custom executable path in settings. The application reports missing tools and does not install them automatically. Static hosting supports the UI but does not supply these local services.
+Local compilation currently targets macOS with an installed TeX toolchain and `sandbox-exec`. TeX and Git executables are detected from the service environment; `ENVOI_TEX_BIN` can select a TeX binary directory. Git status uses the detected Git executable; editor checks auto-detect ChkTeX and support a validated custom executable path in settings. The application reports missing tools and does not install them automatically. Static hosting supports the UI but does not supply these local services.
 
 Reader opens CSV/TSV as editable tables, Markdown as a continuous live preview editor, and images/PDFs in their native previews. Opening a `.tex` file goes to Writer without changing the compilation main file. Ctrl/Command+S immediately saves all project drafts; [settings](docs/SETTINGS.md) include customizable keyboard shortcuts layered by modifier: Mod+Shift switches pages, Mod+Alt acts inside the current page (reader tabs and panels, writer side panels). See [Reader and library](docs/READER_AND_LIBRARY.md) for persistence and format behavior.
 

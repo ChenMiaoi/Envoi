@@ -1,9 +1,9 @@
 import {mkdtemp,mkdir,writeFile,rm,readFile} from 'node:fs/promises';import {tmpdir} from 'node:os';import path from 'node:path';import {execFileSync} from 'node:child_process';import assert from 'node:assert/strict';
 import {initializeBoundGit,readBoundGitStatus,parseGitStatus} from '../server/git.mjs';
 assert.deepEqual(parseGitStatus('R  renamed file.tex\0old file.tex\0?? new.tex\0').map(f=>[f.path,f.originalPath,f.untracked]),[['renamed file.tex','old file.tex',false],['new.tex',undefined,true]]);
-const root=await mkdtemp(path.join(tmpdir(),'paperdesk-git-status-')),proof='b'.repeat(64),input={directory:root,proof};
+const root=await mkdtemp(path.join(tmpdir(),'envoi-git-status-')),proof='b'.repeat(64),input={directory:root,proof};
 try{
- await mkdir(path.join(root,'.paperdesk'));await writeFile(path.join(root,'.paperdesk/git-proof'),proof);
+ await mkdir(path.join(root,'.envoi'));await writeFile(path.join(root,'.envoi/git-proof'),proof);
  assert.equal((await readBoundGitStatus(input)).state,'not-initialized');await initializeBoundGit(input);
  assert.equal((await readBoundGitStatus(input)).files.length,0);
  await writeFile(path.join(root,'a.tex'),'one');let result=await readBoundGitStatus(input);assert(result.files.some(f=>f.path==='a.tex'&&f.untracked));

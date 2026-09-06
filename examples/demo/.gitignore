@@ -24,5 +24,10 @@
 __pycache__/
 *.pyc
 .venv/
-.paperdesk/*
-!.paperdesk/project.json
+.envoi/*
+!.envoi/project.json
+
+# Share project settings; keep machine bindings and caches private
+!/.envoi/
+/.envoi/*
+!/.envoi/project.json

@@ -54,14 +54,14 @@ export function templateFiles(id: string, enableGit = true) {
  return {
   'main.tex': template.main,
   '.gitignore': projectGitignore,
-  '.paperdesk/project.json': JSON.stringify({ projectId:crypto.randomUUID(), main: 'main.tex', settings: {version: 1, overrides: {}}, buildDirectory: 'build', git: { requested: enableGit, branch: 'main', status: enableGit ? 'pending-local-init' : 'disabled' } }, null, 2) + '\n',
+  '.envoi/project.json': JSON.stringify({ projectId:crypto.randomUUID(), main: 'main.tex', settings: {version: 1, overrides: {}}, buildDirectory: 'build', git: { requested: enableGit, branch: 'main', status: enableGit ? 'pending-local-init' : 'disabled' } }, null, 2) + '\n',
   'data/README.md': 'Store source datasets here. Label synthetic data explicitly.\n',
   'build/README.md': 'Generated PDF and compilation logs live here. This directory is ignored by Git.\n',
   'chapters/introduction.tex': String.raw`\section{Introduction}
 Introduce your research question and context. Cite relevant work such as \cite{knuth1984}.
 ` ,
   'references.bib': '@book{knuth1984, author={Donald E. Knuth}, title={The TeXbook}, publisher={Addison-Wesley}, year={1984}}\n',
-  'TEMPLATE.md': `# ${template.name}\n\n官方样式：${template.style}\n来源：${template.source}\n样式许可：${template.license}\n\n本项目为 PaperDesk 编写的最小起稿骨架，调用原始官方样式，不修改或重新分发样式文件。需要本地 TeX 发行版提供相应类/字体/BibTeX样式。\n\n这是模板体系，不是某个会议年度的投稿保证。具体会议/期刊可能要求不同选项、匿名/版权信息、页数与格式。请按目标活动官方要求调整。ACM 骨架使用 nonacm 起稿选项，投稿前按官方要求替换。\n`,
+  'TEMPLATE.md': `# ${template.name}\n\n官方样式：${template.style}\n来源：${template.source}\n样式许可：${template.license}\n\n本项目为 Envoi 编写的最小起稿骨架，调用原始官方样式，不修改或重新分发样式文件。需要本地 TeX 发行版提供相应类/字体/BibTeX样式。\n\n这是模板体系，不是某个会议年度的投稿保证。具体会议/期刊可能要求不同选项、匿名/版权信息、页数与格式。请按目标活动官方要求调整。ACM 骨架使用 nonacm 起稿选项，投稿前按官方要求替换。\n`,
  };
 }
 
@@ -91,7 +91,7 @@ export const projectGitignore = `# Generated build outputs; input PDF figures un
 __pycache__/
 *.pyc
 .venv/
-!/.paperdesk/
-/.paperdesk/*
-!/.paperdesk/project.json
+!/.envoi/
+/.envoi/*
+!/.envoi/project.json
 `;

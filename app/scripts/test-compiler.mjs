@@ -6,7 +6,7 @@ import {compileSnapshot,validateSnapshot} from '../server/compiler.mjs';
 const snapshot=text=>({engine:'pdflatex',main:'main.tex',files:[{path:'main.tex',base64:Buffer.from(text).toString('base64')}]});
 assert.throws(()=>validateSnapshot({...snapshot('x'),main:'../main.tex'}));
 assert.throws(()=>validateSnapshot({...snapshot('x'),engine:'bash'}));
-const folder=await mkdtemp(path.join(tmpdir(),'paperdesk-security-test-'));
+const folder=await mkdtemp(path.join(tmpdir(),'envoi-security-test-'));
 try{
  const sentinel=path.join(folder,'outside.tex');await writeFile(sentinel,'TOPSECRET_TEST_SENTINEL');
  const denied=await compileSnapshot(snapshot(`\\documentclass{article}\\begin{document}\\input{${sentinel}}\\end{document}`));

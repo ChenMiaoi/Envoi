@@ -1,4 +1,4 @@
-# PaperDesk AI 与本机数据
+# Envoi AI 与本机数据
 
 ## 使用与边界
 
@@ -16,10 +16,10 @@ Pi 通过官方 Node SDK 启动，显式传入真实 cwd、AuthStorage、ModelRe
 
 ## 存储布局
 
-默认 `~/.paperdesk`；启动前通过 `PAPERDESK_DATA_DIR` 指定其他本机目录。没有迁移或改写个人 `~/.pi` 凭据。
+默认 `~/.envoi`；启动前通过 `ENVOI_DATA_DIR`（旧名 `PAPERDESK_DATA_DIR` 仍接受）指定其他本机目录。未指定时若仅存在旧 `~/.paperdesk`，首次启动自动更名为 `~/.envoi`。没有迁移或改写个人 `~/.pi` 凭据。
 
 - `pi/auth.json`：Pi 标准认证存储，0600 文件权限；不是系统钥匙串。
-- `pi/models.json`：自定义兼容服务商模型定义，不存用户 Key。SDK 必需的自定义认证引用由 PaperDesk 私有认证存储解析，未保存真实凭据不会成为可用模型。
+- `pi/models.json`：自定义兼容服务商模型定义，不存用户 Key。SDK 必需的自定义认证引用由 Envoi 私有认证存储解析，未保存真实凭据不会成为可用模型。
 - `ai/settings.json`：全局 AI 默认配置。
 - `projects/index.json`：项目 ID、真实路径、目录设备/inode 索引。
 - `projects/<id>/chat/`：会话索引、当前会话、消息/状态与 Pi 原生 JSONL。
@@ -30,7 +30,7 @@ Pi 通过官方 Node SDK 启动，显式传入真实 cwd、AuthStorage、ModelRe
 - `migration/`：按内容哈希归档冲突的旧浏览器版本，重复迁移不会不断创建相同备份。
 - `logs/<date>.jsonl`：仅记录事件类别、项目/会话 ID、状态，不记录 Key、提示词或正文。
 
-工程 `.paperdesk/project.json` 保存稳定 `projectId`、项目设置和 AI 覆盖。机器路径、聊天、认证由全局本机目录管理。旧 `paperdesk.json` 保留为迁移备份。新目录证明使用每次请求独立的 nonce 文件，结束只清理自己的证明，避免 Git/AI 并发互删。
+工程 `.envoi/project.json` 保存稳定 `projectId`、项目设置和 AI 覆盖；改名前的 `.paperdesk/project.json` 仍自动读取，下次保存设置时写入新位置并保留旧文件。机器路径、聊天、认证由全局本机目录管理。旧 `paperdesk.json` 保留为迁移备份。新目录证明使用每次请求独立的 nonce 文件，结束只清理自己的证明，避免 Git/AI 并发互删。
 
 移动后重新连接新位置保持 ID 和历史。原位置仍存在时，新副本必须显式选择“作为独立副本连接”，新建 ID，不混合历史。目录被替换或项目 ID 改变时拒绝继续使用旧绑定。删除工程目录不会隐式删除本机 AI 历史；历史清理是独立的显式操作。
 

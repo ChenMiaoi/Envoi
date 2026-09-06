@@ -10,7 +10,7 @@ export function createLibraryStore(name='paperdesk-library-v1'){
  };
  if(name!=='paperdesk-library-v1')return cache;
  return {
-  async list():Promise<LibraryPaper[]>{const legacy=await cache.list();try{const native=await nativeMigrate('library',await encodeNative(legacy));return decodeNative(native.value) as LibraryPaper[];}catch(error){window.dispatchEvent(new CustomEvent('paperdesk:storage-warning',{detail:'本机论文库未连接，显示浏览器备份：'+(error as Error).message}));return legacy;}},
+  async list():Promise<LibraryPaper[]>{const legacy=await cache.list();try{const native=await nativeMigrate('library',await encodeNative(legacy));return decodeNative(native.value) as LibraryPaper[];}catch(error){window.dispatchEvent(new CustomEvent('envoi:storage-warning',{detail:'本机论文库未连接，显示浏览器备份：'+(error as Error).message}));return legacy;}},
   async put(papers:LibraryPaper[]){const record=await nativeGet<unknown>('library');const current=record?decodeNative(record.value) as LibraryPaper[]:await cache.list();const next=[...current.filter(item=>!papers.some(p=>p.id===item.id)),...papers];await nativePut('library',await encodeNative(next),'default',{expectedRevision:record?.revision??0});await cache.put(papers);},
   async remove(id:string){const record=await nativeGet<unknown>('library');if(!record)throw Error('请先读取并迁移本机论文库');const next=(decodeNative(record.value) as LibraryPaper[]).filter(item=>item.id!==id);await nativePut('library',await encodeNative(next),'default',{expectedRevision:record.revision});await cache.remove(id);}
  };

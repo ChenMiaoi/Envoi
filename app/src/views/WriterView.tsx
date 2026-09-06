@@ -67,8 +67,8 @@ export function WriterView({problemTarget,requestedFile}:{requestedFile?:{id:str
       const panel = (event as CustomEvent<string>).detail;
       if (panel === "outline" || panel === "refs" || panel === "assets") setTab(panel);
     };
-    window.addEventListener("paperdesk:panel", onPanel);
-    return () => window.removeEventListener("paperdesk:panel", onPanel);
+    window.addEventListener("envoi:panel", onPanel);
+    return () => window.removeEventListener("envoi:panel", onPanel);
   }, []);
   return (
     <PanelGroup orientation="horizontal" className="h-full">

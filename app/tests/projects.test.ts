@@ -46,7 +46,7 @@ test('new project creates a real directory model and never overwrites a namesake
  const project=await readProject(directory);
  assert.equal(project.rootId,'main.tex'); assert(project.files.some(f=>f.path==='chapters/introduction.tex')); assert(project.directories.includes('build'));
  assert.equal(dirtyFiles(project).length,0);
- assert.equal(JSON.parse(project.files.find(f=>f.path==='.paperdesk/project.json')!.text!).git.status,'pending-local-init');
+ assert.equal(JSON.parse(project.files.find(f=>f.path==='.envoi/project.json')!.text!).git.status,'pending-local-init');
  assert(!projectTree(project.files,project.directories).some(n=>['build','.gitignore','paperdesk.json'].includes(n.name)));
  await assert.rejects(createPaper(parent.asHandle(),'paper'),/已存在/);
  await assert.rejects(createTextFile(directory,'main.tex','overwrite'),/已存在/);
@@ -87,9 +87,9 @@ test('Git opt-out creates no repository; PDF inputs remain visible',async()=>{
 test('all templates share the writing/build/Git skeleton and explicit opt-out metadata',()=>{
  for(const template of paperTemplates){
   const files=templateFiles(template.id);
-  for(const key of ['main.tex','chapters/introduction.tex','references.bib','.gitignore','.paperdesk/project.json','data/README.md','build/README.md'])assert(key in files);
-  assert.equal(JSON.parse(files['.paperdesk/project.json']).git.branch,'main');
-  assert.equal(JSON.parse(templateFiles(template.id,false)['.paperdesk/project.json']).git.requested,false);
+  for(const key of ['main.tex','chapters/introduction.tex','references.bib','.gitignore','.envoi/project.json','data/README.md','build/README.md'])assert(key in files);
+  assert.equal(JSON.parse(files['.envoi/project.json']).git.branch,'main');
+  assert.equal(JSON.parse(templateFiles(template.id,false)['.envoi/project.json']).git.requested,false);
   assert.match(files['.gitignore'],/\/build\//);assert(!files['.gitignore'].includes('*.pdf'));
  }
 });
@@ -110,7 +110,7 @@ test('project preferences persist, restore inheritance and stay isolated from an
 
 test('project settings write to isolated disk directories and reject external conflicts',async()=>{
  const fs=await import('node:fs/promises'),{join,basename}=await import('node:path'),{tmpdir}=await import('node:os');
- const temporary=await fs.mkdtemp(join(tmpdir(),'paperdesk-settings-'));
+ const temporary=await fs.mkdtemp(join(tmpdir(),'envoi-settings-'));
  function diskFile(path:string){return {kind:'file',name:basename(path),async getFile(){return new File([await fs.readFile(path)],basename(path));},async createWritable(){let content:string|Blob='';return {async write(text:string|Blob){content=text;},async close(){await fs.writeFile(path,typeof content==='string'?content:new Uint8Array(await content.arrayBuffer()));},async abort(){}};}};}
  function diskDirectory(path:string):FileSystemDirectoryHandle{return {kind:'directory',name:basename(path),async queryPermission(){return 'granted';},async getDirectoryHandle(name:string,options?:{create?:boolean}){const target=join(path,name);if(options?.create)await fs.mkdir(target,{recursive:true});try{await fs.access(target);}catch{throw new DOMException('Missing','NotFoundError');}return diskDirectory(target);},async getFileHandle(name:string,options?:{create?:boolean}){const target=join(path,name);try{await fs.access(target);}catch{if(!options?.create)throw new DOMException('Missing','NotFoundError');await fs.writeFile(target,'');}return diskFile(target);},async *entries(){for(const entry of await fs.readdir(path,{withFileTypes:true}))yield [entry.name,entry.isDirectory()?diskDirectory(join(path,entry.name)):diskFile(join(path,entry.name))];}} as unknown as FileSystemDirectoryHandle;}
  try{
@@ -120,8 +120,8 @@ test('project settings write to isolated disk directories and reject external co
   const reopened=await readProject(diskDirectory(join(temporary,'a')));assert.equal(reopened.rootId,'other.tex');assert.deepEqual(reopened.settings?.overrides,{engine:'xelatex',lintEnabled:false,disabledRules:[26]});
   assert.equal(await fs.readFile(join(temporary,'b','paperdesk.json'),'utf8'),beforeB);assert.equal(await fs.readFile(join(temporary,'a','main.tex'),'utf8'),'original source');
   await saveProjectConfiguration(changed,{version:1,overrides:{}});assert.deepEqual((await readProject(diskDirectory(join(temporary,'a')))).settings?.overrides,{});
-  const external='{"main":"main.tex","name":"external change"}';await fs.writeFile(join(temporary,'a','.paperdesk','project.json'),external);
-  await assert.rejects(saveProjectConfiguration(changed,{version:1,overrides:{engine:'pdflatex'}}),/外部修改/);assert.equal(await fs.readFile(join(temporary,'a','.paperdesk','project.json'),'utf8'),external);
+  const external='{"main":"main.tex","name":"external change"}';await fs.writeFile(join(temporary,'a','.envoi','project.json'),external);
+  await assert.rejects(saveProjectConfiguration(changed,{version:1,overrides:{engine:'pdflatex'}}),/外部修改/);assert.equal(await fs.readFile(join(temporary,'a','.envoi','project.json'),'utf8'),external);
   await persistBuild(diskDirectory(join(temporary,'a')),new File(['%PDF-fixture'],'main.pdf'),'success log','{"version":1}');
   await persistDiagnostics(diskDirectory(join(temporary,'a')),{items:[],signature:'snapshot',rootId:'other.tex',status:'failed',log:'failed log'});
   assert.equal(await fs.readFile(join(temporary,'a','build','main.pdf'),'utf8'),'%PDF-fixture');
@@ -148,12 +148,23 @@ test('hidden project configuration wins, migration preserves legacy and refuses 
  const directory=new MemoryDirectory('paper');directory.children.set('main.tex',new MemoryFile('main.tex','source'));const legacy=JSON.stringify({main:'main.tex',engine:'xelatex',unknown:{keep:true},apiKey:'private'});directory.children.set('paperdesk.json',new MemoryFile('paperdesk.json',legacy));
  const old=await readProject(directory.asHandle());const changed=await saveProjectConfiguration(old,{version:1,overrides:{engine:'xelatex'}});
  assert.equal((directory.children.get('paperdesk.json') as MemoryFile).contents,legacy);
- const management=await directory.getDirectoryHandle('.paperdesk'),stored=(management.children.get('project.json') as MemoryFile).contents;assert(!stored.includes('private'));assert(!stored.includes('unknown'));
+ const management=await directory.getDirectoryHandle('.envoi'),stored=(management.children.get('project.json') as MemoryFile).contents;assert(!stored.includes('private'));assert(!stored.includes('unknown'));
  await assert.rejects(saveProjectConfiguration(old,{version:1,overrides:{}}),/新配置已存在/);
  assert.equal((await readProject(directory.asHandle())).settings?.overrides.engine,'xelatex');
  (directory.children.get('paperdesk.json') as MemoryFile).contents='{}';assert.equal((await readProject(directory.asHandle())).settings?.overrides.engine,'xelatex');
  await saveProjectConfiguration(changed,{version:1,overrides:{}});assert.deepEqual((await readProject(directory.asHandle())).settings?.overrides,{});
  (management.children.get('project.json') as MemoryFile).contents='invalid';await assert.rejects(readProject(directory.asHandle()),/格式无效/);
+});
+
+test('legacy .paperdesk configuration still opens and saves migrate forward to .envoi',async()=>{
+ const directory=new MemoryDirectory('paper');directory.children.set('main.tex',new MemoryFile('main.tex','source'));
+ const management=new MemoryDirectory('.paperdesk');management.children.set('project.json',new MemoryFile('project.json',JSON.stringify({projectId:'legacy-id',main:'main.tex',settings:{version:1,overrides:{engine:'xelatex'}}})));directory.children.set('.paperdesk',management);
+ const project=await readProject(directory.asHandle());
+ assert.equal(project.id,'legacy-id');assert.equal(project.settings?.overrides.engine,'xelatex');
+ await saveProjectConfiguration(project,{version:1,overrides:{engine:'pdflatex'}});
+ const reopened=await readProject(directory.asHandle());
+ assert.equal(reopened.id,'legacy-id');assert.equal(reopened.settings?.overrides.engine,'pdflatex');
+ assert(directory.children.has('.envoi'));assert.equal((management.children.get('project.json') as MemoryFile).contents.includes('xelatex'),true);
 });
 
 test('immediate save uses latest buffer once, preserves edits during write and reports failures',async()=>{

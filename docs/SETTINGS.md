@@ -4,7 +4,7 @@ Settings have two scopes, global and current project, and four categories: gener
 
 ## Personal preferences
 
-Global preferences are normalized and saved to this browser's local storage (`paperdesk.preferences.v1`). They update immediately and synchronize between tabs. Storage failures are shown instead of claiming durable persistence.
+Global preferences are normalized and saved to this browser's local storage (`envoi.preferences.v1`). They update immediately and synchronize between tabs. Storage failures are shown instead of claiming durable persistence.
 
 Three independent typography groups are available:
 
@@ -18,23 +18,23 @@ Font choices are named CSS families with system fallbacks, not a claim to enumer
 
 A connected writable project can override compiler, ChkTeX enablement and disabled rules independently. Removing an override restores the current global value. New projects inherit defaults; older projects with a top-level engine retain that explicit selection until inheritance is restored. The main TeX file belongs only to the project.
 
-Overrides are stored in `.paperdesk/project.json`:
+Overrides are stored in `.envoi/project.json`:
 
 ```json
 {"main":"main.tex","settings":{"version":1,"overrides":{"engine":"xelatex","disabledRules":[26]}}}
 ```
 
-New `.paperdesk/project.json` takes precedence over legacy root `paperdesk.json`. A settings save migrates known shareable metadata and explicit overrides, retaining the untouched legacy file as a backup so unknown fields are not deleted or copied into shared configuration. Competing or externally changed new files are rejected. Git rules expose only `.paperdesk/project.json`; other management files remain ignored. Writes preserve unrelated new-project metadata and reject dirty or externally changed configuration files. A project change does not modify another project's configuration. Built-in snapshots, unavailable permissions and moved directories disable project settings with an explanation. After a directory move, open its new location; repeated Git authorization cannot restore the old filesystem handle.
+New `.envoi/project.json` takes precedence over the pre-rename `.paperdesk/project.json` and the legacy root `paperdesk.json`. A settings save migrates known shareable metadata and explicit overrides, retaining the untouched legacy file as a backup so unknown fields are not deleted or copied into shared configuration. Competing or externally changed new files are rejected. Git rules expose only `.envoi/project.json`; other management files remain ignored. Writes preserve unrelated new-project metadata and reject dirty or externally changed configuration files. A project change does not modify another project's configuration. Built-in snapshots, unavailable permissions and moved directories disable project settings with an explanation. After a directory move, open its new location; repeated Git authorization cannot restore the old filesystem handle.
 
 No AI credentials or external service secrets are stored in project settings. AI and Zotero configuration is omitted because those integrations do not have working backends.
 
 ## Local tools
 
-Compile / global detects existing TeX, ChkTeX and TexLab. No installation is performed. ChkTeX can use automatic detection or an absolute executable path; validation resolves the file, requires an executable named `chktex`, and checks its version without a shell. Command strings and other programs are rejected. An explicit saved path resides in `~/.config/paperdesk/tools.json` with user-only file permissions, separately from browser preferences and project files.
+Compile / global detects existing TeX, ChkTeX and TexLab. No installation is performed. ChkTeX can use automatic detection or an absolute executable path; validation resolves the file, requires an executable named `chktex`, and checks its version without a shell. Command strings and other programs are rejected. An explicit saved path resides in `~/.config/envoi/tools.json` with user-only file permissions, separately from browser preferences and project files.
 
 Disabled ChkTeX rules must be integers 1–42. Checks apply fixed arguments and these validated rule numbers to the current unsaved source snapshot. Native project/user configuration is not loaded, and included files are not followed.
 
-TexLab detection is informational; LSP sessions, completion and diagnostics are not integrated. The LaTeX isolation adapter detects the installed binary directory from PATH (or PAPERDESK_TEX_BIN) and derives TeX data/binary roots. It still requires macOS sandbox-exec and validates the required engine tools before reporting availability. Static hosting does not supply these local tool endpoints.
+TexLab detection is informational; LSP sessions, completion and diagnostics are not integrated. The LaTeX isolation adapter detects the installed binary directory from PATH (or ENVOI_TEX_BIN) and derives TeX data/binary roots. It still requires macOS sandbox-exec and validates the required engine tools before reporting availability. Static hosting does not supply these local tool endpoints.
 
 ## Verification
 

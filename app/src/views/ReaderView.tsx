@@ -91,9 +91,9 @@ export function ReaderView({
       if (panel === 'tree') setShowTree((v) => !v);
       else if (panel === 'chat') setShowChat((v) => !v);
     };
-    window.addEventListener('paperdesk:tab', onTab);
-    window.addEventListener('paperdesk:panel', onPanel);
-    return () => { window.removeEventListener('paperdesk:tab', onTab); window.removeEventListener('paperdesk:panel', onPanel); };
+    window.addEventListener('envoi:tab', onTab);
+    window.addEventListener('envoi:panel', onPanel);
+    return () => { window.removeEventListener('envoi:tab', onTab); window.removeEventListener('envoi:panel', onPanel); };
   }, [openFiles, activeId, onOpenFiles, onActive]);
 
 

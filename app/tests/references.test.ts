@@ -33,7 +33,7 @@ test('insertion replaces only selection, repeats add citations and caret advance
 test('assets recognize paths and omitted extensions, exclude comments and locate CSV syntax',()=>{
  const files=[{id:'main',path:'src/main.tex',text:String.raw`\includegraphics[width=2cm]{../assets/architecture}
 % \includegraphics{fake}
-\includepdf{../pdfs/paperdesk-sample.pdf}
+\includepdf{../pdfs/envoi-sample.pdf}
 \addplot table[x=t]{../assets/data.csv};`}];
- const uses=findAssetUses(files);assert.equal(uses.length,3);assert(assetMatches('assets/architecture.png',uses[0]));assert(assetMatches('pdfs/paperdesk-sample.pdf',uses[1]));assert(assetMatches('assets/data.csv',uses[2]));
+ const uses=findAssetUses(files);assert.equal(uses.length,3);assert(assetMatches('assets/architecture.png',uses[0]));assert(assetMatches('pdfs/envoi-sample.pdf',uses[1]));assert(assetMatches('assets/data.csv',uses[2]));
 });

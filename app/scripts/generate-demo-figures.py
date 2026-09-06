@@ -20,7 +20,7 @@ with (ROOT/'data'/'model-data.csv').open('w') as f:
  writer=csv.DictWriter(f,fieldnames=list(rows[0]));writer.writeheader();writer.writerows(rows)
 def save(name):
  plt.tight_layout();plt.savefig(OUT/(name+'.png'),dpi=300,bbox_inches='tight');
- (ROOT/'.paperdesk'/'figure-sources').mkdir(parents=True,exist_ok=True);plt.savefig(ROOT/'.paperdesk'/'figure-sources'/(name+'.pdf'),bbox_inches='tight');plt.close()
+ (ROOT/'.envoi'/'figure-sources').mkdir(parents=True,exist_ok=True);plt.savefig(ROOT/'.envoi'/'figure-sources'/(name+'.pdf'),bbox_inches='tight');plt.close()
 def chart(y1,y2,ylabel,name):
  plt.figure(figsize=(3.4,2.5));plt.plot(ns,y1,'o-',color=BLUE,label='Materialized');plt.plot(ns,y2,'s-',color=ORANGE,label='Tiled')
  plt.xscale('log',base=2);plt.yscale('log');plt.xlabel('Sequence length N');plt.ylabel(ylabel);plt.grid(alpha=.2);plt.legend(frameon=False,fontsize=8);save(name)

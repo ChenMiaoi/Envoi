@@ -28,7 +28,7 @@ export function CompileControls({hasPdf = false}:{hasPdf?:boolean}) {
   }catch(error){setProject(current=>current.id!==id?current:{...current,diagnostics:controller.signal.aborted&&current.diagnostics?current.diagnostics:{items:controller.signal.aborted?[]:parseDiagnostics((error as Error).message,project.files,true),signature,rootId:project.rootId,status:controller.signal.aborted?'cancelled':'failed',log:(error as Error).message},compileStatus:controller.signal.aborted?'编译已取消':'编译失败 · 预览未更新',compileLog:(error as Error).message});}
   finally{setBusy(false);setRunning(false);request.current=null;}
  };
- useEffect(()=>{const compile=()=>{void run();};window.addEventListener('paperdesk:compile',compile);return()=>window.removeEventListener('paperdesk:compile',compile);});
+ useEffect(()=>{const compile=()=>{void run();};window.addEventListener('envoi:compile',compile);return()=>window.removeEventListener('envoi:compile',compile);});
  return <div className="shrink-0 border-b border-border bg-card text-[11px]">
   <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-1.5">
    <button className="text-muted-foreground hover:text-foreground" aria-expanded={open} onClick={()=>setOpen(!open)}>{project.compileStatus ?? (hasPdf ? '已有论文 PDF · 编译日志' : '等待首次编译')} {open?'▴':'▾'}</button>

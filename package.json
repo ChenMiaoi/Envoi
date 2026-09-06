@@ -1,8 +1,8 @@
 {
-  "name": "paperdesk",
+  "name": "envoi",
   "private": true,
   "version": "0.1.0",
-  "description": "PaperDesk local academic writing workspace",
+  "description": "Envoi local academic writing workspace",
   "engines": {
     "node": ">=22.12"
   },
