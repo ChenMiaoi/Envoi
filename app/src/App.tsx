@@ -3,6 +3,9 @@ import {useAgent} from '@/agent/context';
 import {AgentProvider} from "@/agent/AgentProvider";
 import {commands,matchBinding,commandChordLabel,resolveBindings,type Command} from "@/navigation/shortcuts";
 import {PreferencesProvider} from "@/settings/PreferencesProvider";
+import {type MessageKey} from "@/i18n/runtime";
+import {useT} from "@/i18n/useT";
+import {I18nProvider} from "@/i18n";
 import {useSettings} from "@/settings/useSettings";
 import {paperLibrary,libraryAttachment,type LibraryPaper} from "@/lib/paperLibrary";
 import type {ProjectFile} from "@/lib/projectFiles";
@@ -15,7 +18,7 @@ import {ProblemsPanel,type ProblemTarget} from "@/project/ProblemsPanel";
 import { GitStatusPanel } from "@/project/GitStatusPanel";
 import { Search, BookMarked, FileText, FileCode2, FileType2, BookOpenText, PenLine, LibraryBig, History, Settings } from "lucide-react";
 import { ActivityBar } from "@/components/ActivityBar";
-import {viewNames,viewPaths,resolvePage,type ViewId} from "@/navigation/routes";
+import {viewPaths,resolvePage,type ViewId} from "@/navigation/routes";
 import {Link,Navigate,useLocation,useNavigate} from "react-router";
 import { ReaderView, type OpenFile } from "@/views/ReaderView";
 import { WriterView } from "@/views/WriterView";
@@ -47,10 +50,11 @@ function flatten(nodes: FileNode[], prefix = ""): { node: FileNode; path: string
   );
 }
 
-export default function App() { return <PreferencesProvider><ProjectProvider><AgentProvider><ProjectSession /></AgentProvider></ProjectProvider></PreferencesProvider>; }
+export default function App() { return <PreferencesProvider><I18nProvider><ProjectProvider><AgentProvider><ProjectSession /></AgentProvider></ProjectProvider></I18nProvider></PreferencesProvider>; }
 function ProjectSession() { const { project } = useProject(); return <ProjectApp key={project.id} />; }
 function ProjectApp() {
   const agent=useAgent();
+  const {t}=useT();
   const {effective}=useSettings();
   const { project } = useProject();
   const fileTree = useMemo(() => projectTree(project.files, project.directories), [project.files, project.directories]);
@@ -115,7 +119,7 @@ function ProjectApp() {
             style={{ height: 26 }}
           >
             <Search className="h-3 w-3" />
-            <span className="min-w-0 flex-1 truncate text-left">搜索文件、命令…</span>
+            <span className="min-w-0 flex-1 truncate text-left">{t('app.searchPlaceholder')}</span>
             <kbd className="hidden shrink-0 rounded border border-border bg-secondary px-1 font-editor text-[10px] sm:inline">{commandChordLabel('palette',resolveBindings(effective.bindings),mac)}</kbd>
           </button>
         </div>
@@ -125,7 +129,7 @@ function ProjectApp() {
       <div className="flex min-h-0 flex-1">
         <ActivityBar view={view} />
         <div className="min-w-0 flex-1">
-          {visited.has("reader") && <section hidden={view!=="reader"} className="h-full" aria-label="阅读页面">
+          {visited.has("reader") && <section hidden={view!=="reader"} className="h-full" aria-label={t('app.aria.reader')}>
             <ReaderView libraryFiles={libraryFiles} onTex={openTex}
               openFiles={openFiles}
               activeId={activeId}
@@ -133,11 +137,11 @@ function ProjectApp() {
               onActive={setActiveId}
             />
           </section>}
-          {visited.has("writer") && <section hidden={view!=="writer"} className="h-full" aria-label="写作页面"><WriterView requestedFile={writerFile} problemTarget={problemTarget} /></section>}
-          {visited.has("library") && <section hidden={view!=="library"} className="h-full" aria-label="论文库页面"><LibraryView onOpen={openLibraryPaper} /></section>}
-          {visited.has("history") && <section hidden={view!=="history"} className="h-full" aria-label="版本历史页面"><GitHistoryView /></section>}
-          {visited.has("settings") && <section hidden={view!=="settings"} className="h-full" aria-label="设置页面"><SettingsView /></section>}
-          {!view&&!page.redirect&&<div className="flex h-full flex-col items-center justify-center gap-3"><h1 className="text-lg font-medium">页面不存在</h1><p className="text-sm text-muted-foreground">当前地址没有对应页面，项目和编辑仍保留。</p><Link to="/writer" className="text-sm text-primary">返回写作页面</Link></div>}
+          {visited.has("writer") && <section hidden={view!=="writer"} className="h-full" aria-label={t('app.aria.writer')}><WriterView requestedFile={writerFile} problemTarget={problemTarget} /></section>}
+          {visited.has("library") && <section hidden={view!=="library"} className="h-full" aria-label={t('app.aria.library')}><LibraryView onOpen={openLibraryPaper} /></section>}
+          {visited.has("history") && <section hidden={view!=="history"} className="h-full" aria-label={t('app.aria.history')}><GitHistoryView /></section>}
+          {visited.has("settings") && <section hidden={view!=="settings"} className="h-full" aria-label={t('app.aria.settings')}><SettingsView /></section>}
+          {!view&&!page.redirect&&<div className="flex h-full flex-col items-center justify-center gap-3"><h1 className="text-lg font-medium">{t('app.notFound.title')}</h1><p className="text-sm text-muted-foreground">{t('app.notFound.body')}</p><Link to="/writer" className="text-sm text-primary">{t('app.notFound.back')}</Link></div>}
         </div>
       </div>
 
@@ -146,12 +150,12 @@ function ProjectApp() {
         <div className="flex items-center gap-3">
           <GitStatusPanel />
           <ProblemsPanel onNavigate={target=>{setProblemTarget(target);setView("writer");}} />
-          <span>工作区：{view?viewNames[view]:"页面导航"}</span>
+          <span>{t('app.statusbar.workspace')}：{view?t(`view.${view}`):t('app.statusbar.pageNavigation')}</span>
         </div>
         <div className="flex items-center gap-3">
           <span className="flex items-center gap-1.5">
             <span className="inline-block h-1.5 w-1.5 rounded-full bg-muted-foreground" />
-            {agent.status?.runtime?'Pi · 本机运行时':'AI · 未连接'}
+            {agent.status?.runtime?t('app.statusbar.runtime'):t('app.statusbar.disconnected')}
           </span>
           <span className="font-editor">{effective.engine==='xelatex'?'XeLaTeX':'pdfLaTeX'}</span>
           <span className="font-editor">UTF-8</span>
@@ -160,28 +164,28 @@ function ProjectApp() {
 
       {/* ⌘K 命令面板 */}
       <CommandDialog open={paletteOpen} onOpenChange={setPaletteOpen}>
-        <CommandInput placeholder="输入文件名或命令…" />
+        <CommandInput placeholder={t('app.palettePlaceholder')} />
         <CommandList>
-          <CommandEmpty>没有匹配的结果</CommandEmpty>
-          <CommandGroup heading="切换视图">
+          <CommandEmpty>{t('app.paletteEmpty')}</CommandEmpty>
+          <CommandGroup heading={t('app.paletteViews')}>
             <CommandItem onSelect={() => { setView("reader"); setPaletteOpen(false); }}>
-              <BookOpenText className="mr-2 h-3.5 w-3.5 text-muted-foreground" /> 阅读配置
+              <BookOpenText className="mr-2 h-3.5 w-3.5 text-muted-foreground" /> {t('view.reader')}
             </CommandItem>
             <CommandItem onSelect={() => { setView("writer"); setPaletteOpen(false); }}>
-              <PenLine className="mr-2 h-3.5 w-3.5 text-muted-foreground" /> 写作配置
+              <PenLine className="mr-2 h-3.5 w-3.5 text-muted-foreground" /> {t('view.writer')}
             </CommandItem>
             <CommandItem onSelect={() => { setView("library"); setPaletteOpen(false); }}>
-              <LibraryBig className="mr-2 h-3.5 w-3.5 text-muted-foreground" /> 论文库
+              <LibraryBig className="mr-2 h-3.5 w-3.5 text-muted-foreground" /> {t('view.library')}
             </CommandItem>
             <CommandItem onSelect={() => { setView("history"); setPaletteOpen(false); }}>
-              <History className="mr-2 h-3.5 w-3.5 text-muted-foreground" /> 版本历史
+              <History className="mr-2 h-3.5 w-3.5 text-muted-foreground" /> {t('view.history')}
             </CommandItem>
             <CommandItem onSelect={() => { setView("settings"); setPaletteOpen(false); }}>
-              <Settings className="mr-2 h-3.5 w-3.5 text-muted-foreground" /> 设置
+              <Settings className="mr-2 h-3.5 w-3.5 text-muted-foreground" /> {t('view.settings')}
             </CommandItem>
           </CommandGroup>
-          <CommandGroup heading="项目操作">{commands.filter(item=>item.event&&item.scope==='global').map(item=><CommandItem key={item.id} onSelect={()=>{setPaletteOpen(false);setTimeout(()=>runCommand(item),0);}}><span>{item.label}</span><kbd className="ml-auto text-[10px] text-muted-foreground">{commandChordLabel(item.id,resolveBindings(effective.bindings),mac)}</kbd></CommandItem>)}</CommandGroup>
-          <CommandGroup heading="打开文件">
+          <CommandGroup heading={t('app.paletteActions')}>{commands.filter(item=>item.event&&item.scope==='global').map(item=><CommandItem key={item.id} onSelect={()=>{setPaletteOpen(false);setTimeout(()=>runCommand(item),0);}}><span>{t(`command.${item.id}` as MessageKey)}</span><kbd className="ml-auto text-[10px] text-muted-foreground">{commandChordLabel(item.id,resolveBindings(effective.bindings),mac)}</kbd></CommandItem>)}</CommandGroup>
+          <CommandGroup heading={t('app.paletteFiles')}>
             {allFiles.map((f) => {
               const Icon = kindIcon[f.node.kind] ?? FileText;
               return (

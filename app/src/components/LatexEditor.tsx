@@ -1,6 +1,7 @@
 import { useCallback, useImperativeHandle, useLayoutEffect, useMemo, useRef, type Ref } from "react";
 import { replaceSelection } from "@/lib/citations";
 import { tokenizeLatex } from "@/lib/latexHighlight";
+import {useT} from "@/i18n/useT";
 
 export interface LatexEditorHandle { insert: (text: string) => void; locate: (start: number, end: number) => void }
 
@@ -11,6 +12,7 @@ export function LatexEditor({ref,value,onChange,fontSize=12.5,highlight,fontFami
   highlight?:{start:number;severity:"error"|"warning"};
   onDoubleClickLine?:(line:number)=>void;
 }) {
+  const {t}=useT();
   const gutterRef=useRef<HTMLDivElement>(null),preRef=useRef<HTMLDivElement>(null);
   const contentRef=useRef<HTMLDivElement>(null),textareaRef=useRef<HTMLTextAreaElement>(null);
   const highlightRef=useRef<HTMLDivElement>(null),pendingCursor=useRef<number|null>(null);
@@ -61,7 +63,7 @@ export function LatexEditor({ref,value,onChange,fontSize=12.5,highlight,fontFami
           {lines.map((line,index)=><div data-source-line={index+1} key={index}>{line.text?line.tokens.map((token,i)=><span key={i} className={token.cls}>{token.text}</span>):'\u200b'}</div>)}
         </div>
       </div>
-      <textarea ref={textareaRef} aria-label="LaTeX 正文编辑器" value={value} wrap="soft" spellCheck={false} onChange={e=>onChange(e.target.value)} onScroll={sync} onDoubleClick={onDoubleClickLine?(event)=>onDoubleClickLine(value.slice(0,event.currentTarget.selectionStart).split('\n').length):undefined}
+      <textarea ref={textareaRef} aria-label={t('editor.latexBodyAria')} value={value} wrap="soft" spellCheck={false} onChange={e=>onChange(e.target.value)} onScroll={sync} onDoubleClick={onDoubleClickLine?(event)=>onDoubleClickLine(value.slice(0,event.currentTarget.selectionStart).split('\n').length):undefined}
         className="scrollbar-thin absolute inset-0 h-full w-full resize-none overflow-x-hidden overflow-y-auto bg-transparent px-3.5 py-3 font-editor text-transparent caret-primary outline-none selection:bg-primary/25 selection:text-transparent"
         style={{...typography,whiteSpace:'pre-wrap',overflowWrap:'anywhere',wordBreak:'normal'}} />
     </div>

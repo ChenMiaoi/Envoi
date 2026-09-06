@@ -1,3 +1,4 @@
+import {useT} from "@/i18n/useT";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import {matchBookmark} from "@/lib/pdfSync";
 import {forwardLookup,gunzipSyncTex,inverseLookup,matchSyncTexPath,parseSyncTex,type SyncTexDB} from "@/lib/syncTex";
@@ -93,6 +94,7 @@ function createLinkService(documentRef: React.RefObject<PDFDocumentProxy | null>
 }
 
 function PdfPage({ page, width, dpr, linkService, onError, highlight, separator, onClickPoint }: { separator?: boolean; highlight?: number; page: PDFPageProxy; width: number; dpr: number; linkService: PDFLinkService | null; onClickPoint?: (page: number, x: number, y: number) => void; onError: (message: string) => void }) {
+  const {t}=useT();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const textRef = useRef<HTMLDivElement>(null);
   const annotationRef = useRef<HTMLDivElement>(null);
@@ -114,12 +116,12 @@ function PdfPage({ page, width, dpr, linkService, onError, highlight, separator,
     const textLayer = new TextLayer({ textContentSource: page.streamTextContent(), container: text, viewport: page.getViewport({ scale }) });
     Promise.all([task.promise, textLayer.render()]).then(() => { if (active) setError(""); }).catch((reason: Error) => {
       if (active && reason.name !== "RenderingCancelledException") {
-        const message = `第 ${page.pageNumber} 页渲染失败：${reason.message}`;
+        const message = t('compile.renderPageFailed',{page:page.pageNumber,message:reason.message});
         setError(message); onError(message);
       }
     });
     return () => { active = false; task.cancel(); textLayer.cancel(); };
-  }, [page, width, height, scale, dpr, onError]);
+  },[page, width, height, scale, dpr, onError, t]);
   useEffect(() => {
     const annotation = annotationRef.current;
     if (!annotation || !width) return;
@@ -130,7 +132,7 @@ function PdfPage({ page, width, dpr, linkService, onError, highlight, separator,
     page.getAnnotations({ intent: "display" }).then((list) => active ? layer.render({ viewport, div: annotation, page, linkService: linkService as PDFLinkService, annotations: list, renderForms: false }) : undefined).catch(() => { /* 注释层失败不影响正文渲染 */ });
     return () => { active = false; };
   }, [page, width, scale, linkService]);
-  return <figure data-pdf-page={page.pageNumber} className="m-0 shrink-0" aria-label={`第 ${page.pageNumber} 页`}>
+  return <figure data-pdf-page={page.pageNumber} className="m-0 shrink-0" aria-label={t('compile.page',{page:page.pageNumber})}>
     <div className="relative bg-white" style={{ width, height, "--scale-factor": scale, "--user-unit": 1, "--total-scale-factor": "calc(var(--scale-factor) * var(--user-unit))", "--scale-round-x": "1px", "--scale-round-y": "1px" } as React.CSSProperties} onClick={onClickPoint ? (event) => {
       const selection = window.getSelection();
       if (selection && !selection.isCollapsed) return;
@@ -138,7 +140,7 @@ function PdfPage({ page, width, dpr, linkService, onError, highlight, separator,
       const rect = event.currentTarget.getBoundingClientRect();
       onClickPoint(page.pageNumber, (event.clientX - rect.left) / scale, (event.clientY - rect.top) / scale);
     } : undefined}>
-      <canvas ref={canvasRef} className="block h-full w-full" aria-label={`PDF 第 ${page.pageNumber} 页`} />
+      <canvas ref={canvasRef} className="block h-full w-full" aria-label={t('compile.pdfPage',{page:page.pageNumber})} />
       {separator&&<span aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-px bg-slate-300/50" />}
       {highlight!==undefined&&<div className="pointer-events-none absolute left-0 right-0 h-6 border-t-2 border-amber-400/60 bg-amber-300/15" style={{top:highlight*width/original.width}} />}
       <div ref={textRef} className="textLayer" />
@@ -152,9 +154,10 @@ export function TexCompilePreview({ initialSource, paperOnly = false, target, sy
   const [source, setSource] = useState<{ file?: File; name: string; url?: string }>(initialSource ?? { name: "" });
   const documentRef=useRef<PDFDocumentProxy|null>(null);
   const [syncNotice,setSyncNotice]=useState("");
+  const {t}=useT();
   const [highlight,setHighlight]=useState<{page:number;y:number}|null>(null);
   const [pages, setPages] = useState<PDFPageProxy[]>([]);
-  const [status, setStatus] = useState("正在加载 PDF…");
+  const [status, setStatus] = useState(() => t('compile.loadingPdf'));
   const [error, setError] = useState("");
   const [logs, setLogs] = useState<string[]>([]);
   const [logOpen, setLogOpen] = useState(false);
@@ -169,9 +172,9 @@ export function TexCompilePreview({ initialSource, paperOnly = false, target, sy
   useEffect(() => { pagesRef.current = pages; }, [pages]);
   useEffect(() => { setLinkService(createLinkService(documentRef, pagesRef, containerRef)); }, []);
   const onRenderError = useCallback((message: string) => {
-    setStatus("页面渲染失败");
+    setStatus(t('compile.renderFailed'));
     setLogs((previous) => previous.includes(message) ? previous : [...previous, message]);
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     let active = true;
@@ -196,7 +199,7 @@ export function TexCompilePreview({ initialSource, paperOnly = false, target, sy
     void Promise.resolve().then(() => {
       if (!active) return;
       const hit = forwardLookup(syncDb, pathOfInput, syncPoint.path, syncPoint.line);
-      if (!hit) { setSyncNotice("该行没有对应的 PDF 位置；可能不参与输出，或正文改动后尚未重新编译。"); return; }
+      if (!hit) { setSyncNotice(t('compile.noSyncPosition')); return; }
       const viewport = pages[hit.page - 1]?.getViewport({ scale: 1 });
       if (!viewport) return;
       scrollToPagePosition(containerRef.current, hit.page, hit.y / viewport.height);
@@ -204,7 +207,7 @@ export function TexCompilePreview({ initialSource, paperOnly = false, target, sy
       timer = setTimeout(() => setHighlight(null), 1800);
     });
     return () => { active = false; if (timer) clearTimeout(timer); };
-  }, [syncPoint, syncDb, pages, width, pathOfInput]);
+  },[syncPoint, syncDb, pages, width, pathOfInput, t]);
 
 
   useEffect(() => {
@@ -221,9 +224,9 @@ export function TexCompilePreview({ initialSource, paperOnly = false, target, sy
     let document: PDFDocumentProxy | undefined;
     async function load() {
       containerRef.current?.parentElement?.scrollTo({ top: 0 });
-      setPages([]); setError(""); setStatus("正在加载 PDF…");
-      setLogs([`正在读取 ${source.name}`, "此面板读取 PDF 文件；项目编译结果由上方编译操作更新。"]);
-      if (!source.file&&!source.url) { setStatus("未选择 PDF"); setLogs(["项目尚无可预览的 PDF；可打开本地文件。"]); return; }
+      setPages([]); setError(""); setStatus(t('compile.loadingPdf'));
+      setLogs([t('compile.readingFile',{name:source.name}), t('compile.panelHint')]);
+      if (!source.file&&!source.url) { setStatus(t('compile.noPdfSelected')); setLogs([t('compile.noPreviewablePdf')]); return; }
       try {
         const data = source.file ? new Uint8Array(await source.file.arrayBuffer()) : undefined;
         if (!active) return;
@@ -236,18 +239,18 @@ export function TexCompilePreview({ initialSource, paperOnly = false, target, sy
           loaded.push(await document.getPage(number));
           if (!active) return;
         }
-        setPages(loaded); setStatus(`已加载 · ${document.numPages} 页`);
-        setLogs((previous) => [...previous, `PDF 解析成功，共 ${document!.numPages} 页。`, "页面按 PDF 原始尺寸及旋转方向等比渲染。"]);
+        setPages(loaded); setStatus(t('compile.loadedPages',{count:document.numPages}));
+        setLogs((previous) => [...previous, t('compile.parseSuccess',{count:document!.numPages}), t('compile.renderScaleHint')]);
       } catch (reason) {
         if (!active) return;
         const failure = reason as Error;
-        const message = failure.name === "PasswordException" ? "此 PDF 需要密码，请选择未加密的文件。" : `无法加载 PDF：${failure.message}`;
-        setError(message); setStatus("加载失败"); setLogs((previous) => [...previous, message]);
+        const message = failure.name === "PasswordException" ? t('compile.passwordPdf') : t('compile.loadFailed',{message:failure.message});
+        setError(message); setStatus(t('compile.loadError')); setLogs((previous) => [...previous, message]);
       }
     }
     void load();
     return () => { active = false;documentRef.current=null; void task?.destroy(); };
-  }, [source]);
+  }, [source, t]);
 
   useEffect(()=>{
     if(!target)return;
@@ -256,9 +259,9 @@ export function TexCompilePreview({ initialSource, paperOnly = false, target, sy
     const pdf=documentRef.current;if(!pdf||!pages.length)return;
     void (async()=>{
       const bookmark=matchBookmark(await pdf.getOutline()??[],target.title);
-      if(!bookmark?.dest){if(active)setSyncNotice('已定位源码；当前 PDF 没有唯一对应的章节书签。');return;}
+      if(!bookmark?.dest){if(active)setSyncNotice(t('compile.noBookmark'));return;}
       const destination=typeof bookmark.dest==='string'?await pdf.getDestination(bookmark.dest):bookmark.dest;
-      if(!destination||destination[1]?.name!=='XYZ'){if(active)setSyncNotice('已定位源码；此 PDF 书签位置格式暂不支持。');return;}
+      if(!destination||destination[1]?.name!=='XYZ'){if(active)setSyncNotice(t('compile.bookmarkFormatUnsupported'));return;}
       const index=typeof destination[0]==='number'?destination[0]:await pdf.getPageIndex(destination[0]);
       const page=pages[index],viewport=page.getViewport({scale:1});
       const [,y]=viewport.convertToViewportPoint(destination[2]??0,destination[3]??viewport.viewBox[3]);
@@ -266,11 +269,11 @@ export function TexCompilePreview({ initialSource, paperOnly = false, target, sy
       if(!active||!figure||!scroller)return;
       scroller.scrollTo({top:scroller.scrollTop+figure.getBoundingClientRect().top-scroller.getBoundingClientRect().top+y*width/viewport.width-20,behavior:'smooth'});
       setHighlight({page:index+1,y});setSyncNotice('');timer=setTimeout(()=>setHighlight(null),1800);
-    })().catch(()=>{if(active)setSyncNotice('已定位源码；无法读取 PDF 章节位置。');});
+    })().catch(()=>{if(active)setSyncNotice(t('compile.bookmarkReadFailed'));});
     return()=>{active=false;if(timer)clearTimeout(timer);};
-  },[target,syncReady,pages,width]);
+  },[target,syncReady,pages,width,t]);
 
-  const navigationNotice=target&&syncReady!==true?(syncReady===null?'正在校验论文与正文…':'已定位源码；PDF 未经同步校验或正文已有改动，请重新编译。'):syncNotice;
+  const navigationNotice=target&&syncReady!==true?(syncReady===null?t('compile.verifying'):t('compile.notSynced')):syncNotice;
   return <div className="flex h-full min-h-0 flex-col overflow-hidden bg-editor">
     {!paperOnly && <div className="flex min-h-9 shrink-0 flex-wrap items-center justify-between gap-2 border-b border-border px-3 py-1 text-[11.5px]">
       <div className="flex min-w-0 items-center gap-2">
@@ -279,8 +282,8 @@ export function TexCompilePreview({ initialSource, paperOnly = false, target, sy
           {status}<ChevronDown className={`h-3 w-3 ${logOpen ? "rotate-180" : ""}`} />
         </button>
       </div>
-      <button type="button" onClick={() => fileRef.current?.click()} className="flex items-center gap-1 rounded bg-primary px-2 py-1 text-primary-foreground"><FileUp className="h-3 w-3" />打开 PDF</button>
-      <input ref={fileRef} type="file" accept="application/pdf,.pdf" className="hidden" aria-label="选择本地 PDF" onChange={(event) => {
+      <button type="button" onClick={() => fileRef.current?.click()} className="flex items-center gap-1 rounded bg-primary px-2 py-1 text-primary-foreground"><FileUp className="h-3 w-3" />{t('compile.openPdf')}</button>
+      <input ref={fileRef} type="file" accept="application/pdf,.pdf" className="hidden" aria-label={t('compile.selectLocalPdf')} onChange={(event) => {
         const file = event.target.files?.[0];
         if (file) setSource({ file, name: file.name });
         event.target.value = "";
@@ -290,12 +293,12 @@ export function TexCompilePreview({ initialSource, paperOnly = false, target, sy
     <div className="scrollbar-thin min-h-0 flex-1 overflow-y-auto overflow-x-hidden p-3">
       <div data-content-typography="pdf" ref={containerRef} className="flex w-full flex-col">
       {error && <p role="alert" className="p-3 text-sm text-danger">{error}</p>}
-        {!error && !pages.length && <p className="p-3 text-sm text-muted-foreground">{source.name ? "正在加载 PDF…" : paperOnly ? "尚无当前论文的编译输出。点击上方编译正文以生成 PDF。" : "项目中暂无 PDF，请打开文件或将编译产物放入项目目录后重新打开项目。"}</p>}
+        {!error && !pages.length && <p className="p-3 text-sm text-muted-foreground">{source.name ? t('compile.loadingPdf') : paperOnly ? t('compile.noOutput') : t('compile.noProjectPdf')}</p>}
         {pages.map((page,index) => <PdfPage separator={index>0} key={page.pageNumber} page={page} width={width} dpr={dpr} linkService={linkService} onError={onRenderError} onClickPoint={syncDb&&onLocateSource?clickPoint:undefined} highlight={highlight?.page===page.pageNumber?highlight.y:undefined} />)}
       </div>
     </div>
     <div id={logId} hidden={!logOpen} className="shrink-0 border-t border-border bg-card p-3">
-      <div className="mb-1 text-[11px] text-muted-foreground">PDF 加载日志</div>
+      <div className="mb-1 text-[11px] text-muted-foreground">{t('compile.loadLog')}</div>
       <div className="scrollbar-thin max-h-20 overflow-auto text-[11px] leading-relaxed text-muted-foreground">{logs.map((log, index) => <div key={index}>{log}</div>)}</div>
     </div>
   </div>;

@@ -1,3 +1,4 @@
+import {translate} from '@/i18n/runtime';
 import {nativeMigrate,nativePut,nativeGet,encodeNative} from "./localData";
 import {gitPath} from './gitBinding';
 import {projectConfigFile} from './managementDir';
@@ -59,7 +60,7 @@ await syncRegistry('recent',ids.filter(item=>item.store==='recent').map(item=>it
 async function records(store:'recent'|'roots'):Promise<RecentProject[]> {
  const cached=await (store==='recent'?cachedRecentProjects():cachedAuthorizedRoots());
  if(typeof window==='undefined')return cached;
- try{const native=await nativeMigrate(store,await encodeNative(cached));return (native.value as RecentProject[]).map(entry=>({...entry,directory:cached.find(item=>item.id===entry.id)?.directory})).sort((a,b)=>b.updated-a.updated);}catch(error){window.dispatchEvent(new CustomEvent('envoi:storage-warning',{detail:'本机项目列表未连接，浏览器记录仍保留：'+(error as Error).message}));return cached;}
+ try{const native=await nativeMigrate(store,await encodeNative(cached));return (native.value as RecentProject[]).map(entry=>({...entry,directory:cached.find(item=>item.id===entry.id)?.directory})).sort((a,b)=>b.updated-a.updated);}catch(error){window.dispatchEvent(new CustomEvent('envoi:storage-warning',{detail:translate('project.recentDisconnected')+(error as Error).message}));return cached;}
 }
 export const recentProjects=()=>records('recent');
 export const authorizedRoots=()=>records('roots');

@@ -1,3 +1,4 @@
+import {translate} from '@/i18n/runtime';
 import {getDocument,GlobalWorkerOptions} from 'pdfjs-dist';
 import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import {extractIdentifiers,crossrefToPaper,dataciteToPaper,xmpToPaper,pickTitleHint,titleMatches,bibtexKey,type CrossrefWork} from './paperMetadata';
@@ -5,7 +6,7 @@ import type {LibraryPaper} from './paperLibrary';
 GlobalWorkerOptions.workerSrc=workerUrl;
 export interface Enrichment {fields:Partial<Pick<LibraryPaper,'title'|'author'|'year'|'venue'>>;bib?:string;citationKey?:string;source:string}
 const headers={'User-Agent':'Envoi/1.0 (mailto:envoi@localhost)'};
-async function fetchJson(url:string){const response=await fetch(url,{headers});if(!response.ok)throw Error(`元数据服务返回 ${response.status}`);return response.json();}
+async function fetchJson(url:string){const response=await fetch(url,{headers});if(!response.ok)throw Error(translate('bib.metadataHttpError',{status:response.status}));return response.json();}
 async function lookupDoi(doi:string):Promise<Enrichment|null>{
  const work=(await fetchJson(`https://api.crossref.org/works/${encodeURIComponent(doi)}`)).message as CrossrefWork;
  const fields=crossrefToPaper(work);if(!fields.title)return null;
@@ -52,8 +53,8 @@ export async function enrichPaper(hint:{attachment?:Blob;title:string}):Promise<
  try{
   if(scan){
    const {fields,doi}=xmpToPaper(scan.xmp,scan.info);
-   if(doi){const found=await lookupDoi(doi).catch(()=>null);if(found)return {...found,source:`Crossref DOI ${doi}（来自 PDF 元数据）`};}
-   if(fields.title&&fields.author)return {fields,source:'PDF 内嵌元数据（出版商 XMP）'};
+   if(doi){const found=await lookupDoi(doi).catch(()=>null);if(found)return {...found,source:translate('bib.sourceCrossref',{doi})};}
+   if(fields.title&&fields.author)return {fields,source:translate('bib.sourcePdfXmp')};
   }
   const {doi,arxiv}=extractIdentifiers(scan?.text??'');
   if(doi){const found=await lookupDoi(doi);if(found)return found;}

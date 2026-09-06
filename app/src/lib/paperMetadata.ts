@@ -1,3 +1,4 @@
+import {translate} from '@/i18n/runtime';
 import type {LibraryPaper} from './paperLibrary';
 // Pure metadata helpers: identifier extraction, API response mapping and BibTeX synthesis.
 // Network/PDF plumbing lives in metadataLookup.ts so this module stays node-testable.
@@ -50,7 +51,7 @@ export function citationKeyFor(paper:Pick<LibraryPaper,'author'|'year'|'title'>)
  const last=paper.author.split(';')[0].trim().split(/\s+/).pop()??'';
  const word=paper.title.split(/\s+/).find(w=>/[a-zA-Z]{4,}/.test(w))??'';
  const key=`${last}${paper.year}${word}`.toLowerCase().replace(/[^a-z0-9]/g,'');
- if(!key)throw Error('条目缺少作者、年份与标题，无法生成引用键；请先补全资料。');
+ if(!key)throw Error(translate('bib.citationKeyMissing'));
  return key;
 }
 const escapeBib=(value:string)=>value.replace(/[{}\\]/g,'');

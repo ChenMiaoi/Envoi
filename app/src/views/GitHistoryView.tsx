@@ -5,6 +5,7 @@ import {gitPath} from '@/lib/gitBinding';
 import {localGitLog,localGitShow,type GitCommit,type GitLog,type GitShow} from '@/lib/localGit';
 import {layoutGraph} from '@/lib/gitGraph';
 import {cn} from '@/lib/utils';
+import {useT} from '@/i18n/useT';
 
 /** 车道颜色随主题的 hue 槽位解析；SVG 表现属性支持 var() 引用。 */
 const LANE_COLORS=['yellow','blue','green','red','violet','orange','cyan','pink'].map(name=>`hsl(var(--hue-${name}))`);
@@ -36,7 +37,8 @@ export function GitGraph({commits,selected,onSelect}:{commits:GitCommit[];select
 }
 
 function CommitDetail({show,error,busy}:{show?:GitShow;error:string;busy:boolean}){
- if(busy)return <p className="p-4 text-xs text-muted-foreground">读取提交详情…</p>;
+ const {t}=useT();
+ if(busy)return <p className="p-4 text-xs text-muted-foreground">{t('history.loadingDetail')}</p>;
  if(error)return <p role="alert" className="p-4 text-xs text-warning">{error}</p>;
  if(!show)return null;
  const rest=show.commit.body.split('\n').slice(1).join('\n').trim();
@@ -45,11 +47,11 @@ function CommitDetail({show,error,busy}:{show?:GitShow;error:string;busy:boolean
   <h2 className="mt-1 text-sm font-medium">{show.commit.subject}</h2>
   {rest&&<p className="mt-2 whitespace-pre-wrap text-muted-foreground">{rest}</p>}
   <p className="mt-2 text-muted-foreground">{show.commit.author} · {show.commit.date.replace('T',' ').slice(0,16)}</p>
-  {show.commit.parents.length>1&&<p className="mt-2 text-muted-foreground">合并提交；改动相对第一父提交。</p>}
-  <h3 className="mt-4 border-t border-border pt-3 font-medium">改动文件（{show.files.length}）</h3>
-  {show.files.length===0?<p className="mt-2 text-muted-foreground">没有文件改动。</p>:
+  {show.commit.parents.length>1&&<p className="mt-2 text-muted-foreground">{t('history.mergeNote')}</p>}
+  <h3 className="mt-4 border-t border-border pt-3 font-medium">{t('history.changedFiles',{n:show.files.length})}</h3>
+  {show.files.length===0?<p className="mt-2 text-muted-foreground">{t('history.noChanges')}</p>:
   <ul className="mt-2 space-y-1.5">{show.files.map(file=><li key={file.path} className="flex items-baseline gap-2">
-   <span className="shrink-0 font-editor text-[10px]">{file.added===null?<span className="text-muted-foreground">二进制</span>:<><span className="text-success">+{file.added}</span> <span className="text-danger">−{file.deleted}</span></>}</span>
+   <span className="shrink-0 font-editor text-[10px]">{file.added===null?<span className="text-muted-foreground">{t('history.binary')}</span>:<><span className="text-success">+{file.added}</span> <span className="text-danger">−{file.deleted}</span></>}</span>
    <span className="min-w-0 truncate" title={file.path}>{file.path}</span>
   </li>)}</ul>}
  </div>;
@@ -57,7 +59,8 @@ function CommitDetail({show,error,busy}:{show?:GitShow;error:string;busy:boolean
 
 export function GitHistoryView(){
  const {project}=useProject();
- const [log,setLog]=useState<GitLog|null>(null),[message,setMessage]=useState('Git 历史未读取'),[busy,setBusy]=useState(false);
+ const {t}=useT();
+ const [log,setLog]=useState<GitLog|null>(null),[message,setMessage]=useState(()=>t('history.notLoaded')),[busy,setBusy]=useState(false);
  const [selected,setSelected]=useState<string|null>(null);
  const [details,setDetails]=useState<Record<string,GitShow>>({});
  const [detailBusy,setDetailBusy]=useState(false),[detailError,setDetailError]=useState('');
@@ -65,31 +68,31 @@ export function GitHistoryView(){
  const refresh=useCallback(async()=>{
   const id=project.id;setBusy(true);setLog(null);setSelected(null);setDetails({});
   try{
-   if(!project.directory){setMessage('内置快照未绑定真实目录；请打开本地项目查看版本历史。');return;}
-   const bound=await gitPath(project.directory);if(identity.current!==id)return;if(!bound){setMessage('已授权目录；本地工具路径尚未连接，可在项目菜单完善一次项目连接。');return;}
+   if(!project.directory){setMessage(t('history.noDirectory'));return;}
+   const bound=await gitPath(project.directory);if(identity.current!==id)return;if(!bound){setMessage(t('history.noBinding'));return;}
    const result=await localGitLog(project.directory,bound);if(identity.current!==id)return;
-   setLog(result);setMessage(result.state==='nested'?`此目录属于上级 Git 仓库 ${result.enclosing}，没有自己的版本历史；为项目单独初始化 Git 后可在此查看。`:result.state==='not-initialized'?'此项目尚未初始化 Git 仓库；新建项目时可启用版本管理。':result.commits.length?'':'仓库还没有提交。');
+   setLog(result);setMessage(result.state==='nested'?t('history.nested',{repo:result.enclosing ?? ''}):result.state==='not-initialized'?t('history.notInitialized'):result.commits.length?'':t('history.empty'));
   }catch(error){if(identity.current===id)setMessage((error as Error).message);}finally{if(identity.current===id)setBusy(false);}
- },[project.id,project.directory]);
+ },[project.id,project.directory,t]);
  useEffect(()=>{void refresh();},[refresh]);
  useEffect(()=>{const listener=()=>void refresh();window.addEventListener('envoi:connection-updated',listener);return()=>window.removeEventListener('envoi:connection-updated',listener);},[refresh]);
  const select=useCallback(async(hash:string)=>{
   setSelected(hash);if(details[hash])return;
   const id=project.id,directory=project.directory;if(!directory)return;
   setDetailBusy(true);setDetailError('');
-  try{const bound=await gitPath(directory);if(!bound)throw Error('本地连接已失效。');const show=await localGitShow(directory,bound,hash);if(identity.current!==id)return;setDetails(current=>({...current,[hash]:show}));}
+  try{const bound=await gitPath(directory);if(!bound)throw Error(t('history.connectionLost'));const show=await localGitShow(directory,bound,hash);if(identity.current!==id)return;setDetails(current=>({...current,[hash]:show}));}
   catch(error){if(identity.current===id)setDetailError((error as Error).message);}finally{if(identity.current===id)setDetailBusy(false);}
- },[project.id,project.directory,details]);
+ },[project.id,project.directory,details,t]);
  return <div className="flex h-full flex-col bg-background">
   <header className="flex h-11 shrink-0 items-center justify-between border-b border-border bg-card px-4">
    <div className="flex items-center gap-2">
-    <History className="h-4 w-4 text-muted-foreground"/><h1 className="text-sm font-medium">版本历史</h1>
-    {log?.branch&&<span className="flex items-center gap-1 rounded-full border border-border px-2 text-[11px] leading-5 text-muted-foreground"><GitBranch className="h-3 w-3"/>{log.detached?'分离 HEAD · ':''}{log.branch}</span>}
-    {log?.truncated&&<span className="text-[11px] text-muted-foreground">仅显示最近 500 条提交</span>}
+    <History className="h-4 w-4 text-muted-foreground"/><h1 className="text-sm font-medium">{t('view.history')}</h1>
+    {log?.branch&&<span className="flex items-center gap-1 rounded-full border border-border px-2 text-[11px] leading-5 text-muted-foreground"><GitBranch className="h-3 w-3"/>{log.detached?t('history.detachedHead')+' · ':''}{log.branch}</span>}
+    {log?.truncated&&<span className="text-[11px] text-muted-foreground">{t('history.truncated')}</span>}
    </div>
-   <button disabled={busy} aria-label="刷新 Git 历史" onClick={()=>void refresh()} className="rounded border border-border p-1.5 text-muted-foreground hover:text-foreground"><RefreshCw className={`h-3.5 w-3.5 ${busy?'animate-spin':''}`}/></button>
+   <button disabled={busy} aria-label={t('history.refreshAria')} onClick={()=>void refresh()} className="rounded border border-border p-1.5 text-muted-foreground hover:text-foreground"><RefreshCw className={`h-3.5 w-3.5 ${busy?'animate-spin':''}`}/></button>
   </header>
-  {!log&&<div className="flex flex-1 flex-col items-center justify-center gap-2 px-8 text-center"><p role="status" className="text-sm text-muted-foreground">{busy?'正在读取本地 Git 历史…':message}</p></div>}
+  {!log&&<div className="flex flex-1 flex-col items-center justify-center gap-2 px-8 text-center"><p role="status" className="text-sm text-muted-foreground">{busy?t('history.loading'):message}</p></div>}
   {log&&<div className="flex min-h-0 flex-1">
    <div className="min-w-0 flex-1 overflow-auto py-1">
     {message&&<p role="status" className="p-6 text-center text-sm text-muted-foreground">{message}</p>}

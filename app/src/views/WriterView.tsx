@@ -14,19 +14,20 @@ import { AssetsPanel } from "@/components/AssetsPanel";
 import { ReferencesPanel } from "@/components/ReferencesPanel";
 import { ChatPanel } from "@/components/ChatPanel";
 import { LatexEditor, type LatexEditorHandle } from "@/components/LatexEditor";
+import {useT} from "@/i18n/useT";
 
 
 const sideTabs = [
-  { id: "outline", label: "大纲", icon: ListTree },
-  { id: "refs", label: "参考文献", icon: BookMarked },
-  { id: "assets", label: "素材", icon: Package },
+  { id: "outline", labelKey: "writer.tabOutline", icon: ListTree },
+  { id: "refs", labelKey: "writer.tabRefs", icon: BookMarked },
+  { id: "assets", labelKey: "writer.tabAssets", icon: Package },
 ] as const;
-
 type SideTab = (typeof sideTabs)[number]["id"];
 
 export function WriterView({problemTarget,requestedFile}:{requestedFile?:{id:string;request:number};problemTarget?:import("@/project/ProblemsPanel").ProblemTarget}) {
   const {effective}=useSettings();
   const [pdfTarget,setPdfTarget] = useState<{title:string;id:number}|undefined>();
+  const {t}=useT();
   const [syncPoint,setSyncPoint] = useState<{path:string;line:number;id:number}|undefined>();
   const [tab, setTab] = useState<SideTab>("outline");
   const editor = useRef<LatexEditorHandle>(null);
@@ -76,17 +77,17 @@ export function WriterView({problemTarget,requestedFile}:{requestedFile?:{id:str
       <Panel defaultSize="16%" minSize="12%" maxSize="28%" className="bg-card">
         <div className="flex h-full flex-col">
           <div className="flex h-9 shrink-0 items-center gap-1 border-b border-border px-2">
-            {sideTabs.map((t) => (
+            {sideTabs.map((item) => (
               <button
-                key={t.id}
-                onClick={() => setTab(t.id)}
+                key={item.id}
+                onClick={() => setTab(item.id)}
                 className={cn(
                   "flex items-center gap-1 rounded-md px-2 py-1 text-[11.5px] transition-colors",
-                  tab === t.id ? "bg-accent text-primary" : "text-muted-foreground hover:text-foreground",
+                  tab === item.id ? "bg-accent text-primary" : "text-muted-foreground hover:text-foreground",
                 )}
               >
-                <t.icon className="h-3 w-3" />
-                {t.label}
+                <item.icon className="h-3 w-3" />
+                {t(item.labelKey)}
               </button>
             ))}
           </div>
@@ -106,12 +107,12 @@ export function WriterView({problemTarget,requestedFile}:{requestedFile?:{id:str
             <div className="flex h-full flex-col">
               <div className="flex h-9 shrink-0 items-center justify-between border-b border-border bg-card px-3">
                 <div className="flex items-center gap-2 text-[12px]">
-                  <select aria-label="当前 LaTeX 文件" className="max-w-48 bg-card text-foreground/90" value={activeId} onChange={(event) => setActiveId(event.target.value)}>{editable.map((file) => <option key={file.id} value={file.id}>{file.path}</option>)}</select>
+                  <select aria-label={t('writer.currentFileAria')} className="max-w-48 bg-card text-foreground/90" value={activeId} onChange={(event) => setActiveId(event.target.value)}>{editable.map((file) => <option key={file.id} value={file.id}>{file.path}</option>)}</select>
                 </div>
-                <span className="font-editor text-[11px] text-muted-foreground">{project.files.some((file) => file.text !== file.saved) ? "未保存 · 菜单中保存全部" : "源文件已保存 · 可编译预览"}</span>
+                <span className="font-editor text-[11px] text-muted-foreground">{project.files.some((file) => file.text !== file.saved) ? t('writer.unsavedHint') : t('writer.savedHint')}</span>
               </div>
               <div className="min-h-0 flex-1">
-                {active ? <LatexEditor fontSize={effective.fontSize} fontFamily={editorFonts[effective.fontFamily].css} lineHeight={effective.lineHeight} tabSize={effective.tabSize} highlight={problemTarget?.fileId===activeId?{start:problemTarget.start,severity:problemTarget.severity}:undefined} onDoubleClickLine={(line)=>setSyncPoint(current=>({path:active.path,line,id:(current?.id??0)+1}))} ref={editor} value={source} onChange={setSource} /> : <p className="p-4 text-sm text-muted-foreground">项目没有 LaTeX 文件，请通过项目菜单新建 main.tex。</p>}
+                {active ? <LatexEditor fontSize={effective.fontSize} fontFamily={editorFonts[effective.fontFamily].css} lineHeight={effective.lineHeight} tabSize={effective.tabSize} highlight={problemTarget?.fileId===activeId?{start:problemTarget.start,severity:problemTarget.severity}:undefined} onDoubleClickLine={(line)=>setSyncPoint(current=>({path:active.path,line,id:(current?.id??0)+1}))} ref={editor} value={source} onChange={setSource} /> : <p className="p-4 text-sm text-muted-foreground">{t('writer.noLatex')}</p>}
               </div>
             </div>
           </div>

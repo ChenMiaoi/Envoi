@@ -3,7 +3,9 @@
 .chat-markdown > :last-child { margin-bottom: 0; }
 .chat-markdown p, .chat-markdown ul, .chat-markdown ol, .chat-markdown blockquote { margin: .65em 0; }
 .chat-markdown h1, .chat-markdown h2, .chat-markdown h3, .chat-markdown h4, .chat-markdown h5, .chat-markdown h6 { margin: 1em 0 .4em; font-weight: 600; line-height: 1.4; color: var(--prose-heading); }
+.chat-markdown h1, .chat-markdown h2 { color: var(--prose-h12); }
 .chat-markdown h1 { font-size: 1.25em; } .chat-markdown h2 { font-size: 1.15em; } .chat-markdown h3 { font-size: 1.05em; }
+.chat-markdown strong { color: var(--prose-strong); }
 .chat-markdown ul { list-style: disc; padding-left: 1.5em; } .chat-markdown ol { list-style: decimal; padding-left: 1.5em; }
 .chat-markdown li { margin: .2em 0; } .chat-markdown li > p { margin: .25em 0; }
 .chat-markdown blockquote { border-left: 2px solid var(--prose-quote-border); padding-left: .85em; color: hsl(var(--muted-foreground)); background: var(--prose-quote-bg); border-radius: 0 6px 6px 0; padding-top: .15em; padding-bottom: .15em; }

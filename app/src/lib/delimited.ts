@@ -1,3 +1,4 @@
+import {translate} from '@/i18n/runtime';
 /** Lossless source spans: edits replace one field, never reserialize other cells. */
 export interface DelimitedCell {start:number;end:number;value:string;quoted:boolean}
 export function parseDelimited(source:string,delimiter=","):DelimitedCell[][] {
@@ -8,10 +9,10 @@ export function parseDelimited(source:string,delimiter=","):DelimitedCell[][] {
   if(source[i]==='"'){
    quoted=true;i++;let closed=false;
    while(i<source.length){if(source[i]==='"'){if(source[i+1]==='"'){value+='"';i+=2;}else{i++;closed=true;break;}}else value+=source[i++];}
-   if(!closed)throw Error(`第 ${rows.length+1} 行有未闭合引号，请在源码中修正。`);
-   if(i<source.length&&source[i]!==delimiter&&source[i]!=='\r'&&source[i]!=='\n')throw Error(`第 ${rows.length+1} 行引号后存在非分隔内容，请在源码中修正。`);
+   if(!closed)throw Error(translate('csv.unclosedQuote',{line:rows.length+1}));
+   if(i<source.length&&source[i]!==delimiter&&source[i]!=='\r'&&source[i]!=='\n')throw Error(translate('csv.contentAfterQuote',{line:rows.length+1}));
   }else{
-   while(i<source.length&&source[i]!==delimiter&&source[i]!=='\r'&&source[i]!=='\n'){if(source[i]==='"')throw Error(`第 ${rows.length+1} 行未引用字段中出现引号，请在源码中修正。`);value+=source[i++];}
+   while(i<source.length&&source[i]!==delimiter&&source[i]!=='\r'&&source[i]!=='\n'){if(source[i]==='"')throw Error(translate('csv.quoteInUnquoted',{line:rows.length+1}));value+=source[i++];}
   }
   row.push({start,end:i,value,quoted});
   if(source[i]===delimiter){i++;if(i===source.length)row.push({start:i,end:i,value:'',quoted:false});else continue;}

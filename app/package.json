@@ -16,7 +16,9 @@
     "test:demo": "node scripts/test-demo-navigation.mjs && node scripts/test-diagnostic-restore.mjs",
     "demo:build": "node scripts/build-demo.mjs && node scripts/sync-demo-snapshot.mjs",
     "demo:snapshot": "node scripts/sync-demo-snapshot.mjs",
-    "test:ai": "node scripts/test-chat-markdown.mjs && node scripts/test-model-discovery.mjs && node scripts/test-provider-validation.mjs && node scripts/test-agent-native.mjs && node scripts/test-data-migration.mjs"
+    "test:ai": "node scripts/test-chat-markdown.mjs && node scripts/test-model-discovery.mjs && node scripts/test-provider-validation.mjs && node scripts/test-agent-native.mjs && node scripts/test-data-migration.mjs",
+    "i18n:traditional": "node scripts/i18n-traditional.mjs",
+    "i18n:inventory": "node scripts/i18n-inventory.mjs"
   },
   "dependencies": {
     "@codemirror/commands": "^6.11.0",
@@ -97,6 +99,7 @@
     "fake-indexeddb": "^6.2.5",
     "globals": "^16.5.0",
     "kimi-plugin-inspect-react": "^1.0.3",
+    "opencc-js": "^1.4.2",
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.19",
     "tailwindcss-animate": "^1.0.7",

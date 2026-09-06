@@ -1,3 +1,4 @@
+import {translate} from '@/i18n/runtime';
 export interface PaperTemplate { id: string; name: string; category: "通用" | "会议" | "期刊"; family: string; venue?: string; year?: number; version: string; source: string; license: string; main: string; style: string }
 const title = String.raw`\title{Paper Title}
 \author{Author Name}`;
@@ -50,7 +51,7 @@ ${title}
 ];
 export function templateFiles(id: string, enableGit = true) {
  const template = paperTemplates.find(item => item.id === id);
- if (!template) throw new Error('未知论文模板');
+ if (!template) throw new Error(translate('template.unknown'));
  return {
   'main.tex': template.main,
   '.gitignore': projectGitignore,

@@ -1,3 +1,4 @@
+import {translate} from '@/i18n/runtime';
 import {maskLatex} from './citations';
 import {normalizePath,type SourceFile,type SourceLocation} from './paperSources';
 export interface OutlineNode {id:string;title:string;number:string;level:number;kind:'heading'|'abstract'|'references';location:SourceLocation;children:OutlineNode[]}
@@ -32,7 +33,7 @@ export function buildOutline(files:SourceFile[],rootId:string) {
   if(stack.length)stack[stack.length-1].children.push(node);else nodes.push(node);stack.push(node);
  }
  function visit(file:SourceFile,ancestors:Set<string>) {
-  if(ancestors.has(file.id)){warnings.push(`循环引用：${file.path}`);return;}
+  if(ancestors.has(file.id)){warnings.push(translate('outline.circularRef',{path:file.path}));return;}
   const branch=new Set(ancestors).add(file.id),text=maskLatex(file.text);
   const commands=/\\(chapter|section|subsection|subsubsection|input|include|appendix|begin|end|bibliography|printbibliography|setcounter|newcommand|renewcommand|providecommand|DeclareRobustCommand)\b(\*)?/g;
   for(let match=commands.exec(text);match&&!ended;match=commands.exec(text)) {
@@ -47,9 +48,9 @@ export function buildOutline(files:SourceFile[],rootId:string) {
    if(command==='end'&&arg?.value==='document'){ended=true;break;}
    if(command==='setcounter'&&arg){const value=group(text,arg.end);if(value){commands.lastIndex=value.end;const n=Number(value.value);if(Number.isInteger(n)){if(arg.value==='secnumdepth')depthLimit=n;else if(arg.value in sectionIndex)counts[sectionIndex[arg.value]]=n;}}continue;}
    if(command==='input'||command==='include') {
-    const bare=!arg?/^\s*([^\s{}%]+)/.exec(text.slice(cursor)):null;const name=(arg?.value??bare?.[1]??'').trim();if(!name||/[\\#]/.test(name)){warnings.push(`未解析动态引用：${file.path}`);continue;}
+    const bare=!arg?/^\s*([^\s{}%]+)/.exec(text.slice(cursor)):null;const name=(arg?.value??bare?.[1]??'').trim();if(!name||/[\\#]/.test(name)){warnings.push(translate('outline.dynamicRef',{path:file.path}));continue;}
     const target=name.replace(/\.tex$/,'')+'.tex';const candidates=[normalizePath((root?.path.replace(/[^/]+$/,'')??'')+target),normalizePath(file.path.replace(/[^/]+$/,'')+target)];
-    const child=candidates.map(path=>files.find(f=>f.path===path)).find(Boolean);if(child)visit(child,branch);else warnings.push(`缺失文件：${name}`);continue;
+    const child=candidates.map(path=>files.find(f=>f.path===path)).find(Boolean);if(child)visit(child,branch);else warnings.push(translate('outline.missingFile',{name}));continue;
    }
    if(command in sectionIndex && arg){const raw=file.text.slice(arg.start+1,arg.end-1);add(file,start,arg.end,outlineTitle(raw),'heading',sectionIndex[command],!!match[2]);}
    if(command==='begin'&&arg?.value==='abstract')add(file,start,arg.end,'Abstract','abstract');

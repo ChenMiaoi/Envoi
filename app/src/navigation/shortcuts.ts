@@ -1,3 +1,4 @@
+import {translate} from '@/i18n/runtime';
 export type Scope='global'|'reader'|'writer';
 export type ViewTarget='reader'|'writer'|'library'|'history'|'settings';
 export interface Chord{mod:boolean;shift:boolean;alt:boolean;key:string}
@@ -12,26 +13,26 @@ export interface Command{
  view?:ViewTarget;
 }
 export const commands:Command[]=[
- {id:'save',action:'save',label:'保存全部修改',scope:'global',event:'envoi:save'},
- {id:'palette',action:'palette',label:'命令面板',scope:'global'},
- {id:'view-reader',action:'view reader',label:'阅读页',scope:'global',view:'reader'},
- {id:'view-writer',action:'view writer',label:'写作页',scope:'global',view:'writer'},
- {id:'view-library',action:'view library',label:'论文库',scope:'global',view:'library'},
- {id:'view-history',action:'view history',label:'版本历史',scope:'global',view:'history'},
- {id:'view-settings',action:'view settings',label:'设置',scope:'global',view:'settings'},
- {id:'project-open',action:'project open',label:'打开项目',scope:'global',event:'envoi:open-project'},
- {id:'project-manage',action:'project manage',label:'管理项目',scope:'global',event:'envoi:manage-projects'},
- {id:'project-close',action:'project close',label:'关闭当前项目',scope:'global',event:'envoi:close-project'},
- {id:'git',action:'git',label:'Git 状态',scope:'global',event:'envoi:show-git'},
- {id:'compile',action:'compile',label:'编译当前论文',scope:'global',event:'envoi:compile'},
- {id:'tab-close',action:'tab close',label:'关闭当前标签',scope:'reader',event:'envoi:tab',detail:'close'},
- {id:'tab-prev',action:'tab prev',label:'上一个标签',scope:'reader',event:'envoi:tab',detail:'prev'},
- {id:'tab-next',action:'tab next',label:'下一个标签',scope:'reader',event:'envoi:tab',detail:'next'},
- {id:'panel-tree',action:'panel tree',label:'切换目录树',scope:'reader',event:'envoi:panel',detail:'tree'},
- {id:'panel-chat',action:'panel chat',label:'切换 AI 面板',scope:'reader',event:'envoi:panel',detail:'chat'},
- {id:'panel-outline',action:'panel outline',label:'大纲面板',scope:'writer',event:'envoi:panel',detail:'outline'},
- {id:'panel-refs',action:'panel refs',label:'参考文献面板',scope:'writer',event:'envoi:panel',detail:'refs'},
- {id:'panel-assets',action:'panel assets',label:'素材面板',scope:'writer',event:'envoi:panel',detail:'assets'},
+ {id:'save',action:'save',get label(){return translate('command.save');},scope:'global',event:'envoi:save'},
+ {id:'palette',action:'palette',get label(){return translate('command.palette');},scope:'global'},
+ {id:'view-reader',action:'view reader',get label(){return translate('command.view-reader');},scope:'global',view:'reader'},
+ {id:'view-writer',action:'view writer',get label(){return translate('command.view-writer');},scope:'global',view:'writer'},
+ {id:'view-library',action:'view library',get label(){return translate('command.view-library');},scope:'global',view:'library'},
+ {id:'view-history',action:'view history',get label(){return translate('command.view-history');},scope:'global',view:'history'},
+ {id:'view-settings',action:'view settings',get label(){return translate('command.view-settings');},scope:'global',view:'settings'},
+ {id:'project-open',action:'project open',get label(){return translate('command.project-open');},scope:'global',event:'envoi:open-project'},
+ {id:'project-manage',action:'project manage',get label(){return translate('command.project-manage');},scope:'global',event:'envoi:manage-projects'},
+ {id:'project-close',action:'project close',get label(){return translate('command.project-close');},scope:'global',event:'envoi:close-project'},
+ {id:'git',action:'git',get label(){return translate('command.git');},scope:'global',event:'envoi:show-git'},
+ {id:'compile',action:'compile',get label(){return translate('command.compile');},scope:'global',event:'envoi:compile'},
+ {id:'tab-close',action:'tab close',get label(){return translate('command.tab-close');},scope:'reader',event:'envoi:tab',detail:'close'},
+ {id:'tab-prev',action:'tab prev',get label(){return translate('command.tab-prev');},scope:'reader',event:'envoi:tab',detail:'prev'},
+ {id:'tab-next',action:'tab next',get label(){return translate('command.tab-next');},scope:'reader',event:'envoi:tab',detail:'next'},
+ {id:'panel-tree',action:'panel tree',get label(){return translate('command.panel-tree');},scope:'reader',event:'envoi:panel',detail:'tree'},
+ {id:'panel-chat',action:'panel chat',get label(){return translate('command.panel-chat');},scope:'reader',event:'envoi:panel',detail:'chat'},
+ {id:'panel-outline',action:'panel outline',get label(){return translate('command.panel-outline');},scope:'writer',event:'envoi:panel',detail:'outline'},
+ {id:'panel-refs',action:'panel refs',get label(){return translate('command.panel-refs');},scope:'writer',event:'envoi:panel',detail:'refs'},
+ {id:'panel-assets',action:'panel assets',get label(){return translate('command.panel-assets');},scope:'writer',event:'envoi:panel',detail:'assets'},
 ];
 // Modifier layering: Mod+Shift switches pages, Mod+Alt acts inside the current page, bare Mod keeps save/palette.
 export const DEFAULT_BINDS=[
@@ -83,12 +84,12 @@ export function serializeBinding(command:Command,chord:Chord){return `${serializ
 const RESERVED_F=new Set(['f4','f5','f11','f12']);
 const RESERVED_LETTERS='wtnrlqpjhufacvxzy0';
 export function validateChord(chord:Chord,bindings:string[],exclude?:string):string{
- if(!chord.mod&&!chord.shift&&!chord.alt)return '组合至少包含一个修饰键（Mod / Shift / Alt）；裸键会拦截正常输入。';
- if(RESERVED_F.has(chord.key)||(chord.mod&&!chord.alt&&chord.key.length===1&&RESERVED_LETTERS.includes(chord.key)))return '此组合保留给系统、浏览器或编辑器，不能覆盖。';
+ if(!chord.mod&&!chord.shift&&!chord.alt)return translate('shortcuts.noModifier');
+ if(RESERVED_F.has(chord.key)||(chord.mod&&!chord.alt&&chord.key.length===1&&RESERVED_LETTERS.includes(chord.key)))return translate('shortcuts.reserved');
  const mine=serializeChord(chord);
  for(const line of bindings){
   const parsed=parseBinding(line);
-  if(parsed&&parsed.command.id!==exclude&&serializeChord(parsed.chord)===mine)return `与“${parsed.command.label}”冲突，请选择其他组合。`;
+  if(parsed&&parsed.command.id!==exclude&&serializeChord(parsed.chord)===mine)return translate('shortcuts.conflict',{label:parsed.command.label});
  }
  return '';
 }

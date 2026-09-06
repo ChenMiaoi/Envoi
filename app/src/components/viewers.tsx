@@ -11,11 +11,14 @@ import { cn } from "@/lib/utils";
 import {rehypeCallouts} from '@/lib/rehypeCallouts';
 import {useProject} from '@/project/context';
 import {resolveProjectLink} from '@/lib/markdownEditing';
+import {type MessageKey} from '@/i18n/runtime';
+import {useT} from '@/i18n/useT';
 
 /* ---------- Markdown 预览 ---------- */
 export function MarkdownViewer({ source, path, onOpenDoc }: { source: string; path?: string; onOpenDoc?: (file: { id: string; path: string; kind: string }) => void }) {
   const {preferences}=usePreferences();
   const {project}=useProject();
+  const {t}=useT();
   return (
     <div className="scrollbar-thin h-full overflow-y-auto">
       <div data-content-typography="preview" style={{fontFamily:textFonts[preferences.previewFontFamily].css,fontSize:preferences.previewFontSize}} className="markdown-body mx-auto max-w-[720px] px-10 py-8">
@@ -23,7 +26,7 @@ export function MarkdownViewer({ source, path, onOpenDoc }: { source: string; pa
           img: ({src, alt}) => {
             const target = typeof src === 'string' && path ? resolveProjectLink(path, src) : undefined;
             const file = target ? project.files.find(f => f.path === target && f.kind === 'image') : undefined;
-            return file?.url ? <img src={file.url} alt={alt ?? file.path} /> : <span className="text-muted-foreground">[图片{alt ? `：${alt}` : ''}{typeof src === 'string' ? ` · ${src}` : ''}]</span>;
+            return file?.url ? <img src={file.url} alt={alt ?? file.path} /> : <span className="text-muted-foreground">[{t('common.image')}{alt ? t('common.imageAlt',{alt}) : ''}{typeof src === 'string' ? t('common.imageSrc',{src}) : ''}]</span>;
           },
           a: ({href, children}) => {
             const target = href && path ? resolveProjectLink(path, href) : undefined;
@@ -80,6 +83,7 @@ export function LatexViewer({ source }: { source: string }) {
 /* ---------- BibTeX 预览：解析为文献卡片 ---------- */
 export function BibViewer({ source }: { source: string }) {
   const {preferences}=usePreferences();
+  const {t}=useT();
   const entries = source
     .split(/@(?=\w+\s*\{)/)
     .filter((s) => s.trim())
@@ -95,7 +99,7 @@ export function BibViewer({ source }: { source: string }) {
     <div data-content-typography="preview" style={{fontFamily:textFonts[preferences.previewFontFamily].css,fontSize:preferences.previewFontSize}} className="bib-preview scrollbar-thin h-full overflow-y-auto px-6 py-5">
       <div className="mx-auto max-w-[640px] space-y-3">
         <div className="mb-4 text-[11px] uppercase tracking-widest text-muted-foreground">
-          {entries.length} 条参考文献
+          {t('bib.entryCount',{n:entries.length})}
         </div>
         {entries.map((e) => (
           <div key={e.key} className="rounded-lg border border-border bg-card p-3.5">
@@ -114,14 +118,15 @@ export function BibViewer({ source }: { source: string }) {
 }
 
 export function ViewerBadge({kind}: {kind:string}) {
-  const map: Record<string, { label: string; cls: string }> = {
-    csv: {label:"CSV 表格",cls:"text-primary"}, tsv:{label:"TSV 表格",cls:"text-primary"},text:{label:"文本 / 源码",cls:"text-muted-foreground"},binary:{label:"未支持的文件",cls:"text-muted-foreground"},
-    markdown: { label: "Markdown 预览", cls: "text-[hsl(var(--hue-blue))]" },
-    latex: { label: "LaTeX 源码", cls: "text-[hsl(var(--hue-green))]" },
-    pdf: { label: "PDF 预览", cls: "text-[hsl(var(--hue-red))]" },
-    bib: { label: "文献视图", cls: "text-[hsl(var(--hue-orange))]" },
-    image: { label: "图片", cls: "text-[hsl(var(--hue-violet))]" },
+  const {t}=useT();
+  const map: Record<string, { key: MessageKey; cls: string }> = {
+    csv: {key:"viewer.csv",cls:"text-primary"}, tsv:{key:"viewer.tsv",cls:"text-primary"},text:{key:"viewer.text",cls:"text-muted-foreground"},binary:{key:"viewer.binary",cls:"text-muted-foreground"},
+    markdown: { key: "viewer.markdown", cls: "text-[hsl(var(--hue-blue))]" },
+    latex: { key: "viewer.latex", cls: "text-[hsl(var(--hue-green))]" },
+    pdf: { key: "viewer.pdf", cls: "text-[hsl(var(--hue-red))]" },
+    bib: { key: "viewer.bib", cls: "text-[hsl(var(--hue-orange))]" },
+    image: { key: "common.image", cls: "text-[hsl(var(--hue-violet))]" },
   };
-  const m = map[kind] ?? { label: kind, cls: "text-muted-foreground" };
-  return <span className={cn("text-[11px]", m.cls)}>{m.label}</span>;
+  const m = map[kind];
+  return <span className={cn("text-[11px]", m?.cls ?? "text-muted-foreground")}>{m ? t(m.key) : kind}</span>;
 }

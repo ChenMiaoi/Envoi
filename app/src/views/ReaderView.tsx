@@ -2,7 +2,7 @@ import {usePreferences} from "@/settings/context";
 import {editorFonts} from "@/settings/model";
 import { useEffect, useMemo, useState } from "react";
 import { ResizablePanelGroup as PanelGroup, ResizablePanel as Panel, ResizableHandle as PanelResizeHandle } from "@/components/ui/resizable";
-import { X, BookMarked, FileText, FileCode2, FileType2, Image as ImageIcon, FolderTree, MessageSquareText } from "lucide-react";
+import { X, BookMarked, FileText, FileCode2, FileType2, Image as ImageIcon, FolderTree, MessageSquareText, Eye, Code2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { type FileNode } from "@/data/workspace";
 import { useProject } from "@/project/context";
@@ -13,8 +13,9 @@ import { ChatPanel } from "@/components/ChatPanel";
 import {fileKind} from "@/lib/projectFiles";
 import {DelimitedEditor} from "@/components/DelimitedEditor";
 import {MarkdownEditor} from "@/components/MarkdownEditor";
-import { LatexViewer, BibViewer, ViewerBadge } from "@/components/viewers";
+import { LatexViewer, BibViewer, ViewerBadge, MarkdownViewer } from "@/components/viewers";
 import { extractPdfText } from "@/lib/metadataLookup";
+import {useT} from "@/i18n/useT";
 
 const tabIcon: Record<string, typeof FileText> = {
   pdf: BookMarked,
@@ -44,12 +45,15 @@ export function ReaderView({
 }) {
   const {preferences}=usePreferences();
   const { project, edit, busy } = useProject();
+  const {t}=useT();
   const fileTree = useMemo(() => projectTree(project.files, project.directories), [project.files, project.directories]);
   const fileContents = Object.fromEntries(project.files.map((file) => [file.id, file.text]));
   const activeData = [...project.files,...libraryFiles].find((file) => file.id === activeId);
   const kind=activeData?fileKind(activeData.path):undefined;
   const [showChat, setShowChat] = useState(true);
   const [showTree, setShowTree] = useState(true);
+  const [mdMode, setMdMode] = useState<Record<string, "preview" | "source">>({});
+  const mdPreview = kind === "markdown" && (mdMode[activeId ?? ""] ?? "preview") === "preview";
   const active = openFiles.find((f) => f.id === activeId);
   const [pdfContext, setPdfContext] = useState<{ id: string; text: string } | null>(null);
   useEffect(() => {
@@ -104,7 +108,7 @@ export function ReaderView({
           <Panel defaultSize="17%" minSize="12%" maxSize="30%" className="bg-card">
             <div className="flex h-full flex-col">
               <div className="flex h-9 shrink-0 items-center justify-between px-3 text-[11px] uppercase tracking-widest text-muted-foreground">
-                <span>资源管理器</span>
+                <span>{t('reader.explorer')}</span>
               </div>
               <div className="min-h-0 flex-1">
                 <FileTree rootName={project.id==='empty'?undefined:project.name} nodes={fileTree} activeId={activeId} onOpen={openNode} />
@@ -132,7 +136,7 @@ export function ReaderView({
                   )}
                 >
                   <Icon className="h-3.5 w-3.5" strokeWidth={1.8} />
-                  <span className="whitespace-nowrap">{f.name}{project.files.find(file=>file.id===f.id)?.text!==project.files.find(file=>file.id===f.id)?.saved?" · 未保存":""}</span>
+                  <span className="whitespace-nowrap">{f.name}{project.files.find(file=>file.id===f.id)?.text!==project.files.find(file=>file.id===f.id)?.saved?" · "+t('reader.unsaved'):""}</span>
                   <button
                     onClick={(e) => { e.stopPropagation(); close(f.id); }}
                     className="rounded p-0.5 opacity-0 transition-opacity hover:bg-accent group-hover:opacity-100"
@@ -143,16 +147,40 @@ export function ReaderView({
               );
             })}
             <div className="flex-1" />
+              {kind === "markdown" && (
+                <div className="flex items-center gap-1 px-2">
+                <>
+                  <button
+                    title={t('reader.mdPreview')}
+                    aria-label={t('reader.mdPreview')}
+                    aria-pressed={mdPreview}
+                    onClick={() => activeId && setMdMode(m => ({ ...m, [activeId]: "preview" }))}
+                    className={cn("rounded-md p-1.5 transition-colors", mdPreview ? "text-primary" : "text-muted-foreground hover:bg-secondary")}
+                  >
+                    <Eye className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    title={t('reader.mdSource')}
+                    aria-label={t('reader.mdSource')}
+                    aria-pressed={!mdPreview}
+                    onClick={() => activeId && setMdMode(m => ({ ...m, [activeId]: "source" }))}
+                    className={cn("rounded-md p-1.5 transition-colors", !mdPreview ? "text-primary" : "text-muted-foreground hover:bg-secondary")}
+                  >
+                    <Code2 className="h-3.5 w-3.5" />
+                  </button>
+                </>
+                </div>
+              )}
             <div className="flex items-center gap-1 px-2">
               <button
-                title={showTree ? "隐藏目录树" : "显示目录树"}
+                title={showTree ? t('reader.hideTree') : t('reader.showTree')}
                 onClick={() => setShowTree(!showTree)}
                 className={cn("rounded-md p-1.5 transition-colors", showTree ? "text-primary" : "text-muted-foreground hover:bg-secondary")}
               >
                 <FolderTree className="h-3.5 w-3.5" />
               </button>
               <button
-                title={showChat ? "隐藏 AI 面板" : "显示 AI 面板"}
+                title={showChat ? t('reader.hideChat') : t('reader.showChat')}
                 onClick={() => setShowChat(!showChat)}
                 className={cn("rounded-md p-1.5 transition-colors", showChat ? "text-primary" : "text-muted-foreground hover:bg-secondary")}
               >
@@ -165,25 +193,27 @@ export function ReaderView({
           <div className="min-h-0 flex-1">
             {!active ? (
               <div className="flex h-full flex-col items-center justify-center gap-2 text-muted-foreground">
-                <div className="text-[13px]">从左侧目录树打开一个文件</div>
-                <div className="text-[11px] text-muted-foreground/60">PDF · Markdown · 表格按类型打开；LaTeX 文件进入写作页</div>
+                <div className="text-[13px]">{t('reader.openHint')}</div>
+                <div className="text-[11px] text-muted-foreground/60">{t('reader.openHintDetail')}</div>
               </div>
             ) : activeData?.text === undefined && kind!=='image'&&kind!=='pdf' ? (
-              <p className="p-4 text-sm text-muted-foreground">此文件不是可编辑的 UTF-8 文本，暂无预览；原文件保持不变。</p>
+              <p className="p-4 text-sm text-muted-foreground">{t('reader.notText')}</p>
+            ) : kind === "markdown" && mdPreview ? (
+              <MarkdownViewer key={active.id} source={fileContents[active.id] ?? ""} path={activeData?.path ?? active.name} onOpenDoc={(file)=>openNode({id:file.id,name:file.path,kind:file.kind} as FileNode)} />
             ) : kind === "markdown" ? (
               <MarkdownEditor key={active.id} source={fileContents[active.id] ?? ""} readOnly={busy} onChange={text=>edit(active.id,text)} path={activeData?.path??active.name} files={project.files} onOpen={file=>openNode({id:file.id,name:file.path,kind:file.kind})} />
             ) : (kind === "csv" || kind === "tsv") && activeData?.text !== undefined ? (
               <DelimitedEditor key={active.id} source={activeData.text} delimiter={kind==='tsv'?'\t':','} onChange={text=>edit(active.id,text)} readOnly={busy} />
             ) : kind === "text" && activeData?.text !== undefined ? (
-              <textarea aria-label="文本源码编辑器" readOnly={busy} value={activeData.text} onChange={e=>edit(active.id,e.target.value)} data-content-typography="editor" className="h-full w-full resize-none overflow-auto whitespace-pre-wrap break-words bg-transparent p-4 outline-none" style={{fontFamily:editorFonts[preferences.fontFamily].css,fontSize:preferences.fontSize,lineHeight:preferences.lineHeight,tabSize:preferences.tabSize}} />
+              <textarea aria-label={t('reader.textEditorAria')} readOnly={busy} value={activeData.text} onChange={e=>edit(active.id,e.target.value)} data-content-typography="editor" className="h-full w-full resize-none overflow-auto whitespace-pre-wrap break-words bg-transparent p-4 outline-none" style={{fontFamily:editorFonts[preferences.fontFamily].css,fontSize:preferences.fontSize,lineHeight:preferences.lineHeight,tabSize:preferences.tabSize}} />
             ) : kind === "latex" ? (
               <LatexViewer source={fileContents[active.id] ?? ""} />
             ) : kind === "bib" ? (
               <BibViewer source={fileContents[active.id] ?? ""} />
             ) : kind === "pdf" ? (
-              activeData?.file || activeData?.url ? <TexCompilePreview key={`${active.id}:${activeData?.file?.lastModified??activeData?.url}`} initialSource={{ name: activeData.path, file: activeData.file, url: activeData.url }} /> : <p className="p-4 text-xs text-muted-foreground">此文件没有可访问的 PDF 内容。</p>
+              activeData?.file || activeData?.url ? <TexCompilePreview key={`${active.id}:${activeData?.file?.lastModified??activeData?.url}`} initialSource={{ name: activeData.path, file: activeData.file, url: activeData.url }} /> : <p className="p-4 text-xs text-muted-foreground">{t('reader.noPdfContent')}</p>
             ) : (
-              kind==='image'&&activeData?.url ? <img className="max-h-full max-w-full object-contain" src={activeData.url} alt={active.name} /> : <p className="p-4 text-xs text-muted-foreground">此格式暂无预览，或内容不是可编辑的 UTF-8 文本。原文件保持不变。</p>
+              kind==='image'&&activeData?.url ? <img className="max-h-full max-w-full object-contain" src={activeData.url} alt={active.name} /> : <p className="p-4 text-xs text-muted-foreground">{t('reader.noPreview')}</p>
             )}
           </div>
 
@@ -192,7 +222,7 @@ export function ReaderView({
             <div className="flex h-7 shrink-0 items-center justify-between border-t border-border bg-card px-3 text-[11px] text-muted-foreground">
               <span><ViewerBadge kind={kind??active.kind} /></span>
               <span className="font-editor">
-                {kind === "pdf" ? "PDF 原始分页" : `${(fileContents[active.id] ?? "").split("\n").length} 行 · UTF-8`}
+                {kind === "pdf" ? t('reader.pdfPaging') : t('reader.lineCount',{n:(fileContents[active.id] ?? "").split("\n").length})}
               </span>
             </div>
           )}

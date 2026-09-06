@@ -1,5 +1,6 @@
+import {translate} from '@/i18n/runtime';
 export function replaceMarkdownBlock(source:string,start:number,end:number,text:string){
- if(start<0||end<start||end>source.length)throw Error('Markdown 编辑范围无效');
+ if(start<0||end<start||end>source.length)throw Error(translate('editor.invalidMarkdownRange'));
  return source.slice(0,start)+text+source.slice(end);
 }
 /** Project-relative assets only: never turn ../ into a filesystem read. */
@@ -16,6 +17,6 @@ export const markdownDocument=(source:string)=>source.replace(/\r\n|\r/g,'\n');
 export function editMarkdownChanges(source:string,changes:{from:number;to:number;insert:string}[]){
  const offsets=[0];for(let i=0;i<source.length;i++){if(source[i]==='\r'&&source[i+1]==='\n')i++;offsets.push(i+1);}
  const ending=source.match(/\r\n|\r|\n/)?.[0]??'\n';let next=source;
- for(const change of [...changes].sort((a,b)=>b.from-a.from)){const from=offsets[change.from],to=offsets[change.to];if(from===undefined||to===undefined)throw Error('Markdown 编辑范围无效');next=next.slice(0,from)+change.insert.replace(/\r\n|\r|\n/g,ending)+next.slice(to);}
+ for(const change of [...changes].sort((a,b)=>b.from-a.from)){const from=offsets[change.from],to=offsets[change.to];if(from===undefined||to===undefined)throw Error(translate('editor.invalidMarkdownRange'));next=next.slice(0,from)+change.insert.replace(/\r\n|\r|\n/g,ending)+next.slice(to);}
  return next;
 }

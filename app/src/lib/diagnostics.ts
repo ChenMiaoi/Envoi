@@ -1,3 +1,4 @@
+import {translate} from '@/i18n/runtime';
 import type {ProjectFile} from './projectFiles';
 export interface Diagnostic {id:string;column?:number;source?:'compile'|'lint';severity:'error'|'warning';message:string;path?:string;line?:number}
 export interface CompileDiagnostics {items:Diagnostic[];timestamp?:number;engine?:string;signature:string;rootId:string;status:'running'|'success'|'failed'|'cancelled';log:string}
@@ -26,7 +27,7 @@ export function parseDiagnostics(log:string,files:Pick<ProjectFile,'path'|'text'
    add('warning',message,bibFile?mapPath(bibFile[1]):current,position?Number(position[1]):undefined);
   }
  }
- if(failed&&!items.some(item=>item.severity==='error'))add('error',log.split('\n').find(line=>line.trim()&&!line.startsWith('['))??'编译工具失败，请查看日志。');
+ if(failed&&!items.some(item=>item.severity==='error'))add('error',log.split('\n').find(line=>line.trim()&&!line.startsWith('['))??translate('compile.toolFailed'));
  return items;
 }
 export function diagnosticLocation(item:Diagnostic,files:ProjectFile[]){

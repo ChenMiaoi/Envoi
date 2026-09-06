@@ -1,9 +1,10 @@
+import {translate} from '@/i18n/runtime';
 import {projectSignature} from './compileClient';
 import type {PaperProject} from './projectFiles';
 export interface PreviewManifest {main:string;pdfSha256:string;files:Record<string,string>}
 export const snapshotInput=(path:string)=>!path.split('/').some(p=>p.startsWith('.')||['build','output'].includes(p))&&/\.(tex|bib|sty|cls|bst|png|jpe?g|pdf|eps|csv|txt|dat|otf|ttf)$/i.test(path);
 async function digest(bytes:Uint8Array){return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new Uint8Array(bytes).buffer)),b=>b.toString(16).padStart(2,'0')).join('');}
-async function bytes(file:{text?:string;file?:File;url?:string}){if(file.text!==undefined)return new TextEncoder().encode(file.text);if(file.file)return new Uint8Array(await file.file.arrayBuffer());if(file.url){const response=await fetch(file.url);if(!response.ok)throw Error('资源不可用');return new Uint8Array(await response.arrayBuffer());}throw Error('缺少文件');}
+async function bytes(file:{text?:string;file?:File;url?:string}){if(file.text!==undefined)return new TextEncoder().encode(file.text);if(file.file)return new Uint8Array(await file.file.arrayBuffer());if(file.url){const response=await fetch(file.url);if(!response.ok)throw Error(translate('preview.resourceUnavailable'));return new Uint8Array(await response.arrayBuffer());}throw Error(translate('preview.missingFile'));}
 export async function previewManifest(project:PaperProject,pdf:File):Promise<PreviewManifest>{
  const files:Record<string,string>={};for(const file of project.files.filter(f=>snapshotInput(f.path)))files[file.path]=await digest(await bytes(file));
  return {main:project.files.find(f=>f.id===project.rootId)!.path,pdfSha256:await digest(new Uint8Array(await pdf.arrayBuffer())),files};

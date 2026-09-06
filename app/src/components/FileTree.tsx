@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ChevronDown, ChevronRight, FileText, FileType2, FileCode2, BookMarked, Image, FolderOpen, Folder } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {useT} from "@/i18n/useT";
 import type { FileNode } from "@/data/workspace";
 
 const kindIcon: Record<string, typeof FileText> = {
@@ -80,11 +81,12 @@ export function FileTree({
   activeId: string | null;
   onOpen: (n: FileNode) => void;
 }) {
+  const {t}=useT();
   return (
     <div className="scrollbar-thin h-full overflow-y-auto px-1.5 py-2">
       {rootName?<TreeItem key={rootName} node={{id:'project-root',name:rootName,kind:'folder',children:nodes}} depth={0} activeId={activeId} onOpen={onOpen}/>:nodes.length?nodes.map((n) => (
         <TreeItem key={n.id} node={n} depth={0} activeId={activeId} onOpen={onOpen} />
-      )):<p className="px-3 py-2 text-xs text-muted-foreground">未打开项目</p>}
+      )):<p className="px-3 py-2 text-xs text-muted-foreground">{t('project.notOpen')}</p>}
     </div>
   );
 }

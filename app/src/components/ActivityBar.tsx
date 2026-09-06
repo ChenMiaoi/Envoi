@@ -2,13 +2,13 @@ import { BookOpenText, PenLine, LibraryBig, Settings, FlaskConical, History } fr
 import {NavLink} from "react-router";
 import {viewPaths,type ViewId} from "@/navigation/routes";
 import { cn } from "@/lib/utils";
+import {useT} from "@/i18n/useT";
 
-const items: { id: ViewId; label: string; icon: typeof BookOpenText }[] = [
-  { id: "reader", label: "阅读配置", icon: BookOpenText },
-  { id: "writer", label: "写作配置", icon: PenLine },
-  { id: "library", label: "论文库", icon: LibraryBig },
-  { id: "history", label: "版本历史", icon: History },
-  { id: "settings", label: "设置", icon: Settings },
+const items: { id: ViewId; icon: typeof BookOpenText }[] = [
+  { id: "reader", icon: BookOpenText },
+  { id: "writer", icon: PenLine },
+  { id: "library", icon: LibraryBig },
+  { id: "history", icon: History },
 ];
 
 export function ActivityBar({
@@ -16,6 +16,7 @@ export function ActivityBar({
 }: {
   view?: ViewId;
 }) {
+  const {t}=useT();
   return (
     <div className="flex h-full w-12 flex-col items-center border-r border-border bg-card py-2">
       {items.slice(0, 4).map((it) => (
@@ -23,7 +24,7 @@ export function ActivityBar({
           end
           to={viewPaths[it.id]}
           key={it.id}
-          title={it.label}
+          title={t(`view.${it.id}`)}
           className={cn(
             "group relative mb-1.5 flex h-10 w-10 items-center justify-center rounded-lg transition-colors",
             view === it.id
@@ -38,7 +39,7 @@ export function ActivityBar({
         </NavLink>
       ))}
       <button
-        title="实验追踪（即将上线）"
+        title={t("app.experimentsSoon")}
         className="mb-1.5 flex h-10 w-10 cursor-not-allowed items-center justify-center rounded-lg text-muted-foreground/40"
       >
         <FlaskConical className="h-[18px] w-[18px]" strokeWidth={1.8} />
@@ -46,7 +47,7 @@ export function ActivityBar({
       <div className="flex-1" />
       <NavLink
         to={viewPaths.settings}
-        title="设置"
+        title={t("view.settings")}
         className={cn(
           "flex h-10 w-10 items-center justify-center rounded-lg transition-colors",
           view === "settings"
