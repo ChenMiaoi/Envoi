@@ -81,10 +81,9 @@ export function ReaderView({
             <div className="flex h-full flex-col">
               <div className="flex h-9 shrink-0 items-center justify-between px-3 text-[11px] uppercase tracking-widest text-muted-foreground">
                 <span>资源管理器</span>
-                <span className="font-editor normal-case tracking-normal text-muted-foreground/60">{project.name}</span>
               </div>
               <div className="min-h-0 flex-1">
-                <FileTree nodes={fileTree} activeId={activeId} onOpen={openNode} />
+                <FileTree rootName={project.id==='empty'?undefined:project.name} nodes={fileTree} activeId={activeId} onOpen={openNode} />
               </div>
             </div>
           </Panel>

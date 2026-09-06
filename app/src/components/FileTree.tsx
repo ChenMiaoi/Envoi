@@ -58,7 +58,7 @@ function TreeItem({
           className={cn("h-3.5 w-3.5 shrink-0", isFolder ? "text-muted-foreground" : kindColor[node.kind])}
           strokeWidth={1.8}
         />
-        <span className="truncate">{node.name}</span>
+        <span title={node.name} className={cn("truncate",node.id==='project-root'&&"text-[13px] font-semibold text-foreground")}>{node.name}</span>
       </button>
       {isFolder &&
         open &&
@@ -73,16 +73,18 @@ export function FileTree({
   nodes,
   activeId,
   onOpen,
+  rootName,
 }: {
+  rootName?: string;
   nodes: FileNode[];
   activeId: string | null;
   onOpen: (n: FileNode) => void;
 }) {
   return (
     <div className="scrollbar-thin h-full overflow-y-auto px-1.5 py-2">
-      {nodes.map((n) => (
+      {rootName?<TreeItem key={rootName} node={{id:'project-root',name:rootName,kind:'folder',children:nodes}} depth={0} activeId={activeId} onOpen={onOpen}/>:nodes.length?nodes.map((n) => (
         <TreeItem key={n.id} node={n} depth={0} activeId={activeId} onOpen={onOpen} />
-      ))}
+      )):<p className="px-3 py-2 text-xs text-muted-foreground">未打开项目</p>}
     </div>
   );
 }

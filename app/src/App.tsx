@@ -1,3 +1,4 @@
+import {ProjectIdentity} from '@/project/ProjectIdentity';
 import {useAgent} from '@/agent/context';
 import {AgentProvider} from "@/agent/AgentProvider";
 import {matchShortcut,shortcuts,commandBinding,bindingText,shortcutLabel} from "@/navigation/shortcuts";
@@ -97,23 +98,20 @@ function ProjectApp() {
       {page.redirect&&<Navigate to={page.redirect} replace />}
       {/* 标题栏 */}
       <div className="flex h-10 shrink-0 items-center border-b border-border bg-card">
-        <div className="flex w-48 items-center gap-2 pl-3.5">
-          <ProjectMenu />
+        <div className="flex min-w-0 max-w-[55%] items-center gap-2 pl-3.5">
+          <div className="shrink-0"><ProjectMenu /></div><ProjectIdentity />
           
         </div>
-        <div className="flex flex-1 justify-center">
+        <div className="flex min-w-0 flex-1 justify-center px-3">
           <button
             onClick={() => setPaletteOpen(true)}
-            className="flex h-6.5 w-72 items-center gap-2 rounded-lg border border-input bg-background px-2.5 text-[11.5px] text-muted-foreground transition-colors hover:border-primary/50"
+            className="flex h-6.5 w-72 max-w-full items-center gap-2 rounded-lg border border-input bg-background px-2.5 text-[11.5px] text-muted-foreground transition-colors hover:border-primary/50"
             style={{ height: 26 }}
           >
             <Search className="h-3 w-3" />
-            <span className="flex-1 text-left">搜索文件、命令…</span>
-            <kbd className="rounded border border-border bg-secondary px-1 font-editor text-[10px]">{shortcutLabel(bindingText(commandBinding('commands',effective.shortcuts)),/Mac/.test(navigator.platform))}</kbd>
+            <span className="min-w-0 flex-1 truncate text-left">搜索文件、命令…</span>
+            <kbd className="hidden shrink-0 rounded border border-border bg-secondary px-1 font-editor text-[10px] sm:inline">{shortcutLabel(bindingText(commandBinding('commands',effective.shortcuts)),/Mac/.test(navigator.platform))}</kbd>
           </button>
-        </div>
-        <div className="flex w-48 items-center justify-end gap-2 pr-3.5 text-[11px] text-muted-foreground">
-          <span className="font-editor">{project.name}</span>
         </div>
       </div>
 
