@@ -1,7 +1,7 @@
 import {test} from 'node:test';import assert from 'node:assert/strict';
 import {parseDelimited,editDelimitedCell} from '../src/lib/delimited';
 import {markdownDocument,editMarkdownChanges,resolveProjectLink} from '../src/lib/markdownEditing';
-import {fileKind} from '../src/lib/projectFiles';import {matchShortcut} from '../src/navigation/shortcuts';
+import {fileKind} from '../src/lib/projectFiles';import {matchBinding,resolveBindings,normalizeBindings,validateChord,migrateLegacyBindings} from '../src/navigation/shortcuts';import {resolvePage} from '../src/navigation/routes';
 test('CSV/TSV preserve quotes, empty rows/cells, BOM, CRLF and exact numeric strings on one-cell edit',()=>{
  const source='\ufeffname,value,note\r\n"a,b",90071992547409931234,"line1\r\nline2 ""quote"""\r\n\r\nx,,\r\n';
  const rows=parseDelimited(source);assert.equal(rows.length,4);assert.equal(rows[1][0].value,'a,b');assert.equal(rows[1][1].value,'90071992547409931234');assert.equal(rows[1][2].value,'line1\r\nline2 "quote"');assert.deepEqual(rows[3].map(c=>c.value),['x','','']);
@@ -18,12 +18,31 @@ test('continuous Markdown transactions preserve untouched syntax and mixed line 
 test('file routing recognizes only tex as writer source and keeps binary files distinct',()=>{
  assert.equal(fileKind('chapters/a.tex'),'latex');assert.equal(fileKind('a.txt'),'text');assert.equal(fileKind('a.csv'),'csv');assert.equal(fileKind('a.tsv'),'tsv');assert.equal(fileKind('a.md'),'markdown');assert.equal(fileKind('a.docx'),'binary');assert.equal(fileKind('a.avif'),'image');
 });
-test('one shortcut registry recognizes Ctrl and Cmd save without swallowing unrelated keys',()=>{
- const key={key:'s',code:'KeyS',ctrlKey:true,metaKey:false,shiftKey:false,altKey:false};assert.equal(matchShortcut(key)?.id,'save');assert.equal(matchShortcut({...key,ctrlKey:false,metaKey:true})?.id,'save');assert.equal(matchShortcut({...key,shiftKey:true}),undefined);assert.equal(matchShortcut({...key,key:'!',code:'Digit1',shiftKey:true})?.id,'reader');
+test('shortcut matching recognizes Ctrl and Cmd chords and scoped reader commands',()=>{
+ const bindings=resolveBindings([]);
+ const key={key:'s',code:'KeyS',ctrlKey:true,metaKey:false,shiftKey:false,altKey:false};
+ assert.equal(matchBinding(key,bindings)?.id,'save');
+ assert.equal(matchBinding({...key,ctrlKey:false,metaKey:true},bindings)?.id,'save');
+ assert.equal(matchBinding({...key,shiftKey:true},bindings),undefined);
+ assert.equal(matchBinding({key:'!',code:'Digit1',ctrlKey:true,metaKey:false,shiftKey:true,altKey:false},bindings)?.id,'view-reader');
+ assert.equal(matchBinding({key:'ArrowLeft',code:'ArrowLeft',ctrlKey:true,metaKey:false,shiftKey:false,altKey:true},bindings)?.id,'tab-prev');
 });
-test('custom key bindings survive normalization and reject collisions/system/editing combinations',async()=>{
- const {normalizeShortcuts,validateBinding}=await import('../src/navigation/shortcuts');const {resolvePage}=await import('../src/navigation/routes');
- const bindings={save:{key:'k',alt:false,shift:false},commands:{key:'k',alt:true,shift:false}};assert.deepEqual(normalizeShortcuts(bindings),bindings);
- const event={key:'k',code:'KeyK',ctrlKey:true,metaKey:false,shiftKey:false,altKey:false};assert.equal(matchShortcut(event,bindings)?.id,'save');assert.match(validateBinding('writer',{key:'k',alt:false,shift:false},bindings),/冲突/);assert.match(validateBinding('save',{key:'w',shift:false,alt:false}),/保留/);assert.match(validateBinding('save',{key:'z',shift:false,alt:false}),/保留/);
+test('binding strings normalize to canonical form and reject conflicts, reserved and bare keys',()=>{
+ assert.deepEqual(normalizeBindings(['MOD + S = save','mod+alt+w = tab close','mod+alt+w = tab prev','nonsense','mod+q = git']),['mod+s = save','mod+alt+w = tab close']);
+ const taken=['mod+alt+w = tab close'];
+ assert.match(validateChord({mod:true,shift:false,alt:false,key:'w'},taken),/保留/);
+ assert.match(validateChord({mod:true,shift:false,alt:false,key:'f5'},taken),/保留/);
+ assert.match(validateChord({mod:false,shift:false,alt:false,key:'w'},taken),/修饰键/);
+ assert.match(validateChord({mod:true,shift:false,alt:true,key:'w'},taken),/冲突/);
+ assert.equal(validateChord({mod:true,shift:false,alt:true,key:'w'},taken,'tab-close'),'');
  assert.equal(resolvePage('/settings/global/shortcuts').view,'settings');assert.deepEqual(resolvePage('/settings/project/shortcuts'),{});
+});
+test('legacy per-command shortcut overrides migrate onto the default binding table',()=>{
+ const migrated=migrateLegacyBindings({save:{key:'k',shift:false,alt:false},compile:{key:'Enter',shift:true,alt:false}});
+ assert(migrated);
+ assert(migrated.includes('mod+k = save'));
+ assert(migrated.includes('mod+shift+enter = compile'));
+ assert(migrated.includes('mod+alt+o = project open'));
+ assert.equal(migrateLegacyBindings(undefined),undefined);
+ assert.equal(migrateLegacyBindings({unrelated:{key:'k'}}),undefined);
 });

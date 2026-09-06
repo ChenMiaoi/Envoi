@@ -1,7 +1,7 @@
 import {editorFonts} from "@/settings/model";
 import {useSettings} from "@/settings/useSettings";
 import {useEditorLint} from "@/project/useEditorLint";
-import { useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { ResizablePanelGroup as PanelGroup, ResizablePanel as Panel, ResizableHandle as PanelResizeHandle } from "@/components/ui/resizable";
 import { ListTree, BookMarked, Package } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -62,6 +62,14 @@ export function WriterView({problemTarget,requestedFile}:{requestedFile?:{id:str
   if(problemTarget&&problemTarget!==lastProblem){setLastProblem(problemTarget);setActiveId(problemTarget.fileId);}
   useLayoutEffect(()=>{if(problemTarget?.fileId===activeId)editor.current?.locate(problemTarget.start,problemTarget.end);},[problemTarget,activeId]);
   const outline = useMemo(() => buildOutline(sources, project.rootId), [sources, project.rootId]);
+  useEffect(() => {
+    const onPanel = (event: Event) => {
+      const panel = (event as CustomEvent<string>).detail;
+      if (panel === "outline" || panel === "refs" || panel === "assets") setTab(panel);
+    };
+    window.addEventListener("paperdesk:panel", onPanel);
+    return () => window.removeEventListener("paperdesk:panel", onPanel);
+  }, []);
   return (
     <PanelGroup orientation="horizontal" className="h-full">
       {/* 左：资源 / 大纲 */}

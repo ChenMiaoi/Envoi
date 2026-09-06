@@ -72,6 +72,30 @@ export function ReaderView({
     if (activeId === id && rest.length) onActive(rest[rest.length - 1].id);
   };
 
+  useEffect(() => {
+    const onTab = (event: Event) => {
+      const action = (event as CustomEvent<string>).detail;
+      const index = openFiles.findIndex((f) => f.id === activeId);
+      if (action === 'close') {
+        if (!activeId) return;
+        const rest = openFiles.filter((f) => f.id !== activeId);
+        onOpenFiles(rest);
+        if (rest.length) onActive(rest[rest.length - 1].id);
+      } else if ((action === 'prev' || action === 'next') && openFiles.length > 1) {
+        const next = openFiles[((index < 0 ? 0 : index) + (action === 'next' ? 1 : openFiles.length - 1)) % openFiles.length];
+        if (next) onActive(next.id);
+      }
+    };
+    const onPanel = (event: Event) => {
+      const panel = (event as CustomEvent<string>).detail;
+      if (panel === 'tree') setShowTree((v) => !v);
+      else if (panel === 'chat') setShowChat((v) => !v);
+    };
+    window.addEventListener('paperdesk:tab', onTab);
+    window.addEventListener('paperdesk:panel', onPanel);
+    return () => { window.removeEventListener('paperdesk:tab', onTab); window.removeEventListener('paperdesk:panel', onPanel); };
+  }, [openFiles, activeId, onOpenFiles, onActive]);
+
 
   return (
     <PanelGroup orientation="horizontal" className="h-full">

@@ -15,7 +15,7 @@ Open [PaperDesk](http://127.0.0.1:3000/). Page URLs are `/reader`, `/writer`, `/
 
 Local compilation currently targets macOS with an installed TeX toolchain and `sandbox-exec`. TeX and Git executables are detected from the service environment; `PAPERDESK_TEX_BIN` can select a TeX binary directory. Git status uses the detected Git executable; editor checks auto-detect ChkTeX and support a validated custom executable path in settings. The application reports missing tools and does not install them automatically. Static hosting supports the UI but does not supply these local services.
 
-Reader opens CSV/TSV as editable tables, Markdown as a continuous live preview editor, and images/PDFs in their native previews. Opening a `.tex` file goes to Writer without changing the compilation main file. Ctrl/Command+S immediately saves all project drafts; [settings](docs/SETTINGS.md) include customizable keyboard shortcuts. See [Reader and library](docs/READER_AND_LIBRARY.md) for persistence and format behavior.
+Reader opens CSV/TSV as editable tables, Markdown as a continuous live preview editor, and images/PDFs in their native previews. Opening a `.tex` file goes to Writer without changing the compilation main file. Ctrl/Command+S immediately saves all project drafts; [settings](docs/SETTINGS.md) include customizable keyboard shortcuts layered by modifier: Mod+Shift switches pages, Mod+Alt acts inside the current page (reader tabs and panels, writer side panels). See [Reader and library](docs/READER_AND_LIBRARY.md) for persistence and format behavior.
 
 The project menu also supports [closing projects, removing recent records and explicitly confirmed directory deletion](docs/PROJECT_MANAGEMENT.md). These are separate operations.
 

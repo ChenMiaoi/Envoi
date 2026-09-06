@@ -1,7 +1,7 @@
 import {ProjectIdentity} from '@/project/ProjectIdentity';
 import {useAgent} from '@/agent/context';
 import {AgentProvider} from "@/agent/AgentProvider";
-import {matchShortcut,shortcuts,commandBinding,bindingText,shortcutLabel} from "@/navigation/shortcuts";
+import {commands,matchBinding,commandChordLabel,resolveBindings,type Command} from "@/navigation/shortcuts";
 import {PreferencesProvider} from "@/settings/PreferencesProvider";
 import {useSettings} from "@/settings/useSettings";
 import {paperLibrary,libraryAttachment,type LibraryPaper} from "@/lib/paperLibrary";
@@ -13,7 +13,7 @@ import { projectTree } from "@/lib/projectFiles";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {ProblemsPanel,type ProblemTarget} from "@/project/ProblemsPanel";
 import { GitStatusPanel } from "@/project/GitStatusPanel";
-import { Search, BookMarked, FileText, FileCode2, FileType2, BookOpenText, PenLine, LibraryBig, History } from "lucide-react";
+import { Search, BookMarked, FileText, FileCode2, FileType2, BookOpenText, PenLine, LibraryBig, History, Settings } from "lucide-react";
 import { ActivityBar } from "@/components/ActivityBar";
 import {viewNames,viewPaths,resolvePage,type ViewId} from "@/navigation/routes";
 import {Link,Navigate,useLocation,useNavigate} from "react-router";
@@ -70,18 +70,24 @@ function ProjectApp() {
 
   const allFiles = useMemo(() => flatten(fileTree), [fileTree]);
 
+  const mac=/Mac/.test(navigator.platform);
+  const runCommand=useCallback((command:Command)=>{
+    if(command.id==='palette'){setPaletteOpen(v=>!v);return;}
+    if(command.view){setView(command.view);return;}
+    if(command.id==='compile'){setView('writer');setTimeout(()=>window.dispatchEvent(new Event('paperdesk:compile')),0);return;}
+    if(command.event)window.dispatchEvent(new CustomEvent(command.event,{detail:command.detail}));
+  },[setView]);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if(e.isComposing||(e.target as HTMLElement)?.closest?.('[data-shortcut-recorder]'))return;
-      const shortcut=matchShortcut(e,effective.shortcuts);if(!shortcut){if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='s'&&!e.shiftKey&&!e.altKey)e.preventDefault();return;}e.preventDefault();e.stopPropagation();if(e.repeat)return;
-      if(shortcut.id==='commands')setPaletteOpen(v=>!v);
-      else if(shortcut.id==='reader'||shortcut.id==='writer')setView(shortcut.id);
-      else if(shortcut.id==='compile'){setView('writer');setTimeout(()=>window.dispatchEvent(new Event(shortcut.event)),0);}
-      else window.dispatchEvent(new Event(shortcut.event));
+      const command=matchBinding(e,resolveBindings(effective.bindings));
+      if(!command||(command.scope!=='global'&&command.scope!==view)){if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='s'&&!e.shiftKey&&!e.altKey)e.preventDefault();return;}
+      e.preventDefault();e.stopPropagation();if(e.repeat)return;
+      runCommand(command);
     };
     window.addEventListener("keydown", onKey,true);
     return () => window.removeEventListener("keydown", onKey,true);
-  }, [setView,effective.shortcuts]);
+  }, [runCommand,effective.bindings,view]);
 
   const openLibraryPaper=(paper:LibraryPaper)=>{if(paper.status==='待读')void paperLibrary.put([{...paper,status:'在读'}]).then(()=>window.dispatchEvent(new Event('paperdesk:library-updated')));const file=libraryAttachment(paper),id=`library:${paper.id}`;setLibraryFiles(current=>[...current.filter(item=>item.id!==id),{id,path:paper.attachmentName??file.name,kind:'pdf',file}]);setOpenFiles(current=>current.some(item=>item.id===id)?current:[...current,{id,name:paper.title||file.name,kind:'pdf'}]);setActiveId(id);setView('reader');};
   const openFromPalette = (f: { node: FileNode; path: string }) => {
@@ -110,7 +116,7 @@ function ProjectApp() {
           >
             <Search className="h-3 w-3" />
             <span className="min-w-0 flex-1 truncate text-left">搜索文件、命令…</span>
-            <kbd className="hidden shrink-0 rounded border border-border bg-secondary px-1 font-editor text-[10px] sm:inline">{shortcutLabel(bindingText(commandBinding('commands',effective.shortcuts)),/Mac/.test(navigator.platform))}</kbd>
+            <kbd className="hidden shrink-0 rounded border border-border bg-secondary px-1 font-editor text-[10px] sm:inline">{commandChordLabel('palette',resolveBindings(effective.bindings),mac)}</kbd>
           </button>
         </div>
       </div>
@@ -170,8 +176,11 @@ function ProjectApp() {
             <CommandItem onSelect={() => { setView("history"); setPaletteOpen(false); }}>
               <History className="mr-2 h-3.5 w-3.5 text-muted-foreground" /> 版本历史
             </CommandItem>
+            <CommandItem onSelect={() => { setView("settings"); setPaletteOpen(false); }}>
+              <Settings className="mr-2 h-3.5 w-3.5 text-muted-foreground" /> 设置
+            </CommandItem>
           </CommandGroup>
-          <CommandGroup heading="项目操作">{shortcuts.filter(item=>'event' in item).map(item=><CommandItem key={item.id} onSelect={()=>{setPaletteOpen(false);if(item.id==='compile')setView('writer');if('event' in item)setTimeout(()=>window.dispatchEvent(new Event(item.event)),0);}}><span>{item.label}</span><kbd className="ml-auto text-[10px] text-muted-foreground">{shortcutLabel(bindingText(commandBinding(item.id,effective.shortcuts)),/Mac/.test(navigator.platform))}</kbd></CommandItem>)}</CommandGroup>
+          <CommandGroup heading="项目操作">{commands.filter(item=>item.event&&item.scope==='global').map(item=><CommandItem key={item.id} onSelect={()=>{setPaletteOpen(false);setTimeout(()=>runCommand(item),0);}}><span>{item.label}</span><kbd className="ml-auto text-[10px] text-muted-foreground">{commandChordLabel(item.id,resolveBindings(effective.bindings),mac)}</kbd></CommandItem>)}</CommandGroup>
           <CommandGroup heading="打开文件">
             {allFiles.map((f) => {
               const Icon = kindIcon[f.node.kind] ?? FileText;

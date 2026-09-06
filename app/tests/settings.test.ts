@@ -11,6 +11,14 @@ test('invalid preferences and rule values cannot reach consumers',()=>{
  const preferences=normalizePreferences({engine:'lualatex',fontSize:500,disabledRules:[26,26,-1,'command',43],lineHeight:100});assert.equal(preferences.engine,'pdflatex');assert.equal(preferences.fontSize,12.5);assert.equal(preferences.lineHeight,1.75);assert.deepEqual(preferences.disabledRules,[26]);
 });
 
+test('shortcut preferences store canonical binding strings and migrate legacy overrides',()=>{
+ assert.deepEqual(normalizePreferences({}).bindings,[]);
+ assert.deepEqual(normalizePreferences({bindings:['MOD + S = save','bad line']}).bindings,['mod+s = save']);
+ const migrated=normalizePreferences({shortcuts:{save:{key:'k',shift:false,alt:false}}});
+ assert(migrated.bindings.includes('mod+k = save'));
+ assert(migrated.bindings.includes('mod+alt+enter = compile'));
+});
+
 test('legacy editor typography remains independent of UI and reading preferences',()=>{
  const migrated=normalizePreferences({fontFamily:'monaco',fontSize:18});
  assert.equal(migrated.fontSize,18);assert.equal(migrated.fontFamily,'monaco');
