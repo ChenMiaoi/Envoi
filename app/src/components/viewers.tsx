@@ -3,18 +3,35 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
+import rehypeHighlight from "rehype-highlight";
 import "katex/dist/katex.min.css";
 import {usePreferences} from "@/settings/context";
 import {textFonts,editorFonts} from "@/settings/model";
 import { cn } from "@/lib/utils";
+import {rehypeCallouts} from '@/lib/rehypeCallouts';
+import {useProject} from '@/project/context';
+import {resolveProjectLink} from '@/lib/markdownEditing';
 
 /* ---------- Markdown 预览 ---------- */
-export function MarkdownViewer({ source }: { source: string }) {
+export function MarkdownViewer({ source, path, onOpenDoc }: { source: string; path?: string; onOpenDoc?: (file: { id: string; path: string; kind: string }) => void }) {
   const {preferences}=usePreferences();
+  const {project}=useProject();
   return (
     <div className="scrollbar-thin h-full overflow-y-auto">
       <div data-content-typography="preview" style={{fontFamily:textFonts[preferences.previewFontFamily].css,fontSize:preferences.previewFontSize}} className="markdown-body mx-auto max-w-[720px] px-10 py-8">
-        <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeKatex]}>{source}</ReactMarkdown>
+        <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeKatex, rehypeCallouts, [rehypeHighlight, {detect: false}]]} components={{
+          img: ({src, alt}) => {
+            const target = typeof src === 'string' && path ? resolveProjectLink(path, src) : undefined;
+            const file = target ? project.files.find(f => f.path === target && f.kind === 'image') : undefined;
+            return file?.url ? <img src={file.url} alt={alt ?? file.path} /> : <span className="text-muted-foreground">[图片{alt ? `：${alt}` : ''}{typeof src === 'string' ? ` · ${src}` : ''}]</span>;
+          },
+          a: ({href, children}) => {
+            const target = href && path ? resolveProjectLink(path, href) : undefined;
+            const file = target ? project.files.find(f => f.path === target) : undefined;
+            if (file && onOpenDoc) return <button className="markdown-doclink" onClick={() => onOpenDoc({ id: file.id, path: file.path, kind: file.kind })}>{children}</button>;
+            return href ? <a href={href} target="_blank" rel="noopener noreferrer">{children}</a> : <span>{children}</span>;
+          },
+        }}>{source}</ReactMarkdown>
       </div>
     </div>
   );

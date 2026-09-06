@@ -16,7 +16,9 @@ Font choices are named CSS families with system fallbacks, not a claim to enumer
 
 The interface theme is a full palette selection: 石墨 (default, dark), 经典夜色 (the original dark palette), 午夜蓝, 松林, 纸墨 (light) and 雾白 (light). Each theme defines every color token including status hues, file-kind colors, scrollbars and selection; token values live in `src/index.css` under `[data-theme]` selectors. The accent color is chosen independently and automatically darkens under light themes to preserve contrast.
 
-Content surfaces follow the theme through a dedicated prose layer (`--prose-*`, `--stripe`, `--table-header` tokens): Markdown preview headings, links, inline code, blockquotes and striped tables, the chat message rendering, and the CSV/TSV data table (rounded frame, sticky row numbers, zebra rows, right-aligned numeric cells) all read from the active theme rather than hardcoded values.
+Content surfaces follow the theme through a dedicated prose layer (`--prose-*`, `--stripe`, `--table-header` tokens): Markdown preview headings (h1/h2 take a per-theme accent-family color via `--prose-h12`, h2 gains a hairline rule), links, bold emphasis (`--prose-strong`), inline code, blockquotes and striped tables, the chat message rendering, and the CSV/TSV data table (rounded frame, sticky row numbers, zebra rows, right-aligned numeric cells) all read from the active theme rather than hardcoded values. Obsidian/GitHub-style callouts (`> [!note]`, `> [!warning]`, … with optional inline titles) render as theme-tinted cards via `src/lib/rehypeCallouts.ts`; 经典夜色 keeps the original all-white headings as the regression baseline.
+
+Fenced code blocks are syntax-highlighted in Markdown preview and chat via rehype-highlight (`detect: false`, so untagged blocks stay plain), and in the source editor via CodeMirror `language-data`. Token colors map to the per-theme hue slots (`--hue-violet` keywords, `--hue-green` strings, `--hue-orange` numbers, `--hue-sage` comments, `--hue-blue` functions, `--hue-cyan` types, `--hue-yellow` attributes), so every theme carries its own tuned syntax palette.
 
 ## Project inheritance
 

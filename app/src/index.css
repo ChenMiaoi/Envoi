@@ -661,3 +661,17 @@ body { font-family: var(--ui-font, sans-serif); font-size: var(--ui-font-size, 1
 .h-10:not(svg, img, [data-content-typography], [data-content-typography] *) { min-height: calc(40px * var(--ui-scale, 1)); }
 .bib-preview [class~="text-[13px]"] { font-size: 1em; }
 .bib-preview [class~="text-[11px]"], .bib-preview [class~="text-[11.5px]"] { font-size: .85em; }
+
+/* ---------- 代码语法着色（highlight.js token → 主题色相槽） ---------- */
+.hljs-keyword, .hljs-selector-tag, .hljs-doctag, .hljs-template-tag { color: hsl(var(--hue-violet)); }
+.hljs-string, .hljs-regexp, .hljs-addition, .hljs-meta .hljs-string { color: hsl(var(--hue-green)); }
+.hljs-number, .hljs-literal, .hljs-symbol, .hljs-bullet, .hljs-link { color: hsl(var(--hue-orange)); }
+.hljs-comment, .hljs-quote { color: hsl(var(--hue-sage)); font-style: italic; }
+.hljs-title, .hljs-title.function_, .hljs-section, .hljs-selector-attr { color: hsl(var(--hue-blue)); }
+.hljs-title.class_, .hljs-type, .hljs-built_in { color: hsl(var(--hue-cyan)); }
+.hljs-attr, .hljs-attribute, .hljs-variable, .hljs-template-variable, .hljs-selector-id, .hljs-selector-class { color: hsl(var(--hue-yellow)); }
+.hljs-name, .hljs-selector-pseudo, .hljs-subst { color: hsl(var(--hue-pink)); }
+.hljs-meta { color: hsl(var(--muted-foreground)); }
+.hljs-deletion { color: hsl(var(--hue-red)); }
+.hljs-emphasis { font-style: italic; }
+.hljs-strong { font-weight: 700; }
