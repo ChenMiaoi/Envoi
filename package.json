@@ -11,6 +11,7 @@
     "dev": "npm --prefix app run dev -- --host 127.0.0.1",
     "build": "npm --prefix app run build",
     "test": "npm --prefix app test",
+    "test:ai": "npm --prefix app run test:ai",
     "test:local": "npm --prefix app run test:local",
     "test:demo": "npm --prefix app run test:demo",
     "lint": "npm --prefix app run lint",
