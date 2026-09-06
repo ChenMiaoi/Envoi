@@ -108,7 +108,7 @@ export function WriterView({problemTarget,requestedFile}:{requestedFile?:{id:str
             </div>
           </div>
           <div className="shrink-0 bg-editor">
-            <ChatPanel compact inputOnly />
+            <ChatPanel compact inputOnly context={active?{label:active.path,text:source}:undefined} />
           </div>
         </div>
       </Panel>

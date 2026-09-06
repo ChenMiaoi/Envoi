@@ -1,6 +1,6 @@
 import {usePreferences} from "@/settings/context";
 import {editorFonts} from "@/settings/model";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ResizablePanelGroup as PanelGroup, ResizablePanel as Panel, ResizableHandle as PanelResizeHandle } from "@/components/ui/resizable";
 import { X, BookMarked, FileText, FileCode2, FileType2, Image as ImageIcon, FolderTree, MessageSquareText } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -14,6 +14,7 @@ import {fileKind} from "@/lib/projectFiles";
 import {DelimitedEditor} from "@/components/DelimitedEditor";
 import {MarkdownEditor} from "@/components/MarkdownEditor";
 import { LatexViewer, BibViewer, ViewerBadge } from "@/components/viewers";
+import { extractPdfText } from "@/lib/metadataLookup";
 
 const tabIcon: Record<string, typeof FileText> = {
   pdf: BookMarked,
@@ -49,6 +50,15 @@ export function ReaderView({
   const kind=activeData?fileKind(activeData.path):undefined;
   const [showChat, setShowChat] = useState(true);
   const [showTree, setShowTree] = useState(true);
+  const active = openFiles.find((f) => f.id === activeId);
+  const [pdfContext, setPdfContext] = useState<{ id: string; text: string } | null>(null);
+  useEffect(() => {
+    const file = kind === 'pdf' ? activeData?.file : undefined;
+    if (!file || !activeId) return;
+    let live = true;
+    extractPdfText(file, 2).then(text => { if (live) setPdfContext({ id: activeId, text: text.slice(0, 4000) }); }).catch(() => {});
+    return () => { live = false; };
+  }, [activeId, kind, activeData?.file]);
 
   const openNode = (n: FileNode) => {
     if(n.kind==='latex'){onTex(n.id);return;}
@@ -62,7 +72,6 @@ export function ReaderView({
     if (activeId === id && rest.length) onActive(rest[rest.length - 1].id);
   };
 
-  const active = openFiles.find((f) => f.id === activeId);
 
   return (
     <PanelGroup orientation="horizontal" className="h-full">
@@ -171,7 +180,7 @@ export function ReaderView({
       {showChat && <PanelResizeHandle className="w-px bg-border transition-colors hover:bg-primary/60" />}
       {showChat && (
           <Panel defaultSize="23%" minSize="16%" maxSize="40%">
-            <ChatPanel />
+            <ChatPanel context={active?{label:activeData?.path??active.name,text:activeData?.text!==undefined?activeData.text:(kind==='pdf'&&pdfContext?.id===active.id?pdfContext.text:'')}:undefined} />
           </Panel>
       )}
     </PanelGroup>

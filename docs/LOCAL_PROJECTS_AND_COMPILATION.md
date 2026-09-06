@@ -91,6 +91,14 @@ The library (`/library`) stores papers in IndexedDB, shared across projects. PDF
 
 Repository layout: application commands and tool-test paths in this document run from `app/` unless explicitly prefixed with `app/`; root npm scripts wrap the common workflows. Example sources now live in `examples/demo/`. Legacy `/demo/` assets remain for manually recovered sessions only. `npm run demo:snapshot` exports to the explicit example build directory and never injects startup data.
 
+## AI agent (pi)
+
+The chat panel talks to a local agent relay, not to a model API directly. The Vite dev middleware (app/server/agent.mjs, same localhost same-origin + token guards as the compiler) spawns one `pi --mode rpc` process per project directory (bundled dependency @mariozechner/pi-coding-agent, resolved via the .bin symlink; PATH fallback) and bridges browser fetch streams to pi's LF-delimited JSONL protocol. Browser events are a small NDJSON vocabulary: delta/thinking/tool/status/done/error. Client abort triggers the pi `abort` command.
+
+Availability requires pi AND at least one configured model; the status endpoint probes with get_available_models and reports "pi 已安装但尚未配置模型" otherwise (configure via pi /login or provider API key env vars, then restart the dev service). Agent prompts run in a scratch directory (~/.paperdesk/agent-scratch) unless the project directory was authorized via /api/paperdesk/agent/bind (same .paperdesk/git-proof marker as the Git bridge).
+
+PaperDesk loads a pi extension (app/server/paperdesk-search.ts, via `-e`) that registers a web_search tool: Semantic Scholar with Crossref fallback for papers (no key), Brave web search when PAPERDESK_SEARCH_KEY is set. pi does not pass PDFs to models (pi-ai has no document content type); instead the app injects the current file's text — for PDFs, first pages extracted with the bundled pdf.js — into the prompt context.
+
 ## Web page routes and hosting
 
 The URL selects the primary page: `/reader`, `/writer`, `/library`, `/history`, and `/settings`. `/settings` redirects to `/settings/global/general`; every scope/category has its own URL (see [Settings](SETTINGS.md)). `/` redirects with history replacement to `/writer`; trailing slashes canonicalize. Unknown paths show a not-found page without discarding the project. Activity links, keyboard shortcuts, command-palette navigation, file-open actions, and problem-list jumps all use React Router navigation. Browser back/forward and direct refresh follow the URL. No local filesystem paths, directory handles, or permission tokens are encoded in it.

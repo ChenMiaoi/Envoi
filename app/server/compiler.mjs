@@ -98,6 +98,7 @@ export function compilerPlugin() {
   return { name:'paperdesk-local-compiler', configureServer(server) {
     server.middlewares.use(async(req,res,next)=>{
       if(!req.url?.startsWith('/api/paperdesk/'))return next();
+      if(req.url.startsWith('/api/paperdesk/agent'))return next();
       const host=req.headers.host ?? '';
       const sameOrigin=req.headers.origin===`http://${host}` || (!req.headers.origin && req.headers['sec-fetch-site']==='same-origin');
       if(!/^(127\.0\.0\.1|localhost|\[::1\]):\d+$/.test(host)||!sameOrigin){res.statusCode=403;res.end('Local same-origin requests only');return;}
