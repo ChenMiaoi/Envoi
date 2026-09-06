@@ -1,7 +1,7 @@
 import {matchShortcut,shortcuts,commandBinding,bindingText,shortcutLabel} from "@/navigation/shortcuts";
 import {PreferencesProvider} from "@/settings/PreferencesProvider";
 import {useSettings} from "@/settings/useSettings";
-import {libraryAttachment,type LibraryPaper} from "@/lib/paperLibrary";
+import {paperLibrary,libraryAttachment,type LibraryPaper} from "@/lib/paperLibrary";
 import type {ProjectFile} from "@/lib/projectFiles";
 import { ProjectProvider } from "@/project/ProjectProvider";
 import { ProjectMenu } from "@/project/ProjectMenu";
@@ -79,7 +79,7 @@ function ProjectApp() {
     return () => window.removeEventListener("keydown", onKey,true);
   }, [setView,effective.shortcuts]);
 
-  const openLibraryPaper=(paper:LibraryPaper)=>{const file=libraryAttachment(paper),id=`library:${paper.id}`;setLibraryFiles(current=>[...current.filter(item=>item.id!==id),{id,path:paper.attachmentName??file.name,kind:'pdf',file}]);setOpenFiles(current=>current.some(item=>item.id===id)?current:[...current,{id,name:paper.title||file.name,kind:'pdf'}]);setActiveId(id);setView('reader');};
+  const openLibraryPaper=(paper:LibraryPaper)=>{if(paper.status==='待读')void paperLibrary.put([{...paper,status:'在读'}]).then(()=>window.dispatchEvent(new Event('paperdesk:library-updated')));const file=libraryAttachment(paper),id=`library:${paper.id}`;setLibraryFiles(current=>[...current.filter(item=>item.id!==id),{id,path:paper.attachmentName??file.name,kind:'pdf',file}]);setOpenFiles(current=>current.some(item=>item.id===id)?current:[...current,{id,name:paper.title||file.name,kind:'pdf'}]);setActiveId(id);setView('reader');};
   const openFromPalette = (f: { node: FileNode; path: string }) => {
     setPaletteOpen(false);
     if(f.node.kind==='latex'){openTex(f.node.id);return;}
