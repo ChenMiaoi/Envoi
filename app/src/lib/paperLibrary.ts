@@ -1,11 +1,18 @@
+import {nativeGet,nativePut,nativeMigrate,encodeNative,decodeNative} from "./localData";
 import {parseBibliography} from './bibliography';
 export interface LibraryPaper {id:string;title:string;author:string;year:string;venue:string;tags:string[];collection:string;status:'待读'|'在读'|'已读';notes:string;created:number;attachment?:Blob;attachmentName?:string;contentHash?:string;bib?:string;citationKey?:string}
 export function createLibraryStore(name='paperdesk-library-v1'){
  const database=()=>new Promise<IDBDatabase>((resolve,reject)=>{const request=indexedDB.open(name,1);request.onupgradeneeded=()=>request.result.createObjectStore('papers',{keyPath:'id'});request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error);});
- return {
+ const cache={
   async list():Promise<LibraryPaper[]>{const db=await database();try{return await new Promise((resolve,reject)=>{const request=db.transaction('papers').objectStore('papers').getAll();request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error);});}finally{db.close();}},
   async put(papers:LibraryPaper[]){const db=await database();try{await new Promise<void>((resolve,reject)=>{const transaction=db.transaction('papers','readwrite');for(const paper of papers)transaction.objectStore('papers').put(paper);transaction.oncomplete=()=>resolve();transaction.onabort=()=>reject(transaction.error??Error('论文库写入失败'));transaction.onerror=()=>reject(transaction.error);});}finally{db.close();}},
   async remove(id:string){const db=await database();try{await new Promise<void>((resolve,reject)=>{const transaction=db.transaction('papers','readwrite');transaction.objectStore('papers').delete(id);transaction.oncomplete=()=>resolve();transaction.onabort=()=>reject(transaction.error);transaction.onerror=()=>reject(transaction.error);});}finally{db.close();}}
+ };
+ if(name!=='paperdesk-library-v1')return cache;
+ return {
+  async list():Promise<LibraryPaper[]>{const legacy=await cache.list();try{const native=await nativeMigrate('library',await encodeNative(legacy));return decodeNative(native.value) as LibraryPaper[];}catch(error){window.dispatchEvent(new CustomEvent('paperdesk:storage-warning',{detail:'本机论文库未连接，显示浏览器备份：'+(error as Error).message}));return legacy;}},
+  async put(papers:LibraryPaper[]){const record=await nativeGet<unknown>('library');const current=record?decodeNative(record.value) as LibraryPaper[]:await cache.list();const next=[...current.filter(item=>!papers.some(p=>p.id===item.id)),...papers];await nativePut('library',await encodeNative(next),'default',{expectedRevision:record?.revision??0});await cache.put(papers);},
+  async remove(id:string){const record=await nativeGet<unknown>('library');if(!record)throw Error('请先读取并迁移本机论文库');const next=(decodeNative(record.value) as LibraryPaper[]).filter(item=>item.id!==id);await nativePut('library',await encodeNative(next),'default',{expectedRevision:record.revision});await cache.remove(id);}
  };
 }
 export const paperLibrary=createLibraryStore();

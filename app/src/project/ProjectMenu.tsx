@@ -1,3 +1,5 @@
+import {restoreProjectSession} from '@/lib/projectSession';
+import {bindAgentDirectory} from "@/lib/agentClient";
 import {ProjectManagement} from "./ProjectManagement";
 import {usePreferences} from "@/settings/context";
 import { useEffect, useState } from "react";
@@ -42,7 +44,7 @@ export function ProjectMenu() {
     void authorizedRoots().then(async (items) => {
       if (!active) return; setRoots(items);
       if (!items.length) return;
-      const root = items[0].directory; setTrail([root]);
+      const root = items.find(item=>item.directory)?.directory;if(!root)return; setTrail([root]);
       if (await root.queryPermission({ mode: "readwrite" }) !== "granted") { if (active) setPermissionNeeded(true); return; }
       const children: FileSystemDirectoryHandle[] = [];
       for await (const child of root.values()) if (child.kind === "directory") children.push(child);
@@ -62,11 +64,14 @@ export function ProjectMenu() {
     setPermissionNeeded(false); setTrail(next); setFolders(children.sort((a,b) => a.name.localeCompare(b.name)));
   };
   const activate = async (directory: FileSystemDirectoryHandle) => {
-    const next = await readProject(directory);
+    const absolutePath=await gitPath(directory);let bindingError='';
+    if(absolutePath){try{await bindAgentDirectory(directory,absolutePath);}catch(error){bindingError=` AI 连接未完成：${(error as Error).message}`;}}
+    else bindingError=' AI 尚未连接此目录，请在项目连接窗口填写所选目录路径。';
+    const next = await restoreProjectSession(await readProject(directory));
     let remembered = true;
     try { await rememberProject(directory); } catch { remembered = false; }
     setProject(next);
-    setMessage(remembered ? `已打开 ${next.name}；编辑后请使用“保存全部”。` : `已打开 ${next.name}，但最近项目记录未能保存。`);
+    setMessage(remembered ? `已打开 ${next.name}；编辑后请使用“保存全部”。${bindingError}` : `已打开 ${next.name}，但最近项目记录未能保存。`);
     for (const file of project.files) if (file.url?.startsWith("blob:")) URL.revokeObjectURL(file.url);
   };
   const openDialog = (next: "new" | "open" | "file") => { setMode(next); if(next==='new')setEnableGit(preferences.defaultGit); setName(""); setDiscard(false); setMessage(""); };
@@ -90,11 +95,11 @@ export function ProjectMenu() {
         <div className="flex min-h-72">
           <aside className="w-44 shrink-0 border-r border-border bg-background/40 p-3">
             <div className="mb-2 px-2 text-xs text-muted-foreground">已授权位置</div>
-            {roots.map((entry) => <button key={entry.id} disabled={busy || mode === "file"} className="mb-1 block w-full truncate rounded px-2 py-2 text-left text-xs hover:bg-secondary" onClick={() => void run(async () => { if (!(await ensurePermission(entry.directory))) throw new Error("目录权限已失效，请重新授权。"); await rememberRoot(entry.directory); await browse([entry.directory]); })}>{entry.name}</button>)}
+            {roots.map((entry) => <button key={entry.id} disabled={busy || mode === "file"} className="mb-1 block w-full truncate rounded px-2 py-2 text-left text-xs hover:bg-secondary" onClick={() => void run(async () => { if (!entry.directory)throw new Error("请重新选择本机目录以恢复浏览器访问权限。"); if (!(await ensurePermission(entry.directory))) throw new Error("目录权限已失效，请重新授权。"); await rememberRoot(entry.directory); await browse([entry.directory]); })}>{entry.name}</button>)}
             {!project.directory && <p className="mb-3 px-2 text-[10px] text-muted-foreground">尚未连接本地项目；打开真实目录后可新建文件和保存。</p>}<div className="mb-3 flex items-center gap-2 px-2 text-xs text-muted-foreground"><HardDrive className="h-3.5 w-3.5" />最近项目</div>
             {!recent.length && <p className="px-2 text-xs text-muted-foreground">尚无已授权项目</p>}
             {recent.map((entry) => <button key={entry.id} disabled={busy || mode === "file"} className="mb-1 flex w-full items-center gap-2 rounded px-2 py-2 text-left text-xs hover:bg-secondary disabled:opacity-40" onClick={() => void run(async () => {
-              if (!(await ensurePermission(entry.directory))) throw new Error("未获得目录授权，当前项目不变。");
+              if (!entry.directory)throw new Error("请重新选择本机目录以恢复浏览器访问权限。"); if (!(await ensurePermission(entry.directory))) throw new Error("未获得目录授权，当前项目不变。");
               await browse([entry.directory]);
             })}><Folder className="h-3.5 w-3.5 shrink-0" /><span className="truncate">{entry.name}</span></button>)}
           </aside>
@@ -130,11 +135,11 @@ export function ProjectMenu() {
             await createTextFile(project.directory!, name.trim(), "");
             const fresh = await readProject(project.directory!).catch((error) => { throw new Error(`文件已创建，但目录刷新失败：${error.message}。已有编辑仍保留。`); });
             setProject((current) => ({ ...current, ...fresh, compiled: current.compiled, id: current.id, rootId: current.rootId || fresh.rootId, files: fresh.files.map((file) => { const old = current.files.find((item) => item.id === file.id); if (old && file.url?.startsWith("blob:")) URL.revokeObjectURL(file.url); return old ?? file; }) })); setMode(null); setMessage(`已创建 ${name}。`);
-          } else { const directory = mode === "new" ? await createPaper(location, name.trim(), template, enableGit) : location; if(mode === "new" && enableGit) { try { await initializeLocalGit(directory, localPath.replace(/\/$/, "") + "/" + name.trim()); await rememberGitPath(location,localPath); } catch(error) { throw new Error(`项目骨架已创建，但 Git 未完成：${(error as Error).message}。文件保留，请打开该项目检查。`); } } if(mode==="open"&&localPath)await bindProjectConnection(directory,localPath); await activate(directory); if (mode === "new" && enableGit) setMessage("项目已创建，Git 仓库已初始化（main）；尚无提交。"); setMode(null); }
+          } else { const directory = mode === "new" ? await createPaper(location, name.trim(), template, enableGit) : location; if(mode === "new" && enableGit) { try { await initializeLocalGit(directory, localPath.replace(/\/$/, "") + "/" + name.trim()); await rememberGitPath(location,localPath); } catch(error) { throw new Error(`项目骨架已创建，但 Git 未完成：${(error as Error).message}。文件保留，请打开该项目检查。`); } } if(localPath)await bindProjectConnection(directory,mode==="new"?localPath.replace(/\/$/, "")+"/"+name.trim():localPath); await activate(directory); if (mode === "new" && enableGit) setMessage("项目已创建，Git 仓库已初始化（main）；尚无提交。"); setMode(null); }
         })}>{busy ? "处理中…" : mode === "new" ? "创建项目" : mode === "file" ? "创建文件" : "打开当前目录"}</button></div>
       </DialogContent>
     </Dialog>
-    <Dialog open={connectionOpen} onOpenChange={setConnectionOpen}><DialogContent><DialogHeader><DialogTitle>项目本地连接</DialogTitle><DialogDescription>目录已获浏览器授权。旧项目首次连接本机工具时需补充绝对路径，之后 Git 等工具统一复用。</DialogDescription></DialogHeader><input aria-label="项目连接绝对路径" value={connectionPath} onChange={event=>setConnectionPath(event.target.value)} placeholder="当前项目目录的本地绝对路径" className="rounded border border-input bg-background px-3 py-2 text-xs" /><button disabled={busy||!connectionPath.startsWith('/')} className="rounded bg-primary px-3 py-2 text-xs text-primary-foreground disabled:opacity-40" onClick={()=>void run(async()=>{await bindProjectConnection(project.directory!,connectionPath);setConnectionOpen(false);setMessage('项目本地连接已保存，后续本机工具复用此连接。');})}>保存项目连接</button>{message&&<p role="status" className="text-xs text-amber-200">{message}</p>}</DialogContent></Dialog>
+    <Dialog open={connectionOpen} onOpenChange={setConnectionOpen}><DialogContent><DialogHeader><DialogTitle>项目本地连接</DialogTitle><DialogDescription>目录已获浏览器授权。旧项目首次连接本机工具时需补充绝对路径，之后 Git 等工具统一复用。</DialogDescription></DialogHeader><input aria-label="项目连接绝对路径" value={connectionPath} onChange={event=>setConnectionPath(event.target.value)} placeholder="当前项目目录的本地绝对路径" className="rounded border border-input bg-background px-3 py-2 text-xs" /><button disabled={busy||!connectionPath.startsWith('/')} className="rounded bg-primary px-3 py-2 text-xs text-primary-foreground disabled:opacity-40" onClick={()=>void run(async()=>{await bindProjectConnection(project.directory!,connectionPath);setConnectionOpen(false);setMessage('项目本地连接已保存，后续本机工具复用此连接。');})}>保存项目连接</button>{message.includes('身份冲突')&&<button disabled={busy||!connectionPath.startsWith('/')} className="text-left text-xs text-primary" onClick={()=>void run(async()=>{await bindAgentDirectory(project.directory!,connectionPath,true);await rememberGitPath(project.directory!,connectionPath);await activate(project.directory!);setConnectionOpen(false);})}>作为独立副本连接</button>}{message&&<p role="status" className="text-xs text-amber-200">{message}</p>}</DialogContent></Dialog>
     {!mode && message && <div role="status" className="fixed bottom-4 right-4 z-50 flex max-w-lg gap-3 rounded border border-border bg-card p-3 text-xs shadow-xl"><span>{message}</span><button aria-label="关闭项目提示" onClick={() => setMessage("")}>×</button></div>}
   </>;
 }

@@ -1,3 +1,5 @@
+import {useAgent} from '@/agent/context';
+import {AgentProvider} from "@/agent/AgentProvider";
 import {matchShortcut,shortcuts,commandBinding,bindingText,shortcutLabel} from "@/navigation/shortcuts";
 import {PreferencesProvider} from "@/settings/PreferencesProvider";
 import {useSettings} from "@/settings/useSettings";
@@ -44,9 +46,10 @@ function flatten(nodes: FileNode[], prefix = ""): { node: FileNode; path: string
   );
 }
 
-export default function App() { return <PreferencesProvider><ProjectProvider><ProjectSession /></ProjectProvider></PreferencesProvider>; }
+export default function App() { return <PreferencesProvider><ProjectProvider><AgentProvider><ProjectSession /></AgentProvider></ProjectProvider></PreferencesProvider>; }
 function ProjectSession() { const { project } = useProject(); return <ProjectApp key={project.id} />; }
 function ProjectApp() {
+  const agent=useAgent();
   const {effective}=useSettings();
   const { project } = useProject();
   const fileTree = useMemo(() => projectTree(project.files, project.directories), [project.files, project.directories]);
@@ -144,7 +147,7 @@ function ProjectApp() {
         <div className="flex items-center gap-3">
           <span className="flex items-center gap-1.5">
             <span className="inline-block h-1.5 w-1.5 rounded-full bg-muted-foreground" />
-            AI · 未接入
+            {agent.status?.runtime?'Pi · 本机运行时':'AI · 未连接'}
           </span>
           <span className="font-editor">{effective.engine==='xelatex'?'XeLaTeX':'pdfLaTeX'}</span>
           <span className="font-editor">UTF-8</span>

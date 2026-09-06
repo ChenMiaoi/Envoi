@@ -1,3 +1,4 @@
+import {localDataPlugin} from "./server/local-data.mjs"
 import { compilerPlugin } from "./server/compiler.mjs"
 import { agentPlugin } from "./server/agent.mjs"
 import path from "path"
@@ -8,7 +9,7 @@ import { inspectAttr } from 'kimi-plugin-inspect-react'
 // https://vite.dev/config/
 export default defineConfig({
   base: '/',
-  plugins: [compilerPlugin(), agentPlugin(), inspectAttr(), react()],
+  plugins: [localDataPlugin(), compilerPlugin(), agentPlugin(), inspectAttr(), react()],
   server: {
     port: 3000,
   },

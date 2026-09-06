@@ -1,66 +1,14 @@
-// Browser client for the PaperDesk agent relay (app/server/agent.mjs).
-// The relay owns the pi subprocess; this module is a thin NDJSON streaming wrapper.
-export interface AgentStatus { available: boolean; engine?: string; error?: string; token: string }
-
-export type ChatEvent =
-  | { type: 'delta'; text: string }
-  | { type: 'thinking'; text: string }
-  | { type: 'tool'; phase: 'start' | 'end'; name: string; isError?: boolean }
-  | { type: 'status'; text: string }
-  | { type: 'done' }
-  | { type: 'error'; message: string };
-
-export async function agentStatus(signal?: AbortSignal): Promise<AgentStatus> {
-  const response = await fetch('/api/paperdesk/agent', { signal });
-  if (!response.ok || !response.headers.get('content-type')?.includes('application/json')) throw new Error('本地 agent 服务不可用，请通过项目开发服务启动。');
-  return response.json();
+export interface AiConfig {provider?:string|null;thinking?:string|null;model:string|null;context:'none'|'current';tools:'none'|'read'|'write'}
+export interface ModelCatalog {state:string;source:string;visibility?:string;checkedAt?:number;error?:string;message?:string;unresolved?:number}
+export interface AgentStatus {available:boolean;runtime:boolean;error?:string;token:string;providers:{id:string;name:string;oauth:boolean;apiKey?:boolean;catalog?:ModelCatalog;auth:{configured:boolean;source?:string}}[];models:{id:string;provider:string;name:string;thinkingLevels:string[];available:boolean;unavailableReason?:string}[];settings:AiConfig;storage:{dataDir:string;credentials:string;kind:string}}
+export interface AgentMessage{id:string;role:'user'|'assistant';text:string;tools?:{name:string;phase:string;isError?:boolean}[];error?:string}
+export interface AgentRecord{created?:number;id:string;name:string;messages:AgentMessage[];status:string;running?:boolean;count?:number}
+export async function agentStatus(signal?:AbortSignal):Promise<AgentStatus>{const response=await fetch('/api/paperdesk/agent',{signal});if(!response.ok||!response.headers.get('content-type')?.includes('application/json'))throw Error('本机 AI 服务未连接');return response.json();}
+export async function agentRequest<T=unknown>(route:string,body:unknown,signal?:AbortSignal):Promise<T>{const status=await agentStatus(signal);const response=await fetch('/api/paperdesk/agent/'+route,{method:'POST',signal,headers:{'Content-Type':'application/json','X-PaperDesk-Token':status.token},body:JSON.stringify(body)});const result=await response.json();if(!response.ok)throw Error(result.error??'AI 操作失败');return result;}
+const bindings=new WeakMap<FileSystemDirectoryHandle,{path:string;token:string;promise:Promise<{ok:boolean;project:{id:string;path:string;name:string}}>}>();
+export async function bindAgentDirectory(directory:FileSystemDirectoryHandle,absolutePath:string,copy=false){const status=await agentStatus();const previous=bindings.get(directory);if(!copy&&previous?.path===absolutePath&&previous.token===status.token)return previous.promise;
+ const promise=(async()=>{const proof=Array.from(crypto.getRandomValues(new Uint8Array(32)),byte=>byte.toString(16).padStart(2,'0')).join(''),name='agent-proof-'+proof;const folder=await directory.getDirectoryHandle('.paperdesk',{create:true}),handle=await folder.getFileHandle(name,{create:true}),stream=await handle.createWritable();await stream.write(proof);await stream.close();try{return await agentRequest<{ok:boolean;project:{id:string;path:string;name:string}}>('bind',{directory:absolutePath,proof,proofKind:'agent',copy});}finally{await folder.removeEntry(name).catch(()=>{});}})();
+ bindings.set(directory,{path:absolutePath,token:status.token,promise});try{return await promise;}catch(error){bindings.delete(directory);throw error;}
 }
-
-// Reuses the git bridge proof marker (.paperdesk/git-proof) as the directory authorization.
-export async function bindAgentDirectory(directory: FileSystemDirectoryHandle, absolutePath: string, token: string): Promise<string> {
-  const proof = crypto.getRandomValues(new Uint8Array(32)).reduce((hex, byte) => hex + byte.toString(16).padStart(2, '0'), '');
-  const state = await directory.getDirectoryHandle('.paperdesk', { create: true });
-  const handle = await state.getFileHandle('git-proof', { create: true });
-  const stream = await handle.createWritable();
-  await stream.write(proof);
-  await stream.close();
-  try {
-    const response = await fetch('/api/paperdesk/agent/bind', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-PaperDesk-Token': token }, body: JSON.stringify({ directory: absolutePath, proof }) });
-    const result = await response.json();
-    if (!response.ok || !result.ok) throw new Error(result.error ?? '目录授权失败');
-    return result.directory as string;
-  } finally { await state.removeEntry('git-proof').catch(() => {}); }
-}
-
-export async function* agentChat(message: string, options: { cwd?: string; context?: string; signal?: AbortSignal } = {}): AsyncGenerator<ChatEvent> {
-  const status = await agentStatus(options.signal);
-  if (!status.available) throw new Error(status.error ?? 'agent 不可用');
-  const body = { message: options.context ? `${options.context}\n\n${message}` : message, cwd: options.cwd };
-  const response = await fetch('/api/paperdesk/agent/chat', { method: 'POST', signal: options.signal, headers: { 'Content-Type': 'application/json', 'X-PaperDesk-Token': status.token }, body: JSON.stringify(body) });
-  if (!response.ok || !response.body) { const error = await response.json().catch(() => ({})); throw new Error(error.error ?? `agent 服务返回 ${response.status}`); }
-  const reader = response.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = '';
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) return;
-    buffer += decoder.decode(value, { stream: true });
-    for (;;) {
-      const index = buffer.indexOf('\n');
-      if (index < 0) break;
-      const line = buffer.slice(0, index).trim();
-      buffer = buffer.slice(index + 1);
-      if (line) yield JSON.parse(line) as ChatEvent;
-    }
-  }
-}
-
-export async function agentAbort(cwd?: string) {
-  const status = await agentStatus();
-  await fetch('/api/paperdesk/agent/abort', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-PaperDesk-Token': status.token }, body: JSON.stringify({ cwd }) });
-}
-
-export async function agentNewSession(cwd?: string) {
-  const status = await agentStatus();
-  await fetch('/api/paperdesk/agent/new', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-PaperDesk-Token': status.token }, body: JSON.stringify({ cwd }) });
-}
+export type ChatEvent={type:'delta'|'thinking';text:string}|{type:'session';id:string}|{type:'tool';phase:string;name:string;isError?:boolean}|{type:'done'}|{type:'error';message:string};
+export async function* agentChat(message:string,options:{projectId:string;sessionId?:string;context?:string;dirty:boolean;signal?:AbortSignal}):AsyncGenerator<ChatEvent>{const status=await agentStatus(options.signal),response=await fetch('/api/paperdesk/agent/chat',{method:'POST',signal:options.signal,headers:{'Content-Type':'application/json','X-PaperDesk-Token':status.token},body:JSON.stringify({message,...options,signal:undefined})});if(!response.ok||!response.body){const error=await response.json();throw Error(error.error??'AI 请求失败');}const reader=response.body.getReader(),decoder=new TextDecoder();let buffer='';try{for(;;){const chunk=await reader.read();if(chunk.done){buffer+=decoder.decode();if(buffer.trim())yield JSON.parse(buffer);break;}buffer+=decoder.decode(chunk.value,{stream:true});let index;while((index=buffer.indexOf('\n'))>=0){const line=buffer.slice(0,index).trim();buffer=buffer.slice(index+1);if(line)yield JSON.parse(line);}}}finally{reader.releaseLock();}}

@@ -15,7 +15,8 @@
     "test:local": "node scripts/test-compiler.mjs && node scripts/test-templates.mjs && node scripts/test-git.mjs && node scripts/test-git-status.mjs && node scripts/test-git-log.mjs && node scripts/test-git-graph.mjs && node scripts/test-diagnostics.mjs && node scripts/test-lint.mjs && node scripts/test-tool-config.mjs",
     "test:demo": "node scripts/test-demo-navigation.mjs && node scripts/test-diagnostic-restore.mjs",
     "demo:build": "node scripts/build-demo.mjs && node scripts/sync-demo-snapshot.mjs",
-    "demo:snapshot": "node scripts/sync-demo-snapshot.mjs"
+    "demo:snapshot": "node scripts/sync-demo-snapshot.mjs",
+    "test:ai": "node scripts/test-model-discovery.mjs && node scripts/test-provider-validation.mjs && node scripts/test-agent-native.mjs && node scripts/test-data-migration.mjs"
   },
   "dependencies": {
     "@codemirror/commands": "^6.11.0",
@@ -77,7 +78,8 @@
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.4.0",
     "vaul": "^1.1.2",
-    "zod": "^4.3.5"
+    "zod": "^4.3.5",
+    "@mariozechner/pi-ai": "^0.73.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",

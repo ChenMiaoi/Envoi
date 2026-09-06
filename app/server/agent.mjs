@@ -1,205 +1,62 @@
-// PaperDesk agent relay: spawns `pi --mode rpc` per project directory and bridges
-// browser fetch streams to the agent's JSONL stdin/stdout protocol.
-// Mirrors the compiler/git middleware guards: localhost same-origin only, bearer token on POST.
-import { spawn } from 'node:child_process';
-import { randomBytes } from 'node:crypto';
-import { existsSync, realpathSync } from 'node:fs';
-import { lstat, mkdir, readFile, realpath } from 'node:fs/promises';
-import os from 'node:os';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-
-// The package's exports map hides dist/cli.js; resolve the npm bin symlink instead, fall back to PATH.
-function piCli() {
-  const local = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'node_modules', '.bin', 'pi');
-  try { if (existsSync(local)) return realpathSync(local); } catch { /* fall through */ }
-  for (const dir of (process.env.PATH ?? '').split(path.delimiter)) {
-    const candidate = path.join(dir, 'pi');
-    try { if (existsSync(candidate)) return realpathSync(candidate); } catch { /* keep looking */ }
-  }
-  return null;
+import {createModelDiscovery,discoveryAdapters,registerDiscoveredModels} from './model-discovery.mjs';
+import {providerFailure,validateProviderCredential} from './provider-validation.mjs';
+// Pi's documented Node SDK provides explicit sessions/auth/tools without loading personal extensions.
+import {AuthStorage,ModelRegistry,SessionManager,SettingsManager,createAgentSession,createExtensionRuntime,createReadTool,createEditTool,createWriteTool} from '@mariozechner/pi-coding-agent';
+import {getSupportedThinkingLevels} from '@mariozechner/pi-ai';
+import {randomBytes,randomUUID} from 'node:crypto';import {mkdir,realpath,chmod,rm,readdir,lstat,readFile} from 'node:fs/promises';import path from 'node:path';
+import {dataDir,atomicJson,jsonFile,safeId,verifyDirectory,registerProject,projectRoot,withDataLock,logEvent} from './local-data.mjs';
+const agentDir=path.join(dataDir,'pi'),settingsFile=path.join(dataDir,'ai/settings.json');
+const defaults={model:null,context:'current',tools:'read'};
+const runtimes=new Map(),authJobs=new Map();
+let auth,registry;
+const customProviders=new Set();
+const discovery=createModelDiscovery({directory:path.join(dataDir,'ai/model-catalogs')}),catalogStates=new WeakMap(),modelUsability=new WeakMap();
+function hasAuth(model){if(modelUsability.has(model))return modelUsability.get(model);return customProviders.has(model.provider)?auth.getAuthStatus(model.provider).configured:registry.hasConfiguredAuth(model);}
+async function services({refreshProvider}={}){await mkdir(agentDir,{recursive:true,mode:0o700});auth??=AuthStorage.create(path.join(agentDir,'auth.json'));auth.reload();const config=await jsonFile(path.join(agentDir,'models.json'),{providers:{}});customProviders.clear();for(const [id,value] of Object.entries(config.providers??{}))if(value.apiKey==='PAPERDESK_AUTH_FROM_PRIVATE_STORAGE')customProviders.add(id);const current=ModelRegistry.create(auth,path.join(agentDir,'models.json')),builtins=current.getAll(),states=new Map();
+ const ids=[...new Set([...builtins.map(model=>model.provider),...auth.getOAuthProviders().map(provider=>provider.id)])];
+ await Promise.all(ids.map(async id=>{const original=builtins.filter(model=>model.provider===id),manual=config.providers?.[id]?.models?.length>0,configured=manual?auth.getAuthStatus(id).configured:original.some(model=>current.hasConfiguredAuth(model))||auth.has(id);
+ if(manual){states.set(id,{state:'manual',source:'manual',message:'手动配置的模型标识',configured});return;}
+ if(!configured){states.set(id,{state:'unconfigured',source:'none',message:'配置服务商后获取模型目录',configured:false});return;}
+ if(!discoveryAdapters[id]){states.set(id,{state:'unsupported',source:'manual',message:'尚无模型发现适配，请在 AI 设置中手动配置真实模型标识',configured});return;}
+ try{const key=await current.getApiKeyForProvider(id);const result=await discovery.discover(id,key,{force:refreshProvider===id});registerDiscoveredModels(current,id,result);states.set(id,{...result,configured});}catch(error){states.set(id,{state:'failed',source:discoveryAdapters[id].url,error:nativeFailure(error.message).message,configured});}}));
+ for(const model of current.getAll()){const state=states.get(model.provider);modelUsability.set(model,!!state?.configured&&(state.state==='manual'||!!state.models?.some(item=>item.id===model.id)));}
+ catalogStates.set(current,states);registry=current;return {auth,registry:current};}
+export function normalizeAi(value,partial=false){const result=partial?{}:{...defaults};if(value?.provider===null||typeof value?.provider==='string')result.provider=value.provider;if(value?.thinking===null||['off','minimal','low','medium','high','xhigh'].includes(value?.thinking))result.thinking=value.thinking;if(value?.model===null||typeof value?.model==='string'&&value.model.includes('/'))result.model=value.model;if(['none','current'].includes(value?.context))result.context=value.context;if(['none','read','write'].includes(value?.tools))result.tools=value.tools;return result;}
+async function effective(projectId){const global=normalizeAi(await jsonFile(settingsFile,{}));if(projectId==='global')return global;const root=await projectRoot(projectId),project=await jsonFile(path.join(root,'.paperdesk/project.json'),{});return {...global,...normalizeAi(project.ai,true)};}
+function sessionDir(project){return path.join(dataDir,project==='global'?'global':`projects/${safeId(project)}`,'chat');}
+function nativeFailure(raw,status){const secrets=Object.values(auth?.getAll()??{}).flatMap(value=>[value.key,value.access,value.refresh]).filter(value=>typeof value==='string'&&value);return providerFailure(raw,status,secrets);}
+async function chatRecord(project,id){
+ const record=await jsonFile(path.join(sessionDir(project),safeId(id)+'.json'),null);
+ if(record?.piFile){try{const lines=(await readFile(path.join(sessionDir(project),safeId(id),path.basename(record.piFile)),'utf8')).trim().split('\n');const failures=lines.map(line=>JSON.parse(line).message).filter(message=>message?.role==='assistant'&&message.stopReason==='error');const targets=record.messages.filter(message=>message.role==='assistant'&&message.error);if(failures.length===targets.length)for(let i=0;i<targets.length;i++)targets[i].error=nativeFailure(failures[i].errorMessage,Number(String(failures[i].errorMessage??'').match(/\b([45]\d\d)\b/)?.[1])||undefined).message;}catch{/* Existing metadata remains available if native history cannot be read. */}}
+ return record;
 }
-async function verifyBoundDirectory({ directory, proof }) {
-  if (typeof directory !== 'string' || !path.isAbsolute(directory) || typeof proof !== 'string' || !/^\w{64}$/.test(proof)) throw Error('Invalid directory binding');
-  const root = await realpath(directory).catch(error => { if (error.code === 'ENOENT') throw Error('项目目录位置不存在或已移动。'); throw error; });
-  const marker = path.join(root, '.paperdesk', 'git-proof');
-  if (!(await lstat(marker)).isFile() || await realpath(marker) !== marker || await readFile(marker, 'utf8') !== proof) throw Error('目录授权证明不匹配。');
-  return root;
-}
-
-// One pi RPC process per working directory. Strict LF-delimited JSONL framing:
-// split on \n only (Node readline is not protocol-compliant).
-class PiProcess {
-  constructor(cwd, cli) {
-    this.cwd = cwd;
-    this.pending = new Map();
-    this.eventListeners = new Set();
-    this.requestId = 0;
-    this.buffer = '';
-    this.exited = false;
-    this.proc = spawn(process.execPath, [cli, '--mode', 'rpc', '-e', path.join(path.dirname(fileURLToPath(import.meta.url)), 'paperdesk-search.ts')], { cwd, stdio: ['pipe', 'pipe', 'pipe'] });
-    this.stderr = '';
-    this.proc.stdout.setEncoding('utf8');
-    this.proc.stdout.on('data', chunk => this.onData(chunk));
-    this.proc.stderr.setEncoding('utf8');
-    this.proc.stderr.on('data', chunk => { this.stderr = (this.stderr + chunk).slice(-4000); });
-    this.proc.on('exit', () => {
-      this.exited = true;
-      const error = Error(`pi 进程已退出${this.stderr ? `：${this.stderr.trim().split('\n').pop()}` : ''}`);
-      for (const { reject } of this.pending.values()) reject(error);
-      for (const listener of this.eventListeners) listener({ type: 'process_exit' });
-    });
-  }
-  onData(chunk) {
-    this.buffer += chunk;
-    for (;;) {
-      const index = this.buffer.indexOf('\n');
-      if (index < 0) return;
-      const line = this.buffer.slice(0, index).replace(/\r$/, '');
-      this.buffer = this.buffer.slice(index + 1);
-      if (!line.trim()) continue;
-      let record;
-      try { record = JSON.parse(line); } catch { continue; }
-      if (record.type === 'response') {
-        const entry = this.pending.get(record.id);
-        if (entry) { this.pending.delete(record.id); entry.resolve(record); }
-      } else {
-        for (const listener of this.eventListeners) listener(record);
-      }
-    }
-  }
-  request(command) {
-    if (this.exited) return Promise.reject(Error('pi 进程不可用'));
-    const id = `req-${++this.requestId}`;
-    return new Promise((resolve, reject) => {
-      this.pending.set(id, { resolve, reject });
-      this.proc.stdin.write(JSON.stringify({ ...command, id }) + '\n');
-    });
-  }
-  onEvent(listener) { this.eventListeners.add(listener); return () => this.eventListeners.delete(listener); }
-  kill() { this.proc.kill(); }
-}
-
-export function agentPlugin() {
-  const token = randomBytes(32).toString('hex');
-  const cli = piCli();
-  const processes = new Map();
-  const boundDirs = new Set();
-
-  async function processFor(cwd) {
-    let pi = processes.get(cwd);
-    if (pi?.exited) { processes.delete(cwd); pi = null; }
-    if (!pi) {
-      if (!cli) throw Error('未安装 pi（@mariozechner/pi-coding-agent）。');
-      await mkdir(cwd, { recursive: true });
-      pi = new PiProcess(cwd, cli);
-      processes.set(cwd, pi);
-    }
-    return pi;
-  }
-  const scratchDir = () => path.join(os.homedir(), '.paperdesk', 'agent-scratch');
-
-  async function readBody(req, limit = 2 * 1024 * 1024) {
-    let body = '';
-    for await (const chunk of req) { body += chunk; if (body.length > limit) throw Error('请求过大'); }
-    return JSON.parse(body);
-  }
-
-  // Translate pi RPC events into the small NDJSON vocabulary the browser consumes.
-  function translate(event) {
-    if (event.type === 'message_update') {
-      const delta = event.assistantMessageEvent;
-      if (delta?.type === 'text_delta') return { type: 'delta', text: delta.delta };
-      if (delta?.type === 'thinking_delta') return { type: 'thinking', text: delta.delta };
-    }
-    if (event.type === 'tool_execution_start') return { type: 'tool', phase: 'start', name: event.toolName ?? event.tool ?? 'tool' };
-    if (event.type === 'tool_execution_end') return { type: 'tool', phase: 'end', name: event.toolName ?? event.tool ?? 'tool', isError: !!event.isError };
-    if (event.type === 'auto_retry_start') return { type: 'status', text: '服务暂时不可用，正在重试…' };
-    if (event.type === 'compaction_start') return { type: 'status', text: '正在压缩对话上下文…' };
-    if (event.type === 'extension_error') return { type: 'status', text: `扩展错误：${event.error ?? '未知'}` };
-    if (event.type === 'agent_settled') return { type: 'done' };
-    if (event.type === 'process_exit') return { type: 'error', message: 'pi 进程意外退出' };
-    return null;
-  }
-  // Cached probe: pi installed AND at least one model configured. Spawns a short-lived RPC process once.
-  let statusCache = null;
-
-  return {
-    name: 'paperdesk-agent',
-    configureServer(server) {
-      server.middlewares.use(async (req, res, next) => {
-        if (!req.url?.startsWith('/api/paperdesk/agent')) return next();
-        const host = req.headers.host ?? '';
-        const sameOrigin = req.headers.origin === `http://${host}` || (!req.headers.origin && req.headers['sec-fetch-site'] === 'same-origin');
-        if (!/^(127\.0\.0\.1|localhost|\[::1\]):\d+$/.test(host) || !sameOrigin) { res.statusCode = 403; res.end('Local same-origin requests only'); return; }
-        res.setHeader('Cache-Control', 'no-store');
-
-        if (req.method === 'GET' && req.url === '/api/paperdesk/agent') {
-          res.setHeader('Content-Type', 'application/json');
-          if (!cli) { res.end(JSON.stringify({ available: false, error: '未检测到 pi 运行时，请安装应用依赖后重启服务。', token })); return; }
-          if (!statusCache) {
-            statusCache = (async () => {
-              const probe = await processFor(scratchDir());
-              const response = await probe.request({ type: 'get_available_models' });
-              const models = response.data?.models ?? [];
-              return models.length > 0
-                ? { available: true, engine: 'pi', models: models.map(m => `${m.provider}/${m.id}`) }
-                : { available: false, error: 'pi 已安装但尚未配置模型：请在 pi 中登录（pi 命令行 /login）或设置 API key 环境变量后重启服务。' };
-            })().catch(error => ({ available: false, error: `pi 启动失败:${error.message}` }));
-          }
-          res.end(JSON.stringify({ ...(await statusCache), token }));
-          return;
-        }
-        if (req.method !== 'POST' || req.headers['x-paperdesk-token'] !== token) { res.statusCode = 403; res.end(JSON.stringify({ error: 'Invalid agent request' })); return; }
-
-        try {
-          if (req.url === '/api/paperdesk/agent/bind') {
-            const root = await verifyBoundDirectory(await readBody(req, 8192));
-            boundDirs.add(root);
-            res.setHeader('Content-Type', 'application/json');
-            res.end(JSON.stringify({ ok: true, directory: root }));
-            return;
-          }
-
-          if (req.url === '/api/paperdesk/agent/abort' || req.url === '/api/paperdesk/agent/new') {
-            const body = await readBody(req, 8192);
-            const cwd = typeof body.cwd === 'string' && boundDirs.has(body.cwd) ? body.cwd : scratchDir();
-            const pi = processes.get(cwd);
-            const command = req.url.endsWith('/abort') ? { type: 'abort' } : { type: 'new_session' };
-            const response = pi && !pi.exited ? await pi.request(command) : { success: true };
-            res.setHeader('Content-Type', 'application/json');
-            res.end(JSON.stringify({ ok: !!response.success }));
-            return;
-          }
-
-          if (req.url !== '/api/paperdesk/agent/chat') { res.statusCode = 403; res.end(JSON.stringify({ error: 'Invalid agent request' })); return; }
-          const body = await readBody(req);
-          if (typeof body.message !== 'string' || !body.message.trim()) throw Error('消息为空');
-          const cwd = typeof body.cwd === 'string' && boundDirs.has(body.cwd) ? body.cwd : scratchDir();
-          const pi = await processFor(cwd);
-
-          res.setHeader('Content-Type', 'application/x-ndjson');
-          res.flushHeaders();
-          const write = record => { if (!res.writableEnded) res.write(JSON.stringify(record) + '\n'); };
-          let settled = false;
-          const off = pi.onEvent(event => {
-            const out = translate(event);
-            if (!out) return;
-            if (out.type === 'done') settled = true;
-            write(out);
-            if (settled) { off(); res.end(); }
-          });
-          res.on('close', () => {
-            off();
-            if (!settled && !pi.exited) void pi.request({ type: 'abort' }).catch(() => {});
-          });
-          const accepted = await pi.request({ type: 'prompt', message: body.message });
-          if (!accepted.success) { write({ type: 'error', message: accepted.error ?? '消息被拒绝' }); settled = true; off(); res.end(); }
-        } catch (error) {
-          if (!res.headersSent) { res.statusCode = 400; res.setHeader('Content-Type', 'application/json'); }
-          res.end(res.headersSent ? JSON.stringify({ type: 'error', message: error.message }) + '\n' : JSON.stringify({ error: error.message }));
-        }
-      });
-    },
-  };
-}
+async function saveRecord(project,record){return atomicJson(path.join(sessionDir(project),safeId(record.id)+'.json'),record);}
+async function listRecords(project,query=''){const index=await jsonFile(path.join(sessionDir(project),'index.json'),[]);return Promise.all(index.map(id=>chatRecord(project,id))).then(rows=>rows.filter(Boolean).filter(row=>!query||[row.name,...row.messages.map(message=>message.text+' '+(message.error??''))].join(' ').toLocaleLowerCase().includes(query.toLocaleLowerCase())).map(({messages,...row})=>({...row,count:messages.length,running:runtimes.get(project)?.record?.id===row.id})));}
+function newRecord(project){return withDataLock('chat-index:'+project,()=>newRecordLocked(project));}
+async function newRecordLocked(project){const record={id:randomUUID(),name:'新会话',created:Date.now(),messages:[],status:'idle'};const index=await jsonFile(path.join(sessionDir(project),'index.json'),[]);await saveRecord(project,record);await atomicJson(path.join(sessionDir(project),'index.json'),[record.id,...index]);await atomicJson(path.join(sessionDir(project),'active.json'),{id:record.id});return record;}
+export async function providerStatus(){const {auth,registry}=await services(),states=catalogStates.get(registry),oauth=auth.getOAuthProviders();const models=registry.getAll().filter(model=>states.get(model.provider)?.state==='manual'||states.get(model.provider)?.models?.some(item=>item.id===model.id));const providers=[...states.keys()].map(id=>{const state=states.get(id);return {id,name:registry.getProviderDisplayName(id),oauth:oauth.some(provider=>provider.id===id),apiKey:!['openai-codex','github-copilot','google-vertex','amazon-bedrock'].includes(id),auth:{...auth.getAuthStatus(id),configured:state.configured},catalog:{state:state.state,source:state.source,visibility:state.visibility,checkedAt:state.checkedAt,error:state.error,message:state.message,unresolved:state.unresolved?.length??0}};});return {runtime:true,available:models.some(model=>hasAuth(model)),providers,models:[...models.map(model=>({id:model.id,provider:model.provider,name:model.name,thinkingLevels:model.reasoning?getSupportedThinkingLevels(model):[],available:hasAuth(model)})),...[...states].flatMap(([provider,state])=>(state.unresolved??[]).map(id=>({id,provider,name:id,thinkingLevels:[],available:false,unavailableReason:'目录已列出，但缺少可验证的运行能力数据'})))],settings:normalizeAi(await jsonFile(settingsFile,{})),storage:{dataDir,credentials:path.join(agentDir,'auth.json'),kind:'pi-file-0600'},configurationError:registry.getError()?'自定义模型配置无效，请修复或移除后重试。':undefined};}
+export async function safeToolPath(cwd,value){if(typeof value!=='string')throw Error('需要项目相对文件路径');const selected=path.resolve(cwd,value);if(selected===cwd||!selected.startsWith(cwd+path.sep)||path.relative(cwd,selected).split(path.sep).some(part=>part.startsWith('.')))throw Error('工具只能访问项目内非隐藏文件');let resolved;try{resolved=await realpath(selected);}catch{resolved=path.join(await realpath(path.dirname(selected)),path.basename(selected));}if(!resolved.startsWith(cwd+path.sep)||path.relative(cwd,resolved).split(path.sep).some(part=>part.startsWith('.')))throw Error('拒绝通过符号链接访问项目外文件');if(await lstat(selected).then(info=>info.nlink>1&&info.isFile(),()=>false))throw Error('拒绝访问多重硬链接文件');return selected;}
+export function projectTools(cwd,permission,dirty){if(permission==='none')return [];const choices=[createReadTool(cwd),...(permission==='write'&&!dirty?[createEditTool(cwd),createWriteTool(cwd)]:[])];const listing={...choices[0],name:'project_list',label:'项目文件列表',description:'List visible files in a project directory. Use path . for the project root.',async execute(_id,args){const selected=args.path==='.'?cwd:await safeToolPath(cwd,args.path);const names=[];for(const item of await readdir(selected,{withFileTypes:true})){if(item.name.startsWith('.')||item.isSymbolicLink())continue;names.push(item.name+(item.isDirectory()?'/':''));}return {content:[{type:'text',text:names.sort().slice(0,2000).join('\n')}],details:{}};}};return [listing,...choices.map(tool=>({...tool,name:'project_'+tool.name,label:tool.label??tool.name,async execute(id,args,signal,onUpdate,context){await safeToolPath(cwd,args.path);return tool.execute(id,args,signal,onUpdate,context);}}))];}
+const resourceLoader={getExtensions:()=>({extensions:[],errors:[],runtime:createExtensionRuntime()}),getSkills:()=>({skills:[],diagnostics:[]}),getPrompts:()=>({prompts:[],diagnostics:[]}),getThemes:()=>({themes:[],diagnostics:[]}),getAgentsFiles:()=>({agentsFiles:[]}),getSystemPrompt:()=> 'You are the PaperDesk research assistant. Context explicitly marked as unsaved draft is not the on-disk file. Never claim file operations you did not perform. Tools are limited to authorized project files. No shell, hidden files or external paths are available.',getAppendSystemPrompt:()=>[],extendResources:()=>{},reload:async()=>{}};
+function textEvent(event){if(event.type==='message_update'){const d=event.assistantMessageEvent;if(d?.type==='text_delta')return {type:'delta',text:d.delta};if(d?.type==='thinking_delta')return {type:'thinking',text:d.delta};}if(event.type==='tool_execution_start')return {type:'tool',phase:'start',name:event.toolName};if(event.type==='tool_execution_end')return {type:'tool',phase:'end',name:event.toolName,isError:!!event.isError};return null;}
+export function agentPlugin(){const token=randomBytes(32).toString('hex'),bound=new Set();return {name:'paperdesk-agent',configureServer(server){server.httpServer?.once('close',()=>{for(const running of runtimes.values())void running.session?.abort().finally(()=>running.session.dispose());for(const job of authJobs.values())job.controller.abort();});server.middlewares.use(async(req,res,next)=>{
+ if(!req.url?.startsWith('/api/paperdesk/agent'))return next();const host=req.headers.host??'';if(!/^(127\.0\.0\.1|localhost|\[::1\]):\d+$/.test(host)||!(req.headers.origin===`http://${host}`||(!req.headers.origin&&req.headers['sec-fetch-site']==='same-origin'))){res.statusCode=403;res.end();return;}res.setHeader('Cache-Control','no-store');res.setHeader('Content-Type','application/json');
+ try{if(req.method==='GET'&&req.url==='/api/paperdesk/agent'){res.end(JSON.stringify({...await providerStatus(),token}));return;}if(req.method!=='POST'||req.headers['x-paperdesk-token']!==token)throw Error('请求未获授权');let raw='';for await(const chunk of req){raw+=chunk;if(raw.length>2_000_000)throw Error('请求超过大小限制');}const body=JSON.parse(raw),route=req.url.slice('/api/paperdesk/agent/'.length);const {auth,registry}=await services();
+ if(route==='models/refresh'){if(typeof body.provider!=='string')throw Error('请选择服务商');const fresh=await services({refreshProvider:body.provider});const state=catalogStates.get(fresh.registry).get(body.provider);res.end(JSON.stringify({ok:!state?.error,catalog:state}));return;}
+ if(route==='bind'){const root=await verifyDirectory(body),project=await registerProject(root,{copy:body.copy===true});bound.add(project.id);res.end(JSON.stringify({ok:true,project}));return;}
+ if(route==='settings'){const settings=normalizeAi(body.settings);if(settings.model){const slash=settings.model.indexOf('/');if(!registry.find(settings.model.slice(0,slash),settings.model.slice(slash+1)))throw Error('未知模型');}await atomicJson(settingsFile,settings);res.end(JSON.stringify({ok:true,settings}));return;}
+ if(route==='credential'){if(runtimes.size)throw Error('请等待当前 AI 任务结束后修改凭据');const providers=(await providerStatus()).providers;if(!providers.some(p=>p.id===body.provider))throw Error('未知服务商');if(body.remove===true)auth.remove(body.provider);else {if(typeof body.key!=='string'||!body.key.trim()||body.key.length>16000||body.key.trim().startsWith('!'))throw Error('无效 API key');const validation=await validateProviderCredential(body.provider,body.key.trim());if(validation.state==='failed'){res.statusCode=400;res.end(JSON.stringify({error:validation.message,validation,saved:false}));return;}auth.set(body.provider,{type:'api_key',key:body.key.trim()});await atomicJson(path.join(dataDir,'ai/validation',safeId(body.provider)+'.json'),validation);await services({refreshProvider:body.provider});}await chmod(path.join(agentDir,'auth.json'),0o600);res.end(JSON.stringify({ok:true,validation:body.remove?undefined:await jsonFile(path.join(dataDir,'ai/validation',safeId(body.provider)+'.json'),null)}));return;}
+ if(route==='custom-provider'){if(runtimes.size)throw Error('请等待当前 AI 任务结束后修改服务商');safeId(body.provider);if(registry.getAll().some(model=>model.provider===body.provider)&&!customProviders.has(body.provider))throw Error('此标识属于内置服务商，请使用独立的自定义标识');if(/mock/i.test(body.provider))throw Error('不支持模拟服务商');const url=new URL(body.baseUrl);if(!['https:','http:'].includes(url.protocol)||url.username||url.password||url.search||url.hash)throw Error('请输入不含凭据或查询参数的服务地址');if(!['openai-completions','anthropic-messages','google-generative-ai'].includes(body.api))throw Error('不支持该接口类型');if(typeof body.model!=='string'||!body.model.trim())throw Error('请输入真实模型标识');if(!Number.isSafeInteger(Number(body.contextWindow??32000))||Number(body.contextWindow??32000)<1||!Number.isSafeInteger(Number(body.maxTokens??4096))||Number(body.maxTokens??4096)<1)throw Error('模型窗口与输出上限必须是正整数');const file=path.join(agentDir,'models.json'),config=await jsonFile(file,{providers:{}});config.providers??={};config.providers[body.provider]={baseUrl:url.href,api:body.api,apiKey:'PAPERDESK_AUTH_FROM_PRIVATE_STORAGE',models:[...(config.providers[body.provider]?.models??[]).filter(model=>model.id!==body.model.trim()),{id:body.model.trim(),name:body.name?.trim()||body.model.trim(),contextWindow:Number(body.contextWindow)||32000,maxTokens:Number(body.maxTokens)||4096}]};await atomicJson(file,config);res.end(JSON.stringify({ok:true}));return;}
+ if(route==='oauth/start'){for(const old of authJobs.values())if(old.provider===body.provider&&!['done','failed','cancelled'].includes(old.state))old.controller.abort();if(!auth.getOAuthProviders().some(provider=>provider.id===body.provider))throw Error('该服务商不支持 OAuth');const id=randomUUID(),job={id,provider:body.provider,controller:new AbortController(),state:'starting'};authJobs.set(id,job);setTimeout(()=>{job.controller.abort();authJobs.delete(id);},600000).unref();const prompt=question=>new Promise((resolve,reject)=>{job.prompt=question;job.state='input';job.answer=resolve;job.controller.signal.addEventListener('abort',()=>reject(Error('已取消')),{once:true});});void auth.login(body.provider,{signal:job.controller.signal,onAuth:info=>{job.url=info.url;job.instructions=info.instructions;job.state='authorize';},onPrompt:prompt,onManualCodeInput:()=>prompt({message:'粘贴授权后的回调地址或验证码'}),onSelect:question=>prompt({...question,select:true}),onProgress:()=>{}}).then(async()=>{await services({refreshProvider:body.provider});job.state='done';delete job.prompt;delete job.url;delete job.instructions;}).catch(()=>{job.state=job.controller.signal.aborted?'cancelled':'failed';job.error='认证未完成，请重试或检查服务商配置。';delete job.prompt;delete job.url;delete job.instructions;});res.end(JSON.stringify({id}));return;}
+ if(route.startsWith('oauth/')){const job=authJobs.get(body.id);if(!job)throw Error('认证会话不存在');if(route==='oauth/cancel')job.controller.abort();if(route==='oauth/answer'){if(typeof body.answer!=='string'||!job.answer)throw Error('当前没有待回答的认证步骤');job.answer(body.answer);delete job.answer;delete job.prompt;job.state='waiting';}res.end(JSON.stringify({id:job.id,state:job.state,url:job.url,instructions:job.instructions,prompt:job.prompt,error:job.error}));return;}
+ const project=safeId(body.projectId);if(!bound.has(project))throw Error('当前项目尚未完成本机连接。');
+ if(route==='sessions'){res.end(JSON.stringify({sessions:await listRecords(project,typeof body.query==='string'?body.query.slice(0,500):''),settings:await effective(project),activeId:(await jsonFile(path.join(sessionDir(project),'active.json'),{})).id}));return;}
+ if(route==='new'){if(runtimes.has(project))throw Error('请先停止当前任务');res.end(JSON.stringify(await newRecord(project)));return;}
+ if(route==='history/delete'){if(body.confirm!==true||runtimes.has(project))throw Error('需明确确认且停止任务后才能清理历史');const id=safeId(body.sessionId),index=await jsonFile(path.join(sessionDir(project),'index.json'),[]);if(!index.includes(id))throw Error('会话不存在');await rm(path.join(sessionDir(project),id+'.json'),{force:true});await rm(path.join(sessionDir(project),id),{recursive:true,force:true});const remaining=index.filter(value=>value!==id);await atomicJson(path.join(sessionDir(project),'index.json'),remaining);if((await jsonFile(path.join(sessionDir(project),'active.json'),{})).id===id)await atomicJson(path.join(sessionDir(project),'active.json'),{id:remaining[0]});res.end(JSON.stringify({ok:true}));return;}
+ if(route==='session'){if(runtimes.has(project)&&runtimes.get(project)?.record?.id!==body.sessionId)throw Error('请先停止当前任务');const record=await chatRecord(project,body.sessionId);if(!record)throw Error('会话不存在');await atomicJson(path.join(sessionDir(project),'active.json'),{id:record.id});res.end(JSON.stringify(record));return;}
+ if(route==='abort'){const active=runtimes.get(project);if(active&&(!active.record||active.record.id===body.sessionId)){active.cancelled=true;await active.session?.abort();}res.end(JSON.stringify({ok:true,active:!!active}));return;}
+ if(route!=='chat')throw Error('未知 AI 操作');if(runtimes.has(project))throw Error('当前项目已有任务运行');const reservation={session:null,record:null,cancelled:false};runtimes.set(project,reservation);let session,off,stop,record,manager;try{const cwd=await projectRoot(project),config=await effective(project);if(!config.model)throw Error('请先在 AI 设置中选择已配置的模型');const slash=config.model.indexOf('/'),model=registry.find(config.model.slice(0,slash),config.model.slice(slash+1));if(!model||/mock/i.test(model.provider+'/'+model.id)||!hasAuth(model))throw Error('当前模型不在可用目录中，或缺少运行能力数据/凭据；请查看模型目录状态并重新选择或手动配置。');if(typeof body.message!=='string'||!body.message.trim())throw Error('消息为空');if(config.tools==='write'&&body.dirty)throw Error('文件修改权限要求先保存所有草稿；未执行任务');record=body.sessionId?await chatRecord(project,body.sessionId):await newRecord(project);if(!record)throw Error('会话不存在');const folder=path.join(sessionDir(project),record.id);await mkdir(folder,{recursive:true,mode:0o700});manager=record.piFile?SessionManager.open(path.join(folder,path.basename(record.piFile)),folder,cwd):SessionManager.create(cwd,folder);const tools=projectTools(cwd,config.tools,body.dirty);if(config.provider&&config.provider!==model.provider)throw Error('服务商与模型不匹配，请重新选择模型');if(config.thinking!=null&&!getSupportedThinkingLevels(model).includes(config.thinking))throw Error('此模型不支持所选思考档位');({session}=await createAgentSession({cwd,agentDir,authStorage:auth,modelRegistry:registry,model,...(model.reasoning&&config.thinking!=null?{thinkingLevel:config.thinking}:{}),resourceLoader,tools:tools.map(tool=>tool.name),customTools:tools,sessionManager:manager,settingsManager:SettingsManager.inMemory({retry:{enabled:false}})}));Object.assign(reservation,{session,record});if(reservation.cancelled||res.destroyed)throw Error('任务已停止');
+ let terminalFailure=null;const user={id:randomUUID(),role:'user',text:body.message,at:Date.now()},assistant={id:randomUUID(),role:'assistant',text:'',at:Date.now(),tools:[]};record.messages.push(user,assistant);record.status='running';record.name=record.messages.length===2?body.message.slice(0,60):record.name;await saveRecord(project,record);res.setHeader('Content-Type','application/x-ndjson');res.flushHeaders();const write=event=>{if(!res.writableEnded)res.write(JSON.stringify(event)+'\n');};write({type:'session',id:record.id});off=session.subscribe(event=>{if(event.type==='message_end'&&event.message?.role==='assistant'){if(event.message.stopReason==='error')terminalFailure=nativeFailure(event.message.errorMessage,Number(String(event.message.errorMessage??'').match(/\b([45]\d\d)\b/)?.[1])||undefined);if(event.message.stopReason==='aborted')reservation.cancelled=true;}const out=textEvent(event);if(!out)return;if(out.type==='delta')assistant.text+=out.text;if(out.type==='tool')assistant.tools.push(out);write(out);});stop=()=>{reservation.cancelled=true;void session.abort();};res.on('close',stop);
+ try{const context=config.context==='current'&&typeof body.context==='string'?`\n[User supplied document context; may be an UNSAVED DRAFT]\n${body.context.slice(0,40000)}\n[End context]\n`:'';await session.prompt(context+body.message);if(terminalFailure)throw Error('模型请求失败');record.status=reservation.cancelled?'cancelled':'complete';write({type:'done'});}catch(error){record.status=reservation.cancelled?'cancelled':'failed';assistant.error=reservation.cancelled?'任务已停止。':terminalFailure?.message??nativeFailure(error.message).message;write({type:'error',message:assistant.error});}finally{record.piFile=manager.getSessionFile()?path.basename(manager.getSessionFile()):undefined;await saveRecord(project,record);}}finally{off?.();if(stop)res.off('close',stop);session?.dispose();runtimes.delete(project);if(record)await logEvent({type:'chat',project,session:record.id,status:record.status});if(res.headersSent&&!res.writableEnded)res.end();}
+ }catch(error){if(!res.headersSent){res.statusCode=400;res.end(JSON.stringify({error:error.message}));}else res.end(JSON.stringify({type:'error',message:'请求未完成，请检查会话状态。'})+'\n');}
+ });}};}

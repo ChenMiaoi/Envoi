@@ -21,6 +21,6 @@ export function projectConfiguration(raw:unknown,legacyEngine?:string):ProjectCo
  return {version:1,overrides};
 }
 export function effectivePreferences(global:Preferences,project:ProjectConfiguration){return {...global,...project.overrides};}
-export const settingCategories={general:'通用',editor:'编辑器',compile:'编译',references:'文献与版本管理'};
+export const settingCategories={general:'通用',editor:'编辑器',compile:'编译',references:'文献与版本管理',ai:'AI 服务'};
 export type SettingsCategory=keyof typeof settingCategories;
 export type SettingsScope='global'|'project';

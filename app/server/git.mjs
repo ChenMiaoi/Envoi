@@ -8,10 +8,10 @@ export function gitRuntime() {
 }
 function gitRun(root){return args=>execFileSync(detectTool('git')??'git',['--no-optional-locks','-c','core.fsmonitor=false','-c','core.untrackedCache=false',...args],{cwd:root,encoding:'utf8',timeout:10000,maxBuffer:4*1024*1024,stdio:['ignore','pipe','pipe']});}
 async function boundGit(input){const {root}=await boundRoot(input);const runtime=gitRuntime();if(!runtime.available)throw Error(runtime.error);return {root,run:gitRun(root)};}
-async function boundRoot({directory,proof}) {
+async function boundRoot({directory,proof,proofKind}) {
  if(typeof directory!=='string'||!path.isAbsolute(directory)||typeof proof!=='string'||!/^\w{64}$/.test(proof))throw Error('Invalid directory binding');
  const root=await realpath(directory).catch(error=>{if(error.code==='ENOENT')throw Error('项目目录位置不存在或已移动，请在项目菜单打开新位置；这不是 Git 授权失效。');throw error;});
- const marker=path.join(root,'.paperdesk','git-proof');
+ const marker=path.join(root,'.paperdesk',proofKind==='unique'?'git-proof-'+proof:'git-proof');
  if(!(await lstat(marker)).isFile()||await realpath(marker)!==marker||await readFile(marker,'utf8')!==proof)throw Error('目录授权证明不匹配，未运行 Git。');
  return {root};
 }
@@ -44,7 +44,7 @@ export async function readBoundGitStatus(input) {
  try{run(['rev-parse','--show-toplevel']);}catch{return {ok:true,state:'not-initialized',version:runtime.version,files:[]};}
  const prefix=run(['rev-parse','--show-prefix']).trim();
  let branch,detached=false;try{branch=run(['symbolic-ref','--short','HEAD']).trim();}catch{detached=true;branch=run(['rev-parse','--short','HEAD']).trim();}
- const files=parseGitStatus(run(['status','--porcelain=v1','-z','--untracked-files=all','--','.']),prefix).filter(file=>file.path!=='.paperdesk/git-proof');
+ const files=parseGitStatus(run(['status','--porcelain=v1','-z','--untracked-files=all','--','.']),prefix).filter(file=>!/^\.paperdesk\/(?:git|agent)-proof(?:-|$)/.test(file.path));
  return {ok:true,state:'ready',branch,detached,files,version:runtime.version};
 }
 export function parseRefs(decorations){const refs=[];let head=false;for(const part of decorations.split(', ').filter(Boolean)){if(part==='HEAD'){head=true;continue;}if(part.startsWith('HEAD -> ')){head=true;refs.push({name:part.slice(8),kind:'branch'});continue;}if(part.startsWith('tag: ')){refs.push({name:part.slice(5),kind:'tag'});continue;}refs.push({name:part,kind:part.includes('/')?'remote':'branch'});}return {refs,head};}

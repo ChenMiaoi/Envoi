@@ -54,7 +54,7 @@ export function templateFiles(id: string, enableGit = true) {
  return {
   'main.tex': template.main,
   '.gitignore': projectGitignore,
-  '.paperdesk/project.json': JSON.stringify({ main: 'main.tex', settings: {version: 1, overrides: {}}, buildDirectory: 'build', git: { requested: enableGit, branch: 'main', status: enableGit ? 'pending-local-init' : 'disabled' } }, null, 2) + '\n',
+  '.paperdesk/project.json': JSON.stringify({ projectId:crypto.randomUUID(), main: 'main.tex', settings: {version: 1, overrides: {}}, buildDirectory: 'build', git: { requested: enableGit, branch: 'main', status: enableGit ? 'pending-local-init' : 'disabled' } }, null, 2) + '\n',
   'data/README.md': 'Store source datasets here. Label synthetic data explicitly.\n',
   'build/README.md': 'Generated PDF and compilation logs live here. This directory is ignored by Git.\n',
   'chapters/introduction.tex': String.raw`\section{Introduction}
