@@ -1,0 +1,13 @@
+{
+  "name": "IO-Aware Attention: An Illustrative Systems Study",
+  "main": "main.tex",
+  "engine": "pdflatex",
+  "template": "acm-conf",
+  "dataStatus": "synthetic and illustrative; no hardware measurements",
+  "buildDirectory": "build",
+  "git": {
+    "requested": true,
+    "branch": "main",
+    "status": "initialized"
+  }
+}

@@ -1,0 +1,244 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 240 5.9% 10.6%; /* #18181b */
+    --foreground: 0 0% 96%;
+    --card: 240 5% 12.5%;
+    --card-foreground: 0 0% 96%;
+    --popover: 240 5% 12.5%;
+    --popover-foreground: 0 0% 96%;
+    --primary: 57 62% 83%; /* #eef0b1 哑光柠檬 */
+    --primary-foreground: 240 6% 10%;
+    --secondary: 240 3.5% 16%; /* #252526 */
+    --secondary-foreground: 0 0% 96%;
+    --muted: 240 3.5% 16%;
+    --muted-foreground: 0 0% 58.8%; /* #969696 */
+    --accent: 240 2.5% 19%; /* #2e2e30 */
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 45%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 3.5% 17.5%;
+    --input: 240 3.5% 20%;
+    --ring: 57 62% 83%;
+    --radius: 0.5rem;
+    --editor: 240 6% 8.5%;
+    --sidebar-background: 240 5% 11.5%;
+    --sidebar-foreground: 0 0% 96%;
+    --sidebar-primary: 57 62% 83%;
+    --sidebar-primary-foreground: 240 6% 10%;
+    --sidebar-accent: 240 2.5% 19%;
+    --sidebar-accent-foreground: 0 0% 96%;
+    --sidebar-border: 240 3.5% 17.5%;
+    --sidebar-ring: 57 62% 83%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family:
+      -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI",
+      "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    font-size: 13px;
+    -webkit-font-smoothing: antialiased;
+  }
+  ::selection {
+    background: hsl(57 62% 83% / 0.25);
+    color: #fff;
+  }
+}
+
+@layer utilities {
+  .font-editor {
+    font-family: "SF Mono", "JetBrains Mono", "Cascadia Code", Consolas,
+      "Courier New", "PingFang SC", monospace;
+  }
+  .bg-editor {
+    background-color: hsl(var(--editor));
+  }
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: hsl(240 3.5% 24%);
+    border-radius: 8px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background: hsl(240 3.5% 30%);
+  }
+  .scrollbar-thin::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+  .scrollbar-none {
+    scrollbar-width: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* ---------- Markdown 预览排版 ---------- */
+.markdown-body {
+  font-size: 14px;
+  line-height: 1.85;
+  color: hsl(0 0% 88%);
+}
+.markdown-body h1 {
+  font-size: 1.65em;
+  font-weight: 700;
+  margin: 0.6em 0 0.5em;
+  padding-bottom: 0.35em;
+  border-bottom: 1px solid hsl(var(--border));
+  color: #fff;
+}
+.markdown-body h2 {
+  font-size: 1.32em;
+  font-weight: 650;
+  margin: 1.4em 0 0.5em;
+  color: #fff;
+}
+.markdown-body h3 {
+  font-size: 1.1em;
+  font-weight: 600;
+  margin: 1.2em 0 0.4em;
+  color: hsl(0 0% 93%);
+}
+.markdown-body p {
+  margin: 0.7em 0;
+}
+.markdown-body ul,
+.markdown-body ol {
+  margin: 0.6em 0;
+  padding-left: 1.5em;
+}
+.markdown-body ul {
+  list-style: disc;
+}
+.markdown-body ol {
+  list-style: decimal;
+}
+.markdown-body li {
+  margin: 0.25em 0;
+}
+.markdown-body li::marker {
+  color: hsl(var(--primary));
+}
+.markdown-body strong {
+  color: #fff;
+  font-weight: 650;
+}
+.markdown-body a {
+  color: hsl(var(--primary));
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.markdown-body blockquote {
+  margin: 0.9em 0;
+  padding: 0.15em 1em;
+  border-left: 3px solid hsl(var(--primary));
+  background: hsl(240 3.5% 14%);
+  color: hsl(var(--muted-foreground));
+  border-radius: 0 6px 6px 0;
+}
+.markdown-body code {
+  font-family: "SF Mono", "JetBrains Mono", Consolas, monospace;
+  font-size: 0.85em;
+  background: hsl(240 4% 17%);
+  padding: 0.15em 0.4em;
+  border-radius: 4px;
+  color: hsl(57 45% 80%);
+}
+.markdown-body pre {
+  background: hsl(var(--editor));
+  border: 1px solid hsl(var(--border));
+  border-radius: 8px;
+  padding: 0.9em 1.1em;
+  overflow-x: auto;
+  margin: 0.9em 0;
+}
+.markdown-body pre code {
+  background: transparent;
+  padding: 0;
+  font-size: 12.5px;
+  line-height: 1.7;
+  color: hsl(0 0% 85%);
+}
+.markdown-body table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1em 0;
+  font-size: 0.92em;
+}
+.markdown-body th,
+.markdown-body td {
+  border: 1px solid hsl(var(--border));
+  padding: 0.45em 0.8em;
+  text-align: left;
+}
+.markdown-body th {
+  background: hsl(240 3.5% 15%);
+  color: #fff;
+  font-weight: 600;
+}
+.markdown-body hr {
+  border: none;
+  border-top: 1px solid hsl(var(--border));
+  margin: 1.6em 0;
+}
+.markdown-body input[type="checkbox"] {
+  accent-color: hsl(var(--primary));
+  margin-right: 0.45em;
+}
+
+/* ---------- 编译预览（论文页） ---------- */
+.paper-page {
+  background: #fafaf7;
+  color: #1a1a1a;
+  font-family: Georgia, "Times New Roman", "Songti SC", "SimSun", serif;
+  box-shadow:
+    0 1px 2px hsl(0 0% 0% / 0.5),
+    0 8px 28px hsl(0 0% 0% / 0.45);
+}
+
+/* Personal UI typography. Content surfaces own their typography independently. */
+body { font-family: var(--ui-font, sans-serif); font-size: var(--ui-font-size, 13px); }
+[class~="text-[8px]"]:not([data-content-typography], [data-content-typography] *) { font-size: calc(8px * var(--ui-scale, 1)); }
+[class~="text-[8.5px]"]:not([data-content-typography], [data-content-typography] *) { font-size: calc(8.5px * var(--ui-scale, 1)); }
+[class~="text-[9px]"]:not([data-content-typography], [data-content-typography] *) { font-size: calc(9px * var(--ui-scale, 1)); }
+[class~="text-[9.5px]"]:not([data-content-typography], [data-content-typography] *) { font-size: calc(9.5px * var(--ui-scale, 1)); }
+[class~="text-[10px]"]:not([data-content-typography], [data-content-typography] *) { font-size: calc(10px * var(--ui-scale, 1)); }
+[class~="text-[10.5px]"]:not([data-content-typography], [data-content-typography] *) { font-size: calc(10.5px * var(--ui-scale, 1)); }
+[class~="text-[11px]"]:not([data-content-typography], [data-content-typography] *) { font-size: calc(11px * var(--ui-scale, 1)); }
+[class~="text-[11.5px]"]:not([data-content-typography], [data-content-typography] *) { font-size: calc(11.5px * var(--ui-scale, 1)); }
+[class~="text-[12px]"]:not([data-content-typography], [data-content-typography] *) { font-size: calc(12px * var(--ui-scale, 1)); }
+[class~="text-[12.5px]"]:not([data-content-typography], [data-content-typography] *) { font-size: calc(12.5px * var(--ui-scale, 1)); }
+[class~="text-[13px]"]:not([data-content-typography], [data-content-typography] *) { font-size: calc(13px * var(--ui-scale, 1)); }
+[class~="text-[15px]"]:not([data-content-typography], [data-content-typography] *) { font-size: calc(15px * var(--ui-scale, 1)); }
+[class~="text-[19px]"]:not([data-content-typography], [data-content-typography] *) { font-size: calc(19px * var(--ui-scale, 1)); }
+[class~="text-[20px]"]:not([data-content-typography], [data-content-typography] *) { font-size: calc(20px * var(--ui-scale, 1)); }
+.text-xs:not([data-content-typography], [data-content-typography] *) { font-size: calc(12px * var(--ui-scale, 1)); }
+.text-sm:not([data-content-typography], [data-content-typography] *) { font-size: calc(14px * var(--ui-scale, 1)); }
+.text-base:not([data-content-typography], [data-content-typography] *) { font-size: calc(16px * var(--ui-scale, 1)); }
+.text-lg:not([data-content-typography], [data-content-typography] *) { font-size: calc(18px * var(--ui-scale, 1)); }
+.text-xl:not([data-content-typography], [data-content-typography] *) { font-size: calc(20px * var(--ui-scale, 1)); }
+.text-2xl:not([data-content-typography], [data-content-typography] *) { font-size: calc(24px * var(--ui-scale, 1)); }
+.text-3xl:not([data-content-typography], [data-content-typography] *) { font-size: calc(30px * var(--ui-scale, 1)); }
+.h-6:not(svg, img, [data-content-typography], [data-content-typography] *) { min-height: calc(24px * var(--ui-scale, 1)); }
+.h-7:not(svg, img, [data-content-typography], [data-content-typography] *) { min-height: calc(28px * var(--ui-scale, 1)); }
+.h-8:not(svg, img, [data-content-typography], [data-content-typography] *) { min-height: calc(32px * var(--ui-scale, 1)); }
+.h-9:not(svg, img, [data-content-typography], [data-content-typography] *) { min-height: calc(36px * var(--ui-scale, 1)); }
+.h-10:not(svg, img, [data-content-typography], [data-content-typography] *) { min-height: calc(40px * var(--ui-scale, 1)); }
+.bib-preview [class~="text-[13px]"] { font-size: 1em; }
+.bib-preview [class~="text-[11px]"], .bib-preview [class~="text-[11.5px]"] { font-size: .85em; }

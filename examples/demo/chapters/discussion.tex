@@ -1,0 +1,26 @@
+\section{From Illustration to a Measured Study}
+\label{sec:discussion}
+Turning this artifact into an implementation paper would require new evidence, not merely replacing the word ``synthetic'' in the captions. The first step would be to identify a concrete implementation and a complete workload contract. That contract should specify precision, tensor layout, masking, batch size, head count, sequence-length distribution, and whether the experiment covers forward, backward, prefill, or decoding behavior.
+
+\subsection{Correctness protocol}
+A numerical reference should be chosen before tuning performance. Test cases should cover small shapes that can be inspected independently, extreme input magnitudes, non-divisible tile sizes, and masked positions. The report should distinguish absolute error, relative error, and downstream task quality. A test that passes on randomly sampled small tensors may still miss a boundary-condition defect on the longest shape.
+
+The same discipline applies to gradients if backward execution is included. Forward agreement does not establish backward correctness. Tests should document whether they compare analytical gradients, finite differences, or a trusted implementation. Where different accumulation orders are expected, tolerances should be justified and consistently applied rather than adjusted after observing an inconvenient result.
+
+\subsection{Measurement protocol}
+Timing should include enough repetitions to characterize variability, with a stated warmup policy and synchronization boundary. Raw samples should be retained, not only their mean. The report should identify the device, driver, runtime, compiler, and library versions so that a future reader can distinguish an algorithmic change from a changed execution environment. Clock or power settings should be described when they are controlled.
+
+For resource measurements, the selected tool and its counter definitions matter. An observed memory-transaction count is not automatically equivalent to the abstract bytes in Equation~\ref{eq:bytes}. Cache effects, compression, transaction granularity, and profiling overhead can alter the relationship. A measured study should explain how a counter is mapped to the claimed quantity and should avoid combining counters collected under incompatible conditions.
+
+\subsection{Fair baselines and integration}
+Baselines should solve the same problem with comparable precision and masking semantics. They should receive reasonable configuration effort, and any unsupported shapes should be disclosed. An optimization that changes the workload contract may still be useful, but it belongs in a different comparison. Reporting both absolute values and ratios makes those differences harder to hide.
+
+Integration tests should complement isolated kernels. Allocation policy, graph capture, scheduling, and neighboring operations can change the effective workload seen by the kernel. Serving systems add another layer: the distribution of requests and the cache-management policy can dominate the useful throughput of a deployment. The context of PagedAttention illustrates why serving-memory management deserves an explicit experimental boundary~\cite{kwon2023pagedattention}, rather than being folded into a generic statement about attention speed.
+
+\subsection{Limitations of this artifact}
+Our byte coefficients are illustrative, the overlap assumption is optimistic, and the effective rates are not calibrated. We omit batch interactions, backward state, detailed numerical behavior, and device-specific scheduling. The model also cannot predict energy consumption, tail latency, or fairness among concurrent requests. Any of those objectives would require its own variables and measurements.
+
+The document itself has limitations. It is a demonstration of a scholarly workflow, not a peer-reviewed research contribution. Its author label is a project label rather than a real researcher identity. The ACM class supplies familiar typography, but neither that typography nor successful compilation implies ACM endorsement, publication, or compliance with a particular conference's current submission requirements. Keeping these limits explicit is part of the artifact's design.
+
+\subsection{What a negative result would mean}
+If a future implementation failed to achieve the qualitative model trend, that would not automatically invalidate IO awareness. It could indicate that a neglected cost dominates, that the traffic coefficient is unrealistic, or that the implementation exposes insufficient parallelism. The useful response would be to measure the missing mechanism and revise the model. A model is a tool for organizing questions, not an authority that an implementation must obey.

@@ -1,0 +1,51 @@
+\section{A Transparent Synthetic Model}
+\label{sec:model}
+We consider one head and assign both schedules the same leading arithmetic count,
+\begin{equation}
+ F(N,d)=4N^2d.
+ \label{eq:flops}
+\end{equation}
+The coefficient represents two matrix products in a deliberately compact convention. It excludes softmax arithmetic, address calculation, masking, and auxiliary instructions. Using the same count isolates the influence of the traffic assumptions, but it is not an assertion that real schedules perform identical instruction sequences.
+
+The traffic surrogates are
+\begin{align}
+ B_{\mathrm{mat}}(N,d)&=8N^2+8Nd,\\
+ B_{\mathrm{tile}}(N,d)&=0.5N^2+8Nd.
+ \label{eq:bytes}
+\end{align}
+Both expressions are in bytes. The coefficients are selected for illustration, not derived from a particular published implementation. The quadratic term represents repeated handling of pairwise intermediates, while the shared linear term represents input and output movement. Retaining a smaller quadratic term for the tiled case avoids pretending that this simplified model captures every reuse opportunity or that data movement disappears completely.
+
+\subsection{Runtime and resource parameters}
+Let $P$ be a hypothetical peak arithmetic rate, $W$ a hypothetical peak bandwidth, and $\eta_c$ and $\eta_b$ their respective effective fractions. For schedule $s$, we define
+\begin{equation}
+ T_s=\tau+\max\left(\frac{F}{\eta_cP},\frac{B_s}{\eta_bW}\right).
+ \label{eq:time}
+\end{equation}
+The maximum treats arithmetic and transfer as perfectly overlappable at the level of this model. This is an optimistic abstraction. A sum would be more conservative for serialized work, while a detailed simulator would need dependency and concurrency information. The launch term $\tau$ makes small-workload behavior explicit instead of forcing every curve through the origin.
+
+The baseline parameters appear in Table~\ref{tab:parameters}. They describe a hypothetical device, not a named GPU. Their round values are intended to simplify inspection. Effective rates are separate from peak rates so that sensitivity experiments can vary efficiency without changing the nominal device. All later conclusions are conditional on these parameters and the byte-count surrogates.
+
+\begin{table}[t]
+ \caption{Baseline assumptions. Every value is synthetic and is not a device specification.}
+ \label{tab:parameters}\centering
+ \begin{tabular}{lr}\toprule
+ Parameter & Illustrative value\\\midrule
+ Peak arithmetic $P$ & $120\times10^{12}$ FLOP/s\\
+ Peak bandwidth $W$ & $1.2\times10^{12}$ byte/s\\
+ Arithmetic fraction $\eta_c$ & 0.60\\
+ Bandwidth fraction $\eta_b$ & 0.65\\
+ Launch term $\tau$ & $30\,\mu$s\\
+ Baseline head dimension $d$ & 64\\
+ Tile dimensions $(B_r,B_c)$ & $(128,128)$\\\bottomrule
+ \end{tabular}
+\end{table}
+
+\subsection{Workspace is a separate model}
+We assign the materialized schedule a temporary workspace of $4N^2$ bytes. The tiled surrogate receives $4Nd+8B_rB_c+16N$ bytes. The first tiled term represents an output-sized accumulator, the second a fixed tile allocation, and the last per-row statistics. These are explicit accounting choices. They exclude model parameters, permanent input tensors, allocator bookkeeping, and any backward-pass state.
+
+This separation prevents a common interpretive shortcut. Equation~\ref{eq:bytes} may predict large traffic even when the workspace remains small, because a buffer can be reused repeatedly. Conversely, a persistent allocation might occupy considerable space while being accessed only a few times. The model therefore reports workspace and time in different plots rather than using one as a proxy for the other.
+
+\subsection{Derived quantities and interpretive limits}
+The synthetic speedup is $S=T_{\mathrm{mat}}/T_{\mathrm{tile}}$. It compares model outputs under the same parameter tuple. It is neither a confidence interval nor an estimate from repeated trials. Arithmetic intensity is $I_s=F/B_s$, with FLOP per byte as its unit. A crossover occurs when this intensity meets the ratio of effective arithmetic rate to effective bandwidth, but the launch term can still dominate total time on either side.
+
+The formulas intentionally omit several important effects. Cache residency, register pressure, tile occupancy, instruction-level overhead, and device power behavior do not appear. A curve cannot reveal a phenomenon that the model has no variable for. Later sections use sensitivity analyses to show how some assumptions matter; they do not claim to repair every omission. The artifact is useful precisely because a reader can see where its reasoning ends.

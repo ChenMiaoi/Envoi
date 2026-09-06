@@ -1,0 +1,20 @@
+{
+  "name": "paperdesk",
+  "private": true,
+  "version": "0.1.0",
+  "description": "PaperDesk local academic writing workspace",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "setup": "npm --prefix app ci",
+    "dev": "npm --prefix app run dev -- --host 127.0.0.1",
+    "build": "npm --prefix app run build",
+    "test": "npm --prefix app test",
+    "test:local": "npm --prefix app run test:local",
+    "test:demo": "npm --prefix app run test:demo",
+    "lint": "npm --prefix app run lint",
+    "demo:build": "npm --prefix app run demo:build",
+    "demo:snapshot": "npm --prefix app run demo:snapshot"
+  }
+}

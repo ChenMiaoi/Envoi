@@ -1,0 +1,29 @@
+# Dependencies and regenerable application output
+node_modules/
+/app/dist/
+/app/dist-ssr/
+/app/tmp/
+*.tsbuildinfo
+coverage/
+*.log
+
+# Example build products remain on disk; the bundled app snapshot is intentional.
+/examples/*/build/
+/examples/*/output/
+.paperdesk/*
+!.paperdesk/project.json
+__pycache__/
+*.pyc
+.venv/
+
+# Local machine and editor state
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+.env
+.env.*
+!.env.example
+*.local
+*.swp
+*.swo

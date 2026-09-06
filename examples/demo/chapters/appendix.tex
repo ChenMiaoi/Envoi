@@ -1,0 +1,55 @@
+\section{Reproduction and Audit Guide}
+\label{sec:appendix}
+This appendix explains how to reproduce the artifact and how to inspect its boundaries. It is a guide to a deterministic calculation, not instructions for recreating a GPU experiment. The source directory contains the manuscript, bibliography, and generated CSV records. A companion development tool retains the figure generator and its explicit input assumptions. The build directory contains the rendered manuscript and its compilation log. Generated outputs can be replaced without changing the source of the calculation.
+
+\subsection{Artifact inventory}
+The entry point is \texttt{main.tex}. The files in \texttt{chapters/} separate background, model, experimental design, illustrative evaluation, sensitivity analysis, and discussion. This division is editorial: the compiler follows the explicit input statements in the entry point. A file that is present in the directory but not reachable from those statements does not automatically become part of the paper.
+
+The companion figure generator (kept in the application development tools) uses Python, NumPy, and Matplotlib. Running it from any working directory writes six high-resolution PNG figures and retained vector sources, a numeric CSV, and a small LaTeX table into the demonstration project. The calculations use double-precision floating-point arithmetic. There is no random seed because no random quantity is sampled. Version information belongs in the accompanying reproduction notes so that changes in rendering can be distinguished from changes in the numeric model.
+
+The CSV records identify the sequence length and head dimension, followed by the arithmetic count, traffic estimates, component times, total times, and temporary workspace. These fields allow a reader to reconstruct each chart without extracting values from a plotted line. A derived ratio is obtained by dividing the two total-time fields; it is not an independently estimated parameter. A rounded value in the manuscript should therefore be checked against the unrounded CSV rather than against another rounded value.
+
+\subsection{A worked arithmetic check}
+Consider $N=8192$ and $d=64$. The shared arithmetic count is $17{,}179{,}869{,}184$ operations under Equation~\ref{eq:flops}. The materialized traffic expression gives $541{,}065{,}216$ bytes, while the tiled expression gives $37{,}748{,}736$ bytes. With the stated effective rates, the arithmetic component is approximately $0.239$ milliseconds. The two transfer components are approximately $0.694$ and $0.048$ milliseconds. Taking the maximum and then adding the overhead yields approximately $0.724$ and $0.269$ milliseconds. The resulting ratio is approximately $2.69$.
+
+These numbers are arithmetic consequences of the assumptions. In particular, the lower transfer estimate does not cause the tiled total to fall to $0.078$ milliseconds: the shared arithmetic component is larger. This worked example exposes a common interpretive error, namely comparing only the transfer terms after the active constraint has changed. It also explains why the table uses a maximum rather than adding both components together.
+
+For the same shape, the materialized workspace estimate is $268{,}435{,}456$ bytes, or $256$ MiB. The tiled estimate is $2{,}359{,}296$ bytes, or $2.25$ MiB. Neither number includes model weights or the input tensors. A reader should not add one of these numbers to an unrelated profiler result without checking whether the two quantities count overlapping allocations.
+
+\subsection{Unit conventions}
+The assumed transfer rate uses decimal terabytes per second: one TB/s is $10^{12}$ bytes per second. Workspace plots use binary mebibytes: one MiB is $2^{20}$ bytes. These conventions are deliberately stated separately. Replacing a decimal rate with a binary rate while keeping the same numerical coefficient would alter the computed time. The difference is modest relative to the model's conceptual limitations, but a reproducible calculation should still avoid silent unit changes.
+
+The operation count uses a multiply-add convention in which the two dominant matrix products together contribute $4N^2d$ operations. Softmax arithmetic and address calculations are not separately counted. This omission is part of the model definition, not evidence that their cost is zero. A more detailed simulator could add these components, but the resulting parameters would need new justification.
+
+\subsection{Invariants worth checking}
+All byte counts, workspaces, and component times must be positive for the positive shapes in the sweep. The total time must be no smaller than the fixed overhead and no smaller than either selected component plus that overhead. The two schedules share exactly the same arithmetic count for a given shape. Consequently, a reduction in byte traffic cannot push either total below its common arithmetic floor.
+
+The materialized traffic is greater than the tiled traffic for every positive $N$ because their difference is $7.5N^2$ bytes. With identical efficiencies and launch terms, the model therefore cannot predict a tiled slowdown. This is an imposed property of the comparison and an especially important limitation. A real implementation may experience lower occupancy, more instructions, different synchronization, or a fallback path. The absence of slowdowns in this dataset does not demonstrate their absence in practice.
+
+A useful audit modifies one assumption at a time. Increasing only bandwidth cannot increase either predicted total. Increasing only compute efficiency cannot increase either total. Increasing the fixed overhead by a common positive amount moves the ratio closer to one. These checks exercise the meaning of the equations and can catch unit errors or a swapped variable without relying on a reference picture.
+
+\subsection{Extending the model without obscuring it}
+A next version could assign different compute efficiencies to the two schedules. That change would allow the tiled schedule's arithmetic cost to trade off against its lower traffic. The revised experiment should present both the original common-efficiency comparison and the new comparison so that the source of any reversal remains visible. An unexplained efficiency adjustment selected to match a preferred ratio would weaken the artifact rather than improve it.
+
+A second extension could replace the maximum with an overlap parameter. Perfect overlap and complete serialization provide different limiting cases. Such a parameter should be bounded and interpreted physically; it should not become an arbitrary curve-fitting knob. The report should include the limiting cases and identify which observable would constrain the parameter in a real measurement.
+
+A third extension could model causal attention explicitly. The current square score domain is the same for both schedules and does not claim a triangular execution count. Halving one coefficient without changing the rest would not produce a complete causal model. Arithmetic, transfer, masking, and scheduling would all need compatible definitions. The same caution applies to variable sequence lengths and padding removal.
+
+\subsection{A prospective measurement worksheet}
+Before replacing synthetic values with measured values, define the workload contract. Record whether the operation is forward-only or includes gradients, whether attention is causal, the input dtype, accumulation behavior, batch size, head count, sequence lengths, and tensor layout. Record the library and compiler versions together with the device and runtime. These fields identify the experiment; none is supplied by the present CSV.
+
+Next, establish numerical correctness with a suitable reference. Record both absolute and relative error and explain how zero or near-zero reference values are handled. Test representative shapes and edge cases separately. A timing result from an incorrect path should not be averaged into an otherwise correct benchmark. A fallback implementation should be labeled because it may use a different schedule from the one being studied.
+
+Then specify the timing boundary. Decide whether allocations, input transfer, graph capture, and synchronization are included. Use a synchronization method appropriate to asynchronous execution, and document warmup separately from collected trials. Preserve the individual measurements needed to examine variability. A single best time is inadequate for characterizing stability, while a mean without a distribution can hide occasional expensive paths.
+
+Finally, record memory quantities with their definitions. Allocated bytes, reserved bytes, maximum temporary workspace, and traffic inferred from performance counters are different observations. A counter may include transactions that are not represented by a simple tensor-size formula. A discrepancy between a counter and the model should start an investigation of definitions and mechanisms before being described as a failed optimization.
+
+\subsection{Reviewing claims and citations}
+Each citation should support a specific statement. The bibliography in this demonstration contains identifiable public research records, while the synthetic model is introduced as the artifact's own construction. The numerical plots should not be attributed to those records. Conversely, the existence of this small model is not a basis for claiming a new attention algorithm or a new empirical result.
+
+An editorial review can make three separate checks. References should resolve to the intended records. The prose should separate prior work from the illustrative calculation. Every numerical claim should be traceable to an equation or generated data. Correct bibliography formatting alone addresses only the first layer. A professionally formatted PDF can still make unsupported claims, so presentation quality and evidential quality should be evaluated separately.
+
+\subsection{Build and version boundaries}
+A successful build verifies that the TeX inputs, bibliography, and figure paths resolve together. It does not verify the scientific interpretation. The local build uses the installed ACM class in its non-publication mode, with no invented conference identity or copyright statement. The author line identifies the demonstration rather than a fictional research team. This makes the artifact useful for exercising a writing interface without impersonating a submitted paper.
+
+Source files and figure inputs are suitable for version control. Temporary TeX files and generated manuscript output belong in the ignored build directory. Input PDF figures remain eligible for tracking because the manuscript depends on them. Initializing a repository creates a version-control container; it does not create a commit, establish authorship, or publish the paper. A user can decide when a coherent revision is ready to commit and whether a release PDF should later be attached to a tagged version.

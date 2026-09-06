@@ -1,0 +1,23 @@
+\section{Artifact and Study Design}
+\label{sec:design}
+The artifact is organized as a small paper project rather than a single monolithic document. The main source selects the official ACM conference class with drafting options, introduces the title and abstract, and includes chapter files. A separate bibliography contains verified bibliographic records. The data directory contains the numerical dataset, the assets directory contains generated figures, and the build directory contains the actual compiled PDF and compilation log. This organization makes the relation between source, evidence, and presentation visible.
+
+\subsection{Data generation}
+The generator enumerates seven sequence lengths from 512 to 32,768 and three head dimensions, 64, 128, and 256. For every tuple it evaluates Equations~\ref{eq:flops}--\ref{eq:time} and both workspace expressions. It writes a CSV containing input parameters, intermediate costs, predicted time, workspace, and the derived ratio. No random noise is added. Identical parameters therefore produce identical records, and apparent precision in a plot comes from arithmetic rather than repeated observations.
+
+Avoiding noise is a deliberate choice. Simulated jitter can make a figure look more like a benchmark, but it also risks suggesting an empirical sampling process that never occurred. Here, parameter variation is represented directly as a scenario sweep. The resulting bands or curves describe alternative assumptions, not statistical uncertainty. A future measured study should use separate data files and a separately documented collection procedure.
+
+\subsection{Figure construction and traceability}
+Each figure has one primary question. The time plot asks how the two schedules scale with sequence length under the baseline assumptions. The workspace plot asks how their temporary allocations differ. A two-dimensional heat map varies sequence length and head dimension. A bandwidth sweep holds one workload constant while changing the transfer resource. An efficiency sweep asks whether arithmetic improvements still matter after traffic is reduced. Keeping the panels focused makes it harder to hide a change of assumptions inside an attractive composite graphic.
+
+The generator emits high-resolution PNG figures, which LaTeX includes as actual project assets. Axis labels identify units, legends identify the abstract schedules, and captions repeat the synthetic-data qualification when a numeric result is shown. The same CSV can be inspected directly in the application. Values in the summary table are generated from the same records rather than manually transcribed, reducing one source of disagreement between plots and prose.
+
+\subsection{Comparisons and controls}
+The two schedules share $F$, $P$, $W$, $\eta_c$, $\eta_b$, and $\tau$. They differ only in their byte-count and workspace expressions. This is a controlled numerical comparison, not a controlled hardware experiment. It can answer how those expressions behave under equal rates; it cannot determine the rates that a real kernel would achieve.
+
+For sensitivity plots we vary one parameter at a time. This keeps causal interpretation within the model simple, although it misses interactions. For example, a tile choice could alter both effective bandwidth and arithmetic efficiency in a real implementation. If a future extension changes two quantities together, it should explain the joint assumption and avoid describing the effect as an isolated bandwidth improvement.
+
+\subsection{Checks before interpretation}
+Before plotting, the generator checks that all time and workspace values are positive, that sequence lengths are ordered, and that ratios use matching workload tuples. It also records the operation and transfer components separately. A reader can therefore verify which component is selected by the maximum in Equation~\ref{eq:time}. These checks are not substitutes for a validated model, but they catch mistakes that would otherwise produce polished yet internally inconsistent figures.
+
+The authoring workflow adds another level of checks. The manuscript is compiled with the real bibliography tool, unresolved references are searched in the resulting log, and the PDF is rendered for visual inspection. This process verifies that the artifact says what its source intends to say. It does not validate the hypothetical parameters against a real processor, a distinction that remains visible in the evaluation section.
