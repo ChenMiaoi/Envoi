@@ -99,11 +99,11 @@ export function BibViewer({ source }: { source: string }) {
 export function ViewerBadge({kind}: {kind:string}) {
   const map: Record<string, { label: string; cls: string }> = {
     csv: {label:"CSV 表格",cls:"text-primary"}, tsv:{label:"TSV 表格",cls:"text-primary"},text:{label:"文本 / 源码",cls:"text-muted-foreground"},binary:{label:"未支持的文件",cls:"text-muted-foreground"},
-    markdown: { label: "Markdown 预览", cls: "text-[#8ab8e0]" },
-    latex: { label: "LaTeX 源码", cls: "text-[#9ecf9e]" },
-    pdf: { label: "PDF 预览", cls: "text-[#e08a8a]" },
-    bib: { label: "文献视图", cls: "text-[#d8b26e]" },
-    image: { label: "图片", cls: "text-[#b79ae0]" },
+    markdown: { label: "Markdown 预览", cls: "text-[hsl(var(--hue-blue))]" },
+    latex: { label: "LaTeX 源码", cls: "text-[hsl(var(--hue-green))]" },
+    pdf: { label: "PDF 预览", cls: "text-[hsl(var(--hue-red))]" },
+    bib: { label: "文献视图", cls: "text-[hsl(var(--hue-orange))]" },
+    image: { label: "图片", cls: "text-[hsl(var(--hue-violet))]" },
   };
   const m = map[kind] ?? { label: kind, cls: "text-muted-foreground" };
   return <span className={cn("text-[11px]", m.cls)}>{m.label}</span>;

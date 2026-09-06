@@ -6,13 +6,14 @@ import {localGitLog,localGitShow,type GitCommit,type GitLog,type GitShow} from '
 import {layoutGraph} from '@/lib/gitGraph';
 import {cn} from '@/lib/utils';
 
-const LANE_COLORS=['#e7c664','#6ea8fe','#7bd88f','#f38ba8','#c39af5','#f8a05c','#5fd4d0','#e78fb3'];
+/** 车道颜色随主题的 hue 槽位解析；SVG 表现属性支持 var() 引用。 */
+const LANE_COLORS=['yellow','blue','green','red','violet','orange','cyan','pink'].map(name=>`hsl(var(--hue-${name}))`);
 const ROW_H=30,LANE_W=16,PAD=8;
 const cx=(lane:number)=>PAD+lane*LANE_W+LANE_W/2,cy=(row:number)=>row*ROW_H+ROW_H/2;
 
 function RefBadge({commit}:{commit:GitCommit}){
  return <>{commit.head&&<span className="rounded-full border border-primary/50 px-1.5 text-[10px] leading-4 text-primary">HEAD</span>}
- {commit.refs.map(ref=><span key={`${ref.kind}:${ref.name}`} className={cn('flex items-center gap-0.5 rounded-full border px-1.5 text-[10px] leading-4',ref.kind==='branch'?'border-primary/40 text-primary':ref.kind==='tag'?'border-amber-400/40 text-amber-300':'border-border text-muted-foreground')}>
+ {commit.refs.map(ref=><span key={`${ref.kind}:${ref.name}`} className={cn('flex items-center gap-0.5 rounded-full border px-1.5 text-[10px] leading-4',ref.kind==='branch'?'border-primary/40 text-primary':ref.kind==='tag'?'border-warning/40 text-warning':'border-border text-muted-foreground')}>
   {ref.kind==='tag'?<Tag className="h-2.5 w-2.5"/>:<GitBranch className="h-2.5 w-2.5"/>}{ref.name}
  </span>)}</>;
 }
@@ -23,7 +24,7 @@ export function GitGraph({commits,selected,onSelect}:{commits:GitCommit[];select
  return <div className="relative" style={{minHeight:rows.length*ROW_H}}>
   <svg aria-hidden className="absolute left-0 top-0" width={graphWidth} height={(rows.length+1)*ROW_H}>
    {edges.map((edge,index)=><path key={index} d={`M ${cx(edge.fromLane)} ${cy(edge.fromRow)} C ${cx(edge.fromLane)} ${(cy(edge.fromRow)+cy(edge.toRow))/2}, ${cx(edge.toLane)} ${(cy(edge.fromRow)+cy(edge.toRow))/2}, ${cx(edge.toLane)} ${cy(edge.toRow)}`} stroke={LANE_COLORS[edge.color%LANE_COLORS.length]} strokeWidth={1.6} fill="none"/>)}
-   {rows.map(({commit,lane},row)=><circle key={commit.hash} cx={cx(lane)} cy={cy(row)} r={4} fill={commit.head?LANE_COLORS[lane%LANE_COLORS.length]:'var(--color-background)'} stroke={LANE_COLORS[lane%LANE_COLORS.length]} strokeWidth={2}/>)}
+   {rows.map(({commit,lane},row)=><circle key={commit.hash} cx={cx(lane)} cy={cy(row)} r={4} fill={commit.head?LANE_COLORS[lane%LANE_COLORS.length]:'hsl(var(--background))'} stroke={LANE_COLORS[lane%LANE_COLORS.length]} strokeWidth={2}/>)}
   </svg>
   {rows.map(({commit})=><button key={commit.hash} onClick={()=>onSelect(commit.hash)} className={cn('relative flex w-full items-center gap-2 px-2 text-left text-xs transition-colors hover:bg-secondary/60',selected===commit.hash&&'bg-accent/60')} style={{height:ROW_H,paddingLeft:graphWidth+8}}>
    <RefBadge commit={commit}/>
@@ -36,7 +37,7 @@ export function GitGraph({commits,selected,onSelect}:{commits:GitCommit[];select
 
 function CommitDetail({show,error,busy}:{show?:GitShow;error:string;busy:boolean}){
  if(busy)return <p className="p-4 text-xs text-muted-foreground">读取提交详情…</p>;
- if(error)return <p role="alert" className="p-4 text-xs text-amber-300">{error}</p>;
+ if(error)return <p role="alert" className="p-4 text-xs text-warning">{error}</p>;
  if(!show)return null;
  const rest=show.commit.body.split('\n').slice(1).join('\n').trim();
  return <div className="p-4 text-xs">
@@ -48,7 +49,7 @@ function CommitDetail({show,error,busy}:{show?:GitShow;error:string;busy:boolean
   <h3 className="mt-4 border-t border-border pt-3 font-medium">改动文件（{show.files.length}）</h3>
   {show.files.length===0?<p className="mt-2 text-muted-foreground">没有文件改动。</p>:
   <ul className="mt-2 space-y-1.5">{show.files.map(file=><li key={file.path} className="flex items-baseline gap-2">
-   <span className="shrink-0 font-editor text-[10px]">{file.added===null?<span className="text-muted-foreground">二进制</span>:<><span className="text-emerald-400">+{file.added}</span> <span className="text-red-400">−{file.deleted}</span></>}</span>
+   <span className="shrink-0 font-editor text-[10px]">{file.added===null?<span className="text-muted-foreground">二进制</span>:<><span className="text-success">+{file.added}</span> <span className="text-danger">−{file.deleted}</span></>}</span>
    <span className="min-w-0 truncate" title={file.path}>{file.path}</span>
   </li>)}</ul>}
  </div>;

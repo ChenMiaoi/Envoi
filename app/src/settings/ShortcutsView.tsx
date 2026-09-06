@@ -44,7 +44,7 @@ export function ShortcutsView(){
    </select>
    <button className="text-xs text-primary" onClick={()=>{update({bindings:[]});setRecording(null);setMessage('全部快捷键已恢复默认。');}}>全部重置</button>
   </div>
-  <p role="status" className="mb-3 text-xs text-amber-300">{error||message}</p>
+  <p role="status" className="mb-3 text-xs text-warning">{error||message}</p>
   <div className="rounded-xl border border-border bg-card px-5">
    {visible.map(item=>{
     const chord=commandChord(item.id,bindings);

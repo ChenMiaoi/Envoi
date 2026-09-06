@@ -57,7 +57,7 @@ export function LatexEditor({ref,value,onChange,fontSize=12.5,highlight,fontFami
     <div className="relative min-w-0 flex-1 overflow-hidden">
       <div ref={preRef} aria-hidden className="scrollbar-none pointer-events-none absolute inset-0 overflow-hidden">
         <div ref={contentRef} className="relative min-h-full px-3.5 py-3 font-editor text-foreground/85" style={{...typography,whiteSpace:'pre-wrap',overflowWrap:'anywhere',wordBreak:'normal'}}>
-          {highlight&&<div ref={highlightRef} className={`pointer-events-none absolute left-0 right-0 border-l-2 ${highlight.severity==='error'?'border-red-400 bg-red-400/15':'border-amber-300 bg-amber-300/15'}`} />}
+          {highlight&&<div ref={highlightRef} className={`pointer-events-none absolute left-0 right-0 border-l-2 ${highlight.severity==='error'?'border-danger bg-danger/15':'border-warning bg-warning/15'}`} />}
           {lines.map((line,index)=><div data-source-line={index+1} key={index}>{line.text?line.tokens.map((token,i)=><span key={i} className={token.cls}>{token.text}</span>):'\u200b'}</div>)}
         </div>
       </div>

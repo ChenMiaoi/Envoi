@@ -53,8 +53,8 @@ export function ReferencesPanel({ paper, editor, onLocate }: { paper: ReturnType
     </div>
     <p className="break-words text-muted-foreground">{result.label}</p>
     <p className="text-muted-foreground">统计 main.tex 及可达章节；插入到当前文件光标/选区。</p>
-    {!!paper.missing.length && <p role="alert" className="text-amber-300">统计不完整，缺失章节：{paper.missing.join("；")}</p>}
-    {result.error && <p role="alert" className="break-words text-red-400">Bib 无法解析：{result.error}</p>}
+    {!!paper.missing.length && <p role="alert" className="text-warning">统计不完整，缺失章节：{paper.missing.join("；")}</p>}
+    {result.error && <p role="alert" className="break-words text-danger">Bib 无法解析：{result.error}</p>}
     {!result.error && !result.entries.length && <p>此 Bib 没有可用条目。</p>}
     <p role="status" className="break-words text-primary">{notice}</p>
     {[true, false].map((used) => {
@@ -78,6 +78,6 @@ export function ReferencesPanel({ paper, editor, onLocate }: { paper: ReturnType
         })}
       </section>;
     })}
-    {!!unknown.length && <section className="space-y-1 border-t border-border pt-2 text-amber-300"><h3>正文中未解析的引用</h3>{unknown.map((key) => <button key={key} onClick={() => locate(key)} className="block break-all text-left">{key} · 定位</button>)}</section>}
+    {!!unknown.length && <section className="space-y-1 border-t border-border pt-2 text-warning"><h3>正文中未解析的引用</h3>{unknown.map((key) => <button key={key} onClick={() => locate(key)} className="block break-all text-left">{key} · 定位</button>)}</section>}
   </div>;
 }

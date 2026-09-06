@@ -12,7 +12,11 @@ Three independent typography groups are available:
 - Editor / source: monospaced font family, 11–18 px size, line height and tab display width. Applies to Writer and Reader source editing/highlighting. Existing saved editor preferences remain in this group during migration.
 - General / reader text: font family and 12–20 px size, default 14. Applies to Markdown and bibliography cards; Markdown headings retain relative sizes. Code blocks retain a monospace family. Actual PDF pages and LaTeX document typography are unaffected.
 
-Font choices are named CSS families with system fallbacks, not a claim to enumerate installed fonts. All typography groups remain personal and are never written into project configuration. Global settings also control accent color, default compiler, ChkTeX enablement/disabled rules and the default Git checkbox for new projects.
+Font choices are named CSS families with system fallbacks, not a claim to enumerate installed fonts. All typography groups remain personal and are never written into project configuration. Global settings also control the interface theme, accent color, default compiler, ChkTeX enablement/disabled rules and the default Git checkbox for new projects.
+
+The interface theme is a full palette selection: 石墨 (default, dark), 经典夜色 (the original dark palette), 午夜蓝, 松林, 纸墨 (light) and 雾白 (light). Each theme defines every color token including status hues, file-kind colors, scrollbars and selection; token values live in `src/index.css` under `[data-theme]` selectors. The accent color is chosen independently and automatically darkens under light themes to preserve contrast.
+
+Content surfaces follow the theme through a dedicated prose layer (`--prose-*`, `--stripe`, `--table-header` tokens): Markdown preview headings, links, inline code, blockquotes and striped tables, the chat message rendering, and the CSV/TSV data table (rounded frame, sticky row numbers, zebra rows, right-aligned numeric cells) all read from the active theme rather than hardcoded values.
 
 ## Project inheritance
 

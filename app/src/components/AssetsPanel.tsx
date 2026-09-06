@@ -38,7 +38,7 @@ export function AssetsPanel({ paper, onLocate }: { paper: ReturnType<typeof coll
       } catch (error) { setNotice(`读取失败：${(error as Error).message}`); }
     }} />
     <p className="text-muted-foreground">范围：主论文可达章节；识别 includegraphics、includepdf、pgfplotstableread、csvreader 和 addplot table。未使用指在这些语法中未检测到；不解析宏或 graphicspath。</p>
-    {!!paper.missing.length && <p className="text-amber-300">统计不完整：{paper.missing.join("；")}</p>}
+    {!!paper.missing.length && <p className="text-warning">统计不完整：{paper.missing.join("；")}</p>}
     <p role="status" className="break-words text-primary">{notice}</p>
     {[true, false].map((used) => <section key={String(used)} className="space-y-1.5">
       <h3 className="pt-2 text-muted-foreground">{used ? "已使用" : "未使用（支持语法内）"}</h3>
@@ -51,6 +51,6 @@ export function AssetsPanel({ paper, onLocate }: { paper: ReturnType<typeof coll
       <div className="flex justify-between gap-2"><span className="break-all">{selected.path}</span><button onClick={() => setSelected(null)}>关闭</button></div>
       {!selected.url && selected.kind !== "csv" ? <p>没有实体文件可预览，可用“打开本地素材”提供文件。</p> : selected.kind === "pdf" ? <iframe title={selected.path} src={selected.url} className="h-80 w-full border-0" /> : selected.kind === "csv" ? <pre className="max-h-80 overflow-auto whitespace-pre text-[10px]">{selected.text}</pre> : <img src={selected.url} alt={selected.path} className="h-auto w-full" onError={() => setNotice("图片解码失败，请检查文件内容。")} />}
     </div>}
-    {uses.filter((use) => !assets.some((asset) => assetMatches(asset.path, use))).map((use, index) => <button key={index} className="block break-all text-left text-amber-300" onClick={() => onLocate(use)}>未找到实体素材：{use.target} · 定位</button>)}
+    {uses.filter((use) => !assets.some((asset) => assetMatches(asset.path, use))).map((use, index) => <button key={index} className="block break-all text-left text-warning" onClick={() => onLocate(use)}>未找到实体素材：{use.target} · 定位</button>)}
   </div>;
 }

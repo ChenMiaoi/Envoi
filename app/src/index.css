@@ -3,7 +3,62 @@
 @tailwind utilities;
 
 @layer base {
-  :root {
+  /* ---------- 主题：石墨（默认，深色） ---------- */
+  :root,
+  :root[data-theme="graphite"] {
+    color-scheme: dark;
+    --background: 218 13.6% 15.9%; /* #23272e */
+    --foreground: 213 16.7% 76.5%;
+    --card: 217 14% 18.2%;
+    --card-foreground: 213 16.7% 76.5%;
+    --popover: 217 14% 18.2%;
+    --popover-foreground: 213 16.7% 76.5%;
+    --primary: 216 65.9% 73.5%; /* #8fb3e8 */
+    --primary-foreground: 216 16.7% 11.8%;
+    --secondary: 216 14.3% 20.6%;
+    --secondary-foreground: 213 16.7% 76.5%;
+    --muted: 216 14.3% 20.6%;
+    --muted-foreground: 214 10.7% 57.8%;
+    --accent: 215 14.3% 23.3%;
+    --accent-foreground: 214 26.7% 88.2%;
+    --destructive: 4 65.3% 57.1%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 219 12.5% 22%;
+    --input: 218 12.9% 24.3%;
+    --ring: 216 65.9% 73.5%;
+    --radius: 0.5rem;
+    --editor: 216 13.9% 14.1%;
+    --scrollbar: 216 11.5% 25.7%;
+    --scrollbar-hover: 217 11.5% 30.6%;
+    --sidebar-background: 218 14.7% 14.7%;
+    --sidebar-foreground: 213 16.7% 76.5%;
+    --sidebar-primary: 216 65.9% 73.5%;
+    --sidebar-primary-foreground: 216 16.7% 11.8%;
+    --sidebar-accent: 215 14.3% 23.3%;
+    --sidebar-accent-foreground: 214 26.7% 88.2%;
+    --sidebar-border: 219 12.5% 22%;
+    --sidebar-ring: 216 65.9% 73.5%;
+    --hue-red: 0 57% 70.8%;
+    --hue-orange: 28 58.5% 64.1%;
+    --hue-yellow: 47 58.5% 64.1%;
+    --hue-green: 122 29.3% 67.3%;
+    --hue-cyan: 184 45.5% 61.2%;
+    --hue-blue: 213 67.1% 72.5%;
+    --hue-violet: 265 53% 74.1%;
+    --hue-pink: 333 58.1% 71%;
+    --hue-sage: 90 13.7% 54.1%;
+     --prose-heading: hsl(213 25.7% 86.3%);
+    --prose-link: hsl(213 67.1% 72.5%);
+    --prose-code-bg: hsl(216 14.9% 19.8%);
+    --prose-code: hsl(47 58.5% 64.1%);
+    --prose-quote-bg: hsl(0 0% 100% / 0.03);
+    --prose-quote-border: hsl(213 67.1% 72.5%);
+    --stripe: hsl(0 0% 100% / 0.03);
+    --table-header: hsl(0 0% 100% / 0.05);
+  }
+  /* ---------- 主题：经典夜色（原有配色，深色） ---------- */
+  :root[data-theme="classic"] {
+    color-scheme: dark;
     --background: 240 5.9% 10.6%; /* #18181b */
     --foreground: 0 0% 96%;
     --card: 240 5% 12.5%;
@@ -25,14 +80,247 @@
     --ring: 57 62% 83%;
     --radius: 0.5rem;
     --editor: 240 6% 8.5%;
+    --scrollbar: 240 3.5% 24%;
+    --scrollbar-hover: 240 3.5% 30%;
     --sidebar-background: 240 5% 11.5%;
     --sidebar-foreground: 0 0% 96%;
     --sidebar-primary: 57 62% 83%;
     --sidebar-primary-foreground: 240 6% 10%;
     --sidebar-accent: 240 2.5% 19%;
-    --sidebar-accent-foreground: 0 0% 96%;
+    --sidebar-accent-foreground: 0 0% 98%;
     --sidebar-border: 240 3.5% 17.5%;
     --sidebar-ring: 57 62% 83%;
+    --hue-red: 0 58.1% 71%; /* #e08a8a */
+    --hue-orange: 29 57.6% 63.9%; /* #d8a26e */
+    --hue-yellow: 52 62.6% 72.7%; /* #e5d98e */
+    --hue-green: 120 33.8% 71.6%; /* #9ecf9e */
+    --hue-cyan: 178 57.6% 60.2%; /* #5fd4d0 */
+    --hue-blue: 208 58.1% 71%; /* #8ab8e0 */
+    --hue-violet: 265 53% 74.1%; /* #b79ae0 */
+    --hue-pink: 335 64.7% 73.3%; /* #e78fb3 */
+    --hue-sage: 90 13.1% 47.8%; /* #7a8a6a */
+     --prose-heading: hsl(0 0% 100%);
+    --prose-link: hsl(var(--primary));
+    --prose-code-bg: hsl(240 5% 15.7%);
+    --prose-code: hsl(52 62.6% 72.7%);
+    --prose-quote-bg: hsl(240 2.9% 13.7%);
+    --prose-quote-border: hsl(var(--primary));
+    --stripe: hsl(0 0% 100% / 0.03);
+    --table-header: hsl(0 0% 100% / 0.04);
+  }
+  /* ---------- 主题：午夜蓝（深色） ---------- */
+  :root[data-theme="midnight"] {
+    color-scheme: dark;
+    --background: 223 21.2% 12.9%; /* #1a1e28 */
+    --foreground: 221 23% 76.1%;
+    --card: 222 21.5% 15.5%;
+    --card-foreground: 221 23% 76.1%;
+    --popover: 222 21.5% 15.5%;
+    --popover-foreground: 221 23% 76.1%;
+    --primary: 221 61% 68.8%; /* #7f9ee0 */
+    --primary-foreground: 224 21.6% 10%;
+    --secondary: 222 20.8% 18.8%;
+    --secondary-foreground: 221 23% 76.1%;
+    --muted: 222 20.8% 18.8%;
+    --muted-foreground: 221 13.5% 55.1%;
+    --accent: 222 21.4% 22%;
+    --accent-foreground: 219 31.2% 87.5%;
+    --destructive: 2 63.5% 59.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 222 19.2% 20.4%;
+    --input: 222 20% 22.5%;
+    --ring: 221 61% 68.8%;
+    --radius: 0.5rem;
+    --editor: 222 22.8% 11.2%;
+    --scrollbar: 222 18.4% 24.5%;
+    --scrollbar-hover: 222 17.1% 29.8%;
+    --sidebar-background: 223 22.6% 12.2%;
+    --sidebar-foreground: 221 23% 76.1%;
+    --sidebar-primary: 221 61% 68.8%;
+    --sidebar-primary-foreground: 224 21.6% 10%;
+    --sidebar-accent: 222 21.4% 22%;
+    --sidebar-accent-foreground: 219 31.2% 87.5%;
+    --sidebar-border: 222 19.2% 20.4%;
+    --sidebar-ring: 221 61% 68.8%;
+    --hue-red: 355 58.7% 70.6%;
+    --hue-orange: 27 61.8% 65.1%;
+    --hue-yellow: 46 59.3% 66.3%;
+    --hue-green: 138 33.3% 67.1%;
+    --hue-cyan: 185 50.8% 61.8%;
+    --hue-blue: 217 78.3% 72.9%;
+    --hue-violet: 262 60.9% 74.9%;
+    --hue-pink: 332 59.7% 71.8%;
+    --hue-sage: 104 11.3% 54.9%;
+     --prose-heading: hsl(219 31.2% 87.5%);
+    --prose-link: hsl(217 78.3% 72.9%);
+    --prose-code-bg: hsl(221 20.4% 18.2%);
+    --prose-code: hsl(46 59.3% 66.3%);
+    --prose-quote-bg: hsl(0 0% 100% / 0.03);
+    --prose-quote-border: hsl(217 78.3% 72.9%);
+    --stripe: hsl(0 0% 100% / 0.03);
+    --table-header: hsl(0 0% 100% / 0.05);
+  }
+  /* ---------- 主题：松林（深色，暖绿调） ---------- */
+  :root[data-theme="forest"] {
+    color-scheme: dark;
+    --background: 132 7.7% 12.7%; /* #1e231f */
+    --foreground: 110 9.5% 75.3%;
+    --card: 130 7.9% 14.9%;
+    --card-foreground: 110 9.5% 75.3%;
+    --popover: 130 7.9% 14.9%;
+    --popover-foreground: 110 9.5% 75.3%;
+    --primary: 93 33.3% 67.1%; /* #a8c78f */
+    --primary-foreground: 108 9.8% 10%;
+    --secondary: 120 7.9% 17.5%;
+    --secondary-foreground: 110 9.5% 75.3%;
+    --muted: 120 7.9% 17.5%;
+    --muted-foreground: 130 5.3% 55.7%;
+    --accent: 120 7.7% 20.4%;
+    --accent-foreground: 108 13.9% 85.9%;
+    --destructive: 7 64.3% 58.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 129 7.5% 18.2%;
+    --input: 113 8.7% 20.2%;
+    --ring: 93 33.3% 67.1%;
+    --radius: 0.5rem;
+    --editor: 132 8.8% 11.2%;
+    --scrollbar: 120 7.4% 23.7%;
+    --scrollbar-hover: 130 8.1% 29%;
+    --sidebar-background: 132 8.2% 12%;
+    --sidebar-foreground: 110 9.5% 75.3%;
+    --sidebar-primary: 93 33.3% 67.1%;
+    --sidebar-primary-foreground: 108 9.8% 10%;
+    --sidebar-accent: 120 7.7% 20.4%;
+    --sidebar-accent-foreground: 108 13.9% 85.9%;
+    --sidebar-border: 129 7.5% 18.2%;
+    --sidebar-ring: 93 33.3% 67.1%;
+    --hue-red: 6 59.7% 69.8%;
+    --hue-orange: 29 60% 65.7%;
+    --hue-yellow: 47 56.8% 65.5%;
+    --hue-green: 106 35.3% 67.3%;
+    --hue-cyan: 174 40.8% 61.6%;
+    --hue-blue: 211 55.4% 71%;
+    --hue-violet: 267 47.6% 75.3%;
+    --hue-pink: 337 56.6% 72%;
+    --hue-sage: 91 15.3% 57.8%;
+     --prose-heading: hsl(108 13.9% 85.9%);
+    --prose-link: hsl(211 55.4% 71%);
+    --prose-code-bg: hsl(120 7.9% 17.5%);
+    --prose-code: hsl(47 56.8% 65.5%);
+    --prose-quote-bg: hsl(0 0% 100% / 0.03);
+    --prose-quote-border: hsl(106 35.3% 67.3%);
+    --stripe: hsl(0 0% 100% / 0.03);
+    --table-header: hsl(0 0% 100% / 0.05);
+  }
+  /* ---------- 主题：纸墨（浅色，暖纸调） ---------- */
+  :root[data-theme="paper"] {
+    color-scheme: light;
+    --background: 40 27.3% 95.7%; /* #f7f5f1 */
+    --foreground: 40 7% 16.9%;
+    --card: 40 42.9% 98.6%;
+    --card-foreground: 40 7% 16.9%;
+    --popover: 40 42.9% 98.6%;
+    --popover-foreground: 40 7% 16.9%;
+    --primary: 48 48.8% 32.2%; /* #7a6a2a */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 40 19.1% 90.8%;
+    --secondary-foreground: 40 7% 16.9%;
+    --muted: 40 19.1% 90.8%;
+    --muted-foreground: 40 4.1% 43.3%;
+    --accent: 40 18.8% 87.5%;
+    --accent-foreground: 40 7% 16.9%;
+    --destructive: 4 61.4% 48.8%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 40 15% 84.3%;
+    --input: 43 13% 78.8%;
+    --ring: 48 48.8% 32.2%;
+    --radius: 0.5rem;
+    --editor: 42 25% 92.2%;
+    --scrollbar: 40 12.2% 75.9%;
+    --scrollbar-hover: 41 9.5% 67.1%;
+    --sidebar-background: 45 21.1% 92.5%;
+    --sidebar-foreground: 40 7% 16.9%;
+    --sidebar-primary: 48 48.8% 32.2%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 40 18.8% 87.5%;
+    --sidebar-accent-foreground: 40 7% 16.9%;
+    --sidebar-border: 40 15% 84.3%;
+    --sidebar-ring: 48 48.8% 32.2%;
+    --hue-red: 3 46% 49.4%;
+    --hue-orange: 29 63% 42.4%;
+    --hue-yellow: 44 68.3% 32.2%;
+    --hue-green: 109 31.9% 36.3%;
+    --hue-cyan: 176 50.3% 33.1%;
+    --hue-blue: 214 54.1% 40.2%;
+    --hue-violet: 266 36.2% 45.5%;
+    --hue-pink: 334 44.3% 47.8%;
+    --hue-sage: 88 16.2% 41.2%;
+     --prose-heading: hsl(40 10% 11.8%);
+    --prose-link: hsl(214 54.1% 40.2%);
+    --prose-code-bg: hsl(42 21.7% 91%);
+    --prose-code: hsl(39 76.8% 27.1%);
+    --prose-quote-bg: hsl(0 0% 0% / 0.02);
+    --prose-quote-border: hsl(29 63% 42.4%);
+    --stripe: hsl(0 0% 0% / 0.025);
+    --table-header: hsl(0 0% 0% / 0.04);
+  }
+  /* ---------- 主题：雾白（浅色，冷灰蓝调） ---------- */
+  :root[data-theme="mist"] {
+    color-scheme: light;
+    --background: 216 23.8% 95.9%; /* #f2f4f7 */
+    --foreground: 217 13.1% 19.4%;
+    --card: 210 25% 98.4%;
+    --card-foreground: 217 13.1% 19.4%;
+    --popover: 210 25% 98.4%;
+    --popover-foreground: 217 13.1% 19.4%;
+    --primary: 214 50.8% 47.1%; /* #3b6fb5 */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 218 19% 91.8%;
+    --secondary-foreground: 217 13.1% 19.4%;
+    --muted: 218 19% 91.8%;
+    --muted-foreground: 220 8.9% 46.1%;
+    --accent: 217 23.6% 89.2%;
+    --accent-foreground: 217 15.7% 16.3%;
+    --destructive: 4 54.8% 48.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 218 16.4% 86.9%;
+    --input: 219 18.7% 82.2%;
+    --ring: 214 50.8% 47.1%;
+    --radius: 0.5rem;
+    --editor: 213 27.3% 93.5%;
+    --scrollbar: 216 14.3% 79.4%;
+    --scrollbar-hover: 216 13.7% 71.4%;
+    --sidebar-background: 213 25.7% 93.1%;
+    --sidebar-foreground: 217 13.1% 19.4%;
+    --sidebar-primary: 214 50.8% 47.1%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 217 23.6% 89.2%;
+    --sidebar-accent-foreground: 217 15.7% 16.3%;
+    --sidebar-border: 218 16.4% 86.9%;
+    --sidebar-ring: 214 50.8% 47.1%;
+    --hue-red: 357 46.6% 51.6%;
+    --hue-orange: 29 62.3% 43.7%;
+    --hue-yellow: 45 73.3% 32.4%;
+    --hue-green: 135 33.7% 37.3%;
+    --hue-cyan: 186 58.2% 34.7%;
+    --hue-blue: 215 56.3% 42.2%;
+    --hue-violet: 267 38.3% 47.1%;
+    --hue-pink: 334 44.1% 50.2%;
+    --hue-sage: 95 18.4% 40.4%;
+     --prose-heading: hsl(217 17.8% 14.3%);
+    --prose-link: hsl(215 56.3% 42.2%);
+    --prose-code-bg: hsl(213 23.1% 92.4%);
+    --prose-code: hsl(43 74.8% 28%);
+    --prose-quote-bg: hsl(0 0% 0% / 0.02);
+    --prose-quote-border: hsl(215 56.3% 42.2%);
+    --stripe: hsl(0 0% 0% / 0.025);
+    --table-header: hsl(0 0% 0% / 0.04);
+  }
+  /* 语义状态色：随各主题的 hue 槽位解析，无需逐主题重定义。 */
+  :root {
+    --warning: var(--hue-yellow);
+    --success: var(--hue-green);
+    --danger: var(--hue-red);
   }
 }
 
@@ -54,8 +342,8 @@
     -webkit-font-smoothing: antialiased;
   }
   ::selection {
-    background: hsl(57 62% 83% / 0.25);
-    color: #fff;
+    background: hsl(var(--primary) / 0.25);
+    color: hsl(var(--foreground));
   }
 }
 
@@ -72,11 +360,11 @@
     height: 8px;
   }
   .scrollbar-thin::-webkit-scrollbar-thumb {
-    background: hsl(240 3.5% 24%);
+    background: hsl(var(--scrollbar));
     border-radius: 8px;
   }
   .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-    background: hsl(240 3.5% 30%);
+    background: hsl(var(--scrollbar-hover));
   }
   .scrollbar-thin::-webkit-scrollbar-corner {
     background: transparent;
@@ -89,31 +377,39 @@
   }
 }
 
-/* ---------- Markdown 预览排版 ---------- */
+/* ---------- Markdown 预览排版（内容层，随主题 token 变化） ---------- */
 .markdown-body {
   font-size: 14px;
   line-height: 1.85;
-  color: hsl(0 0% 88%);
+  color: hsl(var(--foreground) / 0.92);
 }
 .markdown-body h1 {
-  font-size: 1.65em;
+  font-size: 1.7em;
   font-weight: 700;
-  margin: 0.6em 0 0.5em;
+  letter-spacing: -0.01em;
+  margin: 0.6em 0 0.55em;
   padding-bottom: 0.35em;
   border-bottom: 1px solid hsl(var(--border));
-  color: #fff;
+  color: var(--prose-heading);
 }
 .markdown-body h2 {
   font-size: 1.32em;
   font-weight: 650;
-  margin: 1.4em 0 0.5em;
-  color: #fff;
+  letter-spacing: -0.005em;
+  margin: 1.5em 0 0.5em;
+  color: var(--prose-heading);
 }
 .markdown-body h3 {
-  font-size: 1.1em;
+  font-size: 1.12em;
   font-weight: 600;
-  margin: 1.2em 0 0.4em;
-  color: hsl(0 0% 93%);
+  margin: 1.25em 0 0.4em;
+  color: var(--prose-heading);
+}
+.markdown-body h4 {
+  font-size: 1em;
+  font-weight: 600;
+  margin: 1.1em 0 0.35em;
+  color: var(--prose-heading);
 }
 .markdown-body p {
   margin: 0.7em 0;
@@ -136,61 +432,83 @@
   color: hsl(var(--primary));
 }
 .markdown-body strong {
-  color: #fff;
+  color: var(--prose-heading);
   font-weight: 650;
 }
 .markdown-body a {
-  color: hsl(var(--primary));
+  color: var(--prose-link);
   text-decoration: underline;
+  text-decoration-color: color-mix(in hsl, var(--prose-link) 40%, transparent);
   text-underline-offset: 3px;
+  transition: text-decoration-color 0.15s;
+}
+.markdown-body a:hover {
+  text-decoration-color: var(--prose-link);
 }
 .markdown-body blockquote {
   margin: 0.9em 0;
-  padding: 0.15em 1em;
-  border-left: 3px solid hsl(var(--primary));
-  background: hsl(240 3.5% 14%);
+  padding: 0.35em 1em;
+  border-left: 3px solid var(--prose-quote-border);
+  background: var(--prose-quote-bg);
   color: hsl(var(--muted-foreground));
-  border-radius: 0 6px 6px 0;
+  border-radius: 0 8px 8px 0;
 }
 .markdown-body code {
   font-family: "SF Mono", "JetBrains Mono", Consolas, monospace;
   font-size: 0.85em;
-  background: hsl(240 4% 17%);
+  background: var(--prose-code-bg);
+  border: 1px solid hsl(var(--border) / 0.6);
   padding: 0.15em 0.4em;
-  border-radius: 4px;
-  color: hsl(57 45% 80%);
+  border-radius: 5px;
+  color: var(--prose-code);
 }
 .markdown-body pre {
   background: hsl(var(--editor));
   border: 1px solid hsl(var(--border));
-  border-radius: 8px;
+  border-radius: 10px;
   padding: 0.9em 1.1em;
   overflow-x: auto;
   margin: 0.9em 0;
 }
 .markdown-body pre code {
   background: transparent;
+  border: none;
   padding: 0;
   font-size: 12.5px;
   line-height: 1.7;
-  color: hsl(0 0% 85%);
+  color: hsl(var(--foreground) / 0.88);
+}
+.markdown-body img {
+  border-radius: 8px;
+  border: 1px solid hsl(var(--border));
 }
 .markdown-body table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   margin: 1em 0;
   font-size: 0.92em;
+  border: 1px solid hsl(var(--border));
+  border-radius: 10px;
+  overflow: hidden;
 }
 .markdown-body th,
 .markdown-body td {
-  border: 1px solid hsl(var(--border));
-  padding: 0.45em 0.8em;
+  border-bottom: 1px solid hsl(var(--border) / 0.7);
+  padding: 0.5em 0.85em;
   text-align: left;
 }
+.markdown-body tr:last-child th,
+.markdown-body tr:last-child td {
+  border-bottom: none;
+}
 .markdown-body th {
-  background: hsl(240 3.5% 15%);
-  color: #fff;
+  background: var(--table-header);
+  color: var(--prose-heading);
   font-weight: 600;
+}
+.markdown-body tbody tr:nth-child(even) td {
+  background: var(--stripe);
 }
 .markdown-body hr {
   border: none;
@@ -200,6 +518,51 @@
 .markdown-body input[type="checkbox"] {
   accent-color: hsl(var(--primary));
   margin-right: 0.45em;
+}
+
+/* ---------- 数据表格（CSV / TSV 预览编辑） ---------- */
+.data-table-frame {
+  display: inline-block;
+  border: 1px solid hsl(var(--border));
+  border-radius: 12px;
+  overflow: hidden;
+  background: hsl(var(--card) / 0.5);
+}
+.data-table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.data-table th,
+.data-table td {
+  border-bottom: 1px solid hsl(var(--border) / 0.55);
+}
+.data-table tr:last-child th,
+.data-table tr:last-child td {
+  border-bottom: none;
+}
+.data-table tbody tr:nth-child(even) td {
+  background: var(--stripe);
+}
+.data-table tbody tr:hover td {
+  background: hsl(var(--accent) / 0.35);
+}
+.data-table th[scope="row"] {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: hsl(var(--card));
+  border-right: 1px solid hsl(var(--border));
+  box-shadow: 1px 0 0 hsl(var(--border) / 0.4);
+  color: hsl(var(--muted-foreground));
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  user-select: none;
+}
+.data-table td + td {
+  border-left: 1px solid hsl(var(--border) / 0.35);
+}
+.data-table textarea {
+  font-variant-numeric: tabular-nums;
 }
 
 /* ---------- 编译预览（论文页） ---------- */

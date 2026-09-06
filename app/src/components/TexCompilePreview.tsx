@@ -289,7 +289,7 @@ export function TexCompilePreview({ initialSource, paperOnly = false, target, sy
     {paperOnly&&navigationNotice&&<p role="status" className="shrink-0 px-3 py-1 text-[10px] text-muted-foreground">{navigationNotice}</p>}
     <div className="scrollbar-thin min-h-0 flex-1 overflow-y-auto overflow-x-hidden p-3">
       <div data-content-typography="pdf" ref={containerRef} className="flex w-full flex-col">
-      {error && <p role="alert" className="p-3 text-sm text-red-400">{error}</p>}
+      {error && <p role="alert" className="p-3 text-sm text-danger">{error}</p>}
         {!error && !pages.length && <p className="p-3 text-sm text-muted-foreground">{source.name ? "正在加载 PDF…" : paperOnly ? "尚无当前论文的编译输出。点击上方编译正文以生成 PDF。" : "项目中暂无 PDF，请打开文件或将编译产物放入项目目录后重新打开项目。"}</p>}
         {pages.map((page,index) => <PdfPage separator={index>0} key={page.pageNumber} page={page} width={width} dpr={dpr} linkService={linkService} onError={onRenderError} onClickPoint={syncDb&&onLocateSource?clickPoint:undefined} highlight={highlight?.page===page.pageNumber?highlight.y:undefined} />)}
       </div>

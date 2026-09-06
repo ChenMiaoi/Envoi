@@ -12,11 +12,11 @@ const kindIcon: Record<string, typeof FileText> = {
 };
 
 const kindColor: Record<string, string> = {
-  pdf: "text-[#e08a8a]",
-  markdown: "text-[#8ab8e0]",
-  latex: "text-[#9ecf9e]",
-  bib: "text-[#d8b26e]",
-  image: "text-[#b79ae0]",
+  pdf: "text-[hsl(var(--hue-red))]",
+  markdown: "text-[hsl(var(--hue-blue))]",
+  latex: "text-[hsl(var(--hue-green))]",
+  bib: "text-[hsl(var(--hue-orange))]",
+  image: "text-[hsl(var(--hue-violet))]",
 };
 
 function TreeItem({

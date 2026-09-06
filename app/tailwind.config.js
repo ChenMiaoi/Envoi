@@ -22,6 +22,9 @@ module.exports = {
           DEFAULT: "hsl(var(--destructive) / <alpha-value>)",
           foreground: "hsl(var(--destructive-foreground) / <alpha-value>)",
         },
+        warning: "hsl(var(--warning) / <alpha-value>)",
+        success: "hsl(var(--success) / <alpha-value>)",
+        danger: "hsl(var(--danger) / <alpha-value>)",
         muted: {
           DEFAULT: "hsl(var(--muted))",
           foreground: "hsl(var(--muted-foreground))",

@@ -15,7 +15,7 @@ export function ProjectPdfPreview({target,syncPoint,onLocateSource}:{target?:{ti
  const syncReady=!active?false:verification?.project===project?verification.ok:null;
  return <div className="flex h-full min-h-0 flex-col">
   <CompileControls hasPdf={!!active} />
-  {active?.id==='compiled'&&project.compiled&&project.compiled.signature!==projectSignature(project)&&<p className="shrink-0 bg-card px-3 py-1 text-[10px] text-amber-300">正文已有更新，显示上次成功编译结果。</p>}
+  {active?.id==='compiled'&&project.compiled&&project.compiled.signature!==projectSignature(project)&&<p className="shrink-0 bg-card px-3 py-1 text-[10px] text-warning">正文已有更新，显示上次成功编译结果。</p>}
   <div className="min-h-0 flex-1"><TexCompilePreview paperOnly target={target} syncReady={syncReady} syncPoint={syncPoint} onLocateSource={onLocateSource} syncData={active?.id==='compiled'?project.compiled?.synctex??null:diskSync} sourcePaths={project.files.filter(file=>file.kind==='latex'&&file.text!==undefined).map(file=>file.path)} key={`${project.rootId}:${active?.id??'empty'}:${active?.file?.lastModified??0}:${active?.url??''}`} initialSource={{name:active?.path??'',file:active?.file,url:active?.url}} /></div>
  </div>;
 }
