@@ -5,10 +5,11 @@ import { tokenizeLatex } from "@/lib/latexHighlight";
 export interface LatexEditorHandle { insert: (text: string) => void; locate: (start: number, end: number) => void }
 
 /** Native soft-wrapping textarea with an identically sized syntax mirror. */
-export function LatexEditor({ref,value,onChange,fontSize=12.5,highlight,fontFamily,lineHeight=1.75,tabSize=4}: {
+export function LatexEditor({ref,value,onChange,fontSize=12.5,highlight,fontFamily,lineHeight=1.75,tabSize=4,onDoubleClickLine}: {
   ref?: Ref<LatexEditorHandle>; value:string; onChange:(v:string)=>void;
   fontSize?:number; fontFamily?:string; lineHeight?:number; tabSize?:number;
   highlight?:{start:number;severity:"error"|"warning"};
+  onDoubleClickLine?:(line:number)=>void;
 }) {
   const gutterRef=useRef<HTMLDivElement>(null),preRef=useRef<HTMLDivElement>(null);
   const contentRef=useRef<HTMLDivElement>(null),textareaRef=useRef<HTMLTextAreaElement>(null);
@@ -60,7 +61,7 @@ export function LatexEditor({ref,value,onChange,fontSize=12.5,highlight,fontFami
           {lines.map((line,index)=><div data-source-line={index+1} key={index}>{line.text?line.tokens.map((token,i)=><span key={i} className={token.cls}>{token.text}</span>):'\u200b'}</div>)}
         </div>
       </div>
-      <textarea ref={textareaRef} aria-label="LaTeX 正文编辑器" value={value} wrap="soft" spellCheck={false} onChange={e=>onChange(e.target.value)} onScroll={sync}
+      <textarea ref={textareaRef} aria-label="LaTeX 正文编辑器" value={value} wrap="soft" spellCheck={false} onChange={e=>onChange(e.target.value)} onScroll={sync} onDoubleClick={onDoubleClickLine?(event)=>onDoubleClickLine(value.slice(0,event.currentTarget.selectionStart).split('\n').length):undefined}
         className="scrollbar-thin absolute inset-0 h-full w-full resize-none overflow-x-hidden overflow-y-auto bg-transparent px-3.5 py-3 font-editor text-transparent caret-primary outline-none selection:bg-primary/25 selection:text-transparent"
         style={{...typography,whiteSpace:'pre-wrap',overflowWrap:'anywhere',wordBreak:'normal'}} />
     </div>

@@ -1,6 +1,7 @@
 # Dependencies and regenerable application output
 node_modules/
 /app/dist/
+/app/public/pdfjs/
 /app/dist-ssr/
 /app/tmp/
 *.tsbuildinfo

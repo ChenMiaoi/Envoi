@@ -23,8 +23,8 @@ export function CompileControls({hasPdf = false}:{hasPdf?:boolean}) {
    let diagnosticSaveWarning="";
    if(project.directory)await persistDiagnostics(project.directory,diagnostics).catch(()=>{diagnosticSaveWarning=" · 诊断仅保留浏览器缓存（磁盘写入失败）";});
    let successStatus='编译成功 · 仅浏览器缓存，未写入论文目录';
-   if(result.ok && project.directory){try{await persistBuild(project.directory,result.file,result.log,JSON.stringify(await previewManifest(project,result.file)));successStatus='编译成功 · 已保存当前项目 build/main.pdf';}catch(error){successStatus=`编译成功 · 产物未完整保存：${(error as Error).message}`;}}
-   setProject(current=>current.id!==id?current:result.ok?{...current,diagnostics,compiled:{file:result.file,signature},compileStatus:successStatus+diagnosticSaveWarning,compileLog:result.log}:{...current,diagnostics,compileStatus:'编译失败 · 预览未更新'+diagnosticSaveWarning,compileLog:`${result.error}\n${result.log}`});
+   if(result.ok && project.directory){try{await persistBuild(project.directory,result.file,result.log,JSON.stringify(await previewManifest(project,result.file)),result.synctex);successStatus='编译成功 · 已保存当前项目 build/main.pdf';}catch(error){successStatus=`编译成功 · 产物未完整保存：${(error as Error).message}`;}}
+   setProject(current=>current.id!==id?current:result.ok?{...current,diagnostics,compiled:{file:result.file,signature,synctex:result.synctex},compileStatus:successStatus+diagnosticSaveWarning,compileLog:result.log}:{...current,diagnostics,compileStatus:'编译失败 · 预览未更新'+diagnosticSaveWarning,compileLog:`${result.error}\n${result.log}`});
   }catch(error){setProject(current=>current.id!==id?current:{...current,diagnostics:controller.signal.aborted&&current.diagnostics?current.diagnostics:{items:controller.signal.aborted?[]:parseDiagnostics((error as Error).message,project.files,true),signature,rootId:project.rootId,status:controller.signal.aborted?'cancelled':'failed',log:(error as Error).message},compileStatus:controller.signal.aborted?'编译已取消':'编译失败 · 预览未更新',compileLog:(error as Error).message});}
   finally{setBusy(false);setRunning(false);request.current=null;}
  };

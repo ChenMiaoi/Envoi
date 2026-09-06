@@ -26,5 +26,5 @@ export async function compileProject(project: PaperProject, engine: string, sign
  const response = await fetch('/api/paperdesk/compile', { method:'POST',signal,headers:{'Content-Type':'application/json','X-PaperDesk-Token':runtime.token},body:JSON.stringify({main,engine,files}) });
  const result = await response.json();
  if (!response.ok || !result.ok) return { ok:false as const,error:result.error ?? '编译失败',log:result.log ?? '' };
- return { ok:true as const,file:new File([Uint8Array.from(atob(result.pdf),(character)=>character.charCodeAt(0))], 'compiled.pdf', {type:'application/pdf'}),log:result.log as string };
+ return { ok:true as const,file:new File([Uint8Array.from(atob(result.pdf),(character)=>character.charCodeAt(0))], 'compiled.pdf', {type:'application/pdf'}),synctex:typeof result.synctex==='string'?Uint8Array.from(atob(result.synctex),(character)=>character.charCodeAt(0)):undefined,log:result.log as string };
 }

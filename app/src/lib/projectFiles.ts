@@ -2,11 +2,11 @@ import {projectConfiguration,type ProjectConfiguration} from "../settings/model"
 import {parseDiagnostics} from "./diagnostics";
 import {projectSignature} from "./compileClient";
 import {verifyPreview} from "./pdfSync";
-import type {CompileDiagnostics} from "./diagnostics";
+import type {CompileDiagnostics, Diagnostic} from "./diagnostics";
 import { templateFiles } from "./paperTemplates";
 import type { FileKind, FileNode } from "@/data/workspace";
 export interface ProjectFile { id: string; path: string; kind: FileKind; text?: string; saved?: string; file?: File; handle?: FileSystemFileHandle; url?: string }
-export interface PaperProject { settings?:ProjectConfiguration; lint?: {fileId:string;text:string;status:"checking"|"ready"|"unavailable"|"disabled";message?:string;items:import("./diagnostics").Diagnostic[]}; diagnostics?: CompileDiagnostics; engine?: "pdflatex" | "xelatex"; compiled?: { file: File; signature: string }; compileStatus?: string; compileLog?: string; id: string; name: string; files: ProjectFile[]; directories: string[]; rootId: string; directory?: FileSystemDirectoryHandle }
+export interface PaperProject { settings?:ProjectConfiguration; lint?: {fileId:string;text:string;status:"checking"|"ready"|"unavailable"|"disabled";message?:string;items:Diagnostic[]}; diagnostics?: CompileDiagnostics; engine?: "pdflatex" | "xelatex"; compiled?: { file: File; signature: string; synctex?: Uint8Array<ArrayBuffer> }; compileStatus?: string; compileLog?: string; id: string; name: string; files: ProjectFile[]; directories: string[]; rootId: string; directory?: FileSystemDirectoryHandle }
 export function fileKind(path: string): FileKind {
   const extension = path.split(".").pop()?.toLowerCase();
   return extension === "tex" ? "latex" : extension === "bib" ? "bib" : extension === "pdf" ? "pdf" : ["png", "jpg", "jpeg", "webp", "gif", "svg", "avif", "bmp", "ico"].includes(extension ?? "") ? "image" : extension==='csv'?'csv':extension==='tsv'?'tsv':['md','markdown'].includes(extension??'')?'markdown':isTextPath(path)?'text':'binary';
@@ -103,10 +103,10 @@ export async function saveProject(project: PaperProject, onSaved: (id: string, t
     catch (error) { await stream.abort().catch(() => {}); throw new Error(`${file.path} 保存失败：${(error as Error).message}。此前成功保存的文件已标记。`); }
   }
 }
-export async function persistBuild(directory:FileSystemDirectoryHandle, pdf:File, log:string, manifest?:string) {
+export async function persistBuild(directory:FileSystemDirectoryHandle, pdf:File, log:string, manifest?:string, synctex?:Uint8Array<ArrayBuffer>) {
  if(await directory.queryPermission({mode:'readwrite'})!=='granted')throw new Error('写入权限已失效，PDF 仅保留在当前预览');
  const build=await directory.getDirectoryHandle('build',{create:true});
- for(const [name,data] of [['main.pdf',pdf],['compile.log',log],...(manifest ? [['preview.json',manifest] as const] : [])] as const){
+ for(const [name,data] of [['main.pdf',pdf],['compile.log',log],...(manifest ? [['preview.json',manifest] as const] : []),...(synctex ? [['main.synctex.gz',synctex] as const] : [])] as const){
   const handle=await build.getFileHandle(name,{create:true});const stream=await handle.createWritable();
   try{await stream.write(data);await stream.close();}catch(error){await stream.abort().catch(()=>{});throw error;}
  }

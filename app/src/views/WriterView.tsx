@@ -27,6 +27,7 @@ type SideTab = (typeof sideTabs)[number]["id"];
 export function WriterView({problemTarget,requestedFile}:{requestedFile?:{id:string;request:number};problemTarget?:import("@/project/ProblemsPanel").ProblemTarget}) {
   const {effective}=useSettings();
   const [pdfTarget,setPdfTarget] = useState<{title:string;id:number}|undefined>();
+  const [syncPoint,setSyncPoint] = useState<{path:string;line:number;id:number}|undefined>();
   const [tab, setTab] = useState<SideTab>("outline");
   const editor = useRef<LatexEditorHandle>(null);
   const { project, edit, busy } = useProject();
@@ -45,6 +46,13 @@ export function WriterView({problemTarget,requestedFile}:{requestedFile?:{id:str
   const locate = (location: SourceLocation) => {
     if (location.fileId === activeId) editor.current?.locate(location.start, location.end);
     else { pendingLocation.current = location; setActiveId(location.fileId); }
+  };
+  // PDF 点击 → 定位源码行（路径已在预览侧匹配回项目相对路径）。
+  const locateSource = (path:string,line:number) => {
+    const file=editable.find(f=>f.path===path);if(!file?.text)return;
+    const lines=file.text.split('\n');
+    const start=lines.slice(0,line-1).reduce((n,text)=>n+text.length+1,0);
+    locate({fileId:file.id,path,start,end:start+(lines[line-1]?.length??0)});
   };
   useLayoutEffect(() => {
     if (pendingLocation.current) { const location = pendingLocation.current; pendingLocation.current = null; editor.current?.locate(location.start, location.end); }
@@ -95,7 +103,7 @@ export function WriterView({problemTarget,requestedFile}:{requestedFile?:{id:str
                 <span className="font-editor text-[11px] text-muted-foreground">{project.files.some((file) => file.text !== file.saved) ? "未保存 · 菜单中保存全部" : "源文件已保存 · 可编译预览"}</span>
               </div>
               <div className="min-h-0 flex-1">
-                {active ? <LatexEditor fontSize={effective.fontSize} fontFamily={editorFonts[effective.fontFamily].css} lineHeight={effective.lineHeight} tabSize={effective.tabSize} highlight={problemTarget?.fileId===activeId?{start:problemTarget.start,severity:problemTarget.severity}:undefined} ref={editor} value={source} onChange={setSource} /> : <p className="p-4 text-sm text-muted-foreground">项目没有 LaTeX 文件，请通过项目菜单新建 main.tex。</p>}
+                {active ? <LatexEditor fontSize={effective.fontSize} fontFamily={editorFonts[effective.fontFamily].css} lineHeight={effective.lineHeight} tabSize={effective.tabSize} highlight={problemTarget?.fileId===activeId?{start:problemTarget.start,severity:problemTarget.severity}:undefined} onDoubleClickLine={(line)=>setSyncPoint(current=>({path:active.path,line,id:(current?.id??0)+1}))} ref={editor} value={source} onChange={setSource} /> : <p className="p-4 text-sm text-muted-foreground">项目没有 LaTeX 文件，请通过项目菜单新建 main.tex。</p>}
               </div>
             </div>
           </div>
@@ -108,7 +116,7 @@ export function WriterView({problemTarget,requestedFile}:{requestedFile?:{id:str
 
       {/* 右：编译预览 */}
       <Panel defaultSize="42%" minSize="18%" maxSize="45%">
-        <ProjectPdfPreview target={pdfTarget} />
+        <ProjectPdfPreview target={pdfTarget} syncPoint={syncPoint} onLocateSource={locateSource} />
       </Panel>
     </PanelGroup>
   );

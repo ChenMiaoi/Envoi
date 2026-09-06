@@ -79,7 +79,7 @@ export async function compileSnapshot(input, { signal, timeoutMs = 90000 } = {})
     const buildDirectory = path.join(cwd, 'build');
     await mkdir(buildDirectory,{recursive:true});
     const main = './' + path.basename(input.main);
-    const args=['-no-shell-escape','-interaction=nonstopmode','-halt-on-error','-file-line-error','-jobname=paperdesk','-output-directory=build',...(input.engine==='xelatex'?['-no-pdf']:[]),main];
+    const args=['-no-shell-escape','-interaction=nonstopmode','-halt-on-error','-file-line-error','-synctex=1','-jobname=paperdesk','-output-directory=build',...(input.engine==='xelatex'?['-no-pdf']:[]),main];
     await run(input.engine,args);
     const aux=await readFile(path.join(buildDirectory,'paperdesk.aux'),'utf8').catch(()=> '');
     if (/\\bibdata\{/.test(aux) && /\\citation\{/.test(aux)) await run('bibtex',['paperdesk'],buildDirectory);
@@ -88,7 +88,8 @@ export async function compileSnapshot(input, { signal, timeoutMs = 90000 } = {})
     if(input.engine==='xelatex')await run('xdvipdfmx',['-o','paperdesk.pdf','paperdesk.xdv'],buildDirectory);
     const pdf=await readFile(path.join(buildDirectory,'paperdesk.pdf'));
     if(!pdf.subarray(0,5).equals(Buffer.from('%PDF-')))throw Error('编译没有产生有效PDF');
-    return { ok:true, pdf:pdf.toString('base64'), log };
+    const synctex=await readFile(path.join(buildDirectory,'paperdesk.synctex.gz')).catch(()=>null);
+    return { ok:true, pdf:pdf.toString('base64'), synctex:synctex?synctex.toString('base64'):null, log };
   } catch(error) { return {ok:false,error:error.message,log}; }
   finally { clearTimeout(timer); signal?.removeEventListener('abort',cancel); await rm(directory,{recursive:true,force:true}); }
 }
