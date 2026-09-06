@@ -1,0 +1,18 @@
+// Envoi logomark: a pen nib over a rising flourish — the final stroke of a farewell stanza.
+export function BrandMark({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+      <g transform="rotate(7 12 11)">
+        <path
+          fill="currentColor"
+          fillRule="evenodd"
+          d="M12 2.6c-2 2.4-4 4.6-4.9 6.8-.5 1.2-.2 2.2.5 3.2l1.1 2.7c.1.3.5.5.9.5h4.8c.4 0 .8-.2.9-.5l1.1-2.7c.7-1 1-2 .5-3.2-.9-2.2-2.9-4.4-4.9-6.8zM11.5 4.9v5.7h1V4.9zM12 11.8a1.05 1.05 0 1 0 0 2.1 1.05 1.05 0 0 0 0-2.1z"
+        />
+      </g>
+      <path
+        fill="currentColor"
+        d="M2.5 20.3c3.9 1.1 8.9.7 12.6-1.4 1.9-1.1 3.5-2.6 4.7-4.4-1 2-2.6 3.7-4.5 4.9-3.8 2.4-8.9 2.7-12.8.9z"
+      />
+    </svg>
+  );
+}

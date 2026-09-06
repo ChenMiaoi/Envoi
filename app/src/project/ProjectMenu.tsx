@@ -1,6 +1,7 @@
 import {restoreProjectSession} from '@/lib/projectSession';
 import {bindAgentDirectory} from "@/lib/agentClient";
 import {ProjectManagement} from "./ProjectManagement";
+import {BrandMark} from "@/components/BrandMark";
 import {usePreferences} from "@/settings/context";
 import { useEffect, useState } from "react";
 import { Folder, FolderOpen, ArrowUp, HardDrive, FilePlus2 } from "lucide-react";
@@ -78,7 +79,7 @@ export function ProjectMenu() {
   return <>
     <ProjectManagement />
     <DropdownMenu><DropdownMenuTrigger aria-label="Envoi 项目菜单" className="flex items-center gap-2 rounded focus-visible:outline focus-visible:outline-primary">
-      <span className="flex h-5 w-5 items-center justify-center rounded-md bg-primary font-editor text-[11px] font-bold text-primary-foreground">P</span><span className="text-[12.5px] font-semibold">Envoi</span>
+      <span className="flex h-5 w-5 items-center justify-center rounded-md bg-primary text-primary-foreground"><BrandMark className="h-4 w-4" /></span><span className="font-serif text-[14px] font-semibold italic tracking-[0.02em]">Envoi</span>
     </DropdownMenuTrigger><DropdownMenuContent align="start" className="w-64">
       <DropdownMenuLabel>项目 / 文件 {changed ? `· ${changed} 个未保存` : ""}</DropdownMenuLabel>
       <DropdownMenuItem disabled={busy} onSelect={() => openDialog("new")}>新建项目…</DropdownMenuItem>
