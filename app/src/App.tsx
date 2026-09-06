@@ -10,13 +10,14 @@ import { projectTree } from "@/lib/projectFiles";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {ProblemsPanel,type ProblemTarget} from "@/project/ProblemsPanel";
 import { GitStatusPanel } from "@/project/GitStatusPanel";
-import { Search, BookMarked, FileText, FileCode2, FileType2, BookOpenText, PenLine, LibraryBig } from "lucide-react";
+import { Search, BookMarked, FileText, FileCode2, FileType2, BookOpenText, PenLine, LibraryBig, History } from "lucide-react";
 import { ActivityBar } from "@/components/ActivityBar";
 import {viewNames,viewPaths,resolvePage,type ViewId} from "@/navigation/routes";
 import {Link,Navigate,useLocation,useNavigate} from "react-router";
 import { ReaderView, type OpenFile } from "@/views/ReaderView";
 import { WriterView } from "@/views/WriterView";
 import { LibraryView } from "@/views/LibraryView";
+import { GitHistoryView } from "@/views/GitHistoryView";
 import { SettingsView } from "@/views/SettingsView";
 import { type FileNode } from "@/data/workspace";
 import {
@@ -127,6 +128,7 @@ function ProjectApp() {
           </section>}
           {visited.has("writer") && <section hidden={view!=="writer"} className="h-full" aria-label="写作页面"><WriterView requestedFile={writerFile} problemTarget={problemTarget} /></section>}
           {visited.has("library") && <section hidden={view!=="library"} className="h-full" aria-label="论文库页面"><LibraryView onOpen={openLibraryPaper} /></section>}
+          {visited.has("history") && <section hidden={view!=="history"} className="h-full" aria-label="版本历史页面"><GitHistoryView /></section>}
           {visited.has("settings") && <section hidden={view!=="settings"} className="h-full" aria-label="设置页面"><SettingsView /></section>}
           {!view&&!page.redirect&&<div className="flex h-full flex-col items-center justify-center gap-3"><h1 className="text-lg font-medium">页面不存在</h1><p className="text-sm text-muted-foreground">当前地址没有对应页面，项目和编辑仍保留。</p><Link to="/writer" className="text-sm text-primary">返回写作页面</Link></div>}
         </div>
@@ -163,6 +165,9 @@ function ProjectApp() {
             </CommandItem>
             <CommandItem onSelect={() => { setView("library"); setPaletteOpen(false); }}>
               <LibraryBig className="mr-2 h-3.5 w-3.5 text-muted-foreground" /> 论文库
+            </CommandItem>
+            <CommandItem onSelect={() => { setView("history"); setPaletteOpen(false); }}>
+              <History className="mr-2 h-3.5 w-3.5 text-muted-foreground" /> 版本历史
             </CommandItem>
           </CommandGroup>
           <CommandGroup heading="项目操作">{shortcuts.filter(item=>'event' in item).map(item=><CommandItem key={item.id} onSelect={()=>{setPaletteOpen(false);if(item.id==='compile')setView('writer');if('event' in item)setTimeout(()=>window.dispatchEvent(new Event(item.event)),0);}}><span>{item.label}</span><kbd className="ml-auto text-[10px] text-muted-foreground">{shortcutLabel(bindingText(commandBinding(item.id,effective.shortcuts)),/Mac/.test(navigator.platform))}</kbd></CommandItem>)}</CommandGroup>

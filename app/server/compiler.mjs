@@ -1,7 +1,7 @@
 import {realpathSync,accessSync,constants} from 'node:fs';
 import {toolInfo,configureTools,detectTool} from './tool-config.mjs';
 import {lintText} from './lint.mjs';
-import {gitRuntime,initializeBoundGit,readBoundGitStatus,verifyProjectBinding} from './git.mjs';
+import {gitRuntime,initializeBoundGit,readBoundGitStatus,readBoundGitLog,readBoundGitShow,verifyProjectBinding} from './git.mjs';
 import { spawn, execFileSync } from 'node:child_process';
 import { mkdtemp, mkdir, writeFile, readFile, rm, realpath } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -106,8 +106,10 @@ export function compilerPlugin() {
       if(req.method==='POST'&&req.url==='/api/paperdesk/tools'&&req.headers['x-paperdesk-token']===token){try{let body='';for await(const chunk of req){body+=chunk;if(body.length>8192)throw Error('Request too large');}res.end(JSON.stringify({...await configureTools(JSON.parse(body)),latex:runtimeInfo(),token}));}catch(error){res.statusCode=400;res.end(JSON.stringify({error:error.message}));}return;}
       if(req.method==='GET' && req.url==='/api/paperdesk/compiler'){res.end(JSON.stringify({...runtimeInfo(),token}));return;}
       if(req.method==='GET' && req.url==='/api/paperdesk/git'){res.end(JSON.stringify({...gitRuntime(),token}));return;}
-      if(req.method==='POST' && ['/api/paperdesk/git-init','/api/paperdesk/git-status','/api/paperdesk/project-bind'].includes(req.url) && req.headers['x-paperdesk-token']===token){
-        try {let body='';for await(const chunk of req){body+=chunk;if(body.length>8192)throw Error('Request too large');}res.end(JSON.stringify(await (req.url==='/api/paperdesk/git-init'?initializeBoundGit:req.url==='/api/paperdesk/project-bind'?verifyProjectBinding:readBoundGitStatus)(JSON.parse(body))));}
+      if(req.method==='POST' && req.headers['x-paperdesk-token']===token){
+        const gitHandlers={'/api/paperdesk/git-init':initializeBoundGit,'/api/paperdesk/git-status':readBoundGitStatus,'/api/paperdesk/git-log':readBoundGitLog,'/api/paperdesk/git-show':readBoundGitShow,'/api/paperdesk/project-bind':verifyProjectBinding};
+        const handler=gitHandlers[req.url];if(!handler){res.statusCode=403;res.end(JSON.stringify({error:'Invalid compile request'}));return;}
+        try {let body='';for await(const chunk of req){body+=chunk;if(body.length>8192)throw Error('Request too large');}res.end(JSON.stringify(await handler(JSON.parse(body))));}
         catch(error){res.statusCode=400;res.end(JSON.stringify({ok:false,error:error.message}));}return;
       }
       if(req.method==='POST'&&req.url==='/api/paperdesk/lint'&&req.headers['x-paperdesk-token']===token){

@@ -1,7 +1,7 @@
 import {settingCategories} from "../settings/model";
-export type ViewId='reader'|'writer'|'library'|'settings';
-export const viewPaths:Record<ViewId,string>={reader:'/reader',writer:'/writer',library:'/library',settings:'/settings'};
-export const viewNames:Record<ViewId,string>={reader:'阅读配置',writer:'写作配置',library:'论文库',settings:'设置'};
+export type ViewId='reader'|'writer'|'library'|'history'|'settings';
+export const viewPaths:Record<ViewId,string>={reader:'/reader',writer:'/writer',library:'/library',history:'/history',settings:'/settings'};
+export const viewNames:Record<ViewId,string>={reader:'阅读配置',writer:'写作配置',library:'论文库',history:'版本历史',settings:'设置'};
 export function resolvePage(pathname:string):{view?:ViewId;redirect?:string}{
  if(pathname==='/')return {redirect:viewPaths.writer};
  const normalized=pathname.replace(/\/+$/,'');

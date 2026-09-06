@@ -1,4 +1,4 @@
-import { BookOpenText, PenLine, LibraryBig, Settings, FlaskConical } from "lucide-react";
+import { BookOpenText, PenLine, LibraryBig, Settings, FlaskConical, History } from "lucide-react";
 import {NavLink} from "react-router";
 import {viewPaths,type ViewId} from "@/navigation/routes";
 import { cn } from "@/lib/utils";
@@ -7,6 +7,7 @@ const items: { id: ViewId; label: string; icon: typeof BookOpenText }[] = [
   { id: "reader", label: "阅读配置", icon: BookOpenText },
   { id: "writer", label: "写作配置", icon: PenLine },
   { id: "library", label: "论文库", icon: LibraryBig },
+  { id: "history", label: "版本历史", icon: History },
   { id: "settings", label: "设置", icon: Settings },
 ];
 
@@ -17,7 +18,7 @@ export function ActivityBar({
 }) {
   return (
     <div className="flex h-full w-12 flex-col items-center border-r border-border bg-card py-2">
-      {items.slice(0, 3).map((it) => (
+      {items.slice(0, 4).map((it) => (
         <NavLink
           end
           to={viewPaths[it.id]}
