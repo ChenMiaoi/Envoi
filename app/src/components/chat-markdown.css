@@ -1,0 +1,21 @@
+.chat-markdown { min-width: 0; max-width: 100%; overflow-wrap: anywhere; white-space: normal; line-height: 1.7; }
+.chat-markdown > :first-child { margin-top: 0; }
+.chat-markdown > :last-child { margin-bottom: 0; }
+.chat-markdown p, .chat-markdown ul, .chat-markdown ol, .chat-markdown blockquote { margin: .65em 0; }
+.chat-markdown h1, .chat-markdown h2, .chat-markdown h3, .chat-markdown h4, .chat-markdown h5, .chat-markdown h6 { margin: 1em 0 .4em; font-weight: 600; line-height: 1.4; }
+.chat-markdown h1 { font-size: 1.25em; } .chat-markdown h2 { font-size: 1.15em; } .chat-markdown h3 { font-size: 1.05em; }
+.chat-markdown ul { list-style: disc; padding-left: 1.5em; } .chat-markdown ol { list-style: decimal; padding-left: 1.5em; }
+.chat-markdown li { margin: .2em 0; } .chat-markdown li > p { margin: .25em 0; }
+.chat-markdown blockquote { border-left: 2px solid hsl(var(--border)); padding-left: .85em; color: hsl(var(--muted-foreground)); }
+.chat-markdown a { text-decoration: underline; text-underline-offset: 3px; }
+.chat-markdown a:hover { opacity: .8; }
+.chat-markdown code { font-family: ui-monospace, monospace; font-size: .88em; border-radius: 4px; padding: .12em .3em; background: hsl(var(--muted)); }
+.chat-markdown pre { display: block; max-width: 100%; overflow-x: auto; margin: .75em 0; border: 1px solid hsl(var(--border)); border-radius: 8px; padding: .8em 1em; background: hsl(var(--muted) / .45); white-space: pre; overflow-wrap: normal; line-height: 1.55; }
+.chat-markdown pre code { padding: 0; background: transparent; }
+.chat-markdown .chat-table-scroll { max-width: 100%; overflow-x: auto; margin: .75em 0; }
+.chat-markdown table { border-collapse: collapse; font-size: .9em; }
+.chat-markdown th, .chat-markdown td { border: 1px solid hsl(var(--border)); padding: .4em .65em; min-width: 5em; }
+.chat-markdown th { font-weight: 600; background: hsl(var(--muted) / .5); }
+.chat-markdown .katex-display { max-width: 100%; overflow-x: auto; overflow-y: hidden; padding: .2em 0; }
+.chat-markdown hr { margin: 1em 0; border-color: hsl(var(--border)); }
+.chat-markdown :focus-visible { outline: 1px solid hsl(var(--ring)); outline-offset: 2px; }

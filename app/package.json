@@ -16,7 +16,7 @@
     "test:demo": "node scripts/test-demo-navigation.mjs && node scripts/test-diagnostic-restore.mjs",
     "demo:build": "node scripts/build-demo.mjs && node scripts/sync-demo-snapshot.mjs",
     "demo:snapshot": "node scripts/sync-demo-snapshot.mjs",
-    "test:ai": "node scripts/test-model-discovery.mjs && node scripts/test-provider-validation.mjs && node scripts/test-agent-native.mjs && node scripts/test-data-migration.mjs"
+    "test:ai": "node scripts/test-chat-markdown.mjs && node scripts/test-model-discovery.mjs && node scripts/test-provider-validation.mjs && node scripts/test-agent-native.mjs && node scripts/test-data-migration.mjs"
   },
   "dependencies": {
     "@codemirror/commands": "^6.11.0",

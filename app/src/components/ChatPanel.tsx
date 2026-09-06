@@ -1,3 +1,4 @@
+import { ChatMarkdown } from './ChatMarkdown';
 import { useEffect, useRef, useState } from 'react';
 import { ArrowUp, Mic, Plus, Square, ChevronUp, ChevronDown } from 'lucide-react';
 import { useAgent } from '@/agent/context';
@@ -36,7 +37,7 @@ export function ChatPanel({ compact = false, inputOnly = false, context }: { com
           {agent.record?.messages.filter(message => message.text || message.error || (agent.busy && message.role === 'assistant')).map(message => (
             <div key={message.id} className={cn('flex min-w-0 shrink-0 flex-col gap-1', message.role === 'user' ? 'items-end' : 'items-start')}>
               <div className={cn('min-w-0 max-w-[92%] whitespace-pre-wrap rounded-2xl px-3 py-2 text-sm leading-relaxed', message.role === 'user' ? 'border border-border/50 bg-muted/80 text-foreground' : 'text-foreground')}>
-                {message.text}{message.error ? message.error.length > 240 ? <details className="break-words text-xs text-muted-foreground"><summary className="cursor-pointer">{message.error.slice(0,160)}…</summary><pre className="mt-2 whitespace-pre-wrap font-sans">{message.error}</pre></details> : <span className="break-words text-xs text-muted-foreground">{message.error}</span> : (!message.text && agent.busy && message.role === 'assistant' ? <span className="text-muted-foreground">…</span> : null)}
+                {message.role==='assistant'&&message.text?<ChatMarkdown text={message.text}/>:message.text}{message.error ? message.error.length > 240 ? <details className="break-words text-xs text-muted-foreground"><summary className="cursor-pointer">{message.error.slice(0,160)}…</summary><pre className="mt-2 whitespace-pre-wrap font-sans">{message.error}</pre></details> : <span className="break-words text-xs text-muted-foreground">{message.error}</span> : (!message.text && agent.busy && message.role === 'assistant' ? <span className="text-muted-foreground">…</span> : null)}
               </div>
             </div>
           ))}
