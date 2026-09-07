@@ -53,3 +53,10 @@ export async function* agentChat(message:string,options:{projectId:string;sessio
   }
  }finally{options.signal?.removeEventListener('abort',abort);unsubscribe();}
 }
+
+const catalogRefreshes=new Map<string,Promise<unknown>>();
+export function refreshModelCatalog(provider:string){
+ const pending=catalogRefreshes.get(provider);if(pending)return pending;
+ const request=agentRequest('models/refresh',{provider}).finally(()=>{catalogRefreshes.delete(provider);});
+ catalogRefreshes.set(provider,request);return request;
+}

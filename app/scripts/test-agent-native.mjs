@@ -41,6 +41,8 @@ try{
  assert.equal((await post('agent/credential',{provider:'protocol-fixture',key:'  !echo forbidden'})).response.status,400);assert((await post('agent/credential',{provider:'protocol-fixture',key:'fixture-only-not-a-real-key'})).response.ok);
  const status=await get('agent');assert(!JSON.stringify(status).includes('fixture-only-not-a-real-key'));if(process.platform!=='win32')assert.equal((await stat(path.join(local.dataDir,'pi/auth.json'))).mode&0o777,0o600);
  assert((await post('agent/settings',{settings:{model:'protocol-fixture/gpt-4o',tools:'read'}})).response.ok);
+ const authPath=path.join(local.dataDir,'pi/auth.json'),privateAuth=JSON.parse(await readFile(authPath,'utf8'));await writeFile(authPath,JSON.stringify({...privateAuth,deepseek:{type:'api_key',key:'fixture-only-no-inference'}}));
+ const fallbackStatus=await get('agent');assert.equal(fallbackStatus.providers.find(p=>p.id==='deepseek')?.catalog.state,'builtin');assert(fallbackStatus.models.some(m=>m.provider==='deepseek'&&m.available),'configured SDK providers must not disappear without a discovery adapter');
  const chat=await post('agent/chat',{projectId:id,message:'Verify local protocol',dirty:false});assert.equal(chat.response.status,200,JSON.stringify(chat.body));assert(chat.body.includes('Protocol verified'),chat.body);
  assert.deepEqual(transportRequests.at(-1).tools.map(tool=>tool.function.name),['project_list','project_read']);
  const list=(await post('agent/sessions',{projectId:id})).body;assert.equal(list.sessions.length,1);const sessionId=list.activeId;assert(sessionId);const record=(await post('agent/session',{projectId:id,sessionId})).body;assert.equal(record.status,'complete');assert.equal(record.messages[1].text,'Protocol verified');assert(record.piFile);
