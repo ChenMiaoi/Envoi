@@ -3,10 +3,13 @@ import {compileSnapshot,runtimeInfo} from '../../server/compiler.mjs';
 import {lintText} from '../../server/lint.mjs';
 import {configureTools,toolInfo} from '../../server/tool-config.mjs';
 import {gitInitAt,gitLogAt,gitRuntime,gitShowAt,gitStatusAt} from '../../server/git.mjs';
-import {createAgentCore} from '../../server/agent.mjs';
 import {TaskRegistry} from './task-registry.mjs';
-const tasks=new TaskRegistry();let agent;
-const ai=()=>agent??=createAgentCore({trustedDesktop:true});
+const tasks=new TaskRegistry();let agent,loadingAgent;
+async function ai(){
+ if(agent)return agent;
+ loadingAgent??=import('../../server/agent.mjs').then(module=>agent=module.createAgentCore({trustedDesktop:true})).catch(error=>{loadingAgent=undefined;throw error;});
+ return loadingAgent;
+}
 const git={gitInit:gitInitAt,gitStatus:gitStatusAt,gitLog:gitLogAt,gitShow:gitShowAt};
 async function dispatch(message){
  const {id,method,args,owner,root}=message;
@@ -19,11 +22,10 @@ async function dispatch(message){
  if(method==='configureTools')return {...await configureTools(args[0]),latex:runtimeInfo({trusted:true})};
  if(method==='compile')return tasks.run('compile:'+root,owner,root,signal=>compileSnapshot(args[0],{signal,trustedRoot:root,sourceRoot:args[0].drafts?root:undefined,onResource:resource=>parentPort.postMessage({resource})}));
  if(method==='lint')return tasks.run('lint:'+owner+':'+id,owner,root,signal=>lintText(args[0],{signal,trustedRoot:root}));
- if(method==='agentStatus')return ai().status();
- if(method==='agentRequest'){if(args[1]?.projectId)ai().bind(args[1].projectId);return ai().request(...args);}
+ if(method==='agentStatus')return (await ai()).status();
+ if(method==='agentRequest'){const core=await ai();if(args[1]?.projectId)core.bind(args[1].projectId);return core.request(...args);}
  if(method==='agentChat'){
-  ai().bind(args[0].projectId);
-  return tasks.run('chat:'+args[0].projectId,owner,root,signal=>ai().chat(args[0],{signal,onEvent:event=>parentPort.postMessage({id,event})}));
+  return tasks.run('chat:'+args[0].projectId,owner,root,async signal=>{const core=await ai();signal.throwIfAborted();core.bind(args[0].projectId);return core.chat(args[0],{signal,onEvent:event=>parentPort.postMessage({id,event})});});
  }
  throw Error('未知后台操作');
 }

@@ -49,3 +49,15 @@ Closing stops the window's project tasks and watcher, records an empty workspace
 Removing a recent project preserves disk files and workspace trust. Removing the currently open project first uses the close/discard flow. It also removes the exact folder shortcut, comparing canonical paths so aliases such as macOS `/var` and `/private/var` cannot leave duplicate entries; parent shortcuts remain. Permanent directory deletion is a separate, named confirmation and recognizes hidden project metadata for nested TeX entry points.
 
 Desktop regression tests exercise close/discard/reload/reopen, removal without deleting files, and permanent deletion against temporary fixtures only.
+
+## Startup measurements
+
+`cd app && npm run measure:startup` measures three launches of the built application with temporary empty profiles. Add `-- --project` to restore a temporary copy of the demo, leaving the real demo untouched. `ENVOI_DESKTOP_EXECUTABLE` selects a packaged executable. Results include window readiness, first Git response, and browser paint timings; they are local repeated-launch measurements, not a guarantee of first-install cold-start performance.
+
+Views load on demand. Git and compilation workers do not load the AI SDK; the AI worker loads it only for AI requests. An empty workspace does not automatically request model discovery.
+
+## Welcome page
+
+A workspace with no open project shows the Envoi welcome page with new/open/example actions, recent projects, settings, shortcuts and LaTeX documentation. Closing a project returns here even from Settings. Successful startup restoration reopens the project; a failed restoration returns here with the reason and a separate recoverable-draft action.
+
+Recent entries open directly and can be removed without deleting files. Development opens `examples/demo` directly. Packaged applications include example resources and create a writable copy under the application's user-data `examples/demo` directory on demand; reopening preserves edits. There is no timed splash screen or startup animation, and no extra permissions beyond the existing workspace trust decision.

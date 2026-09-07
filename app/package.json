@@ -27,7 +27,8 @@
     "prebuild:desktop": "node scripts/sync-pdfjs-assets.mjs",
     "test:desktop": "node --test scripts/test-workspace-trust.mjs scripts/test-desktop-backend.mjs && node scripts/test-desktop-smoke.mjs",
     "dev:web": "vite",
-    "build:web": "tsc -b && vite build"
+    "build:web": "tsc -b && vite build",
+    "measure:startup": "node scripts/measure-startup.mjs"
   },
   "dependencies": {
     "@codemirror/commands": "^6.11.0",

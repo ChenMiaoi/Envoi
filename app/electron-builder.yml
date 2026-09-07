@@ -14,3 +14,12 @@ mac:
   identity: null
 dmg:
   title: Envoi
+
+extraResources:
+  - from: ../examples/demo
+    to: demo
+    filter:
+      - "**/*"
+      - "!**/.git{,/**}"
+      - "!**/.envoi{,/**}"
+      - "!**/.paperdesk{,/**}"

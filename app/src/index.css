@@ -675,3 +675,7 @@ body { font-family: var(--ui-font, sans-serif); font-size: var(--ui-font-size, 1
 .hljs-deletion { color: hsl(var(--hue-red)); }
 .hljs-emphasis { font-style: italic; }
 .hljs-strong { font-weight: 700; }
+
+/* Native macOS window dragging, with interactive controls excluded. */
+.window-drag { -webkit-app-region: drag; }
+.window-drag :is(button, a, input, select, textarea, [role="button"]) { -webkit-app-region: no-drag; }

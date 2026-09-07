@@ -3,7 +3,7 @@ import {bindProject} from "@/lib/agentClient";
 import {ProjectManagement} from "./ProjectManagement";
 import {BrandMark} from "@/components/BrandMark";
 import {usePreferences} from "@/settings/context";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Folder, FolderOpen, ArrowUp, HardDrive, FilePlus2 } from "lucide-react";
 import { createPaper, createTextFile, dirtyFiles, readProject } from "@/lib/projectFiles";
 import { authorizedRoots, rememberRoot, recentProjects, rememberProject, type RecentProject } from "@/lib/recentProjects";
@@ -49,13 +49,13 @@ export function ProjectMenu() {
     const first=items.find(item=>item.path)?.path;if(!first)return;
     try{const root=first;const listing=await envoi().fsChildren(root);if(!active)return;setTrail([root]);setFolders(listing.filter(entry=>entry.kind==='directory').map(entry=>entry.name).filter((part)=>part&&!part.startsWith(".")&&part!=="node_modules").sort((a,b)=>a.localeCompare(b)));}catch{/* 上次位置不可用时留空，用户重新选择。 */}
   }).catch(()=>{});return()=>{active=false;};},[]);
-  const run = async (operation: () => Promise<void>) => {
-    if (busy) return;
+  const run = useCallback(async (operation: () => Promise<void>) => {
+    if (busy||saving) return;
     setBusy(true); setMessage("");
     try { await operation(); } catch (error) { setMessage((error as Error).message); }
     finally { setBusy(false); }
-  };
-  const activate = async (rootPath: string) => {
+  },[busy,saving,setBusy,setMessage]);
+  const activate = useCallback(async (rootPath: string) => {
     const binding = await bindProject(rootPath); rootPath = binding.project.path;
     const bindingError = '';
     window.dispatchEvent(new Event('envoi:connection-updated'));
@@ -64,7 +64,14 @@ export function ProjectMenu() {
     try { await rememberProject(rootPath); } catch { remembered = false; }
     setProject(next);
     setMessage(remembered ? t('project.opened',{name:next.name,bindingError}) : t('project.openedNoRecent',{name:next.name}));
-  };
+  },[setProject,setMessage,t]);
+  useEffect(()=>{
+    const create=()=>{setMode('new');setName('');setDiscard(false);setEnableGit(preferences.defaultGit);setMessage('');};
+    const recent=(event:Event)=>{const directory=(event as CustomEvent<string>).detail;if(typeof directory==='string')void run(()=>activate(directory));};
+    const example=()=>{void run(async()=>{await activate(await envoi().exampleDirectory());});};
+    window.addEventListener('envoi:new-project',create);window.addEventListener('envoi:open-recent',recent);window.addEventListener('envoi:open-example',example);
+    return()=>{window.removeEventListener('envoi:new-project',create);window.removeEventListener('envoi:open-recent',recent);window.removeEventListener('envoi:open-example',example);};
+  },[run,activate,preferences.defaultGit,setMessage]);
   const openDialog = (next: "new" | "open" | "file") => { setMode(next); if(next==='new')setEnableGit(preferences.defaultGit); setName(""); setDiscard(false); setMessage(""); };
   return <>
     <ProjectManagement />

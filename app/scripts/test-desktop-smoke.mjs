@@ -12,12 +12,31 @@ await writeFile(path.join(root,'main.tex'),'\\documentclass{article}\n\\begin{do
 let instance;
 try {
  instance=await _electron.launch({executablePath:process.env.ENVOI_DESKTOP_EXECUTABLE ?? require('electron'),args:[path.resolve('.'), '--user-data-dir='+path.join(temp,'profile')],env:{...process.env,ENVOI_DATA_DIR:path.join(temp,'data')}});
- 
+
  let prompts=0;
  await instance.evaluate(({dialog})=>{globalThis.trustPrompts=0;dialog.showMessageBox=async()=>{globalThis.trustPrompts++;return {response:0,checkboxChecked:false}}});
  const page=await instance.firstWindow();const errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.waitForFunction(()=>!!window.envoi);
- await page.locator('button').first().waitFor(); 
+ await page.getByTestId('welcome-page').waitFor();
+ if(process.platform==='darwin'){
+  const chrome=await instance.evaluate(({BrowserWindow})=>{const window=BrowserWindow.getAllWindows()[0];return {buttons:window.getWindowButtonPosition(),bounds:window.getBounds(),content:window.getContentBounds()};});
+  assert.deepEqual(chrome.buttons,{x:16,y:14});
+  assert.equal(chrome.content.height,chrome.bounds.height,'content extends into the native titlebar');
+  assert.equal(await page.locator('.window-drag').evaluate(element=>getComputedStyle(element).getPropertyValue('-webkit-app-region')),'drag');
+ }
+
+ await page.getByTestId('welcome-page').waitFor();
+ assert.equal(await page.getByTestId('welcome-page').getByRole('heading',{name:'Envoi.'}).count(),1);
+ if(process.env.ENVOI_WELCOME_SCREENSHOT)await page.screenshot({path:process.env.ENVOI_WELCOME_SCREENSHOT});
+ await page.setViewportSize({width:760,height:600});
+ assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+ await page.setViewportSize({width:1440,height:900});
+ await page.getByRole('button',{name:/新建项目/}).click();
+ await page.getByRole('button',{name:'取消',exact:true}).click();
+ await page.getByRole('link',{name:'快捷键',exact:true}).click();
+ await page.waitForFunction(()=>location.hash.includes('/settings/global/shortcuts'));
+ await page.evaluate(()=>{location.hash='/writer';});
+ await page.getByTestId('welcome-page').waitFor();
  console.log('loaded',await page.title(), await page.locator('body').innerText().then(t=>t.slice(0,120)));
  await instance.evaluate(({dialog}, root)=>{dialog.showOpenDialog=async()=>({canceled:false,filePaths:[root]})},root);
  await page.evaluate(()=>window.dispatchEvent(new Event('envoi:open-project')));
@@ -76,34 +95,34 @@ try {
  await instance.close();instance=null;
  instance=await _electron.launch({executablePath:process.env.ENVOI_DESKTOP_EXECUTABLE ?? require('electron'),args:[path.resolve('.'), '--user-data-dir='+path.join(temp,'profile')],env:{...process.env,ENVOI_DATA_DIR:path.join(temp,'data')}});
  await instance.evaluate(({dialog})=>{globalThis.trustPrompts=0;dialog.showMessageBox=async()=>{globalThis.trustPrompts++;return {response:1}}});
- const reopened=await instance.firstWindow();await reopened.waitForFunction(()=>!!window.envoi);await reopened.locator('button').first().waitFor();
+ const reopened=await instance.firstWindow();await reopened.waitForFunction(()=>!!window.envoi);await reopened.getByRole('textbox',{name:'LaTeX 正文编辑器',exact:true}).waitFor();
  await reopened.evaluate(root=>window.envoi.bindProject(root),root);
  assert.equal(await instance.evaluate(()=>globalThis.trustPrompts),0);
  console.log('PASS: persisted trust across restart');
  await reopened.waitForFunction(()=>document.body.innerText.includes('main.tex'));
  const editor=reopened.locator('textarea').first();
  await editor.fill('Unsaved text to discard');
+ await reopened.evaluate(()=>{location.hash='/settings/global/general';});
+ await reopened.waitForFunction(()=>location.hash.includes('/settings/global/general'));
  await reopened.evaluate(()=>window.dispatchEvent(new Event('envoi:close-project')));
  assert.equal(await reopened.getByRole('button',{name:'关闭项目',exact:true}).isEnabled(),false);
  await reopened.getByLabel('放弃当前未保存修改').check();
  await reopened.getByRole('button',{name:'关闭项目',exact:true}).click();
- await reopened.waitForFunction(()=>document.body.innerText.includes('未打开项目')&&!document.querySelector('textarea[aria-label="LaTeX 正文编辑器"]'));
+ await reopened.waitForFunction(()=>!!document.querySelector('[data-testid="welcome-page"]')&&!document.querySelector('textarea[aria-label="LaTeX 正文编辑器"]'));
+ await reopened.getByTestId('welcome-page').waitFor();
  await reopened.reload();
- await reopened.waitForFunction(()=>document.body.innerText.includes('未打开项目')&&!document.querySelector('textarea[aria-label="LaTeX 正文编辑器"]'));
- await instance.evaluate(({dialog},root)=>{dialog.showOpenDialog=async()=>({canceled:false,filePaths:[root]});},root);
- await reopened.evaluate(()=>window.dispatchEvent(new Event('envoi:open-project')));
- await reopened.getByRole('button',{name:'选择文件夹…',exact:true}).click();
- await reopened.getByRole('button',{name:'打开当前目录',exact:true}).click();
+ await reopened.waitForFunction(()=>!!document.querySelector('[data-testid="welcome-page"]')&&!document.querySelector('textarea[aria-label="LaTeX 正文编辑器"]'));
+ await reopened.getByTestId('welcome-page').getByRole('button',{name:/^paper /}).click();
  await reopened.waitForFunction(()=>document.body.innerText.includes('main.tex'));
  assert.equal(await reopened.locator('textarea').first().inputValue().then(text=>text.includes('Unsaved text to discard')),false);
  await reopened.evaluate(()=>window.dispatchEvent(new Event('envoi:manage-projects')));
  await reopened.getByRole('button',{name:'移除记录',exact:true}).click();
  await reopened.getByRole('button',{name:'移除记录',exact:true}).click();
- await reopened.waitForFunction(()=>document.body.innerText.includes('未打开项目')&&!document.querySelector('textarea[aria-label="LaTeX 正文编辑器"]'));
+ await reopened.waitForFunction(()=>!!document.querySelector('[data-testid="welcome-page"]')&&!document.querySelector('textarea[aria-label="LaTeX 正文编辑器"]'));
  await reopened.waitForFunction(async()=>{const recent=await window.envoi.dataGet('recent');return recent?.value?.length===0;});
  assert.match(await readFile(path.join(root,'main.tex'),'utf8'),/Desktop test/);
  await reopened.reload();
- await reopened.waitForFunction(()=>document.body.innerText.includes('未打开项目')&&!document.querySelector('textarea[aria-label="LaTeX 正文编辑器"]'));
+ await reopened.waitForFunction(()=>!!document.querySelector('[data-testid="welcome-page"]')&&!document.querySelector('textarea[aria-label="LaTeX 正文编辑器"]'));
  assert.equal((await reopened.evaluate(()=>window.envoi.dataGet('roots'))).value.length,0);
  console.log('PASS: discard-close, empty restart, clean reopen, remove-current without deleting disk files');
  const deleteRoot=path.join(temp,'delete-paper');
@@ -119,10 +138,28 @@ try {
  await reopened.getByRole('button',{name:'检查待删除目录',exact:true}).click();
  await reopened.getByRole('textbox',{name:'确认删除项目目录名',exact:true}).fill('delete-paper');
  await reopened.getByRole('button',{name:'确认永久删除目录',exact:true}).click();
- await reopened.waitForFunction(()=>document.body.innerText.includes('未打开项目'));
+ await reopened.waitForFunction(()=>!!document.querySelector('[data-testid="welcome-page"]'));
  await assert.rejects(readFile(path.join(deleteRoot,'chapters','paper.tex')),error=>error.code==='ENOENT');
  assert.match(await readFile(path.join(root,'main.tex'),'utf8'),/Desktop test/);
  console.log('PASS: verified permanent deletion of nested-entry fixture leaves other project untouched');
+ await reopened.getByTestId('welcome-page').waitFor();
+ await reopened.evaluate(async root=>{await window.envoi.dataPut('recent',[{id:'welcome-recent-test',name:'paper',path:root,updated:Date.now()}]);window.dispatchEvent(new Event('envoi:recent-updated'));},root);
+ await reopened.getByRole('button',{name:'移除最近项目：paper',exact:true}).click();
+ await reopened.waitForFunction(async()=>!(await window.envoi.dataGet('recent')).value.length);
+ assert.match(await readFile(path.join(root,'main.tex'),'utf8'),/Desktop test/);
+ console.log('PASS: welcome recent removal preserves project files');
+ if(process.env.ENVOI_DESKTOP_EXECUTABLE){
+  await instance.evaluate(({app},directory)=>app.setPath('userData',directory),path.join(temp,'profile'));
+  await reopened.getByRole('button',{name:/打开示例项目/}).click();
+  await reopened.getByRole('textbox',{name:'LaTeX 正文编辑器',exact:true}).waitFor();
+  const example=await reopened.evaluate(()=>window.envoi.exampleDirectory());
+  assert.ok(example.includes(path.join('profile','examples','demo')));
+  await reopened.evaluate(async root=>{await window.envoi.fsWrite(root,'example-check.txt',{text:'preserved'});},example);
+  assert.equal(await reopened.evaluate(()=>window.envoi.exampleDirectory()),example);
+  assert.equal(await readFile(path.join(example,'example-check.txt'),'utf8'),'preserved');
+  console.log('PASS: bundled example opens as an editable copy and is not overwritten');
+ }
+
 
 
 } finally {await instance?.close();await rm(temp,{recursive:true,force:true});}

@@ -2,6 +2,7 @@
 // preload/index.ts 实现此接口；src 侧经 app/src/lib/desktop.ts re-export 消费。
 export interface EnvoiBridge {
   // 目录与项目绑定（无 proof；directory 为绝对路径）
+  exampleDirectory(): Promise<string>
   canonicalDirectory(directory: string): Promise<string>
   trustDirectory(directory: string): Promise<string>
   pickDirectory(): Promise<string | null>

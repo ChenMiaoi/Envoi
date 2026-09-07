@@ -1,3 +1,4 @@
+import {WelcomePage} from '@/project/WelcomePage';
 import {ProjectIdentity} from '@/project/ProjectIdentity';
 import {useAgent} from '@/agent/context';
 import {AgentProvider} from "@/agent/AgentProvider";
@@ -13,18 +14,14 @@ import { ProjectProvider } from "@/project/ProjectProvider";
 import { ProjectMenu } from "@/project/ProjectMenu";
 import { useProject } from "@/project/context";
 import { projectTree } from "@/lib/projectFiles";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {ProblemsPanel,type ProblemTarget} from "@/project/ProblemsPanel";
 import { GitStatusPanel } from "@/project/GitStatusPanel";
 import { Search, BookMarked, FileText, FileCode2, FileType2, BookOpenText, PenLine, LibraryBig, History, Settings } from "lucide-react";
 import { ActivityBar } from "@/components/ActivityBar";
 import {viewPaths,resolvePage,type ViewId} from "@/navigation/routes";
 import {Link,Navigate,useLocation,useNavigate} from "react-router";
-import { ReaderView, type OpenFile } from "@/views/ReaderView";
-import { WriterView } from "@/views/WriterView";
-import { LibraryView } from "@/views/LibraryView";
-import { GitHistoryView } from "@/views/GitHistoryView";
-import { SettingsView } from "@/views/SettingsView";
+import type { OpenFile } from "@/views/ReaderView";
 import { type FileNode } from "@/data/workspace";
 import {
   CommandDialog,
@@ -34,6 +31,12 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
+
+const ReaderView=lazy(()=>import("@/views/ReaderView").then(module=>({default:module.ReaderView})));
+const WriterView=lazy(()=>import("@/views/WriterView").then(module=>({default:module.WriterView})));
+const LibraryView=lazy(()=>import("@/views/LibraryView").then(module=>({default:module.LibraryView})));
+const GitHistoryView=lazy(()=>import("@/views/GitHistoryView").then(module=>({default:module.GitHistoryView})));
+const SettingsView=lazy(()=>import("@/views/SettingsView").then(module=>({default:module.SettingsView})));
 
 const kindIcon: Record<string, typeof FileText> = {
   pdf: BookMarked,
@@ -51,7 +54,11 @@ function flatten(nodes: FileNode[], prefix = ""): { node: FileNode; path: string
 }
 
 export default function App() { return <PreferencesProvider><I18nProvider><ProjectProvider><AgentProvider><ProjectSession /></AgentProvider></ProjectProvider></I18nProvider></PreferencesProvider>; }
-function ProjectSession() { const { project } = useProject(); return <ProjectApp key={project.id} />; }
+function ProjectSession() {
+ const {project}=useProject(),navigate=useNavigate(),previous=useRef<string|undefined>(undefined);
+ useEffect(()=>{if(previous.current===project.id)return;previous.current=project.id;if(project.id==='empty')void navigate('/writer',{replace:true});},[project.id,navigate]);
+ return <ProjectApp key={project.id}/>;
+}
 function ProjectApp() {
   const agent=useAgent();
   const {t}=useT();
@@ -107,8 +114,9 @@ function ProjectApp() {
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-background text-foreground">
       {page.redirect&&<Navigate to={page.redirect} replace />}
-      {/* 标题栏 */}
-      <div className="flex h-10 shrink-0 items-center border-b border-border bg-card">
+      {mac&&emptyWorkspace&&<div aria-hidden="true" className="window-drag fixed inset-x-0 top-0 z-40 h-10"/>}
+      {/* The macOS traffic lights share the content area; keep controls clear of them. */}
+      <div className={emptyWorkspace ? "hidden" : `flex h-10 shrink-0 items-center border-b border-border bg-card ${mac ? "window-drag pl-[80px]" : ""}`}>
         <div className="flex min-w-0 max-w-[55%] items-center gap-2 pl-3.5">
           <div className="shrink-0"><ProjectMenu /></div><ProjectIdentity />
           
@@ -128,9 +136,10 @@ function ProjectApp() {
 
       {/* 主体 */}
       <div className="flex min-h-0 flex-1">
-        <ActivityBar view={view} />
+        {!emptyWorkspace&&<ActivityBar view={view} />}
         <div className="min-w-0 flex-1">
-          {emptyWorkspace&&<div className="flex h-full flex-col items-center justify-center gap-4"><h1 className="text-lg font-medium">{t('project.notOpened')}</h1><button className="rounded bg-primary px-4 py-2 text-sm text-primary-foreground" onClick={()=>window.dispatchEvent(new Event('envoi:open-project'))}>{t('command.project-open')}</button></div>}
+          <Suspense fallback={<div role="status" className="flex h-full items-center justify-center text-sm text-muted-foreground">{t('project.processing')}</div>}>
+          {emptyWorkspace&&<WelcomePage/>}
           {!emptyWorkspace&&visited.has("reader") && <section hidden={view!=="reader"} className="h-full" aria-label={t('app.aria.reader')}>
             <ReaderView libraryFiles={libraryFiles} onTex={openTex}
               openFiles={openFiles}
@@ -144,11 +153,12 @@ function ProjectApp() {
           {project.id!=='empty'&&visited.has("history") && <section hidden={view!=="history"} className="h-full" aria-label={t('app.aria.history')}><GitHistoryView /></section>}
           {visited.has("settings") && <section hidden={view!=="settings"} className="h-full" aria-label={t('app.aria.settings')}><SettingsView /></section>}
           {!view&&!page.redirect&&<div className="flex h-full flex-col items-center justify-center gap-3"><h1 className="text-lg font-medium">{t('app.notFound.title')}</h1><p className="text-sm text-muted-foreground">{t('app.notFound.body')}</p><Link to="/writer" className="text-sm text-primary">{t('app.notFound.back')}</Link></div>}
+          </Suspense>
         </div>
       </div>
 
       {/* 状态栏 */}
-      <div className="flex h-6.5 shrink-0 items-center justify-between border-t border-border bg-card px-3 text-[11px] text-muted-foreground" style={{ height: 26 }}>
+      {!emptyWorkspace&&<div className="flex h-6.5 shrink-0 items-center justify-between border-t border-border bg-card px-3 text-[11px] text-muted-foreground" style={{ height: 26 }}>
         <div className="flex items-center gap-3">
           {project.id!=='empty'&&<GitStatusPanel />}
           {project.id!=='empty'&&<ProblemsPanel onNavigate={target=>{setProblemTarget(target);setView("writer");}} />}
@@ -162,7 +172,7 @@ function ProjectApp() {
           <span className="font-editor">{effective.engine==='xelatex'?'XeLaTeX':'pdfLaTeX'}</span>
           <span className="font-editor">UTF-8</span>
         </div>
-      </div>
+      </div>}
 
       {/* ⌘K 命令面板 */}
       <CommandDialog open={paletteOpen} onOpenChange={setPaletteOpen}>

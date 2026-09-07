@@ -797,6 +797,21 @@ const en: Messages = {
  'settings.tools.restoreAutoDetect':'Restore auto-detect',
  'settings.tools.validateSave':'Validate and save',
 
+ "welcome.eyebrow":"A place for your research",
+ "welcome.tagline":"From the first idea to the final page.",
+ "welcome.start":"Get started",
+ "welcome.new":"New project",
+ "welcome.newHint":"Choose a template and start a new paper.",
+ "welcome.openHint":"Continue a paper or research folder on your computer.",
+ "welcome.demo":"Open example project",
+ "welcome.demoHint":"Explore Envoi through a complete manuscript.",
+ "welcome.recent":"Recent projects",
+ "welcome.remove":"Remove recent project: {name}",
+ "welcome.noRecent":"Your work starts here",
+ "welcome.noRecentHint":"Open or create a project to return to it here.",
+ "welcome.footer":"Local files · Focused writing",
+ "welcome.shortcuts":"Keyboard shortcuts",
+ "welcome.help":"LaTeX help",
  'settings.ai.workspaceTrust':"Git, LaTeX, AI and file operations share workspace trust. Trusted folders need no further tool approvals.",
 };
 export default en;

@@ -797,6 +797,21 @@ const ja: Messages = {
  'settings.tools.restoreAutoDetect':'自動検出に戻す',
  'settings.tools.validateSave':'検証して保存',
 
+ "welcome.eyebrow":"研究を、ここから",
+ "welcome.tagline":"最初のアイデアから、論文の最後のページまで。",
+ "welcome.start":"はじめる",
+ "welcome.new":"新規プロジェクト",
+ "welcome.newHint":"テンプレートを選んで新しい論文を作成。",
+ "welcome.openHint":"このコンピューターの論文や研究を再開。",
+ "welcome.demo":"サンプルを開く",
+ "welcome.demoHint":"完成した論文で Envoi を体験。",
+ "welcome.recent":"最近のプロジェクト",
+ "welcome.remove":"最近のプロジェクトを削除：{name}",
+ "welcome.noRecent":"研究の続きをここから",
+ "welcome.noRecentHint":"プロジェクトを開くか作成すると、ここから再開できます。",
+ "welcome.footer":"ローカルファイル · 執筆に集中",
+ "welcome.shortcuts":"キーボードショートカット",
+ "welcome.help":"LaTeX ヘルプ",
  'settings.ai.workspaceTrust':"Git, LaTeX, AI and file operations share workspace trust. Trusted folders need no further tool approvals.",
 };
 export default ja;

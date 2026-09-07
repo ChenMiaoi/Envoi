@@ -51,7 +51,7 @@ export async function restoreSession():Promise<{project?:PaperProject;recoverabl
 
  if(!cached){const recent=(await recentProjects())[0];if(!recent)return {};cached={id:'restore',name:recent.name,rootPath:recent.path,files:[],directories:[],rootId:''};}
  if(cached.id==='demo'&&!cached.rootPath){const archive=await database();try{await new Promise<void>((resolve,reject)=>{const tx=archive.transaction('current','readwrite');tx.objectStore('current').put(cached,'legacy-demo');tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error);});}finally{archive.close();}return {recoverable:cached,warning:translate('project.legacySessionWarning')};}
- const result=await restoreProjectCache(cached);return {...result,...(recoverable?{recoverable,warning:translate('project.restoreConflict')}:{})};
+ const result=await restoreProjectCache(cached);if(cached.rootPath&&!result.project.rootPath&&result.warning)return {project:emptyProject(),recoverable:result.project,warning:result.warning};return {...result,...(recoverable?{recoverable,warning:translate('project.restoreConflict')}:{})};
 }
 export async function restoreProjectCache(cached:PaperProject):Promise<{project:PaperProject;warning?:string}> {
  cached={...cached,diagnostics:cached.diagnostics?.status==='running'?{...cached.diagnostics,status:'cancelled'}:cached.diagnostics,compileStatus:cached.compileStatus?.startsWith(translate('compile.compiling'))?translate('compile.interrupted'):cached.compileStatus,files:cached.files.map(file=>({...file,kind:fileKind(file.path),url:file.url?.startsWith('blob:')?undefined:file.url}))};

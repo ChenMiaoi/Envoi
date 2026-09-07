@@ -48,3 +48,12 @@ test('removing a recent project clears its exact location shortcut but preserves
  await forgetRecentProject('removed');
  assert.equal((await recentProjects()).length,0);assert.deepEqual((await authorizedRoots()).map(item=>item.id),['parent']);
 });
+
+test('failed startup restore returns home and preserves recoverable drafts',async()=>{
+ installDesktopFixture();
+ const {saveSession,restoreSession}=await import('../src/lib/projectSession');
+ const project={...emptyProject(),id:'missing-home-test',rootPath:'/missing/paper',files:[{id:'main.tex',path:'main.tex',kind:'latex' as const,text:'recover me',saved:'old'}]};
+ window.envoi!.bindProject=async()=>{throw Error('ENOENT: project moved');};
+ await saveSession(project);const result=await restoreSession();
+ assert.equal(result.project?.id,'empty');assert.equal(result.recoverable?.files[0].text,'recover me');assert.ok(result.warning);
+});

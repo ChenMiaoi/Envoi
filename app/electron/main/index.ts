@@ -1,6 +1,6 @@
 import { app, BrowserWindow, dialog, ipcMain, protocol, shell } from "electron"
 import { randomBytes } from "node:crypto"
-import { mkdir, readdir, readFile, stat, realpath, rename, rm } from "node:fs/promises"
+import { cp, mkdtemp, mkdir, readdir, readFile, stat, realpath, rename, rm } from "node:fs/promises"
 import path from "node:path"
 
 import type { CompileInput } from "../../server/compiler.mjs"
@@ -130,7 +130,21 @@ async function agentRoot(body: unknown) {
 
 // ── IPC 通道（契约第 1 节；错误消息沿用中文风格）──
 
+let exampleCreation: Promise<string> | undefined
 function registerIpc(): void {
+  ipcMain.handle('envoi:example-directory', () => {
+    exampleCreation ??= (async () => {
+      const source=app.isPackaged?path.join(process.resourcesPath,'demo'):path.resolve(import.meta.dirname,'../../../examples/demo')
+      if(!app.isPackaged)return realpath(source)
+      const parent=path.join(app.getPath('userData'),'examples'),target=path.join(parent,'demo')
+      try{return await realpath(target)}catch(error){if((error as NodeJS.ErrnoException).code!=='ENOENT')throw error}
+      await mkdir(parent,{recursive:true})
+      const staging=await mkdtemp(path.join(parent,'.demo-'))
+      try{await cp(source,staging,{recursive:true,filter:entry=>!['.git','.envoi','.paperdesk'].includes(path.basename(entry))});await rename(staging,target);return await realpath(target)}
+      finally{await rm(staging,{recursive:true,force:true})}
+    })().finally(()=>{exampleCreation=undefined})
+    return exampleCreation
+  })
 
   ipcMain.handle("envoi:pick-directory", async (event) => {
     const window = BrowserWindow.fromWebContents(event.sender)
@@ -309,6 +323,7 @@ function createWindow(): void {
     width: 1440,
     height: 900,
     title: "Envoi",
+    ...(process.platform === 'darwin' ? {titleBarStyle: 'hidden' as const, trafficLightPosition: {x: 16, y: 14}} : {}),
     webPreferences: {
       preload: path.join(import.meta.dirname, "../preload/index.cjs"),
       contextIsolation: true,
