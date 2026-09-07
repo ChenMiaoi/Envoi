@@ -12,6 +12,7 @@ async function directory(root:string, rel='',create=false):Promise<TestDirectory
  return handle;
 }
 const bridge = {
+ canonicalDirectory:async(root:string)=>root,
  trustDirectory:async(root:string)=>root,
  fsChildren:async(root:string)=>{const children:{name:string;kind:'directory'|'file'}[]=[];for await(const [name,entry] of (await directory(root)).entries())children.push({name,kind:entry.kind});return children;},
  fsList:async(root:string)=>{const files:{path:string;kind:string;text:string}[]=[],directories:string[]=[];const walk=async(handle:TestDirectory,prefix='')=>{for await(const [name,child] of handle.entries()){if(['.envoi','.paperdesk','.git','node_modules'].includes(name))continue;const rel=prefix+name;if(child.kind==='directory'){directories.push(rel);await walk(child,rel+'/');}else files.push({path:rel,kind:'text',text:await (await child.getFile()).text()});}};await walk(await directory(root));return {files,directories};},

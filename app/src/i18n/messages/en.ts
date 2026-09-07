@@ -624,7 +624,7 @@ const en: Messages = {
  'project.localPathLabel':'Local path of the selected location · fill in once when first connecting local tools',
  'project.localPathNote':'Directory authorization is reused; browsers do not expose absolute paths, and sub-projects under a connected root inherit automatically.',
  'project.localPathPlaceholder':'Local absolute path of the chosen location',
- 'project.manageDesc':'Removing records does not delete files; deleting a directory is a separate, permanent action.',
+ 'project.manageDesc':'Removing the current project closes it and removes its recent record and folder shortcut, keeping files on disk. Deleting a directory is a separate, permanent action.',
  'project.manageMenu':'Manage / Remove / Delete Projects…',
  'project.menuAria':'Envoi project menu',
  'project.menuLabel':'Project / Files',

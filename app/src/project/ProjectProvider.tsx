@@ -4,14 +4,15 @@ import {assertCanClose} from "@/lib/projectManagement";
 import {initialProject,emptyProject} from '@/lib/initialProject';
 import {envoi} from "@/lib/desktop";
 import { readProject, mergeDiskProject, dirtyFiles, type PaperProject } from '@/lib/projectFiles';
-import {restoreSession,saveSession} from '@/lib/projectSession';
+import {restoreSession,saveSession,closeProjectSession} from '@/lib/projectSession';
 import { ProjectContext } from './context';
 import {useT} from "@/i18n/useT";
 export function ProjectProvider({ children }: { children: ReactNode }) {
   const {t}=useT();
   const [project, setProjectState] = useState<PaperProject>(()=>initialProject(import.meta.hot?.data.project));
   const latest=useRef(project);
-  const setProject=useCallback<React.Dispatch<React.SetStateAction<PaperProject>>>((action)=>{const next=typeof action==='function'?action(latest.current):action;latest.current=next;setProjectState(next);},[]);
+  const closing=useRef(false);
+  const setProject=useCallback<React.Dispatch<React.SetStateAction<PaperProject>>>((action)=>{if(closing.current)return;const next=typeof action==='function'?action(latest.current):action;latest.current=next;setProjectState(next);},[]);
   const [saving,setSaving]=useState(false);
   const [recoverable,setRecoverable]=useState<PaperProject|undefined>();
   const [restored,setRestored] = useState(!!import.meta.hot?.data.project&&import.meta.hot.data.project.id!=='demo');
@@ -31,7 +32,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       running = true; pending = false;
       try {
         const disk = await readProject(root);
-        if (!disposed) setProject(current => mergeDiskProject(current, disk));
+        if (!disposed && !closing.current) setProject(current => mergeDiskProject(current, disk));
       } catch (error) {if (!disposed) setMessage((error as Error).message);}
       finally {running = false; if (pending && !disposed) timer = setTimeout(() => void refresh(), 200);}
     };
@@ -45,7 +46,21 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   }, [project.rootPath, restored, setProject]);
   // createProjectSaver stores this getter; it reads the ref only when a save is requested.
   const saveAll=useMemo(()=>createProjectSaver({getProject:()=>latest.current,setProject,message:setMessage,saving:setSaving}),[setProject]);
-  const closeProject=useCallback(async(discard=false)=>{const current=latest.current;assertCanClose(current,busy,saving,discard);setBusy(true);try{const empty=emptyProject();await saveSession(empty);if(latest.current!==current){await saveSession(latest.current);throw Error(t('project.errorCloseChanged'));}if(import.meta.hot)import.meta.hot.data.project=empty;setProject(empty);setMessage(t('project.closed'));}finally{setBusy(false);}},[busy,saving,setProject,t]);
+  const closeProject=useCallback(async(discard=false)=>{
+    const current=latest.current;
+    assertCanClose(current,busy||closing.current,saving,discard);
+    closing.current=true;activity.current={busy:true,saving};setBusy(true);
+    try {
+      if(current.rootPath)await envoi().closeProject(current.rootPath);
+      await closeProjectSession(current,discard);
+      const empty=emptyProject();
+      if(import.meta.hot)import.meta.hot.data.project=empty;
+      latest.current=empty;setProjectState(empty);setRecoverable(undefined);setMessage(t('project.closed'));
+    } catch(error) {
+      if(current.rootPath)void envoi().watchProject(current.rootPath).catch(()=>{});
+      throw error;
+    } finally {closing.current=false;activity.current={busy:false,saving};setBusy(false);}
+  },[busy,saving,t]);
   useEffect(()=>{const save=()=>{void saveAll();};window.addEventListener('envoi:save',save);return()=>window.removeEventListener('envoi:save',save);},[saveAll]);
   useEffect(() => {
     if(restored)return;
@@ -56,7 +71,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   useEffect(()=>{
     if(!restored)return;
     if(import.meta.hot)import.meta.hot.data.project=project;
-    if(project.id==='empty')return;
+    if(project.id==='empty'||closing.current)return;
     void saveSession(project).catch(()=>setMessage(t('project.recoverySaveFailed')));
   },[project,restored,t]);
   useEffect(() => {

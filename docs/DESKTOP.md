@@ -41,3 +41,11 @@ Local data remains in `~/.envoi/`; the renderer retains IndexedDB recovery copie
 Packaged navigation uses hash routes. Local assets use the `envoi:` protocol, including PDF fetches. External web links open in the default browser.
 
 `test:desktop` launches the built application against temporary data and project directories. It checks opening through the project menu, one trust prompt, repeated binding, nested writes, Git initialization/status, AI session access, compilation when TeX is installed, local PDF fetching, reopening after restart, external file refresh, save conflicts, native draft compilation, compiler cancellation, and utility-process crash recovery. Backend unit tests also cover concurrent saves, permissions/symlinks, task isolation, and watcher cleanup. Native dialogs are answered by the test only for its temporary fixtures. `ENVOI_DESKTOP_EXECUTABLE` can point at a packaged application executable for the same checks. It does not spend model API credits.
+
+## Closing and removing projects
+
+Closing stops the window's project tasks and watcher, records an empty workspace, and clears the editor view. Unsaved changes must be saved or explicitly discarded. Discard also clears those buffers from the per-project recovery snapshot, so reopening does not resurrect them. A closed workspace stays empty after restart.
+
+Removing a recent project preserves disk files and workspace trust. Removing the currently open project first uses the close/discard flow. It also removes the exact folder shortcut, comparing canonical paths so aliases such as macOS `/var` and `/private/var` cannot leave duplicate entries; parent shortcuts remain. Permanent directory deletion is a separate, named confirmation and recognizes hidden project metadata for nested TeX entry points.
+
+Desktop regression tests exercise close/discard/reload/reopen, removal without deleting files, and permanent deletion against temporary fixtures only.

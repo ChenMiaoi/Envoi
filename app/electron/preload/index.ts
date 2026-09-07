@@ -11,6 +11,7 @@ function invoke<T>(channel: string, ...args: unknown[]): Promise<T> {
 // agentStatus agentRequest agentChat onAgentEvent
 // fsList fsRead fsWrite fsWriteFiles fsMkdir fsRemove fsRename fsRemoveTree assetUrl
 const bridge: EnvoiBridge = {
+  canonicalDirectory: directory => invoke('envoi:canonical-directory', directory),
   trustDirectory: (directory) => invoke("envoi:trust-directory", directory),
   pickDirectory: () => invoke("envoi:pick-directory"),
   bindProject: (directory, opts) => invoke("envoi:bind-project", directory, opts),
@@ -41,6 +42,7 @@ const bridge: EnvoiBridge = {
     return () => ipcRenderer.removeListener("envoi:agent-event", listener)
   },
 
+  closeProject: root => invoke('envoi:close-project', root),
   watchProject: root => invoke('envoi:watch-project', root),
   onFilesChanged: cb => {
     const listener = (_event: unknown, payload: {root: string; paths: string[]; error?: string}) => cb(payload)

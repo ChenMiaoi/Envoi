@@ -67,6 +67,7 @@ function ProjectApp() {
   if(view&&!visited.has(view))setVisited(new Set([...visited,view]));
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [libraryFiles,setLibraryFiles]=useState<ProjectFile[]>([]);
+  const emptyWorkspace=project.id==='empty'&&view!=='library'&&view!=='settings'&&!libraryFiles.length;
   const [openFiles, setOpenFiles] = useState<OpenFile[]>([]);
   const [writerFile,setWriterFile]=useState<{id:string;request:number}|undefined>();
   const openTex=(id:string)=>{setWriterFile(previous=>({id,request:(previous?.request??0)+1}));setView("writer");};
@@ -129,7 +130,8 @@ function ProjectApp() {
       <div className="flex min-h-0 flex-1">
         <ActivityBar view={view} />
         <div className="min-w-0 flex-1">
-          {visited.has("reader") && <section hidden={view!=="reader"} className="h-full" aria-label={t('app.aria.reader')}>
+          {emptyWorkspace&&<div className="flex h-full flex-col items-center justify-center gap-4"><h1 className="text-lg font-medium">{t('project.notOpened')}</h1><button className="rounded bg-primary px-4 py-2 text-sm text-primary-foreground" onClick={()=>window.dispatchEvent(new Event('envoi:open-project'))}>{t('command.project-open')}</button></div>}
+          {!emptyWorkspace&&visited.has("reader") && <section hidden={view!=="reader"} className="h-full" aria-label={t('app.aria.reader')}>
             <ReaderView libraryFiles={libraryFiles} onTex={openTex}
               openFiles={openFiles}
               activeId={activeId}
@@ -137,9 +139,9 @@ function ProjectApp() {
               onActive={setActiveId}
             />
           </section>}
-          {visited.has("writer") && <section hidden={view!=="writer"} className="h-full" aria-label={t('app.aria.writer')}><WriterView requestedFile={writerFile} problemTarget={problemTarget} /></section>}
+          {project.id!=='empty'&&visited.has("writer") && <section hidden={view!=="writer"} className="h-full" aria-label={t('app.aria.writer')}><WriterView requestedFile={writerFile} problemTarget={problemTarget} /></section>}
           {visited.has("library") && <section hidden={view!=="library"} className="h-full" aria-label={t('app.aria.library')}><LibraryView onOpen={openLibraryPaper} /></section>}
-          {visited.has("history") && <section hidden={view!=="history"} className="h-full" aria-label={t('app.aria.history')}><GitHistoryView /></section>}
+          {project.id!=='empty'&&visited.has("history") && <section hidden={view!=="history"} className="h-full" aria-label={t('app.aria.history')}><GitHistoryView /></section>}
           {visited.has("settings") && <section hidden={view!=="settings"} className="h-full" aria-label={t('app.aria.settings')}><SettingsView /></section>}
           {!view&&!page.redirect&&<div className="flex h-full flex-col items-center justify-center gap-3"><h1 className="text-lg font-medium">{t('app.notFound.title')}</h1><p className="text-sm text-muted-foreground">{t('app.notFound.body')}</p><Link to="/writer" className="text-sm text-primary">{t('app.notFound.back')}</Link></div>}
         </div>
@@ -148,8 +150,8 @@ function ProjectApp() {
       {/* 状态栏 */}
       <div className="flex h-6.5 shrink-0 items-center justify-between border-t border-border bg-card px-3 text-[11px] text-muted-foreground" style={{ height: 26 }}>
         <div className="flex items-center gap-3">
-          <GitStatusPanel />
-          <ProblemsPanel onNavigate={target=>{setProblemTarget(target);setView("writer");}} />
+          {project.id!=='empty'&&<GitStatusPanel />}
+          {project.id!=='empty'&&<ProblemsPanel onNavigate={target=>{setProblemTarget(target);setView("writer");}} />}
           <span>{t('app.statusbar.workspace')}：{view?t(`view.${view}`):t('app.statusbar.pageNavigation')}</span>
         </div>
         <div className="flex items-center gap-3">

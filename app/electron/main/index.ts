@@ -146,6 +146,10 @@ function registerIpc(): void {
     return { ok: true, project: { id: project.id, path: root, name: project.name } }
   })
 
+  ipcMain.handle('envoi:canonical-directory', (_event, directory: string) => {
+    if(typeof directory!=='string'||!path.isAbsolute(directory))throw Error('需要绝对目录路径')
+    return realpath(directory)
+  })
   ipcMain.handle("envoi:trust-directory", async (_event, directory: string) => {
     const root = await workspaceTrust.trust(directory)
     bindRoot(root)
@@ -204,6 +208,13 @@ function registerIpc(): void {
     return { ok: true }
   })
 
+  ipcMain.handle('envoi:close-project', async (event, root: string) => {
+    const owner = event.sender.id
+    watchGenerations.set(owner, (watchGenerations.get(owner) ?? 0) + 1)
+    watchers.get(owner)?.(); watchers.delete(owner)
+    for (const request of compileRequests.get(owner) ?? []) request.cancelled = true
+    await Promise.all(backends.map(backend => backend.cancel(owner, root)))
+  })
   ipcMain.handle('envoi:watch-project', async (event, directory: string | null) => {
     const owner = event.sender.id, generation = (watchGenerations.get(owner) ?? 0) + 1
     watchGenerations.set(owner, generation)

@@ -638,7 +638,7 @@ export const zhCN = {
  'project.localPathLabel':'所选位置的本地路径 · 首次连接本机工具时填写一次',
  'project.localPathNote':'目录授权会复用；浏览器不提供绝对路径，已连接根目录的子项目自动继承。',
  'project.localPathPlaceholder':'已选择位置的本机绝对路径',
- 'project.manageDesc':'移除记录不会删除文件；删除目录是独立的永久操作。',
+ 'project.manageDesc':'移除当前项目会先关闭它，并移除最近记录和该目录快捷入口，不删除文件。删除目录是独立的永久操作。',
  'project.manageMenu':'管理项目 / 移除 / 删除…',
  'project.menuAria':'Envoi 项目菜单',
  'project.menuLabel':'项目 / 文件',

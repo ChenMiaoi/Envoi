@@ -2,6 +2,7 @@
 // preload/index.ts 实现此接口；src 侧经 app/src/lib/desktop.ts re-export 消费。
 export interface EnvoiBridge {
   // 目录与项目绑定（无 proof；directory 为绝对路径）
+  canonicalDirectory(directory: string): Promise<string>
   trustDirectory(directory: string): Promise<string>
   pickDirectory(): Promise<string | null>
   bindProject(directory: string, opts?: { copy?: boolean }): Promise<{ ok: boolean; project: { id: string; path: string; name: string } }>
@@ -34,6 +35,7 @@ export interface EnvoiBridge {
   onAgentEvent(cb: (event: { projectId: string; [k: string]: unknown }) => void): () => void
 
   // 项目文件服务（root 必须是已 bindProject 的项目根；relPath 需通过 safePath 规则，主进程二次校验）
+  closeProject(root: string): Promise<void>
   watchProject(root: string | null): Promise<void>
   onFilesChanged(cb: (event: {root: string; paths: string[]; error?: string}) => void): () => void
   fsChildren(root: string): Promise<{name: string; kind: "directory" | "file"}[]>

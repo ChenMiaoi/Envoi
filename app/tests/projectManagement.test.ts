@@ -24,3 +24,27 @@ test('native deletion rechecks contents and propagates disk failures',async()=>{
  window.envoi!.fsList=async()=>({files:[{path:'main.tex',kind:'latex'}],directories:[]});
  window.envoi!.fsRemoveTree=async()=>{throw Error('Disk failure');};await assert.rejects(deleteVerifiedProject(plan,'paper'),/Disk failure/);
 });
+
+test('deletion recognizes hidden metadata pointing to a nested TeX entry',async()=>{
+ installDesktopFixture();window.envoi!.fsList=async()=>({files:[{path:'chapters/paper.tex',kind:'latex'}],directories:['chapters']});
+ window.envoi!.fsRead=async(_root,path)=>{if(path!=='.envoi/project.json')throw Error('Missing');return {text:JSON.stringify({main:'chapters/paper.tex'})};};
+ assert.equal((await verifyDeletionTarget('/papers/nested')).name,'nested');
+});
+test('discarding closes the workspace and does not restore discarded project drafts',async()=>{
+ installDesktopFixture();
+ const {closeProjectSession,restoreSession,restoreProjectSession,saveSession}=await import('../src/lib/projectSession');
+ const project={...emptyProject(),id:'close-test',files:[{id:'a.tex',path:'a.tex',kind:'latex' as const,text:'draft',saved:'disk'}]};
+ await saveSession(project);await closeProjectSession(project,true);
+ assert.equal((await restoreSession()).project?.id,'empty');
+ const reopened=await restoreProjectSession({...project,files:project.files.map(file=>({...file,text:'disk'}))});
+ assert.equal(reopened.files[0].text,'disk');
+});
+test('removing a recent project clears its exact location shortcut but preserves parent and files',async()=>{
+ installDesktopFixture();
+ const {forgetRecentProject,recentProjects,authorizedRoots}=await import('../src/lib/recentProjects');
+ await window.envoi!.dataPut('recent',[{id:'removed',name:'paper',path:'/papers/paper',updated:1}]);
+ await window.envoi!.dataPut('roots',[{id:'shortcut',name:'paper',path:'/alias/paper',updated:1},{id:'parent',name:'papers',path:'/papers',updated:1}]);
+ window.envoi!.canonicalDirectory=async path=>path==='/alias/paper'?'/papers/paper':path;
+ await forgetRecentProject('removed');
+ assert.equal((await recentProjects()).length,0);assert.deepEqual((await authorizedRoots()).map(item=>item.id),['parent']);
+});

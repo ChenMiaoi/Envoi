@@ -623,7 +623,7 @@ const zhTW: Messages = {
  'project.localPathLabel':'所選位置的本地路徑 · 首次連線本機工具時填寫一次',
  'project.localPathNote':'目錄授權會複用；瀏覽器不提供絕對路徑，已連線根目錄的子專案自動繼承。',
  'project.localPathPlaceholder':'已選擇位置的本機絕對路徑',
- 'project.manageDesc':'移除記錄不會刪除檔案；刪除目錄是獨立的永久操作。',
+ 'project.manageDesc':'移除目前專案會先關閉它，並移除最近記錄和該目錄快捷入口，不刪除檔案。刪除目錄是獨立的永久操作。',
  'project.manageMenu':'管理專案 / 移除 / 刪除…',
  'project.menuAria':'Envoi 專案選單',
  'project.menuLabel':'專案 / 檔案',

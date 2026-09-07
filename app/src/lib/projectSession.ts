@@ -1,3 +1,4 @@
+import {emptyProject} from './initialProject';
 import {translate} from '@/i18n/runtime';
 import {nativeGet,nativePut,nativeMigrate,encodeNative,decodeNative} from "./localData";
 import {fileKind,readProject,type PaperProject} from './projectFiles';
@@ -23,6 +24,12 @@ export function saveSession(project: PaperProject): Promise<void> {
   })();});
  }
  return promise;
+}
+export async function closeProjectSession(project: PaperProject, discard: boolean) {
+ // Clear discarded buffers in the per-project cache before recording the empty workspace.
+ // Otherwise reopening the same project restores the supposedly discarded edits.
+ if (project.id !== 'empty') await saveSession(discard ? {...project, files: project.files.filter(file => file.saved !== undefined || file.text === undefined).map(file => file.text === undefined ? file : {...file, text: file.saved})} : project);
+ await saveSession(emptyProject());
 }
 async function writeSession(project:PaperProject){
  let nativeError:unknown;

@@ -33,7 +33,7 @@ export function ProjectMenu() {
   const [discard, setDiscard] = useState(false);
   useEffect(() => { if(mode!=="new") return; void localGitRuntime().then(result=>{setGitAvailable(result.available);if(!result.available)setEnableGit(false);setGitStatus(result.available?result.version!:t('project.gitDisabledSuffix',{error:result.error ?? ''}));}).catch(error=>{setGitAvailable(false);setGitStatus(error.message);}); }, [mode, t]);
   useEffect(()=>{const open=()=>setMode('open');window.addEventListener('envoi:open-project',open);return()=>window.removeEventListener('envoi:open-project',open);},[]);
-  useEffect(()=>{const refresh=()=>{void recentProjects().then(setRecent);};window.addEventListener('envoi:recent-updated',refresh);return()=>window.removeEventListener('envoi:recent-updated',refresh);},[]);
+  useEffect(()=>{const refresh=()=>{void recentProjects().then(setRecent).catch(error=>setMessage(error.message));void authorizedRoots().then(setRoots).catch(error=>setMessage(error.message));setTrail([]);setFolders([]);};window.addEventListener('envoi:recent-updated',refresh);return()=>window.removeEventListener('envoi:recent-updated',refresh);},[setMessage]);
   const changed = dirtyFiles(project).length;
   const location = trail[trail.length - 1];
   useEffect(() => { void recentProjects().then(setRecent).catch(() => setMessage(t('project.recentStoreUnavailable'))); }, [setMessage, t]);

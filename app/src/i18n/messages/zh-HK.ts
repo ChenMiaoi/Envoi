@@ -623,7 +623,7 @@ const zhHK: Messages = {
  'project.localPathLabel':'所選位置的本地路徑 · 首次連接本機工具時填寫一次',
  'project.localPathNote':'目錄授權會複用；瀏覽器不提供絕對路徑，已連接根目錄的子項目自動繼承。',
  'project.localPathPlaceholder':'已選擇位置的本機絕對路徑',
- 'project.manageDesc':'移除記錄不會刪除文件；刪除目錄是獨立的永久操作。',
+ 'project.manageDesc':'移除目前專案會先關閉它，並移除最近記錄和該目錄快捷入口，不刪除文件。刪除目錄是獨立的永久操作。',
  'project.manageMenu':'管理項目 / 移除 / 刪除…',
  'project.menuAria':'Envoi 項目菜單',
  'project.menuLabel':'項目 / 文件',

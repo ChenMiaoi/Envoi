@@ -1,3 +1,4 @@
+import {envoi} from './desktop';
 import {translate} from '@/i18n/runtime';
 import {nativeMigrate,nativePut,nativeGet,encodeNative} from "./localData";
 import {projectConfigFile} from './managementDir';
@@ -14,6 +15,7 @@ async function cachedRecentProjects(): Promise<RecentProject[]> {
   try { return await new Promise((resolve, reject) => { const request = db.transaction("recent").objectStore("recent").getAll(); request.onsuccess = () => resolve((request.result as (RecentProject & { directory?: unknown })[]).map(value => { const entry={...value};delete entry.directory;return entry; }).sort((a,b) => b.updated-a.updated)); request.onerror = () => reject(request.error); }); } finally { db.close(); }
 }
 async function remember(store: 'recent' | 'roots', rootPath: string) {
+  rootPath = await envoi().canonicalDirectory(rootPath);
   const previous = await (store === 'recent' ? recentProjects() : authorizedRoots());
   let identity:string|undefined;try{identity=JSON.parse((await projectConfigFile(rootPath))?.text??'{}').projectId;}catch{/* Authorized roots need not be projects. */}
   const existing=previous.find(entry=>entry.path===rootPath)??previous.find(entry=>identity&&entry.projectId===identity);
@@ -29,8 +31,10 @@ async function cachedAuthorizedRoots(): Promise<RecentProject[]> {
   try { return await new Promise((resolve, reject) => { const request = db.transaction("roots").objectStore("roots").getAll(); request.onsuccess = () => resolve((request.result as (RecentProject & { directory?: unknown })[]).map(value => { const entry={...value};delete entry.directory;return entry; }).sort((a,b) => b.updated-a.updated)); request.onerror = () => reject(request.error); }); } finally { db.close(); }
 }
 export async function forgetRecentProject(id:string){
- const db=await database();try{await new Promise<void>((resolve,reject)=>{const tx=db.transaction('recent','readwrite');tx.objectStore('recent').delete(id);tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error);});}finally{db.close();}
-await syncRegistry('recent',[id]);
+ const entry=(await recentProjects()).find(item=>item.id===id);
+ const selected=entry?.path?await envoi().canonicalDirectory(entry.path).catch(()=>entry.path):undefined;
+ const roots=selected?(await Promise.all((await authorizedRoots()).map(async item=>({item,path:item.path?await envoi().canonicalDirectory(item.path).catch(()=>item.path):undefined})))).filter(value=>value.path===selected).map(value=>value.item):[];
+ await forgetDeletedRecords([{store:'recent',id},...roots.map(item=>({store:'roots',id:item.id}))]);
 }
 export async function matchingProjectRecords(rootPath:string){
  const recent=await recentProjects(),roots=await authorizedRoots();const ids:{store:string;id:string}[]=[];
@@ -52,7 +56,10 @@ export const authorizedRoots=()=>records('roots');
 async function syncRegistry(store:'recent'|'roots',remove:string[]=[],changed:string[]=[]) {
  if(typeof window==='undefined')return;
  const cached=await (store==='recent'?cachedRecentProjects():cachedAuthorizedRoots());
- const current=await nativeGet<RecentProject[]>(store);
- const merged=new Map((current?.value??[]).map(entry=>[entry.id,entry]));for(const entry of cached.filter(entry=>changed.includes(entry.id)))merged.set(entry.id,{...merged.get(entry.id),...entry});for(const id of remove)merged.delete(id);
- await nativePut(store,await encodeNative([...merged.values()]),'default',{expectedRevision:current?.revision??0});
+ for(let attempt=0;attempt<3;attempt++){
+  const current=await nativeGet<RecentProject[]>(store);
+  const merged=new Map((current?.value??[]).map(entry=>[entry.id,entry]));for(const entry of cached.filter(entry=>changed.includes(entry.id)))merged.set(entry.id,{...merged.get(entry.id),...entry});for(const id of remove)merged.delete(id);
+  try{await nativePut(store,await encodeNative([...merged.values()]),'default',{expectedRevision:current?.revision??0});return;}
+  catch(error){if(attempt===2||!String((error as Error).message).includes('另一窗口修改'))throw error;}
+ }
 }

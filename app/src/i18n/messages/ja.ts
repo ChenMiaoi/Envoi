@@ -624,7 +624,7 @@ const ja: Messages = {
  'project.localPathLabel':'選択した場所のローカルパス · ローカルツール初回接続時に一度だけ入力',
  'project.localPathNote':'ディレクトリ認可は再利用されます。ブラウザーは絶対パスを提供しないため、接続済みルートのサブプロジェクトは自動的に継承します。',
  'project.localPathPlaceholder':'選択した場所のローカル絶対パス',
- 'project.manageDesc':'記録の削除はファイルを削除しません。ディレクトリの削除は独立した永続的な操作です。',
+ 'project.manageDesc':'現在のプロジェクトを一覧から削除すると閉じられ、最近の記録とフォルダーのショートカットが削除されます。ファイルは保持されます。ディレクトリの削除は別の永続的な操作です。',
  'project.manageMenu':'プロジェクトの管理 / 除去 / 削除…',
  'project.menuAria':'Envoi プロジェクトメニュー',
  'project.menuLabel':'プロジェクト / ファイル',

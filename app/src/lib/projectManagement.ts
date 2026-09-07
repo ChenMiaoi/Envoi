@@ -13,7 +13,7 @@ export async function verifyDeletionTarget(path:string):Promise<DeletionTarget>{
  // This interface deletes paper directories, never the application/code repository root.
  if(listing.files.some(file=>file.path==='package.json'))throw Error(translate('project.deletePackageJson'));
  let paper=listing.files.some(file=>!file.path.includes('/')&&/\.tex$/i.test(file.path));
- if(!paper){for(const configuration of ['.envoi/project.json','.paperdesk/project.json','paperdesk.json']){const marker=listing.files.find(file=>file.path===configuration);if(!marker?.text)continue;try{const metadata=JSON.parse(marker.text);if(typeof metadata.main!=='string'||!/\.tex$/i.test(metadata.main))continue;if(listing.files.some(file=>file.path===safePath(metadata.main).join('/'))){paper=true;break;}}catch{/* An invalid/missing project marker never authorizes deletion. */}}}
+ if(!paper){for(const configuration of ['.envoi/project.json','.paperdesk/project.json','paperdesk.json']){const marker=listing.files.find(file=>file.path===configuration)??await envoi().fsRead(path,configuration).catch(()=>undefined);if(!marker?.text)continue;try{const metadata=JSON.parse(marker.text);if(typeof metadata.main!=='string'||!/\.tex$/i.test(metadata.main))continue;if(listing.files.some(file=>file.path===safePath(metadata.main).join('/'))){paper=true;break;}}catch{/* An invalid/missing project marker never authorizes deletion. */}}}
  if(!paper)throw Error(translate('project.deleteNoMainTex'));
  return {path,name,label:path};
 }
