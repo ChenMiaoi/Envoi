@@ -1,3 +1,4 @@
+import { MarkdownCodeBlock } from "./MarkdownCodeBlock"
 import { tokenizeLatex } from "@/lib/latexHighlight"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
@@ -41,6 +42,7 @@ export function MarkdownViewer({
           remarkPlugins={[remarkGfm, remarkMath]}
           rehypePlugins={[rehypeKatex, rehypeCallouts, [rehypeHighlight, { detect: false }]]}
           components={{
+            pre: MarkdownCodeBlock,
             img: ({ src, alt }) => {
               const target =
                 typeof src === "string" && path ? resolveProjectLink(path, src) : undefined

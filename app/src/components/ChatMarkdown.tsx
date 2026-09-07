@@ -1,3 +1,4 @@
+import { MarkdownCodeBlock } from "./MarkdownCodeBlock"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import remarkMath from "remark-math"
@@ -62,7 +63,7 @@ export function ChatMarkdown({
               <table>{children}</table>
             </div>
           ),
-          pre: ({ children }) => <pre tabIndex={0}>{children}</pre>,
+          pre: MarkdownCodeBlock,
         }}
       >
         {text}

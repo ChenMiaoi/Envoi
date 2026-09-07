@@ -37,6 +37,7 @@ const codeHighlight = HighlightStyle.define([
     color: "hsl(var(--hue-yellow))",
   },
   { tag: [tags.labelName, tags.namespace], color: "hsl(var(--hue-pink))" },
+  { tag: [tags.operator, tags.punctuation], color: "hsl(var(--muted-foreground))" },
   { tag: tags.meta, color: "hsl(var(--muted-foreground))" },
 ])
 
@@ -158,6 +159,19 @@ export function MarkdownEditor({
         enter(node) {
           const name = node.name,
             text = state.doc.sliceString(node.from, node.to)
+          if (name === "FencedCode" || name === "CodeBlock") {
+            const first = state.doc.lineAt(node.from).number
+            const last = state.doc.lineAt(node.to).number
+            for (let line = first; line <= last; line++) {
+              const classes = ["cm-md-codeblock"]
+              if (line === first) classes.push("cm-md-codeblock-first")
+              if (line === last) classes.push("cm-md-codeblock-last")
+              ranges.push(
+                Decoration.line({ class: classes.join(" ") }).range(state.doc.line(line).from),
+              )
+            }
+            return false
+          }
           if (name === "Table" && !active(node.from, node.to)) {
             ranges.push(
               Decoration.replace({
@@ -200,8 +214,7 @@ export function MarkdownEditor({
             name === "StrongEmphasis" ||
             name === "Emphasis" ||
             name === "Strikethrough" ||
-            name === "InlineCode" ||
-            name === "FencedCode"
+            name === "InlineCode"
           )
             ranges.push(
               Decoration.mark({
@@ -210,7 +223,6 @@ export function MarkdownEditor({
                   Emphasis: "cm-md-em",
                   Strikethrough: "cm-md-strike",
                   InlineCode: "cm-md-code",
-                  FencedCode: "cm-md-code",
                 }[name],
               }).range(node.from, node.to),
             )
@@ -365,6 +377,30 @@ export function MarkdownEditor({
               color: "var(--prose-code)",
               borderRadius: "4px",
               padding: "0 .2em",
+            },
+            ".cm-line.cm-md-codeblock": {
+              fontFamily: editorFonts[preferences.fontFamily].css,
+              fontSize: `${preferences.fontSize}px`,
+              lineHeight: "1.65",
+              background: "var(--prose-code-bg)",
+              color: "hsl(var(--foreground))",
+              borderLeft: "1px solid hsl(var(--border))",
+              borderRight: "1px solid hsl(var(--border))",
+              padding: "0 16px",
+              whiteSpace: "pre-wrap",
+              overflowWrap: "normal",
+              wordBreak: "normal",
+              tabSize: String(preferences.tabSize),
+            },
+            ".cm-line.cm-md-codeblock-first": {
+              borderTop: "1px solid hsl(var(--border))",
+              borderRadius: "8px 8px 0 0",
+              paddingTop: "10px",
+            },
+            ".cm-line.cm-md-codeblock-last": {
+              borderBottom: "1px solid hsl(var(--border))",
+              borderRadius: "0 0 8px 8px",
+              paddingBottom: "10px",
             },
             ".cm-md-link": { color: "var(--prose-link)", textDecoration: "underline" },
             ".cm-md-quote": {
