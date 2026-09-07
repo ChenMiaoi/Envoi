@@ -18,10 +18,10 @@ test('concurrent saves with one baseline cannot overwrite each other',()=>fixtur
  const results=await Promise.all(['one','two'].map(text=>saveProjectFiles(root,[{path:'a.txt',text,expectedText:'old'}])));
  assert.equal(results.filter(result=>result.saved.length===1).length,1);assert.equal(results.filter(result=>result.error).length,1);
 }));
-test('atomic writes preserve executable mode and symlinks',()=>fixture(async root=>{
- await writeFile(path.join(root,'run.sh'),'old',{mode:0o755});await symlink('run.sh',path.join(root,'link.sh'));
+test('atomic writes preserve executable mode and symlinks',t=>fixture(async root=>{
+ await writeFile(path.join(root,'run.sh'),'old',{mode:0o755});try{await symlink('run.sh',path.join(root,'link.sh'));}catch(error){if(process.platform==='win32'&&error.code==='EPERM'){t.skip('File symlinks require Windows Developer Mode or elevation');return;}throw error;}
  await atomicProjectWrite(root,'link.sh',{text:'new'});
- assert.equal(await readlink(path.join(root,'link.sh')),'run.sh');assert.equal(await readFile(path.join(root,'run.sh'),'utf8'),'new');assert.equal((await stat(path.join(root,'run.sh'))).mode&0o777,0o755);
+ assert.equal(await readlink(path.join(root,'link.sh')),'run.sh');assert.equal(await readFile(path.join(root,'run.sh'),'utf8'),'new');if(process.platform!=='win32')assert.equal((await stat(path.join(root,'run.sh'))).mode&0o777,0o755);
  await assert.rejects(atomicProjectWrite(root,'../escape',{text:'bad'}));
 }));
 test('task reservations are immediate and cancellation is owner scoped',async()=>{

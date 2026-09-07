@@ -1,3 +1,4 @@
+import {nativeBasename} from '@/lib/nativePath';
 import {translate} from '@/i18n/runtime';
 import {dirtyFiles,safePath,type PaperProject} from './projectFiles';
 import {envoi} from './desktop';
@@ -7,7 +8,7 @@ export function assertCanClose(project:PaperProject,busy:boolean,saving:boolean,
 }
 export interface DeletionTarget {path:string;name:string;label:string}
 export async function verifyDeletionTarget(path:string):Promise<DeletionTarget>{
- const name=path.split('/').filter(Boolean).pop()??'';
+ const name=nativeBasename(path);
  if(!name||name==='.'||name==='..')throw Error(translate('project.deleteInvalidName'));
  const listing=await envoi().fsList(path);
  // This interface deletes paper directories, never the application/code repository root.

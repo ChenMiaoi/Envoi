@@ -1,3 +1,4 @@
+import {killProcessTree} from '../../server/process-tree.mjs'
 import {utilityProcess} from 'electron'
 import path from 'node:path'
 import {rm} from 'node:fs/promises'
@@ -19,7 +20,7 @@ export class BackendHost {
     this.child = child
     const processes = new Set<number>(), directories = new Set<string>()
     const cleanup = () => {
-      for (const pid of processes) {try {process.kill(process.platform === 'win32' ? pid : -pid, 'SIGKILL')} catch { /* Already exited. */ }}
+      for (const pid of processes) killProcessTree(pid)
       processes.clear()
       for (const directory of directories) void rm(directory, {recursive: true, force: true}).catch(() => {})
       directories.clear()

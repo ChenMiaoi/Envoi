@@ -1,3 +1,4 @@
+import {pathToFileURL} from 'node:url';
 import assert from 'node:assert/strict';
 import {mkdtemp,rm,writeFile} from 'node:fs/promises';import path from 'node:path';import {fileURLToPath} from 'node:url';
 import {build} from 'esbuild';import React from 'react';import {renderToStaticMarkup} from 'react-dom/server';
@@ -13,7 +14,7 @@ const value={locale:'zh-CN',t:(key,vars)=>formatMessage(zhCN[key]??String(key),v
 export function ChatMarkdown({text}:{text:string}){return React.createElement(I18nContext.Provider,{value},React.createElement(Base,{text}));}
 `);
  await build({entryPoints:[entry],outfile:path.join(folder,'view.mjs'),bundle:true,jsx:'automatic',format:'esm',platform:'node',packages:'external',alias:{'@':path.join(app,'src')},loader:{'.css':'empty'},plugins:[{name:'omit-style-in-node-test',setup(build){build.onResolve({filter:/\.css$/},()=>({path:'style',namespace:'empty'}));build.onLoad({filter:/.*/,namespace:'empty'},()=>({contents:'',loader:'js'}));}}]});
- const {ChatMarkdown}=await import(path.join(folder,'view.mjs'));const render=text=>renderToStaticMarkup(React.createElement(ChatMarkdown,{text}));
+ const {ChatMarkdown}=await import(pathToFileURL(path.join(folder,'view.mjs')).href);const render=text=>renderToStaticMarkup(React.createElement(ChatMarkdown,{text}));
  const sample='# 标题\n\n**重点**与*强调*、`x`。\n\n1. 第一项\n2. 第二项\n\n- 无序项\n\n> 引用\n\n[来源](https://example.com)\n\n```js\nconst longLine = "'+ 'x'.repeat(500)+'";\n```\n\n| A | B |\n|---|---|\n| 1 | 2 |\n\n公式 $E=mc^2$\n\n$$\n\\int_0^1 x^2 dx\n$$';
  const html=render(sample);for(const element of ['<h1>','<strong>','<em>','<ol>','<ul>','<blockquote>','<pre','<table>','katex'])assert(html.includes(element),element);assert(html.includes('rel="noopener noreferrer"'));assert(html.includes('chat-table-scroll'));
  for(let length=1;length<sample.length;length+=37)assert.doesNotThrow(()=>render(sample.slice(0,length)));

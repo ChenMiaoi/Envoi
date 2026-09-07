@@ -29,7 +29,7 @@ try{
  const moved=path.join(fixture,'moved');await rename(first,moved);assert.equal((await bind(moved)).body.project.id,id);assert.equal(await local.projectRoot(id),moved);
  const read=agent.projectTools(moved,'read',false);assert.deepEqual(read.map(tool=>tool.name),['project_list','project_read']);assert.equal((await read[1].execute('r',{path:'main.tex'})).content[0].text,'source one');
  assert((await read[0].execute('l',{path:'.'})).content[0].text.includes('main.tex'));
- await writeFile(path.join(moved,'.envoi','secret'),'hidden');await symlink(path.join(moved,'.envoi','secret'),path.join(moved,'alias'));await symlink(fixture,path.join(moved,'external'));
+ await writeFile(path.join(moved,'.envoi','secret'),'hidden');await symlink(path.join(moved,'.envoi'),path.join(moved,'alias'),process.platform==='win32'?'junction':'dir');await symlink(fixture,path.join(moved,'external'),process.platform==='win32'?'junction':'dir');
  for(const selected of ['../outside','.envoi/secret','alias','external/data'])await assert.rejects(()=>agent.safeToolPath(moved,selected));
  const write=agent.projectTools(moved,'write',false).find(tool=>tool.name==='project_write');await write.execute('w',{path:'created.tex',content:'written'});assert.equal(await readFile(path.join(moved,'created.tex'),'utf8'),'written');assert(!agent.projectTools(moved,'write',true).some(tool=>tool.name==='project_write'));
  const s=await post('data/store',{store:'preferences',action:'put',value:{font:'a'},expectedRevision:0});assert.equal(s.body.revision,1);
@@ -39,7 +39,7 @@ try{
  // Only this temporary app instance gets a loopback protocol fixture model and credential.
  assert((await post('agent/custom-provider',{provider:'protocol-fixture',baseUrl:transport.url+'/v1',api:'openai-completions',model:'gpt-4o'})).response.ok);
  assert.equal((await post('agent/credential',{provider:'protocol-fixture',key:'  !echo forbidden'})).response.status,400);assert((await post('agent/credential',{provider:'protocol-fixture',key:'fixture-only-not-a-real-key'})).response.ok);
- const status=await get('agent');assert(!JSON.stringify(status).includes('fixture-only-not-a-real-key'));assert.equal((await stat(path.join(local.dataDir,'pi/auth.json'))).mode&0o777,0o600);
+ const status=await get('agent');assert(!JSON.stringify(status).includes('fixture-only-not-a-real-key'));if(process.platform!=='win32')assert.equal((await stat(path.join(local.dataDir,'pi/auth.json'))).mode&0o777,0o600);
  assert((await post('agent/settings',{settings:{model:'protocol-fixture/gpt-4o',tools:'read'}})).response.ok);
  const chat=await post('agent/chat',{projectId:id,message:'Verify local protocol',dirty:false});assert.equal(chat.response.status,200,JSON.stringify(chat.body));assert(chat.body.includes('Protocol verified'),chat.body);
  assert.deepEqual(transportRequests.at(-1).tools.map(tool=>tool.function.name),['project_list','project_read']);

@@ -11,10 +11,11 @@ npm run setup
 npm run dev
 npm run build
 npm run test:desktop
-npm run package:mac
+npm run package:mac # macOS
+npm run package:win # Windows
 ```
 
-`dev:desktop` and `build:desktop` are explicit aliases. `app/release/` contains macOS output. The current packaging configuration produces unsigned local builds; distribution signing and notarization require the project owner's Apple credentials. TeX Live, Git and optional ChkTeX/Biber are detected on the machine, not bundled. macOS is the validated platform.
+`dev:desktop` and `build:desktop` are explicit aliases. `app/release/` contains platform-specific output. The current packaging configuration produces unsigned local builds; distribution signing and notarization require the project owner's Apple credentials. TeX Live, Git and optional ChkTeX/Biber are detected on the machine, not bundled. Windows and macOS are supported. Windows packaging reuses the installed Electron runtime and produces an NSIS installer; Windows distribution signing is not configured.
 
 ## One workspace trust decision
 
@@ -26,7 +27,7 @@ Trusted compilation uses the user's environment and TeX configuration, enables s
 
 Trusted AI sessions enable local coding tools, including reading, writing and commands. Old per-tool permission settings no longer restrict desktop sessions. Before a writing task, the editor saves drafts automatically; a save conflict prevents the task from discarding unsaved work. Provider sign-in remains necessary to use a provider account.
 
-Unsaved-work checks, explicit permanent deletion confirmation, malformed-input validation, and Electron's isolated renderer are separate from workspace trust. macOS filesystem permissions and missing executables are reported as operating-system/tool errors, not requests to authorize Git or LaTeX again.
+Unsaved-work checks, explicit permanent deletion confirmation, malformed-input validation, and Electron's isolated renderer are separate from workspace trust. Operating-system filesystem permissions and missing executables are reported as operating-system/tool errors, not requests to authorize Git or LaTeX again.
 
 ## Persistence and verification
 
@@ -61,3 +62,11 @@ Views load on demand. Git and compilation workers do not load the AI SDK; the AI
 A workspace with no open project shows the Envoi welcome page with new/open/example actions, recent projects, settings, shortcuts and LaTeX documentation. Closing a project returns here even from Settings. Successful startup restoration reopens the project; a failed restoration returns here with the reason and a separate recoverable-draft action.
 
 Recent entries open directly and can be removed without deleting files. Development opens `examples/demo` directly. Packaged applications include example resources and create a writable copy under the application's user-data `examples/demo` directory on demand; reopening preserves edits. There is no timed splash screen or startup animation, and no extra permissions beyond the existing workspace trust decision.
+
+## Windows setup and automatic detection
+
+Use Node.js 22.12+ and run `npm run setup`, then `npm run dev` in PowerShell from the repository root. No Bash shell is needed for these commands. AI shell tools may require their own shell installation.
+
+Settings show the operating system, native machine architecture, running Node architecture, Git version/path, LaTeX root and optional Biber/ChkTeX availability. Tool discovery checks `ENVOI_TEX_BIN` (an optional explicit override), PATH, then common Git, MiKTeX and default TeX Live year directories. Quoted PATH entries and `.exe` names are supported. Nonstandard installations should be added to PATH; there is no full-drive scan or automatic installation. Restart the app after changing the system PATH. Detected fallback directories are also passed to backend and AI processes.
+
+The Windows validation uses TeX Live 2026; finding MiKTeX executables does not certify every MiKTeX configuration. Compilation requires the PDFLaTeX/XeLaTeX, BibTeX and xdvipdfmx programs from the selected TeX directory. Biber remains optional. Windows cancellation stops the compiler process tree. Existing user data stays under `%USERPROFILE%/.envoi` and tool preferences under `%USERPROFILE%/.config/envoi`.

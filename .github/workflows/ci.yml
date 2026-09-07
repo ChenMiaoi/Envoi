@@ -7,8 +7,11 @@ on:
 
 jobs:
   check:
-    # macOS: local compilation targets macOS (TeX toolchain + sandbox-exec).
-    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -22,6 +25,8 @@ jobs:
       - run: npm test
       - run: npm run test:ai
       - run: npm run test:local
+      - run: npm run test:desktop
+        if: runner.os == 'Windows'
 # The runner has no TeX toolchain installed, so TeX-dependent local tests
 # self-skip rather than fail. test:demo (needs a compiled example PDF from
 # demo:build) stays a manual per-machine step; see CONTRIBUTING.md.

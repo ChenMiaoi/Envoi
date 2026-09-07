@@ -8,8 +8,8 @@ try{
  assert.equal((await readBoundGitStatus(input)).files.length,0);
  await writeFile(path.join(root,'a.tex'),'one');let result=await readBoundGitStatus(input);assert(result.files.some(f=>f.path==='a.tex'&&f.untracked));
  // Fixture staging is confined to this temporary test repository, never the demo.
- execFileSync('/usr/bin/git',['add','a.tex'],{cwd:root});await writeFile(path.join(root,'a.tex'),'two');const before=await readFile(path.join(root,'.git/index'));
+ execFileSync('git',['add','a.tex'],{cwd:root});await writeFile(path.join(root,'a.tex'),'two');const before=await readFile(path.join(root,'.git/index'));
  result=await readBoundGitStatus(input);assert.equal(result.branch,'main');assert(result.files.some(f=>f.index==='A'&&f.worktree==='M'));
- assert.deepEqual(await readFile(path.join(root,'.git/index')),before);assert.equal(execFileSync('/usr/bin/git',['remote'],{cwd:root,encoding:'utf8'}),'');
+ assert.deepEqual(await readFile(path.join(root,'.git/index')),before);assert.equal(execFileSync('git',['remote'],{cwd:root,encoding:'utf8'}),'');
  console.log('PASS native Git status: uninitialized/clean/untracked/staged+modified; index unchanged, no remote');
 }finally{await rm(root,{recursive:true,force:true});}

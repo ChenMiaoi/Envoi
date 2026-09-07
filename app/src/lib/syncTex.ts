@@ -5,7 +5,7 @@ export interface SyncTexDB { inputs:string[]; records:SyncTexRecord[] }
 export function parseSyncTex(text:string):SyncTexDB {
  const inputs:string[]=[],records:SyncTexRecord[]=[];
  let page=0,unit=1,mag=1000,xOffset=0,yOffset=0;
- for(const raw of text.split('\n')){
+ for(const raw of text.split(/\r?\n/)){
   if(raw.startsWith('Input:')){const rest=raw.slice(6),sep=rest.indexOf(':');inputs[Number(rest.slice(0,sep))]=rest.slice(sep+1);continue;}
   if(raw.startsWith('Unit:')){unit=Number(raw.slice(5))||1;continue;}
   if(raw.startsWith('Magnification:')){mag=Number(raw.slice(14))||1000;continue;}

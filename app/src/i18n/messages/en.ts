@@ -1,6 +1,7 @@
 /** English messages. Must contain exactly the same keys as zh-CN. */
 import type {Messages} from './zh-CN';
 const en: Messages = {
+ 'settings.tools.system':'System',
  'common.save':'Save',
  'common.close':'Close',
  'common.enabled':'On',

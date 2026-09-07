@@ -8,7 +8,7 @@ test('trust persists, coalesces prompts, covers descendants and canonical aliase
  const temp=await mkdtemp(path.join(tmpdir(),'envoi-trust-'));
  try{
  const root=path.join(temp,'paper'),child=path.join(root,'chapter'),sibling=path.join(temp,'paper-other'),alias=path.join(temp,'alias');
- await mkdir(child,{recursive:true});await mkdir(sibling);await symlink(root,alias,'dir');
+ await mkdir(child,{recursive:true});await mkdir(sibling);await symlink(root,alias,process.platform==='win32'?'junction':'dir');
  let prompts=0;const file=path.join(temp,'trust.json');const trust=createWorkspaceTrust(file,async()=>{prompts++;return true;});
  await assert.rejects(trust.requireTrust(root));
  await Promise.all([trust.trust(root),trust.trust(root),trust.trust(alias)]);assert.equal(prompts,1);

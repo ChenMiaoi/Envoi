@@ -3,10 +3,10 @@ import {execFileSync} from 'node:child_process';
 import {readFile,realpath,lstat} from 'node:fs/promises';
 import path from 'node:path';
 export function gitRuntime() {
- try {return {available:true,version:execFileSync(detectTool('git')??'git',['--version'],{encoding:'utf8',timeout:5000}).trim()};}
+ try {return {available:true,version:execFileSync(detectTool('git')??'git',['--version'],{windowsHide:true,encoding:'utf8',timeout:5000}).trim()};}
  catch {return {available:false,error:'未检测到可用的本地 Git。'};}
 }
-function gitRun(root){return args=>execFileSync(detectTool('git')??'git',['--no-optional-locks','-c','core.fsmonitor=false','-c','core.untrackedCache=false',...args],{cwd:root,encoding:'utf8',timeout:10000,maxBuffer:4*1024*1024,stdio:['ignore','pipe','pipe']});}
+function gitRun(root){return args=>execFileSync(detectTool('git')??'git',['--no-optional-locks','-c','core.fsmonitor=false','-c','core.untrackedCache=false',...args],{windowsHide:true,cwd:root,encoding:'utf8',timeout:10000,maxBuffer:4*1024*1024,stdio:['ignore','pipe','pipe']});}
 function gitReady(){const runtime=gitRuntime();if(!runtime.available)throw Error(runtime.error);return runtime;}
 async function boundRoot({directory,proof,proofKind}) {
  if(typeof directory!=='string'||!path.isAbsolute(directory)||typeof proof!=='string'||!/^\w{64}$/.test(proof))throw Error('Invalid directory binding');
@@ -19,11 +19,11 @@ export async function gitInitAt(root) {
  const runtime=gitReady();
  // Never reinitialize an existing repository or silently nest inside one.
  let existing;
- try {existing=execFileSync(detectTool('git')??'git',['rev-parse','--show-toplevel'],{cwd:root,encoding:'utf8',timeout:5000,stdio:['ignore','pipe','ignore']}).trim();}catch{}
+ try {existing=execFileSync(detectTool('git')??'git',['rev-parse','--show-toplevel'],{windowsHide:true,cwd:root,encoding:'utf8',timeout:5000,stdio:['ignore','pipe','ignore']}).trim();}catch{}
  if(existing)throw Error(`此位置已属于 Git 仓库 ${existing}，未更改已有历史；请选择独立位置或取消启用 Git。`);
  if(await lstat(path.join(root,'.git')).then(()=>true,()=>false))throw Error('已有 .git，未覆盖。');
- execFileSync(detectTool('git')??'git',['init','-b','main'],{cwd:root,encoding:'utf8',timeout:10000});
- const branch=execFileSync(detectTool('git')??'git',['symbolic-ref','--short','HEAD'],{cwd:root,encoding:'utf8',timeout:5000}).trim();
+ execFileSync(detectTool('git')??'git',['init','-b','main'],{windowsHide:true,cwd:root,encoding:'utf8',timeout:10000});
+ const branch=execFileSync(detectTool('git')??'git',['symbolic-ref','--short','HEAD'],{windowsHide:true,cwd:root,encoding:'utf8',timeout:5000}).trim();
  if(branch!=='main')throw Error('Git 分支验证失败。');
  return {ok:true,branch,version:runtime.version};
 }

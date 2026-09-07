@@ -1,6 +1,7 @@
 // window.envoi 桥接类型（契约第 1 节唯一事实来源）。
 // preload/index.ts 实现此接口；src 侧经 app/src/lib/desktop.ts re-export 消费。
 export interface EnvoiBridge {
+  windowColors(colors: {color: string; symbolColor: string}): Promise<void>
   // 目录与项目绑定（无 proof；directory 为绝对路径）
   exampleDirectory(): Promise<string>
   canonicalDirectory(directory: string): Promise<string>

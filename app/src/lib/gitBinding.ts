@@ -1,3 +1,4 @@
+import {nativePathWithin} from './nativePath';
 import {nativeGet,nativePut} from './localData';
 // 绑定存储：projectId → 项目根绝对路径，由 agentClient.bindProject 在绑定成功后记录。
 export async function rememberGitPath(projectId:string,path:string){
@@ -7,7 +8,7 @@ export async function rememberGitPath(projectId:string,path:string){
 // 删除流程：找出根路径等于 rootPath 或位于其下的所有绑定项目。
 export async function matchingGitBindings(rootPath:string){
  const root=rootPath.replace(/\/$/,''),bindings=await nativeGet<Record<string,string>>('bindings');
- return Object.entries(bindings?.value??{}).filter(([,path])=>path===root||path.startsWith(root+'/')).map(([id])=>id);
+ return Object.entries(bindings?.value??{}).filter(([,path])=>nativePathWithin(path,root)).map(([id])=>id);
 }
 export async function forgetGitBindings(projectIds:string[]){
  const current=await nativeGet<Record<string,string>>('bindings');

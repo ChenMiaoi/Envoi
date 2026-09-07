@@ -1,6 +1,7 @@
 /** 由 scripts/i18n-traditional.mjs 从 zh-CN.ts 自动生成（OpenCC）。术语覆盖请修改该脚本，勿手改本文件。 */
 import type {Messages} from './zh-CN';
 const zhTW: Messages = {
+ 'settings.tools.system':'系統環境',
  'common.save':'儲存',
  'common.close':'關閉',
  'common.enabled':'開啟',

@@ -1,5 +1,6 @@
+import {killProcessTree} from './process-tree.mjs';
 import {realpathSync,accessSync,constants} from 'node:fs';
-import {toolInfo,configureTools,detectTool} from './tool-config.mjs';
+import {toolInfo,configureTools,detectTool,executableName} from './tool-config.mjs';
 import {lintText} from './lint.mjs';
 import {gitRuntime,initializeBoundGit,readBoundGitStatus,readBoundGitLog,readBoundGitShow,verifyProjectBinding} from './git.mjs';
 import { spawn, execFileSync } from 'node:child_process';
@@ -31,11 +32,11 @@ export function runtimeInfo({trusted=false}={}) {
   if (!trusted && process.platform !== 'darwin') return { available: false, error: '当前本地编译适配器需要 macOS sandbox-exec；未启用无隔离编译。' };
   try {
     const located=detectTool('kpsewhich');const bin=process.env.ENVOI_TEX_BIN??process.env.PAPERDESK_TEX_BIN??(located?path.dirname(located):'');if(!path.isAbsolute(bin))throw Error('TeX bin directory unavailable');
-    const programs=['kpsewhich','pdflatex','pdftex','xelatex','xetex','bibtex','xdvipdfmx'];const executables=programs.map(name=>{const selected=path.join(bin,name);accessSync(selected,constants.X_OK);return realpathSync(selected);});
-    const root=realpathSync(execFileSync(path.join(bin,'kpsewhich'),['-var-value=TEXMFROOT'],{encoding:'utf8',timeout:5000}).trim());
+    const programs=['kpsewhich','pdflatex','pdftex','xelatex','xetex','bibtex','xdvipdfmx'];const executables=programs.map(name=>{const selected=path.join(bin,executableName(name));accessSync(selected,constants.X_OK);return realpathSync(selected);});
+    const root=realpathSync(execFileSync(path.join(bin,executableName('kpsewhich')),['-var-value=TEXMFROOT'],{windowsHide:true,encoding:'utf8',timeout:5000}).trim());
     const prefixes=[...new Set(executables.map(executable=>executable.match(/^(.*)\/Cellar\//)?.[1]).filter(Boolean))];
     return {available:true,root,bin,executables,libraryRoots:prefixes.flatMap(prefix=>['lib','opt','bin','Cellar'].map(name=>path.join(prefix,name))),engines:['pdflatex','xelatex']};
-  } catch { return { available: false, error: '未找到本地 TeX Live，未自动下载安装。' }; }
+  } catch { return { available: false, error: '未找到完整的本地 TeX 工具链；请检查安装及 PATH，或设置 ENVOI_TEX_BIN。' }; }
 }
 export async function compileSnapshot(input, { signal, timeoutMs = 90000, trustedRoot, sourceRoot, onResource = () => {} } = {}) {
   if (sourceRoot) {
@@ -88,9 +89,9 @@ export async function compileSnapshot(input, { signal, timeoutMs = 90000, truste
       if (controller.signal.aborted) throw controller.signal.reason;
       log += `\n[${program}]\n`;
       await new Promise((resolve,reject) => {
-        child=spawn(trustedRoot?path.join(runtime.bin,program):'/usr/bin/sandbox-exec',trustedRoot?args:['-p',profile,path.join(runtime.bin,program),...args],{cwd:workingDirectory,env:executionEnv,detached:process.platform!=='win32',stdio:['ignore','pipe','pipe']});
+        child=spawn(trustedRoot?path.join(runtime.bin,executableName(program)):'/usr/bin/sandbox-exec',trustedRoot?args:['-p',profile,path.join(runtime.bin,executableName(program)),...args],{cwd:workingDirectory,env:executionEnv,detached:process.platform!=='win32',windowsHide:true,stdio:['ignore','pipe','pipe']});
         if(child.pid)onResource({pid:child.pid,active:true});
-        const kill=()=>{ try { if(process.platform==='win32')child.kill();else process.kill(-child.pid,'SIGKILL'); } catch {} };
+        const kill=()=>killProcessTree(child.pid);
         const append=chunk=>{log+=chunk.toString();if(log.length>2_000_000)controller.abort(Error('编译日志过大，任务已终止。'));};
         controller.signal.addEventListener('abort',kill,{once:true});
         child.stdout.on('data',append);child.stderr.on('data',append);child.on('error',reject);

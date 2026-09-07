@@ -4,7 +4,7 @@ assert.deepEqual(parseRefs('HEAD -> main, tag: v1.0, origin/main'),{refs:[{name:
 assert.deepEqual(parseRefs('HEAD'),{refs:[],head:true});
 assert.equal(parseLog('\x1eaaa\x1f\x1f\x1fA\x1f2026-01-01T00:00:00+00:00\x1finit\n')[0].subject,'init');
 const root=await mkdtemp(path.join(tmpdir(),'envoi-git-log-')),proof='c'.repeat(64),input={directory:root,proof};
-const git=(...args)=>execFileSync('/usr/bin/git',['-c','user.name=Test','-c','user.email=test@envoi.dev',...args],{cwd:root,encoding:'utf8'});
+const git=(...args)=>execFileSync('git',['-c','user.name=Test','-c','user.email=test@envoi.dev',...args],{cwd:root,encoding:'utf8'});
 try{
  await mkdir(path.join(root,'.envoi'));await writeFile(path.join(root,'.envoi/git-proof'),proof);
  assert.equal((await readBoundGitLog(input)).state,'not-initialized');
@@ -29,10 +29,10 @@ try{
  const outer=await mkdtemp(path.join(tmpdir(),'envoi-git-nested-'));
  try{
   const inner=path.join(outer,'demo');await mkdir(path.join(inner,'.envoi'),{recursive:true});await writeFile(path.join(inner,'.envoi/git-proof'),proof);
-  execFileSync('/usr/bin/git',['init','-b','main'],{cwd:outer});execFileSync('/usr/bin/git',['-c','user.name=T','-c','user.email=t@t','commit','--allow-empty','-m','outer'],{cwd:outer});
+  execFileSync('git',['init','-b','main'],{cwd:outer});execFileSync('git',['-c','user.name=T','-c','user.email=t@t','commit','--allow-empty','-m','outer'],{cwd:outer});
   const nested=await readBoundGitLog({directory:inner,proof});
   assert.equal(nested.state,'nested');assert.equal(nested.commits.length,0);assert.match(nested.enclosing,/envoi-git-nested-/);
-  execFileSync('/usr/bin/git',['init','-b','main'],{cwd:inner});
+  execFileSync('git',['init','-b','main'],{cwd:inner});
   assert.equal((await readBoundGitLog({directory:inner,proof})).state,'ready'); // own .git wins
  }finally{await rm(outer,{recursive:true,force:true});}
  console.log('PASS native Git log/show: branch+merge topology, refs, first-parent merge stat, root tree, commit validation');

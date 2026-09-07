@@ -3,10 +3,11 @@ import {mkdtemp, mkdir, writeFile, readFile, rm} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import path from 'node:path';
 import assert from 'node:assert/strict';
+async function waitForAsync(page,predicate,arg){const deadline=Date.now()+30000;while(!await page.evaluate(predicate,arg)){if(Date.now()>deadline)throw Error('Async desktop condition timed out');await new Promise(resolve=>setTimeout(resolve,50));}}
 const require=createRequire(import.meta.url);
 const {_electron}=require(process.env.ENVOI_PLAYWRIGHT ?? 'playwright');
 const temp=await mkdtemp(path.join(tmpdir(),'envoi-desktop-smoke-'));
-const root=path.join(temp,'paper');await mkdir(root);
+const root=path.join(temp,'paper with spaces');await mkdir(root);
 await writeFile(path.join(root,'trusted-extra.tex'),'Local project input');
 await writeFile(path.join(root,'main.tex'),'\\documentclass{article}\n\\begin{document}Desktop test\\end{document}');
 let instance;
@@ -53,7 +54,7 @@ try {
   const sessions=await bridge.agentRequest('sessions',{projectId:binding.project.id});
   const runtime=await bridge.compilerRuntime();
   let compile;
-  if(runtime.available)compile=await bridge.compile({rootPath:root,main:'main.tex',engine:'pdflatex',files:[{path:'main.tex',base64:btoa('\\documentclass{article}\\begin{document}Desktop test\\input{'+root+'/trusted-extra.tex}\\immediate\\write18{echo trusted > "'+root+'/trusted-tool.txt"}\\end{document}')}]});
+  if(runtime.available)compile=await bridge.compile({rootPath:root,main:'main.tex',engine:'pdflatex',files:[{path:'main.tex',base64:btoa('\\documentclass{article}\\begin{document}Desktop test\\input{'+root.replace(/\\/g,'/')+'/trusted-extra.tex}\\immediate\\write18{echo trusted > "'+root.replace(/\\/g,'/')+'/trusted-tool.txt"}\\end{document}')}]});
   let asset;
   if(compile?.ok){await bridge.fsWrite(root,'build/main.pdf',{base64:compile.pdf});const response=await fetch(await bridge.assetUrl(root,'build/main.pdf'));asset={status:response.status,header:new TextDecoder().decode((await response.arrayBuffer()).slice(0,5))};}
   return {binding,read,git,sessions,runtime,compile,asset};
@@ -73,9 +74,9 @@ try {
  }
  if(result.runtime.available){
   await page.evaluate(root=>{
-   window.cancelledCompile=window.envoi.compile({rootPath:root,main:'main.tex',engine:'pdflatex',drafts:[{path:'main.tex',text:'\\documentclass{article}\\begin{document}\\immediate\\write18{echo started > "'+root+'/cancel-started.txt"; sleep 30}Cancel test\\end{document}'}]});
+   window.cancelledCompile=window.envoi.compile({rootPath:root,main:'main.tex',engine:'pdflatex',drafts:[{path:'main.tex',text:'\\documentclass{article}\\begin{document}\\immediate\\write18{echo started > "'+root.replace(/\\/g,'/')+'/cancel-started.txt"'+(navigator.platform.startsWith('Win')?' & ping -n 30 127.0.0.1 > nul':'; sleep 30')+'}Cancel test\\end{document}'}]});
   },root);
-  await page.waitForFunction(async root=>{try{return (await window.envoi.fsRead(root,'cancel-started.txt')).text?.includes('started');}catch{return false;}},root);
+  await waitForAsync(page,async root=>{try{return (await window.envoi.fsRead(root,'cancel-started.txt')).text?.includes('started');}catch{return false;}},root);
   await page.evaluate(()=>window.envoi.cancelCompile());
   const cancelled=await page.evaluate(()=>window.cancelledCompile);
   assert.equal(cancelled.ok,false);assert.match(cancelled.error,/取消/);
@@ -84,7 +85,7 @@ try {
  const toolsPid=await instance.evaluate(({app})=>app.getAppMetrics().find(item=>item.name==='Envoi Tools'||item.serviceName==='Envoi Tools')?.pid);
  assert.ok(toolsPid,'Git runs in a dedicated utility process');
  await instance.evaluate((_electron,pid)=>process.kill(pid,'SIGKILL'),toolsPid);
- await page.waitForFunction(async()=>{try{return (await window.envoi.gitRuntime()).available;}catch{return false;}});
+ await waitForAsync(page,async()=>{try{return (await window.envoi.gitRuntime()).available;}catch{return false;}});
  console.log('PASS: backend process isolation and restart after forced exit');
  console.log('PASS: filesystem watch, backend save conflict, native draft compilation');
  prompts=await instance.evaluate(()=>globalThis.trustPrompts);assert.equal(prompts,1);
@@ -119,11 +120,12 @@ try {
  await reopened.getByRole('button',{name:'移除记录',exact:true}).click();
  await reopened.getByRole('button',{name:'移除记录',exact:true}).click();
  await reopened.waitForFunction(()=>!!document.querySelector('[data-testid="welcome-page"]')&&!document.querySelector('textarea[aria-label="LaTeX 正文编辑器"]'));
- await reopened.waitForFunction(async()=>{const recent=await window.envoi.dataGet('recent');return recent?.value?.length===0;});
+ await reopened.getByRole('dialog').waitFor({state:'hidden'});
+ await waitForAsync(reopened,async()=>{const recent=await window.envoi.dataGet('recent');return recent?.value?.length===0&&(await window.envoi.dataGet('roots'))?.value?.length===0;});
  assert.match(await readFile(path.join(root,'main.tex'),'utf8'),/Desktop test/);
  await reopened.reload();
  await reopened.waitForFunction(()=>!!document.querySelector('[data-testid="welcome-page"]')&&!document.querySelector('textarea[aria-label="LaTeX 正文编辑器"]'));
- assert.equal((await reopened.evaluate(()=>window.envoi.dataGet('roots'))).value.length,0);
+ const remainingRoots=(await reopened.evaluate(()=>window.envoi.dataGet('roots'))).value;assert.equal(remainingRoots.length,0,JSON.stringify({root,remainingRoots}));
  console.log('PASS: discard-close, empty restart, clean reopen, remove-current without deleting disk files');
  const deleteRoot=path.join(temp,'delete-paper');
  await mkdir(path.join(deleteRoot,'chapters'),{recursive:true});await mkdir(path.join(deleteRoot,'.envoi'));
@@ -145,7 +147,7 @@ try {
  await reopened.getByTestId('welcome-page').waitFor();
  await reopened.evaluate(async root=>{await window.envoi.dataPut('recent',[{id:'welcome-recent-test',name:'paper',path:root,updated:Date.now()}]);window.dispatchEvent(new Event('envoi:recent-updated'));},root);
  await reopened.getByRole('button',{name:'移除最近项目：paper',exact:true}).click();
- await reopened.waitForFunction(async()=>!(await window.envoi.dataGet('recent')).value.length);
+ await waitForAsync(reopened,async()=>!(await window.envoi.dataGet('recent')).value.length);
  assert.match(await readFile(path.join(root,'main.tex'),'utf8'),/Desktop test/);
  console.log('PASS: welcome recent removal preserves project files');
  if(process.env.ENVOI_DESKTOP_EXECUTABLE){

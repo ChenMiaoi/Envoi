@@ -1,3 +1,4 @@
+import {nativeBasename,nativePathWithin} from '@/lib/nativePath';
 import {envoi} from './desktop';
 import {translate} from '@/i18n/runtime';
 import {nativeMigrate,nativePut,nativeGet,encodeNative} from "./localData";
@@ -21,7 +22,7 @@ async function remember(store: 'recent' | 'roots', rootPath: string) {
   const existing=previous.find(entry=>entry.path===rootPath)??previous.find(entry=>identity&&entry.projectId===identity);
   const id=existing?.id??identity??crypto.randomUUID();
   const db = await database();
-  try { await new Promise<void>((resolve, reject) => { const transaction = db.transaction(store, "readwrite"); transaction.objectStore(store).put({ id, name: rootPath.split("/").filter(Boolean).pop() ?? rootPath, projectId:identity, path: rootPath, updated: Date.now() }); transaction.oncomplete = () => resolve(); transaction.onerror = () => reject(transaction.error); }); } finally { db.close(); }
+  try { await new Promise<void>((resolve, reject) => { const transaction = db.transaction(store, "readwrite"); transaction.objectStore(store).put({ id, name: nativeBasename(rootPath), projectId:identity, path: rootPath, updated: Date.now() }); transaction.oncomplete = () => resolve(); transaction.onerror = () => reject(transaction.error); }); } finally { db.close(); }
   await syncRegistry(store,[],[id]);
 }
 export const rememberProject = (rootPath: string) => remember('recent', rootPath);
@@ -38,7 +39,7 @@ export async function forgetRecentProject(id:string){
 }
 export async function matchingProjectRecords(rootPath:string){
  const recent=await recentProjects(),roots=await authorizedRoots();const ids:{store:string;id:string}[]=[];
- for(const [store,entries] of [['recent',recent],['roots',roots]] as const)for(const entry of entries)if(entry.path&&(entry.path===rootPath||entry.path.startsWith(rootPath+'/')))ids.push({store,id:entry.id});
+ for(const [store,entries] of [['recent',recent],['roots',roots]] as const)for(const entry of entries)if(entry.path&&(nativePathWithin(entry.path,rootPath)))ids.push({store,id:entry.id});
  return ids;
 }
 export async function forgetDeletedRecords(ids:{store:string;id:string}[]){

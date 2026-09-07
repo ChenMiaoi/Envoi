@@ -1,4 +1,5 @@
-import { app, BrowserWindow, dialog, ipcMain, protocol, shell } from "electron"
+import {toolDirectories} from '../../server/tool-config.mjs'
+import { app, BrowserWindow, dialog, ipcMain, Menu, protocol, shell } from "electron"
 import { randomBytes } from "node:crypto"
 import { cp, mkdtemp, mkdir, readdir, readFile, stat, realpath, rename, rm } from "node:fs/promises"
 import path from "node:path"
@@ -10,8 +11,8 @@ import {BackendHost} from './backend-host'
 import {atomicProjectWrite, saveProjectFiles} from './file-service.mjs'
 
 import {createWorkspaceTrust} from './workspace-trust.mjs'
-// Finder does not inherit a terminal's PATH. Include common local tool locations.
-if (process.platform === 'darwin') process.env.PATH = [...new Set([...(process.env.PATH ?? '').split(path.delimiter), '/opt/homebrew/bin', '/usr/local/bin', '/Library/TeX/texbin', '/usr/bin', '/bin'].filter(Boolean))].join(path.delimiter)
+// Desktop launchers may omit installed tools from PATH; share discovery with workers and AI.
+process.env.PATH = [...new Set([...toolDirectories(), ...(process.env.PATH ?? '').split(path.delimiter)].filter(Boolean))].join(path.delimiter)
 const workspaceTrust = createWorkspaceTrust(path.join(dataDir, 'workspace-trust.json'), async (root: string) => {
   const result = await dialog.showMessageBox({type: 'question', title: '信任此目录？', message: '是否信任此目录中的文件？', detail: `${root}\n\n信任后，此目录及子目录的 Git、LaTeX、AI 和文件操作将全部启用，可以运行本机工具和修改文件。以后打开不再询问。`, buttons: ['信任并打开', '取消'], defaultId: 0, cancelId: 1, noLink: true})
   return result.response === 0
@@ -132,6 +133,10 @@ async function agentRoot(body: unknown) {
 
 let exampleCreation: Promise<string> | undefined
 function registerIpc(): void {
+  ipcMain.handle('envoi:window-colors', (event, colors: {color: string; symbolColor: string}) => {
+    if (!colors || !/^#[\da-f]{6}$/i.test(colors.color) || !/^#[\da-f]{6}$/i.test(colors.symbolColor)) throw Error('Invalid window colors')
+    if (process.platform === 'win32') BrowserWindow.fromWebContents(event.sender)?.setTitleBarOverlay({...colors, height: 40})
+  })
   ipcMain.handle('envoi:example-directory', () => {
     exampleCreation ??= (async () => {
       const source=app.isPackaged?path.join(process.resourcesPath,'demo'):path.resolve(import.meta.dirname,'../../../examples/demo')
@@ -324,6 +329,7 @@ function createWindow(): void {
     height: 900,
     title: "Envoi",
     ...(process.platform === 'darwin' ? {titleBarStyle: 'hidden' as const, trafficLightPosition: {x: 16, y: 14}} : {}),
+    ...(process.platform === 'win32' ? {titleBarStyle: 'hidden' as const, titleBarOverlay: {color: '#23272e', symbolColor: '#c8cdd5', height: 40}} : {}),
     webPreferences: {
       preload: path.join(import.meta.dirname, "../preload/index.cjs"),
       contextIsolation: true,
@@ -353,6 +359,7 @@ function createWindow(): void {
 }
 
 void app.whenReady().then(() => {
+  if (process.platform !== 'darwin') Menu.setApplicationMenu(null)
   protocol.handle("envoi", handleAsset)
   registerIpc()
   createWindow()

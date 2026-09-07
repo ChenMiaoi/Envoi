@@ -3,6 +3,7 @@
  * 插值占位符使用 {name}；翻译文件必须与本文件键集合完全一致（编译期以 Record<MessageKey,string> 保证）。
  */
 export const zhCN = {
+ 'settings.tools.system':'系统环境',
  /* ---------- 通用 ---------- */
  'common.save':'保存',
  'common.close':'关闭',

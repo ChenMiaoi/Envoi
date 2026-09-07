@@ -1,6 +1,7 @@
 /** 日本語メッセージ。zh-CN と完全に同じキーを持つこと。 */
 import type {Messages} from './zh-CN';
 const ja: Messages = {
+ 'settings.tools.system':'システム環境',
  'common.save':'保存',
  'common.close':'閉じる',
  'common.enabled':'オン',

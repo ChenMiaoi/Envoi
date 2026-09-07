@@ -11,9 +11,9 @@ try{
  await mkdir(path.join(root,'.envoi'));await writeFile(path.join(root,'.envoi/git-proof'),proof);
  await assert.rejects(initializeBoundGit({directory:root,proof:'b'.repeat(64)}),/证明/);
  const result=await initializeBoundGit({directory:root,proof});assert.equal(result.branch,'main');
- assert.equal(execFileSync('/usr/bin/git',['symbolic-ref','--short','HEAD'],{cwd:root,encoding:'utf8'}).trim(),'main');
- assert.equal(execFileSync('/usr/bin/git',['remote'],{cwd:root,encoding:'utf8'}),'');
- assert.throws(()=>execFileSync('/usr/bin/git',['rev-parse','--verify','HEAD'],{cwd:root,stdio:'pipe'}));
+ assert.equal(execFileSync('git',['symbolic-ref','--short','HEAD'],{cwd:root,encoding:'utf8'}).trim(),'main');
+ assert.equal(execFileSync('git',['remote'],{cwd:root,encoding:'utf8'}),'');
+ assert.throws(()=>execFileSync('git',['rev-parse','--verify','HEAD'],{cwd:root,stdio:'pipe'}));
  await assert.rejects(initializeBoundGit({directory:root,proof}),/已属于/);
  console.log('PASS bound native Git init, main, no commits/remotes, wrong proof rejected, existing history preserved');
 }finally{await rm(root,{recursive:true,force:true});}

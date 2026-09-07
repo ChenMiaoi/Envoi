@@ -1,4 +1,6 @@
 import {WelcomePage} from '@/project/WelcomePage';
+import {usePreferences} from '@/settings/context';
+import {envoi} from '@/lib/desktop';
 import {ProjectIdentity} from '@/project/ProjectIdentity';
 import {useAgent} from '@/agent/context';
 import {AgentProvider} from "@/agent/AgentProvider";
@@ -83,6 +85,18 @@ function ProjectApp() {
   const allFiles = useMemo(() => flatten(fileTree), [fileTree]);
 
   const mac=/Mac/.test(navigator.platform);
+  const windows=/Win/.test(navigator.platform);
+  const {preferences}=usePreferences();
+  useEffect(()=>{
+    if(!windows)return;
+    const frame=requestAnimationFrame(()=>{
+      const style=getComputedStyle(document.documentElement),canvas=document.createElement('canvas').getContext('2d');
+      if(!canvas)return;
+      const hex=(name:string)=>{canvas.fillStyle=`hsl(${style.getPropertyValue(name)})`;return canvas.fillStyle;};
+      void envoi().windowColors({color:hex(emptyWorkspace?'--background':'--card'),symbolColor:hex('--foreground')}).catch(()=>{});
+    });
+    return()=>cancelAnimationFrame(frame);
+  },[windows,preferences.theme,emptyWorkspace]);
   const runCommand=useCallback((command:Command)=>{
     if(command.id==='palette'){setPaletteOpen(v=>!v);return;}
     if(command.view){setView(command.view);return;}
@@ -114,9 +128,9 @@ function ProjectApp() {
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-background text-foreground">
       {page.redirect&&<Navigate to={page.redirect} replace />}
-      {mac&&emptyWorkspace&&<div aria-hidden="true" className="window-drag fixed inset-x-0 top-0 z-40 h-10"/>}
+      {(mac||windows)&&emptyWorkspace&&<div aria-hidden="true" className="window-drag fixed inset-x-0 top-0 z-40 h-10"/>}
       {/* The macOS traffic lights share the content area; keep controls clear of them. */}
-      <div className={emptyWorkspace ? "hidden" : `flex h-10 shrink-0 items-center border-b border-border bg-card ${mac ? "window-drag pl-[80px]" : ""}`}>
+      <div className={emptyWorkspace ? "hidden" : `flex h-10 shrink-0 items-center border-b border-border bg-card ${mac ? "window-drag pl-[80px]" : windows ? "window-drag pr-[150px]" : ""}`}>
         <div className="flex min-w-0 max-w-[55%] items-center gap-2 pl-3.5">
           <div className="shrink-0"><ProjectMenu /></div><ProjectIdentity />
           
