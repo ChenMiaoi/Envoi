@@ -2,9 +2,13 @@ import { killProcessTree } from "../../server/process-tree.mjs"
 import { utilityProcess } from "electron"
 import path from "node:path"
 import { rm } from "node:fs/promises"
+import { diagnostics, operationContext } from "./diagnostics"
 
 type Event = Record<string, unknown>
 interface Pending {
+  operationId: string
+  method: string
+  started: number
   resolve(value: unknown): void
   reject(error: Error): void
   onEvent?: (event: Event) => void
@@ -26,6 +30,7 @@ export class BackendHost {
     child.stdout?.resume()
     child.stderr?.resume()
     this.child = child
+    diagnostics.write("info", "backend", "process.started", { backend: this.name })
     const processes = new Set<number>(),
       directories = new Set<string>()
     const cleanup = () => {
@@ -42,8 +47,20 @@ export class BackendHost {
         id: number
         result?: unknown
         error?: string
+        diagnosticError?: { name?: string; code?: string; stack?: string }
+        fatal?: boolean
         event?: Event
       }) => {
+        if (message.fatal) {
+          diagnostics.write(
+            "error",
+            "backend",
+            "uncaught.exception",
+            { backend: this.name },
+            message.diagnosticError,
+          )
+          return
+        }
         if (message.resource) {
           const { pid, directory, active } = message.resource
           if (pid) {
@@ -59,15 +76,45 @@ export class BackendHost {
         const request = this.pending.get(message.id)
         if (!request) return
         if (message.event) {
+          if (message.event.type === "error")
+            diagnostics.write("error", "backend", "stream.failed", {
+              backend: this.name,
+              operationId: request.operationId,
+            })
           request.onEvent?.(message.event)
           return
         }
         this.pending.delete(message.id)
+        const unsuccessful =
+          !!message.result &&
+          typeof message.result === "object" &&
+          (message.result as { ok?: boolean }).ok === false
+        diagnostics.write(
+          message.error ? "error" : unsuccessful ? "warn" : "debug",
+          "backend",
+          message.error
+            ? "operation.failed"
+            : unsuccessful
+              ? "operation.unsuccessful"
+              : "operation.completed",
+          {
+            backend: this.name,
+            method: request.method,
+            operationId: request.operationId,
+            durationMs: Date.now() - request.started,
+          },
+          message.diagnosticError,
+        )
         if (message.error) request.reject(Error(message.error))
         else request.resolve(message.result)
       },
     )
-    child.once("exit", () => {
+    child.once("exit", (exitCode) => {
+      diagnostics.write(this.closing ? "info" : "error", "backend", "process.exited", {
+        backend: this.name,
+        exitCode,
+        pending: this.pending.size,
+      })
       cleanup()
       if (this.child === child) this.child = undefined
       for (const request of this.pending.values())
@@ -85,6 +132,9 @@ export class BackendHost {
       id = ++this.sequence
     return new Promise<T>((resolve, reject) => {
       this.pending.set(id, {
+        operationId: operationContext.getStore() ?? `${this.name}-${id}`,
+        method,
+        started: Date.now(),
         resolve: (value) => resolve(value as T),
         reject,
         onEvent: options.onEvent,

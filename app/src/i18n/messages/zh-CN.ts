@@ -6,6 +6,13 @@ export const zhCN = {
   "settings.tools.system": "系统环境",
   "settings.update.inaccessible": "暂时无法获取发布信息，请稍后重试。",
   "settings.update.title": "Envoi 版本",
+  "settings.logs.title": "诊断日志",
+  "settings.logs.hint":
+    "仅保存在本机，按大小自动轮转（每份约 5 MB，保留两份）。不记录论文、聊天正文或凭证。",
+  "settings.logs.open": "打开日志目录",
+  "settings.logs.export": "导出诊断日志",
+  "settings.logs.exported": "诊断日志已导出。",
+  "settings.logs.failed": "无法打开或导出日志，请检查目录权限及磁盘空间。",
   "settings.update.hint": "检查正式版本；下载更新将打开发布页，请下载安装包完成更新。",
   "settings.update.check": "检查更新",
   "settings.update.busy": "请稍候…",

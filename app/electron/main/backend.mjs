@@ -1,4 +1,10 @@
 const parentPort = process.parentPort
+process.on("uncaughtExceptionMonitor", (error) => {
+  parentPort.postMessage({
+    fatal: true,
+    diagnosticError: { name: error.name, code: error.code, stack: error.stack },
+  })
+})
 import { compileSnapshot, runtimeInfo } from "../../server/compiler.mjs"
 import { lintText } from "../../server/lint.mjs"
 import { configureTools, toolInfo } from "../../server/tool-config.mjs"
@@ -70,6 +76,11 @@ parentPort.on("message", ({ data }) => {
   if (!data || typeof data.id !== "number") return
   void dispatch(data).then(
     (result) => parentPort.postMessage({ id: data.id, result }),
-    (error) => parentPort.postMessage({ id: data.id, error: error.message }),
+    (error) =>
+      parentPort.postMessage({
+        id: data.id,
+        error: error.message,
+        diagnosticError: { name: error.name, code: error.code, stack: error.stack },
+      }),
   )
 })

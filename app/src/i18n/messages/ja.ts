@@ -5,6 +5,14 @@ const ja: Messages = {
   "settings.update.inaccessible":
     "リリース情報を取得できません。しばらくしてから再試行してください。",
   "settings.update.title": "Envoi バージョン",
+  "settings.logs.title": "診断ログ",
+  "settings.logs.hint":
+    "端末内に保存し、サイズでローテーションします（約5 MB、2ファイル）。論文・チャット本文や認証情報は記録しません。",
+  "settings.logs.open": "ログフォルダーを開く",
+  "settings.logs.export": "診断ログをエクスポート",
+  "settings.logs.exported": "診断ログをエクスポートしました。",
+  "settings.logs.failed":
+    "ログを開くかエクスポートできません。フォルダーの権限と空き容量を確認してください。",
   "settings.update.hint":
     "正式版を確認します。ダウンロード先でインストーラーを取得し、更新してください。",
   "settings.update.check": "更新を確認",

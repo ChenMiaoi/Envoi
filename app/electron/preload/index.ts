@@ -11,6 +11,10 @@ function invoke<T>(channel: string, ...args: unknown[]): Promise<T> {
 // agentStatus agentRequest agentChat onAgentEvent
 // fsList fsRead fsWrite fsWriteFiles fsMkdir fsRemove fsRename fsRemoveTree assetUrl
 const bridge: EnvoiBridge = {
+  diagnosticsInfo: () => invoke("envoi:diagnostics-info"),
+  diagnosticsOpen: () => invoke("envoi:diagnostics-open"),
+  diagnosticsExport: () => invoke("envoi:diagnostics-export"),
+  diagnosticsLog: (entry) => ipcRenderer.send("envoi:diagnostics-log", entry),
   appVersion: () => invoke("envoi:app-version"),
   checkUpdate: () => invoke("envoi:check-update"),
   downloadUpdate: () => invoke("envoi:download-update"),

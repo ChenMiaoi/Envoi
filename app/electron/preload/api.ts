@@ -1,6 +1,15 @@
 // window.envoi 桥接类型（契约第 1 节唯一事实来源）。
 // preload/index.ts 实现此接口；src 侧经 app/src/lib/desktop.ts re-export 消费。
 export interface EnvoiBridge {
+  diagnosticsInfo(): Promise<{
+    directory: string
+    maxFileBytes: number
+    files: number
+    available: boolean
+  }>
+  diagnosticsOpen(): Promise<void>
+  diagnosticsExport(): Promise<boolean>
+  diagnosticsLog(entry: import("../../shared/log-record").RendererLog): void
   appVersion(): Promise<string>
   checkUpdate(): Promise<{
     currentVersion: string

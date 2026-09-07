@@ -4,6 +4,13 @@ const zhTW: Messages = {
   "settings.tools.system": "系統環境",
   "settings.update.inaccessible": "暫時無法取得發佈資訊，請稍後重試。",
   "settings.update.title": "Envoi 版本",
+  "settings.logs.title": "診斷日誌",
+  "settings.logs.hint":
+    "僅儲存在本機，按大小自動輪替（每份約 5 MB，保留兩份）。不記錄論文、聊天正文或憑證。",
+  "settings.logs.open": "開啟日誌目錄",
+  "settings.logs.export": "匯出診斷日誌",
+  "settings.logs.exported": "診斷日誌已匯出。",
+  "settings.logs.failed": "無法開啟或匯出日誌，請檢查目錄權限及磁碟空間。",
   "settings.update.hint": "檢查正式版本；下載更新將開啟發佈頁，請下載安裝包完成更新。",
   "settings.update.check": "檢查更新",
   "settings.update.busy": "請稍候…",

@@ -5,6 +5,13 @@ const en: Messages = {
   "settings.update.inaccessible":
     "Release information is currently unavailable. Please try again later.",
   "settings.update.title": "Envoi version",
+  "settings.logs.title": "Diagnostic logs",
+  "settings.logs.hint":
+    "Stored locally with size-based rotation (about 5 MB per file, two files). Manuscripts, chat content and credentials are excluded.",
+  "settings.logs.open": "Open log folder",
+  "settings.logs.export": "Export diagnostic logs",
+  "settings.logs.exported": "Diagnostic logs exported.",
+  "settings.logs.failed": "Unable to open or export logs. Check folder permissions and disk space.",
   "settings.update.hint":
     "Check stable releases. Download opens the release page; install the package to update.",
   "settings.update.check": "Check for updates",

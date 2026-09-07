@@ -1,3 +1,5 @@
+import { diagnostics, operationContext } from "./diagnostics"
+import { randomUUID } from "node:crypto"
 import { libraryRequest, researchRoot } from "../../server/research-library.mjs"
 import { createExampleProject } from "./example-project.mjs"
 import { checkUpdate } from "./updates.mjs"
@@ -224,25 +226,87 @@ async function agentRoot(body: unknown) {
 
 // ── IPC 通道（契约第 1 节；错误消息沿用中文风格）──
 
+function handle(channel: string, listener: Parameters<typeof ipcMain.handle>[1]) {
+  ipcMain.handle(channel, async (event, ...args) => {
+    const operationId = randomUUID(),
+      started = Date.now()
+    return operationContext.run(operationId, async () => {
+      try {
+        const result = await listener(event, ...args)
+        diagnostics.write("debug", "ipc", "operation.completed", {
+          operationId,
+          method: channel,
+          durationMs: Date.now() - started,
+        })
+        return result
+      } catch (error) {
+        diagnostics.write(
+          "error",
+          "ipc",
+          "operation.failed",
+          { operationId, method: channel, durationMs: Date.now() - started },
+          error,
+        )
+        throw error
+      }
+    })
+  })
+}
+
 function registerIpc(): void {
+  handle("envoi:diagnostics-info", () => diagnostics.info())
+  handle("envoi:diagnostics-open", async () => {
+    const error = await shell.openPath(await diagnostics.open())
+    if (error) throw Error("Unable to open log directory")
+  })
+  handle("envoi:diagnostics-export", async (event) => {
+    const owner = BrowserWindow.fromWebContents(event.sender)
+    if (!owner) throw Error("Window unavailable")
+    const result = await dialog.showSaveDialog(owner, {
+      defaultPath: `Envoi-diagnostics-${new Date().toISOString().slice(0, 10)}.json`,
+      filters: [{ name: "Diagnostic logs", extensions: ["json"] }],
+    })
+    if (result.canceled || !result.filePath) return false
+    await diagnostics.export(result.filePath)
+    return true
+  })
+  const limits = new WeakMap<Electron.WebContents, { start: number; count: number }>()
+  ipcMain.on("envoi:diagnostics-log", (event, input: unknown) => {
+    if (!BrowserWindow.fromWebContents(event.sender) || !input || typeof input !== "object") return
+    const value = input as { level?: string; event?: string; error?: unknown }
+    if (
+      !["debug", "info", "warn", "error"].includes(value.level ?? "") ||
+      !["renderer.error", "renderer.rejection", "react.error", "notification.shown"].includes(
+        value.event ?? "",
+      )
+    )
+      return
+    let limit = limits.get(event.sender)
+    if (!limit || Date.now() - limit.start > 60000) {
+      limit = { start: Date.now(), count: 0 }
+      limits.set(event.sender, limit)
+    }
+    if (++limit.count > 100) return
+    diagnostics.write(value.level!, "renderer", value.event!, {}, value.error)
+  })
   let updateUrl: string | undefined
-  ipcMain.handle("envoi:app-version", () => app.getVersion())
-  ipcMain.handle("envoi:check-update", async () => {
+  handle("envoi:app-version", () => app.getVersion())
+  handle("envoi:check-update", async () => {
     updateUrl = undefined
     const result = await checkUpdate(app.getVersion())
     if (result.status === "available") updateUrl = result.url
     return result
   })
-  ipcMain.handle("envoi:download-update", async () => {
+  handle("envoi:download-update", async () => {
     if (!updateUrl) throw Error("Check for updates first")
     await shell.openExternal(updateUrl)
   })
-  ipcMain.handle("envoi:library", async (_event, root: string, input: Record<string, unknown>) => {
+  handle("envoi:library", async (_event, root: string, input: Record<string, unknown>) => {
     root = await requireBoundRoot(root)
     await requireBoundRoot(await researchRoot(root))
     return libraryRequest(root, input)
   })
-  ipcMain.handle(
+  handle(
     "envoi:workspaces",
     async (
       _event,
@@ -266,7 +330,7 @@ function registerIpc(): void {
       throw Error("未知工作区操作")
     },
   )
-  ipcMain.handle("envoi:window-colors", (event, colors: { color: string; symbolColor: string }) => {
+  handle("envoi:window-colors", (event, colors: { color: string; symbolColor: string }) => {
     if (
       !colors ||
       !/^#[\da-f]{6}$/i.test(colors.color) ||
@@ -276,7 +340,7 @@ function registerIpc(): void {
     if (process.platform === "win32")
       BrowserWindow.fromWebContents(event.sender)?.setTitleBarOverlay({ ...colors, height: 40 })
   })
-  ipcMain.handle("envoi:example-directory", () =>
+  handle("envoi:example-directory", () =>
     createExampleProject({
       source: app.isPackaged
         ? path.join(process.resourcesPath, "demo")
@@ -285,7 +349,7 @@ function registerIpc(): void {
     }),
   )
 
-  ipcMain.handle("envoi:pick-directory", async (event) => {
+  handle("envoi:pick-directory", async (event) => {
     const window = BrowserWindow.fromWebContents(event.sender)
     const result = await dialog.showOpenDialog(window!, {
       properties: ["openDirectory", "createDirectory"],
@@ -293,29 +357,26 @@ function registerIpc(): void {
     return result.canceled ? null : (result.filePaths[0] ?? null)
   })
 
-  ipcMain.handle(
-    "envoi:bind-project",
-    async (_event, directory: string, opts?: { copy?: boolean }) => {
-      const root = await workspaceTrust.trust(directory)
-      const project = await registerProject(root, { copy: opts?.copy ?? true })
-      bindRoot(root)
-      projectRoots.set(project.id, root)
-      return { ok: true, project: { id: project.id, path: root, name: project.name } }
-    },
-  )
+  handle("envoi:bind-project", async (_event, directory: string, opts?: { copy?: boolean }) => {
+    const root = await workspaceTrust.trust(directory)
+    const project = await registerProject(root, { copy: opts?.copy ?? true })
+    bindRoot(root)
+    projectRoots.set(project.id, root)
+    return { ok: true, project: { id: project.id, path: root, name: project.name } }
+  })
 
-  ipcMain.handle("envoi:canonical-directory", (_event, directory: string) => {
+  handle("envoi:canonical-directory", (_event, directory: string) => {
     if (typeof directory !== "string" || !path.isAbsolute(directory))
       throw Error("需要绝对目录路径")
     return realpath(directory)
   })
-  ipcMain.handle("envoi:trust-directory", async (_event, directory: string) => {
+  handle("envoi:trust-directory", async (_event, directory: string) => {
     const root = await workspaceTrust.trust(directory)
     bindRoot(root)
     return root
   })
-  ipcMain.handle("envoi:compiler-runtime", () => compilerBackend.call("runtime"))
-  ipcMain.handle("envoi:compile", async (event, input: CompileInput) => {
+  handle("envoi:compiler-runtime", () => compilerBackend.call("runtime"))
+  handle("envoi:compile", async (event, input: CompileInput) => {
     const owner = event.sender.id,
       request = { cancelled: false }
     const requests = compileRequests.get(owner) ?? new Set<{ cancelled: boolean }>()
@@ -330,11 +391,11 @@ function registerIpc(): void {
       if (!requests.size) compileRequests.delete(owner)
     }
   })
-  ipcMain.handle("envoi:cancel-compile", (event) => {
+  handle("envoi:cancel-compile", (event) => {
     for (const request of compileRequests.get(event.sender.id) ?? []) request.cancelled = true
     return compilerBackend.cancel(event.sender.id)
   })
-  ipcMain.handle(
+  handle(
     "envoi:lint",
     async (
       event,
@@ -345,21 +406,19 @@ function registerIpc(): void {
         root: input.rootPath ? await requireBoundRoot(input.rootPath) : undefined,
       }),
   )
-  ipcMain.handle("envoi:tools", () => toolsBackend.call("tools"))
-  ipcMain.handle("envoi:configure-tools", (_event, input: { chktexPath: string | null }) =>
+  handle("envoi:tools", () => toolsBackend.call("tools"))
+  handle("envoi:configure-tools", (_event, input: { chktexPath: string | null }) =>
     toolsBackend.call("configureTools", [input]),
   )
-  ipcMain.handle("envoi:git-runtime", () => toolsBackend.call("gitRuntime"))
+  handle("envoi:git-runtime", () => toolsBackend.call("gitRuntime"))
   for (const [channel, method] of [
     ["git-init", "gitInit"],
     ["git-status", "gitStatus"],
     ["git-log", "gitLog"],
     ["git-show", "gitShow"],
   ]) {
-    ipcMain.handle(
-      `envoi:${channel}`,
-      async (_event, directory: string, extra?: Record<string, unknown>) =>
-        toolsBackend.call(method, [await requireBoundRoot(directory), extra]),
+    handle(`envoi:${channel}`, async (_event, directory: string, extra?: Record<string, unknown>) =>
+      toolsBackend.call(method, [await requireBoundRoot(directory), extra]),
     )
   }
 
@@ -369,10 +428,10 @@ function registerIpc(): void {
     if (result.status >= 400) throw new Error(result.body?.error ?? "本机数据操作失败")
     return result.body
   }
-  ipcMain.handle("envoi:data-get", (_event, name: string, key?: string) =>
+  handle("envoi:data-get", (_event, name: string, key?: string) =>
     store({ store: name, key: key ?? "default", action: "get" }),
   )
-  ipcMain.handle(
+  handle(
     "envoi:data-put",
     (
       _event,
@@ -391,8 +450,8 @@ function registerIpc(): void {
       }),
   )
 
-  ipcMain.handle("envoi:agent-status", () => agentBackend.call("agentStatus"))
-  ipcMain.handle("envoi:agent-request", async (_event, route: string, body: unknown) => {
+  handle("envoi:agent-status", () => agentBackend.call("agentStatus"))
+  handle("envoi:agent-request", async (_event, route: string, body: unknown) => {
     if (route === "bind") throw Error("请通过打开项目连接目录。")
     const result = (await agentBackend.call("agentRequest", [route, body], {
       root: await agentRoot(body),
@@ -400,7 +459,7 @@ function registerIpc(): void {
     if (result.status >= 400) throw new Error(result.body?.error ?? "AI 操作失败")
     return result.body
   })
-  ipcMain.handle(
+  handle(
     "envoi:agent-chat",
     async (
       event,
@@ -435,7 +494,7 @@ function registerIpc(): void {
     },
   )
 
-  ipcMain.handle("envoi:close-project", async (event, root: string) => {
+  handle("envoi:close-project", async (event, root: string) => {
     const owner = event.sender.id
     watchGenerations.set(owner, (watchGenerations.get(owner) ?? 0) + 1)
     watchers.get(owner)?.()
@@ -443,7 +502,7 @@ function registerIpc(): void {
     for (const request of compileRequests.get(owner) ?? []) request.cancelled = true
     await Promise.all(backends.map((backend) => backend.cancel(owner, root)))
   })
-  ipcMain.handle("envoi:watch-project", async (event, directory: string | null) => {
+  handle("envoi:watch-project", async (event, directory: string | null) => {
     const owner = event.sender.id,
       generation = (watchGenerations.get(owner) ?? 0) + 1
     watchGenerations.set(owner, generation)
@@ -459,14 +518,14 @@ function registerIpc(): void {
       }),
     )
   })
-  ipcMain.handle("envoi:fs-children", async (_event, root: string) => {
+  handle("envoi:fs-children", async (_event, root: string) => {
     const entries = await readdir(await requireBoundRoot(root), { withFileTypes: true })
     return entries.map((entry) => ({
       name: entry.name,
       kind: entry.isDirectory() ? "directory" : "file",
     }))
   })
-  ipcMain.handle("envoi:fs-list", async (_event, root: string) => {
+  handle("envoi:fs-list", async (_event, root: string) => {
     const base = await requireBoundRoot(root)
     const files: { path: string; kind: string; text?: string; version: string }[] = []
     const directories: string[] = []
@@ -504,7 +563,7 @@ function registerIpc(): void {
     }
   })
 
-  ipcMain.handle("envoi:fs-read", async (_event, root: string, relPath: string) => {
+  handle("envoi:fs-read", async (_event, root: string, relPath: string) => {
     const target = await resolveInside(await requireBoundRoot(root), relPath)
     const bytes = await readFile(await realpath(target))
     const text = isTextPath(relPath) ? decodeText(bytes) : undefined
@@ -517,7 +576,7 @@ function registerIpc(): void {
   ): Promise<void> => {
     await atomicProjectWrite(base, file.path, file)
   }
-  ipcMain.handle(
+  handle(
     "envoi:fs-save",
     async (
       _event,
@@ -525,37 +584,37 @@ function registerIpc(): void {
       changes: { path: string; text: string; expectedText: string | null }[],
     ) => saveProjectFiles(await requireBoundRoot(root), changes),
   )
-  ipcMain.handle(
+  handle(
     "envoi:fs-write",
     async (_event, root: string, relPath: string, content: { text?: string; base64?: string }) => {
       await writeOne(await requireBoundRoot(root), { path: relPath, ...content })
     },
   )
-  ipcMain.handle(
+  handle(
     "envoi:fs-write-files",
     async (_event, root: string, files: { path: string; text?: string; base64?: string }[]) => {
       const base = await requireBoundRoot(root)
       for (const file of files) await writeOne(base, file)
     },
   )
-  ipcMain.handle("envoi:fs-mkdir", async (_event, root: string, relPath: string) => {
+  handle("envoi:fs-mkdir", async (_event, root: string, relPath: string) => {
     await mkdir(await resolveInside(await requireBoundRoot(root), relPath), { recursive: true })
   })
-  ipcMain.handle("envoi:fs-remove", async (_event, root: string, relPath: string) => {
+  handle("envoi:fs-remove", async (_event, root: string, relPath: string) => {
     const target = await resolveInside(await requireBoundRoot(root), relPath)
     await rm(target)
   })
-  ipcMain.handle("envoi:fs-rename", async (_event, root: string, from: string, to: string) => {
+  handle("envoi:fs-rename", async (_event, root: string, from: string, to: string) => {
     const base = await requireBoundRoot(root)
     await rename(await resolveInside(base, from), await resolveInside(base, to))
   })
-  ipcMain.handle("envoi:fs-remove-tree", async (_event, root: string) => {
+  handle("envoi:fs-remove-tree", async (_event, root: string) => {
     const base = await requireBoundRoot(root)
     await Promise.all(backends.map((backend) => backend.cancel(undefined, base)))
     await rm(base, { recursive: true, force: true })
     unbindRoot(base)
   })
-  ipcMain.handle("envoi:asset-url", async (_event, root: string, relPath: string) => {
+  handle("envoi:asset-url", async (_event, root: string, relPath: string) => {
     const base = await requireBoundRoot(root)
     const parts = safePathParts(relPath)
     return `envoi://${tokensByRoot.get(base)}/${parts.map(encodeURIComponent).join("/")}`
@@ -585,6 +644,12 @@ function createWindow(): void {
       nodeIntegration: false,
     },
   })
+  window.webContents.on("render-process-gone", (_event, details) =>
+    diagnostics.write("error", "renderer", "process.gone", {
+      reason: details.reason,
+      exitCode: details.exitCode,
+    }),
+  )
   const owner = window.webContents.id
   window.webContents.once("destroyed", () => {
     watchers.get(owner)?.()
@@ -622,6 +687,7 @@ void app.whenReady().then(() => {
   if (process.platform !== "darwin") Menu.setApplicationMenu(null)
   protocol.handle("envoi", handleAsset)
   registerIpc()
+  diagnostics.write("info", "main", "app.started")
   createWindow()
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
@@ -633,6 +699,7 @@ app.on("will-quit", (event) => {
   if (cleanedUp) return
   event.preventDefault()
   void Promise.allSettled(backends.map((backend) => backend.dispose())).then(() => {
+    diagnostics.write("info", "main", "app.stopped")
     cleanedUp = true
     app.quit()
   })
@@ -641,3 +708,7 @@ app.on("will-quit", (event) => {
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") app.quit()
 })
+
+process.on("uncaughtExceptionMonitor", (error) =>
+  diagnostics.write("error", "main", "uncaught.exception", {}, error),
+)
