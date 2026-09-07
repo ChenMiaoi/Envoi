@@ -27,7 +27,7 @@ Trusted compilation uses the user's environment and TeX configuration, enables s
 
 Trusted AI sessions enable local coding tools, including reading, writing and commands. Old per-tool permission settings no longer restrict desktop sessions. Before a writing task, the editor saves drafts automatically; a save conflict prevents the task from discarding unsaved work. Provider sign-in remains necessary to use a provider account.
 
-Unsaved-work checks, explicit permanent deletion confirmation, malformed-input validation, and Electron's isolated renderer are separate from workspace trust. Operating-system filesystem permissions and missing executables are reported as operating-system/tool errors, not requests to authorize Git or LaTeX again.
+Unsaved-work checks, explicit trash confirmation, malformed-input validation, and Electron's isolated renderer are separate from workspace trust. Operating-system filesystem permissions and missing executables are reported as operating-system/tool errors, not requests to authorize Git or LaTeX again.
 
 ## Persistence and verification
 
@@ -47,9 +47,13 @@ Packaged navigation uses hash routes. Local assets use the `envoi:` protocol, in
 
 Closing stops the window's project tasks and watcher, records an empty workspace, and clears the editor view. Unsaved changes must be saved or explicitly discarded. Discard also clears those buffers from the per-project recovery snapshot, so reopening does not resurrect them. A closed workspace stays empty after restart.
 
-Removing a recent project preserves disk files and workspace trust. Removing the currently open project first uses the close/discard flow. It also removes the exact folder shortcut, comparing canonical paths so aliases such as macOS `/var` and `/private/var` cannot leave duplicate entries; parent shortcuts remain. Permanent directory deletion is a separate, named confirmation and recognizes hidden project metadata for nested TeX entry points.
+Removing another project only removes its recent-list entry. Removing the current project also closes it; unsaved changes offer Save and Remove, Discard and Remove, or Cancel. Failed saves keep the project open and its recent entry intact. Disk files, saved locations and workspace trust are preserved.
 
-Desktop regression tests exercise close/discard/reload/reopen, removal without deleting files, and permanent deletion against temporary fixtures only.
+Deleting files is a separate action that verifies the absolute directory and requires its name before moving it to the operating-system trash. Trash failure never falls back to permanent deletion. Markdown and code projects are supported without requiring a TeX entry point. Filesystem roots and ancestors of the home, application and application-data directories are protected by the native handler.
+
+A main repository cannot be trashed while linked worktrees outside the deletion target remain. The confirmation shows their paths. Removing an individual worktree keeps its branch and saved results, moves its files to trash, then removes only its Git worktree registration and Envoi experiment entry. Locked worktrees and external Git metadata that cannot be safely treated as a linked worktree are blocked. Restoring a removed experiment from trash requires reattaching its Git worktree. Metadata cleanup failures are reported after a successful trash operation.
+
+Desktop regression tests exercise close/discard/reload/reopen, removal without deleting files, and trash operations against temporary fixtures only. The desktop test substitutes a temporary destination for the OS trash call; backend tests verify protected directories, linked-worktree handling and trash failure without touching user projects.
 
 ## Startup measurements
 

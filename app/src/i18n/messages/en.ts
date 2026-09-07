@@ -1,6 +1,14 @@
 /** English messages. Must contain exactly the same keys as zh-CN. */
 import type { Messages } from "./zh-CN"
 const en: Messages = {
+  "project.removeAndClose": "Remove and Close",
+  "project.saveAndRemove": "Save and Remove",
+  "project.discardAndRemove": "Discard and Remove",
+  "project.restartForTrash":
+    "The app has been updated. Save your changes, quit completely and reopen it before deleting a project.",
+  "project.trashWorktreeHint":
+    "Only this worktree is removed; its branch and saved results are kept. Restoring from trash requires reconnecting the Git worktree.",
+  "project.deletionChanged": "The directory or worktree changed. Check it again.",
   "workspace.createHint":
     "Create an experiment from the current commit. Uncommitted changes are excluded.",
   "workspace.saveHint":
@@ -467,8 +475,7 @@ const en: Messages = {
     "The project configuration is invalid; fix it and reopen. The configuration was not overwritten.",
   "project.deleteConfirmName":
     "Type the full project directory name to confirm permanent deletion.",
-  "project.deleteIncomplete":
-    "Deletion incomplete: {message}. Some files may have been removed; current drafts are kept, check the directory.",
+  "project.deleteIncomplete": "Could not move to trash: {message}",
   "project.deleteInvalidName": "Invalid directory name; deletion refused.",
   "project.deleteIsParent":
     "Cannot delete the selected parent directory itself; choose the project\\'s direct parent.",
@@ -662,7 +669,7 @@ const en: Messages = {
   "project.closeProject": "Close Project",
 
   "project.closed": "Project closed.",
-  "project.confirmDelete": "Confirm Permanent Directory Deletion",
+  "project.confirmDelete": "Move to Trash",
   "project.confirmNameAria": "Confirm the project directory name for deletion",
   "project.connectAsCopy": "Connect as an Independent Copy",
   "project.connectionDesc":
@@ -674,19 +681,19 @@ const en: Messages = {
   "project.createFile": "Create File",
   "project.createProject": "Create Project",
   "project.currentName": "Current: {name}",
-  "project.deleteCurrentDirectory": "Delete Current Directory…",
-  "project.deleteDirectory": "Delete Directory…",
+  "project.deleteCurrentDirectory": "Delete Current Project Files…",
+  "project.deleteDirectory": "Delete Files…",
   "project.deleteForeverDesc":
-    "Permanently deletes this folder, including papers, attachments, build output and Git history. Check the path and type its name to continue.",
-  "project.deleteForeverHeading": "Permanently delete: {name}",
-  "project.deletedPermanently": "Directory permanently deleted{suffix}",
+    "Move the entire directory to the trash. Check the path and enter the directory name.",
+  "project.deleteForeverHeading": "Move to Trash: {name}",
+  "project.deletedPermanently": "Directory moved to trash{suffix}",
 
   "project.dialogFileTitle": "New Project File",
 
   "project.dialogNewTitle": "New Paper Project",
   "project.dialogOpenDesc": "Select a project folder.",
   "project.dialogOpenTitle": "Open Paper Project",
-  "project.discardIfCurrent": "If deleting the current project, discard its unsaved changes",
+  "project.discardIfCurrent": "Discard unsaved changes in this project",
   "project.discardOnSwitch": "Discard unsaved changes when switching",
   "project.discardUnsaved": "Discard current unsaved changes",
   "project.dismissAria": "Dismiss project notice",
@@ -723,7 +730,8 @@ const en: Messages = {
     "Local path of the selected location · fill in once when first connecting local tools",
 
   "project.localPathPlaceholder": "Local absolute path of the chosen location",
-  "project.manageDesc": "Removing a record keeps files. Deleting a folder cannot be undone.",
+  "project.manageDesc":
+    "Removing the current entry closes the project. Deleted files go to the trash.",
   "project.manageMenu": "Manage / Remove / Delete Projects…",
   "project.menuAria": "Envoi project menu",
   "project.menuLabel": "Project / Files",

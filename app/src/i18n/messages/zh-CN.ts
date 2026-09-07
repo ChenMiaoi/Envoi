@@ -3,6 +3,13 @@
  * 插值占位符使用 {name}；翻译文件必须与本文件键集合完全一致（编译期以 Record<MessageKey,string> 保证）。
  */
 export const zhCN = {
+  "project.removeAndClose": "移除并关闭",
+  "project.saveAndRemove": "保存并移除",
+  "project.discardAndRemove": "放弃修改并移除",
+  "project.restartForTrash": "应用已更新，请保存修改并完全退出后重新打开，再删除项目。",
+  "project.trashWorktreeHint":
+    "仅移除这个实验工作区，保留分支和已保存结果。从回收站恢复后需重新关联 Git 工作区。",
+  "project.deletionChanged": "目录或工作区状态已改变，请重新检查。",
   "workspace.createHint": "从当前提交创建实验，未提交修改不会带入。",
   "workspace.saveHint": "将所选文件和源码归档保存到主工作区。请先提交实验代码。",
   "workspace.created": "实验已创建。",
@@ -452,8 +459,7 @@ export const zhCN = {
   "project.closeUnsaved": "当前项目有未保存修改，请先保存或明确放弃修改。",
   "project.configInvalid": "项目配置格式无效，请修复后重新打开；未覆盖配置。",
   "project.deleteConfirmName": "请输入完整项目目录名称确认永久删除。",
-  "project.deleteIncomplete":
-    "删除未完成：{message}。可能已有部分文件被移除；当前草稿仍保留，请检查目录。",
+  "project.deleteIncomplete": "移到回收站失败：{message}",
   "project.deleteInvalidName": "目录名称无效，拒绝删除。",
   "project.deleteIsParent": "不能删除所选父目录本身，请选择项目的直接父目录。",
   "project.deleteMoved": "项目目录已移动或被替换，未删除。",
@@ -625,7 +631,7 @@ export const zhCN = {
   "project.closeProject": "关闭项目",
 
   "project.closed": "项目已关闭。",
-  "project.confirmDelete": "确认永久删除目录",
+  "project.confirmDelete": "移到回收站",
   "project.confirmNameAria": "确认删除项目目录名",
   "project.connectAsCopy": "作为独立副本连接",
   "project.connectionDesc":
@@ -637,19 +643,18 @@ export const zhCN = {
   "project.createFile": "创建文件",
   "project.createProject": "创建项目",
   "project.currentName": "当前：{name}",
-  "project.deleteCurrentDirectory": "删除当前目录…",
-  "project.deleteDirectory": "删除目录…",
-  "project.deleteForeverDesc":
-    "永久删除此目录中的论文、附件、编译产物和 Git 历史。请核对路径并输入目录名。",
-  "project.deleteForeverHeading": "永久删除：{name}",
-  "project.deletedPermanently": "目录已永久删除{suffix}",
+  "project.deleteCurrentDirectory": "删除当前项目文件…",
+  "project.deleteDirectory": "删除文件…",
+  "project.deleteForeverDesc": "将整个目录移到回收站。请核对路径并输入目录名。",
+  "project.deleteForeverHeading": "移到回收站：{name}",
+  "project.deletedPermanently": "目录已移到回收站{suffix}",
 
   "project.dialogFileTitle": "新建项目文件",
 
   "project.dialogNewTitle": "新建论文项目",
   "project.dialogOpenDesc": "选择项目文件夹。",
   "project.dialogOpenTitle": "打开论文项目",
-  "project.discardIfCurrent": "若删除的是当前项目，放弃其未保存修改",
+  "project.discardIfCurrent": "放弃此项目未保存的修改",
   "project.discardOnSwitch": "切换时放弃未保存修改",
   "project.discardUnsaved": "放弃当前未保存修改",
   "project.dismissAria": "关闭项目提示",
@@ -679,7 +684,7 @@ export const zhCN = {
   "project.localPathLabel": "所选位置的本地路径 · 首次连接本机工具时填写一次",
 
   "project.localPathPlaceholder": "已选择位置的本机绝对路径",
-  "project.manageDesc": "移除记录不会删除文件。删除目录无法撤销。",
+  "project.manageDesc": "移除当前记录会关闭项目；删除文件会移到回收站。",
   "project.manageMenu": "管理项目 / 移除 / 删除…",
   "project.menuAria": "Envoi 项目菜单",
   "project.menuLabel": "项目 / 文件",

@@ -104,6 +104,14 @@ export interface EnvoiBridge {
   fsMkdir(root: string, relPath: string): Promise<void>
   fsRemove(root: string, relPath: string): Promise<void>
   fsRename(root: string, from: string, to: string): Promise<void>
-  fsRemoveTree(root: string): Promise<void>
+  fsInspectDeletion(root: string): Promise<{
+    path: string
+    name: string
+    label: string
+    kind: "project" | "worktree"
+    related: string[]
+    blocked?: string
+  }>
+  fsTrashProject(root: string, typedName: string): Promise<{ warnings: string[] }>
   assetUrl(root: string, relPath: string): Promise<string>
 }

@@ -99,32 +99,7 @@ async function cachedAuthorizedRoots(): Promise<RecentProject[]> {
   }
 }
 export async function forgetRecentProject(id: string) {
-  const entry = (await recentProjects()).find((item) => item.id === id)
-  const selected = entry?.path
-    ? await envoi()
-        .canonicalDirectory(entry.path)
-        .catch(() => entry.path)
-    : undefined
-  const roots = selected
-    ? (
-        await Promise.all(
-          (await authorizedRoots()).map(async (item) => ({
-            item,
-            path: item.path
-              ? await envoi()
-                  .canonicalDirectory(item.path)
-                  .catch(() => item.path)
-              : undefined,
-          })),
-        )
-      )
-        .filter((value) => value.path === selected)
-        .map((value) => value.item)
-    : []
-  await forgetDeletedRecords([
-    { store: "recent", id },
-    ...roots.map((item) => ({ store: "roots", id: item.id })),
-  ])
+  await forgetDeletedRecords([{ store: "recent", id }])
 }
 export async function matchingProjectRecords(rootPath: string) {
   const recent = await recentProjects(),
@@ -150,14 +125,10 @@ export async function forgetDeletedRecords(ids: { store: string; id: string }[])
   } finally {
     db.close()
   }
-  await syncRegistry(
-    "recent",
-    ids.filter((item) => item.store === "recent").map((item) => item.id),
-  )
-  await syncRegistry(
-    "roots",
-    ids.filter((item) => item.store === "roots").map((item) => item.id),
-  )
+  for (const store of ["recent", "roots"] as const) {
+    const removed = ids.filter((item) => item.store === store).map((item) => item.id)
+    if (removed.length) await syncRegistry(store, removed)
+  }
 }
 
 async function records(store: "recent" | "roots"): Promise<RecentProject[]> {

@@ -1,6 +1,14 @@
 /** 日本語メッセージ。zh-CN と完全に同じキーを持つこと。 */
 import type { Messages } from "./zh-CN"
 const ja: Messages = {
+  "project.removeAndClose": "削除して閉じる",
+  "project.saveAndRemove": "保存して一覧から削除",
+  "project.discardAndRemove": "変更を破棄して一覧から削除",
+  "project.restartForTrash":
+    "アプリが更新されました。変更を保存して完全に終了し、再起動してからプロジェクトを削除してください。",
+  "project.trashWorktreeHint":
+    "この作業ツリーのみを削除し、ブランチと保存済みの結果は保持します。ゴミ箱から復元した後は Git 作業ツリーの再接続が必要です。",
+  "project.deletionChanged": "ディレクトリまたは作業ツリーが変更されました。再確認してください。",
   "workspace.createHint": "現在のコミットから実験を作成します。未コミットの変更は含まれません。",
   "workspace.saveHint":
     "選択したファイルとソースのアーカイブをメイン作業領域に保存します。先に実験コードをコミットしてください。",
@@ -476,8 +484,7 @@ const ja: Messages = {
     "プロジェクト設定の形式が無効です。修正して開き直してください。設定は上書きされていません。",
   "project.deleteConfirmName":
     "完全なプロジェクトディレクトリ名を入力して、完全削除を確認してください。",
-  "project.deleteIncomplete":
-    "削除が完了していません：{message}。一部のファイルが削除された可能性があります。現在の下書きは保持されます。ディレクトリを確認してください。",
+  "project.deleteIncomplete": "ゴミ箱へ移動できませんでした：{message}",
   "project.deleteInvalidName": "ディレクトリ名が無効です。削除を拒否しました。",
   "project.deleteIsParent":
     "選択した親ディレクトリ自体は削除できません。プロジェクトの直接の親ディレクトリを選択してください。",
@@ -679,7 +686,7 @@ const ja: Messages = {
   "project.closeProject": "プロジェクトを閉じる",
 
   "project.closed": "プロジェクトを閉じました。",
-  "project.confirmDelete": "ディレクトリの完全削除を確認",
+  "project.confirmDelete": "ゴミ箱へ移動",
   "project.confirmNameAria": "削除するプロジェクトディレクトリ名の確認",
   "project.connectAsCopy": "独立したコピーとして接続",
   "project.connectionDesc":
@@ -691,19 +698,19 @@ const ja: Messages = {
   "project.createFile": "ファイルを作成",
   "project.createProject": "プロジェクトを作成",
   "project.currentName": "現在：{name}",
-  "project.deleteCurrentDirectory": "現在のディレクトリを削除…",
-  "project.deleteDirectory": "ディレクトリを削除…",
+  "project.deleteCurrentDirectory": "現在のプロジェクトファイルを削除…",
+  "project.deleteDirectory": "ファイルを削除…",
   "project.deleteForeverDesc":
-    "Permanently deletes this folder, including papers, attachments, build output and Git history. Check the path and type its name to continue.",
-  "project.deleteForeverHeading": "完全に削除：{name}",
-  "project.deletedPermanently": "ディレクトリを完全に削除しました{suffix}",
+    "ディレクトリ全体をゴミ箱へ移動します。パスを確認してディレクトリ名を入力してください。",
+  "project.deleteForeverHeading": "ゴミ箱へ移動：{name}",
+  "project.deletedPermanently": "ディレクトリをゴミ箱へ移動しました{suffix}",
 
   "project.dialogFileTitle": "新規プロジェクトファイル",
 
   "project.dialogNewTitle": "新規論文プロジェクト",
   "project.dialogOpenDesc": "プロジェクトフォルダーを選択してください。",
   "project.dialogOpenTitle": "論文プロジェクトを開く",
-  "project.discardIfCurrent": "現在のプロジェクトを削除する場合、その未保存の変更を破棄",
+  "project.discardIfCurrent": "このプロジェクトの未保存の変更を破棄",
   "project.discardOnSwitch": "切り替え時に未保存の変更を破棄",
   "project.discardUnsaved": "現在の未保存の変更を破棄",
   "project.dismissAria": "プロジェクト通知を閉じる",
@@ -741,7 +748,8 @@ const ja: Messages = {
   "project.localPathLabel": "選択した場所のローカルパス · ローカルツール初回接続時に一度だけ入力",
 
   "project.localPathPlaceholder": "選択した場所のローカル絶対パス",
-  "project.manageDesc": "履歴の削除ではファイルは残ります。フォルダーの削除は取り消せません。",
+  "project.manageDesc":
+    "現在の履歴を削除するとプロジェクトを閉じます。ファイルはゴミ箱へ移動します。",
   "project.manageMenu": "プロジェクトの管理 / 除去 / 削除…",
   "project.menuAria": "Envoi プロジェクトメニュー",
   "project.menuLabel": "プロジェクト / ファイル",

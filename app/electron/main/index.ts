@@ -4,6 +4,8 @@ import { libraryRequest, researchRoot } from "../../server/research-library.mjs"
 import { createExampleProject } from "./example-project.mjs"
 import { checkUpdate } from "./updates.mjs"
 import {
+  inspectProjectDeletion,
+  trashProjectDirectory,
   listWorkspaces,
   createWorkspace,
   workspaceTarget,
@@ -608,11 +610,30 @@ function registerIpc(): void {
     const base = await requireBoundRoot(root)
     await rename(await resolveInside(base, from), await resolveInside(base, to))
   })
-  handle("envoi:fs-remove-tree", async (_event, root: string) => {
+  const deletionProtected = [
+    app.getPath("home"),
+    app.getAppPath(),
+    dataDir,
+    app.getPath("userData"),
+  ]
+  handle("envoi:fs-inspect-deletion", async (_event, root: string) => {
+    await requireBoundRoot(root)
+    return inspectProjectDeletion(root, deletionProtected)
+  })
+  handle("envoi:fs-trash-project", async (_event, root: string, typedName: string) => {
     const base = await requireBoundRoot(root)
+    const plan = await inspectProjectDeletion(root, deletionProtected)
+    if (plan.blocked) throw Error(plan.blocked)
+    if (typedName !== plan.name) throw Error("请输入完整目录名确认。")
     await Promise.all(backends.map((backend) => backend.cancel(undefined, base)))
-    await rm(base, { recursive: true, force: true })
+    const result = await trashProjectDirectory(
+      root,
+      typedName,
+      (directory: string) => shell.trashItem(directory),
+      deletionProtected,
+    )
     unbindRoot(base)
+    return result
   })
   handle("envoi:asset-url", async (_event, root: string, relPath: string) => {
     const base = await requireBoundRoot(root)

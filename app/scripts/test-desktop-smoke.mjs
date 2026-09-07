@@ -304,30 +304,26 @@ try {
     await editor.inputValue().then((text) => text.includes("Unsaved text to discard")),
     false,
   )
+  await editor.fill("Unsaved draft pending removal")
   await reopened.evaluate(() => window.dispatchEvent(new Event("envoi:manage-projects")))
-  await reopened.getByRole("button", { name: "移除记录", exact: true }).click()
-  await reopened.getByRole("button", { name: "移除记录", exact: true }).click()
-  await reopened.waitForFunction(
-    () =>
-      !!document.querySelector('[data-testid="welcome-page"]') &&
-      !document.querySelector('textarea[aria-label="LaTeX 正文编辑器"]'),
+  await reopened.getByRole("button", { name: "移除并关闭", exact: true }).click()
+  await reopened.getByRole("button", { name: "取消", exact: true }).click()
+  assert.equal(
+    await reopened.locator('textarea[aria-label="LaTeX 正文编辑器"]').inputValue(),
+    "Unsaved draft pending removal",
   )
-  await reopened.getByRole("dialog").waitFor({ state: "hidden" })
-  await waitForAsync(reopened, async () => {
-    const recent = await window.envoi.dataGet("recent")
-    return recent?.value?.length === 0 && (await window.envoi.dataGet("roots"))?.value?.length === 0
-  })
-  assert.match(await readFile(path.join(root, "main.tex"), "utf8"), /Desktop test/)
-  await reopened.reload()
-  await reopened.waitForFunction(
-    () =>
-      !!document.querySelector('[data-testid="welcome-page"]') &&
-      !document.querySelector('textarea[aria-label="LaTeX 正文编辑器"]'),
+  await reopened.getByRole("button", { name: "移除并关闭", exact: true }).click()
+  await reopened.getByRole("button", { name: "放弃修改并移除", exact: true }).click()
+  await reopened.getByTestId("welcome-page").waitFor()
+  await waitForAsync(
+    reopened,
+    async () => (await window.envoi.dataGet("recent"))?.value?.length === 0,
   )
   const remainingRoots = (await reopened.evaluate(() => window.envoi.dataGet("roots"))).value
-  assert.equal(remainingRoots.length, 0, JSON.stringify({ root, remainingRoots }))
+  assert(remainingRoots.length > 0)
+  assert.match(await readFile(path.join(root, "main.tex"), "utf8"), /Desktop test/)
   console.log(
-    "PASS: discard-close, empty restart, clean reopen, remove-current without deleting disk files",
+    "PASS: cancel preserves draft; discard-and-remove closes current project and preserves files and locations",
   )
   const deleteRoot = path.join(temp, "delete-paper")
   await mkdir(path.join(deleteRoot, "chapters"), { recursive: true })
@@ -347,21 +343,31 @@ try {
   await reopened
     .getByRole("button", { name: "项目：delete-paper，打开项目管理", exact: true })
     .click()
-  await reopened.getByRole("button", { name: "删除当前目录…", exact: true }).click()
+  await reopened.getByRole("button", { name: "删除当前项目文件…", exact: true }).click()
   await reopened.getByRole("button", { name: "检查待删除目录", exact: true }).click()
   await reopened
     .getByRole("textbox", { name: "确认删除项目目录名", exact: true })
     .fill("delete-paper")
-  await reopened.getByRole("button", { name: "确认永久删除目录", exact: true }).click()
+  await instance.evaluate(
+    ({ shell }, destination) => {
+      shell.trashItem = async (source) => {
+        await process.getBuiltinModule("fs/promises").rename(source, destination)
+      }
+    },
+    path.join(temp, "trash-fixture"),
+  )
+  await reopened.getByRole("button", { name: "移到回收站", exact: true }).click()
   await reopened.waitForFunction(() => !!document.querySelector('[data-testid="welcome-page"]'))
   await assert.rejects(
     readFile(path.join(deleteRoot, "chapters", "paper.tex")),
     (error) => error.code === "ENOENT",
   )
-  assert.match(await readFile(path.join(root, "main.tex"), "utf8"), /Desktop test/)
-  console.log(
-    "PASS: verified permanent deletion of nested-entry fixture leaves other project untouched",
+  assert.equal(
+    await readFile(path.join(temp, "trash-fixture", "chapters", "paper.tex"), "utf8"),
+    "Temporary paper",
   )
+  assert.match(await readFile(path.join(root, "main.tex"), "utf8"), /Desktop test/)
+  console.log("PASS: verified trash operation leaves other project untouched")
   await reopened.getByTestId("welcome-page").waitFor()
   await reopened.evaluate(async (root) => {
     await window.envoi.dataPut("recent", [

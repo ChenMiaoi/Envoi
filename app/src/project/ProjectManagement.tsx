@@ -1,5 +1,5 @@
-import { nativeBasename, nativePathWithin } from "@/lib/nativePath"
-import { useEffect, useState } from "react"
+import { nativeBasename, nativePathWithin, nativePathKey } from "@/lib/nativePath"
+import { useEffect, useRef, useState } from "react"
 import { useT } from "@/i18n/useT"
 import { useProject } from "./context"
 import { dirtyFiles } from "@/lib/projectFiles"
@@ -29,17 +29,22 @@ export function ProjectManagement() {
   const { t } = useT()
   const { project, setProject, closeProject, saveAll, busy, saving, setBusy, setMessage } =
     useProject()
-  const [removing, setRemoving] = useState<RecentProject | null>(null),
-    [mode, setMode] = useState<"close" | "manage" | null>(null),
+  const [mode, setMode] = useState<"close" | "manage" | "remove" | null>(null),
+    [removing, setRemoving] = useState<RecentProject | null>(null),
+    [removalPending, setRemovalPending] = useState(false),
     [recent, setRecent] = useState<RecentProject[]>([]),
     [target, setTarget] = useState<string | null>(null),
     [plan, setPlan] = useState<DeletionTarget | null>(null),
     [typed, setTyped] = useState(""),
     [discard, setDiscard] = useState(false),
     [message, status] = useState("")
+  const removalLock = useRef(false)
+  const isCurrent = (entry: RecentProject) =>
+    !!entry.path &&
+    !!project.rootPath &&
+    nativePathKey(entry.path) === nativePathKey(project.rootPath)
   useEffect(() => {
     const close = () => {
-        setRemoving(null)
         setMode("close")
         setDiscard(false)
         status("")
@@ -71,16 +76,33 @@ export function ProjectManagement() {
     window.dispatchEvent(new Event("envoi:recent-updated"))
     status(t("project.removedRecent"))
   }
+  const finishRemoval = async (entry: RecentProject, action: "save" | "discard" | "close") => {
+    if (busy || saving || removalLock.current) return
+    removalLock.current = true
+    setRemovalPending(true)
+    status("")
+    try {
+      if (isCurrent(entry)) {
+        if (action === "save" && !(await saveAll())) return
+        await closeProject(action === "discard")
+      }
+      await forget(entry)
+      setRemoving(null)
+      setMode(null)
+    } catch (error) {
+      status((error as Error).message)
+    } finally {
+      removalLock.current = false
+      setRemovalPending(false)
+    }
+  }
   const remove = async (entry: RecentProject) => {
-    if (busy || saving) return
-    if (
-      (entry.path === project.rootPath || entry.projectId === project.id) &&
-      project.id !== "empty"
-    ) {
+    if (busy || saving || removalLock.current) return
+    if (isCurrent(entry)) {
       setRemoving(entry)
-      setMode("close")
-      setDiscard(false)
       status("")
+      if (dirtyFiles(project).length) setMode("remove")
+      else await finishRemoval(entry, "close")
       return
     }
     setBusy(true)
@@ -95,7 +117,6 @@ export function ProjectManagement() {
   const finishClose = async () => {
     try {
       await closeProject(discard)
-      if (removing) await forget(removing)
       setMode(null)
     } catch (error) {
       setMessage((error as Error).message)
@@ -112,8 +133,7 @@ export function ProjectManagement() {
         throw Error(t("project.errorUnsavedChanges"))
       const records = await matchingProjectRecords(plan.path),
         bindingKeys = await matchingGitBindings(plan.path)
-      await deleteVerifiedProject(plan, typed)
-      const warnings: string[] = []
+      const warnings = await deleteVerifiedProject(plan, typed)
       try {
         await forgetDeletedRecords(records)
       } catch {
@@ -158,7 +178,7 @@ export function ProjectManagement() {
     <Dialog
       open={mode !== null}
       onOpenChange={(open) => {
-        if (!open && !busy && !saving) {
+        if (!open && !busy && !saving && !removalPending) {
           setMode(null)
           setTarget(null)
           setPlan(null)
@@ -168,21 +188,54 @@ export function ProjectManagement() {
       <DialogContent className="max-h-[85vh] overflow-auto sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>
-            {mode === "close"
-              ? removing
-                ? t("project.removeRecord")
-                : t("command.project-close")
-              : t("command.project-manage")}
+            {mode === "remove"
+              ? t("project.removeAndClose")
+              : mode === "close"
+                ? t("command.project-close")
+                : t("command.project-manage")}
           </DialogTitle>
           <DialogDescription>
-            {mode === "close"
-              ? removing
-                ? t("project.manageDesc")
-                : t("project.closeDesc", { name: project.name })
-              : t("project.manageDesc")}
+            {mode === "remove"
+              ? removing?.name
+              : mode === "close"
+                ? t("project.closeDesc", { name: project.name })
+                : t("project.manageDesc")}
           </DialogDescription>
         </DialogHeader>
-        {mode === "close" ? (
+        {mode === "remove" && removing ? (
+          <>
+            <p className="text-sm">
+              {t("project.unsavedFilesCount", { count: dirtyFiles(project).length })}
+            </p>
+            <div className="flex flex-wrap justify-end gap-2">
+              <button
+                disabled={busy || saving || removalPending}
+                className="rounded border px-3 py-2 text-sm"
+                onClick={() => {
+                  setRemoving(null)
+                  setMode("manage")
+                  status("")
+                }}
+              >
+                {t("project.cancel")}
+              </button>
+              <button
+                disabled={busy || saving || removalPending}
+                className="rounded border px-3 py-2 text-sm text-danger"
+                onClick={() => void finishRemoval(removing, "discard")}
+              >
+                {t("project.discardAndRemove")}
+              </button>
+              <button
+                disabled={busy || saving || removalPending}
+                className="rounded bg-primary px-3 py-2 text-sm text-primary-foreground"
+                onClick={() => void finishRemoval(removing, "save")}
+              >
+                {t("project.saveAndRemove")}
+              </button>
+            </div>
+          </>
+        ) : mode === "close" ? (
           <>
             {dirtyFiles(project).length > 0 && (
               <p className="text-sm">
@@ -213,16 +266,18 @@ export function ProjectManagement() {
               onClick={() => void finishClose()}
               className="rounded bg-primary px-3 py-2 text-sm text-primary-foreground disabled:opacity-40"
             >
-              {removing ? t("project.removeRecord") : t("project.closeProject")}
+              {t("project.closeProject")}
             </button>
           </>
         ) : (
           <>
             <div className="flex items-center justify-between border-b border-border pb-3">
-              <span className="text-sm">{t("project.currentName", { name: project.name })}</span>
+              <span className="min-w-0 flex-1 truncate text-sm" title={project.name}>
+                {t("project.currentName", { name: project.name })}
+              </span>
               <button
                 disabled={busy || saving || !project.rootPath}
-                className="text-xs text-danger disabled:opacity-40"
+                className="shrink-0 text-xs text-danger disabled:opacity-40"
                 onClick={() => project.rootPath && choose(project.rootPath)}
               >
                 {t("project.deleteCurrentDirectory")}
@@ -235,13 +290,21 @@ export function ProjectManagement() {
                     key={entry.id}
                     className="flex items-center gap-3 rounded border border-border px-3 py-2"
                   >
-                    <span className="min-w-0 flex-1 truncate text-sm">{entry.name}</span>
+                    <span className="min-w-0 flex-1 text-sm">
+                      <span className="block truncate">{entry.name}</span>
+                      <span
+                        className="block truncate text-xs text-muted-foreground"
+                        title={entry.path}
+                      >
+                        {entry.path}
+                      </span>
+                    </span>
                     <button
                       disabled={busy || saving}
                       className="text-xs text-primary"
                       onClick={() => void remove(entry)}
                     >
-                      {t("project.removeRecord")}
+                      {isCurrent(entry) ? t("project.removeAndClose") : t("project.removeRecord")}
                     </button>
                     <button
                       disabled={busy || saving}
@@ -260,7 +323,7 @@ export function ProjectManagement() {
             </div>
             {target && (
               <div className="space-y-3 rounded border border-danger/40 p-4">
-                <h3 className="text-sm font-medium">
+                <h3 className="break-all text-sm font-medium">
                   {t("project.deleteForeverHeading", { name: nativeBasename(target) })}
                 </h3>
                 <p className="text-xs text-muted-foreground">{t("project.deleteForeverDesc")}</p>
@@ -268,6 +331,7 @@ export function ProjectManagement() {
                   disabled={busy || saving}
                   className="text-sm text-primary"
                   onClick={async () => {
+                    setBusy(true)
                     try {
                       setPlan(await verifyDeletionTarget(target))
                       status("")
@@ -278,6 +342,8 @@ export function ProjectManagement() {
                           ? t("project.selectionCancelled")
                           : (error as Error).message,
                       )
+                    } finally {
+                      setBusy(false)
                     }
                   }}
                 >
@@ -289,6 +355,21 @@ export function ProjectManagement() {
                       {t("project.verifiedDirectory", { label: plan.label })}
                     </p>
                     <p className="text-xs text-muted-foreground">{t("project.verifiedNote")}</p>
+                    {plan.blocked && (
+                      <p role="alert" className="text-sm text-warning">
+                        {plan.blocked}
+                      </p>
+                    )}
+                    {plan.related?.map((path) => (
+                      <p key={path} className="break-all text-xs text-muted-foreground">
+                        {path}
+                      </p>
+                    ))}
+                    {plan.kind === "worktree" && (
+                      <p className="text-xs text-muted-foreground">
+                        {t("project.trashWorktreeHint")}
+                      </p>
+                    )}
                     <input
                       aria-label={t("project.confirmNameAria")}
                       value={typed}
@@ -296,18 +377,29 @@ export function ProjectManagement() {
                       placeholder={t("project.typeNamePlaceholder", { name: plan.name })}
                       className="w-full rounded border border-input bg-background p-2 text-sm"
                     />
-                    {dirtyFiles(project).length > 0 && (
-                      <label className="flex gap-2 text-xs">
-                        <input
-                          type="checkbox"
-                          checked={discard}
-                          onChange={(e) => setDiscard(e.target.checked)}
-                        />
-                        {t("project.discardIfCurrent")}
-                      </label>
-                    )}
+                    {project.rootPath &&
+                      nativePathWithin(project.rootPath, plan.path) &&
+                      dirtyFiles(project).length > 0 && (
+                        <label className="flex gap-2 text-xs">
+                          <input
+                            type="checkbox"
+                            checked={discard}
+                            onChange={(e) => setDiscard(e.target.checked)}
+                          />
+                          {t("project.discardIfCurrent")}
+                        </label>
+                      )}
                     <button
-                      disabled={busy || saving || typed !== plan.name}
+                      disabled={
+                        busy ||
+                        saving ||
+                        !!plan.blocked ||
+                        typed !== plan.name ||
+                        (!!project.rootPath &&
+                          nativePathWithin(project.rootPath, plan.path) &&
+                          dirtyFiles(project).length > 0 &&
+                          !discard)
+                      }
                       className="rounded bg-red-500 px-3 py-2 text-sm text-white disabled:opacity-40"
                       onClick={() => void destroy()}
                     >

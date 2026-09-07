@@ -316,3 +316,106 @@ export async function researchWorkspaceRoot(root) {
   })
   return canonical
 }
+
+function deletionContains(parent, child) {
+  const relative = path.relative(parent, child)
+  return (
+    relative === "" ||
+    (!path.isAbsolute(relative) && relative !== ".." && !relative.startsWith(".." + path.sep))
+  )
+}
+export async function inspectProjectDeletion(directory, protectedDirectories = []) {
+  if ((await lstat(directory)).isSymbolicLink()) throw Error("请打开目录的真实位置后再删除。")
+  const root = await realpath(directory)
+  if (
+    root === path.parse(root).root ||
+    protectedDirectories.some((p) => deletionContains(root, path.resolve(p)))
+  )
+    throw Error("不能删除系统、应用或应用数据所在目录。")
+  const plan = {
+    path: root,
+    name: path.basename(root),
+    label: root,
+    kind: "project",
+    related: [],
+    blocked: undefined,
+  }
+  async function inspect(folder) {
+    const children = await readdir(folder, { withFileTypes: true })
+    if (children.some((entry) => entry.name === ".git")) {
+      const repo = await repository(folder)
+      const items = await entries(folder)
+      const outside = items
+        .map((item) => path.resolve(item.worktree))
+        .filter((p) => !deletionContains(root, p))
+      if (deletionContains(root, repo.common) && outside.length) {
+        plan.related.push(...outside)
+        plan.blocked = "此项目仍有关联实验工作区，请先删除这些工作区后再移除主项目。"
+      } else if (!deletionContains(root, repo.common)) {
+        if (folder !== root) {
+          plan.blocked = "目录中包含关联其他仓库的工作区，请先单独处理该工作区。"
+          plan.related.push(folder)
+        } else {
+          plan.kind = "worktree"
+          if (path.resolve(items[0]?.worktree ?? root) === root)
+            plan.blocked = "该目录使用外部 Git 元数据，请先解除子模块或外部仓库关联。"
+          plan.related.push(...outside)
+          if (items.some((item) => path.resolve(item.worktree) === root && item.locked))
+            plan.blocked = "该实验工作区已锁定，请先解锁后再删除。"
+        }
+      }
+    }
+    for (const entry of children) {
+      if (entry.name !== ".git" && entry.isDirectory() && !entry.isSymbolicLink())
+        await inspect(path.join(folder, entry.name))
+    }
+  }
+  await inspect(root)
+  plan.related = [...new Set(plan.related)]
+  return plan
+}
+export async function trashProjectDirectory(
+  directory,
+  typedName,
+  trash,
+  protectedDirectories = [],
+) {
+  const plan = await inspectProjectDeletion(directory, protectedDirectories)
+  if (typedName !== plan.name) throw Error("请输入完整目录名确认。")
+  if (plan.blocked) throw Error(plan.blocked)
+  const repo = await lstat(path.join(plan.path, ".git")).then(
+    () => repository(plan.path),
+    (error) => {
+      if (error.code !== "ENOENT") throw error
+      return null
+    },
+  )
+  const perform = async () => {
+    const current = await inspectProjectDeletion(directory, protectedDirectories)
+    if (current.blocked || current.kind !== plan.kind)
+      throw Error(current.blocked || "工作区状态已改变，请重新检查。")
+    await trash(plan.path)
+    const warnings = []
+    if (repo && plan.kind === "worktree") {
+      try {
+        // The files are already in the trash. Remove only this worktree's Git entry; keep its branch.
+        await git(path.dirname(repo.common), [
+          "--git-dir",
+          repo.common,
+          "worktree",
+          "remove",
+          plan.path,
+        ])
+        const state = await jsonFile(repo.file, null)
+        if (state?.experiments) {
+          delete state.experiments[plan.path]
+          await atomicJson(repo.file, state)
+        }
+      } catch {
+        warnings.push("文件已移到回收站，但 Git 工作区记录清理失败。请在主项目中检查工作区。")
+      }
+    }
+    return { warnings }
+  }
+  return repo ? withDataLock(repo.file, perform) : perform()
+}

@@ -1,6 +1,13 @@
 /** 由 scripts/i18n-traditional.mjs 从 zh-CN.ts 自动生成（OpenCC）。术语覆盖请修改该脚本，勿手改本文件。 */
 import type { Messages } from "./zh-CN"
 const zhTW: Messages = {
+  "project.removeAndClose": "移除並關閉",
+  "project.saveAndRemove": "儲存並移除",
+  "project.discardAndRemove": "放棄修改並移除",
+  "project.restartForTrash": "應用已更新，請儲存修改並完全退出後重新開啟，再刪除專案。",
+  "project.trashWorktreeHint":
+    "僅移除這個實驗工作區，保留分支和已保存結果。從回收站恢復後需重新關聯 Git 工作區。",
+  "project.deletionChanged": "目錄或工作區狀態已改變，請重新檢查。",
   "workspace.createHint": "從當前提交創建實驗，未提交修改不會帶入。",
   "workspace.saveHint": "將所選文件和源碼歸檔保存到主工作區。請先提交實驗代碼。",
   "workspace.created": "實驗已創建。",
@@ -437,8 +444,7 @@ const zhTW: Messages = {
   "project.closeUnsaved": "當前專案有未儲存修改，請先儲存或明確放棄修改。",
   "project.configInvalid": "專案配置格式無效，請修復後重新開啟；未覆蓋配置。",
   "project.deleteConfirmName": "請輸入完整專案目錄名稱確認永久刪除。",
-  "project.deleteIncomplete":
-    "刪除未完成：{message}。可能已有部分檔案被移除；當前草稿仍保留，請檢查目錄。",
+  "project.deleteIncomplete": "移到回收站失敗：{message}",
   "project.deleteInvalidName": "目錄名稱無效，拒絕刪除。",
   "project.deleteIsParent": "不能刪除所選父目錄本身，請選擇專案的直接父目錄。",
   "project.deleteMoved": "專案目錄已移動或被替換，未刪除。",
@@ -610,7 +616,7 @@ const zhTW: Messages = {
   "project.closeProject": "關閉專案",
 
   "project.closed": "項目已關閉。",
-  "project.confirmDelete": "確認永久刪除目錄",
+  "project.confirmDelete": "移到回收站",
   "project.confirmNameAria": "確認刪除專案目錄名",
   "project.connectAsCopy": "作為獨立副本連線",
   "project.connectionDesc":
@@ -622,19 +628,18 @@ const zhTW: Messages = {
   "project.createFile": "建立檔案",
   "project.createProject": "建立專案",
   "project.currentName": "當前：{name}",
-  "project.deleteCurrentDirectory": "刪除當前目錄…",
-  "project.deleteDirectory": "刪除目錄…",
-  "project.deleteForeverDesc":
-    "永久刪除此目錄中的論文、附件、編譯產物和 Git 歷史。請核對路徑並輸入目錄名。",
-  "project.deleteForeverHeading": "永久刪除：{name}",
-  "project.deletedPermanently": "目錄已永久刪除{suffix}",
+  "project.deleteCurrentDirectory": "刪除當前項目文件…",
+  "project.deleteDirectory": "刪除文件…",
+  "project.deleteForeverDesc": "將整個目錄移到回收站。請核對路徑並輸入目錄名。",
+  "project.deleteForeverHeading": "移到回收站：{name}",
+  "project.deletedPermanently": "目錄已移到回收站{suffix}",
 
   "project.dialogFileTitle": "新建專案檔案",
 
   "project.dialogNewTitle": "新建論文專案",
   "project.dialogOpenDesc": "選擇項目文件夾。",
   "project.dialogOpenTitle": "開啟論文專案",
-  "project.discardIfCurrent": "若刪除的是當前專案，放棄其未儲存修改",
+  "project.discardIfCurrent": "放棄此項目未保存的修改",
   "project.discardOnSwitch": "切換時放棄未儲存修改",
   "project.discardUnsaved": "放棄當前未儲存修改",
   "project.dismissAria": "關閉專案提示",
@@ -664,7 +669,7 @@ const zhTW: Messages = {
   "project.localPathLabel": "所選位置的本地路徑 · 首次連線本機工具時填寫一次",
 
   "project.localPathPlaceholder": "已選擇位置的本機絕對路徑",
-  "project.manageDesc": "移除記錄不會刪除文件。刪除目錄無法撤銷。",
+  "project.manageDesc": "移除目前記錄會關閉專案；刪除檔案會移到資源回收筒。",
   "project.manageMenu": "管理專案 / 移除 / 刪除…",
   "project.menuAria": "Envoi 專案選單",
   "project.menuLabel": "專案 / 檔案",

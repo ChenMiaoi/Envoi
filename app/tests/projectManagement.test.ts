@@ -25,10 +25,18 @@ test("native deletion checks the selected path and typed name without asking for
     if (removed) throw Error("Missing")
     return { files: [{ path: "main.tex", kind: "latex" }], directories: [] }
   }
-  window.envoi!.fsRemoveTree = async (root) => {
+  window.envoi!.fsTrashProject = async (root) => {
     assert.equal(root, "/papers/paper")
     removed = true
+    return { warnings: [] }
   }
+  window.envoi!.fsInspectDeletion = async (path) => ({
+    path,
+    name: "paper",
+    label: path,
+    kind: "project",
+    related: [],
+  })
   const plan = await verifyDeletionTarget("/papers/paper")
   await assert.rejects(deleteVerifiedProject(plan, "wrong"), /完整/)
   assert(!removed)
@@ -41,31 +49,55 @@ test("native deletion rechecks contents and propagates disk failures", async () 
     files: [{ path: "main.tex", kind: "latex" }],
     directories: [],
   })
+  window.envoi!.fsInspectDeletion = async (path) => ({
+    path,
+    name: "paper",
+    label: path,
+    kind: "project",
+    related: [],
+  })
   const plan = await verifyDeletionTarget("/papers/paper")
-  window.envoi!.fsList = async () => ({ files: [], directories: [] })
-  await assert.rejects(deleteVerifiedProject(plan, "paper"), /未找到可验证/)
+  window.envoi!.fsInspectDeletion = async (path) => ({
+    path,
+    name: "paper",
+    label: path,
+    kind: "project",
+    related: [],
+    blocked: "关联工作区",
+  })
+  await assert.rejects(deleteVerifiedProject(plan, "paper"), /关联工作区/)
+  window.envoi!.fsInspectDeletion = async (path) => ({
+    path,
+    name: "paper",
+    label: path,
+    kind: "project",
+    related: [],
+  })
   window.envoi!.fsList = async () => ({
     files: [{ path: "main.tex", kind: "latex" }],
     directories: [],
   })
-  window.envoi!.fsRemoveTree = async () => {
+  window.envoi!.fsTrashProject = async () => {
     throw Error("Disk failure")
   }
   await assert.rejects(deleteVerifiedProject(plan, "paper"), /Disk failure/)
 })
 
-test("deletion recognizes hidden metadata pointing to a nested TeX entry", async () => {
+test("deletion rejects a changed workspace and preserves cleanup warnings after trash", async () => {
   installDesktopFixture()
-  window.envoi!.fsList = async () => ({
-    files: [{ path: "chapters/paper.tex", kind: "latex" }],
-    directories: ["chapters"],
-  })
-  window.envoi!.fsRead = async (_root, path) => {
-    if (path !== ".envoi/project.json") throw Error("Missing")
-    return { text: JSON.stringify({ main: "chapters/paper.tex" }) }
+  const plan = {
+    path: "/papers/code",
+    name: "code",
+    label: "/papers/code",
+    kind: "project" as const,
   }
-  assert.equal((await verifyDeletionTarget("/papers/nested")).name, "nested")
+  window.envoi!.fsInspectDeletion = async () => ({ ...plan, kind: "worktree", related: [] })
+  await assert.rejects(deleteVerifiedProject(plan, "code"), /已改变/)
+  window.envoi!.fsInspectDeletion = async () => ({ ...plan, related: [] })
+  window.envoi!.fsTrashProject = async () => ({ warnings: ["Git cleanup failed"] })
+  assert.deepEqual(await deleteVerifiedProject(plan, "code"), ["Git cleanup failed"])
 })
+
 test("discarding closes the workspace and does not restore discarded project drafts", async () => {
   installDesktopFixture()
   const { closeProjectSession, restoreSession, restoreProjectSession, saveSession } =
@@ -84,7 +116,7 @@ test("discarding closes the workspace and does not restore discarded project dra
   })
   assert.equal(reopened.files[0].text, "disk")
 })
-test("removing a recent project clears its exact location shortcut but preserves parent and files", async () => {
+test("removing a recent project preserves saved locations and files", async () => {
   installDesktopFixture()
   const { forgetRecentProject, recentProjects, authorizedRoots } =
     await import("../src/lib/recentProjects")
@@ -97,12 +129,11 @@ test("removing a recent project clears its exact location shortcut but preserves
   ])
   window.envoi!.canonicalDirectory = async (path) =>
     path === "/alias/paper" ? "/papers/paper" : path
+  const rootsBefore = await window.envoi!.dataGet("roots")
   await forgetRecentProject("removed")
+  assert.deepEqual(await window.envoi!.dataGet("roots"), rootsBefore)
   assert.equal((await recentProjects()).length, 0)
-  assert.deepEqual(
-    (await authorizedRoots()).map((item) => item.id),
-    ["parent"],
-  )
+  assert.deepEqual((await authorizedRoots()).map((item) => item.id).sort(), ["parent", "shortcut"])
 })
 
 test("failed startup restore returns home and preserves recoverable drafts", async () => {
@@ -130,4 +161,24 @@ test("failed startup restore returns home and preserves recoverable drafts", asy
   assert.equal(result.project?.id, "empty")
   assert.equal(result.recoverable?.files[0].text, "recover me")
   assert.ok(result.warning)
+})
+
+test("old desktop bridges cannot invoke legacy permanent deletion", async () => {
+  installDesktopFixture()
+  let legacyCalled = false
+  Object.assign(window.envoi!, {
+    fsRemoveTree: async () => {
+      legacyCalled = true
+    },
+  })
+  await assert.rejects(verifyDeletionTarget("/papers/paper"), /完全退出/)
+  await assert.rejects(
+    deleteVerifiedProject({ path: "/papers/paper", name: "paper", label: "paper" }, "paper"),
+    /完全退出/,
+  )
+  assert.equal(legacyCalled, false)
+  window.envoi!.fsInspectDeletion = async () => {
+    throw Error("No handler registered for 'envoi:fs-inspect-deletion'")
+  }
+  await assert.rejects(verifyDeletionTarget("/papers/paper"), /完全退出/)
 })

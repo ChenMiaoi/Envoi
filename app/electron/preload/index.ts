@@ -9,7 +9,7 @@ function invoke<T>(channel: string, ...args: unknown[]): Promise<T> {
 // pickDirectory bindProject compilerRuntime compile cancelCompile lint tools configureTools
 // gitRuntime gitInit gitStatus gitLog gitShow dataGet dataPut
 // agentStatus agentRequest agentChat onAgentEvent
-// fsList fsRead fsWrite fsWriteFiles fsMkdir fsRemove fsRename fsRemoveTree assetUrl
+// fsList fsRead fsWrite fsWriteFiles fsMkdir fsRemove fsRename fsTrashProject assetUrl
 const bridge: EnvoiBridge = {
   diagnosticsInfo: () => invoke("envoi:diagnostics-info"),
   diagnosticsOpen: () => invoke("envoi:diagnostics-open"),
@@ -73,7 +73,8 @@ const bridge: EnvoiBridge = {
   fsMkdir: (root, relPath) => invoke("envoi:fs-mkdir", root, relPath),
   fsRemove: (root, relPath) => invoke("envoi:fs-remove", root, relPath),
   fsRename: (root, from, to) => invoke("envoi:fs-rename", root, from, to),
-  fsRemoveTree: (root) => invoke("envoi:fs-remove-tree", root),
+  fsInspectDeletion: (root) => invoke("envoi:fs-inspect-deletion", root),
+  fsTrashProject: (root, typedName) => invoke("envoi:fs-trash-project", root, typedName),
   assetUrl: (root, relPath) => invoke("envoi:asset-url", root, relPath),
 }
 
