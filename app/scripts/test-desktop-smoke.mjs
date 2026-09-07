@@ -101,7 +101,7 @@ try {
  assert.equal(await instance.evaluate(()=>globalThis.trustPrompts),0);
  console.log('PASS: persisted trust across restart');
  await reopened.waitForFunction(()=>document.body.innerText.includes('main.tex'));
- const editor=reopened.locator('textarea').first();
+ const editor=reopened.getByRole('textbox',{name:'LaTeX 正文编辑器',exact:true});
  await editor.fill('Unsaved text to discard');
  await reopened.evaluate(()=>{location.hash='/settings/global/general';});
  await reopened.waitForFunction(()=>location.hash.includes('/settings/global/general'));
@@ -115,7 +115,8 @@ try {
  await reopened.waitForFunction(()=>!!document.querySelector('[data-testid="welcome-page"]')&&!document.querySelector('textarea[aria-label="LaTeX 正文编辑器"]'));
  await reopened.getByTestId('welcome-page').getByRole('button',{name:/^paper /}).click();
  await reopened.waitForFunction(()=>document.body.innerText.includes('main.tex'));
- assert.equal(await reopened.locator('textarea').first().inputValue().then(text=>text.includes('Unsaved text to discard')),false);
+ await reopened.evaluate(()=>location.hash='/writer');
+ assert.equal(await editor.inputValue().then(text=>text.includes('Unsaved text to discard')),false);
  await reopened.evaluate(()=>window.dispatchEvent(new Event('envoi:manage-projects')));
  await reopened.getByRole('button',{name:'移除记录',exact:true}).click();
  await reopened.getByRole('button',{name:'移除记录',exact:true}).click();
