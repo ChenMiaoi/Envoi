@@ -10,6 +10,8 @@
     "setup": "npm --prefix app ci",
     "dev": "npm --prefix app run dev",
     "build": "npm --prefix app run build",
+    "format": "npm --prefix app run format",
+    "format:check": "npm --prefix app run format:check",
     "test": "npm --prefix app test",
     "test:ai": "npm --prefix app run test:ai",
     "test:local": "npm --prefix app run test:local",

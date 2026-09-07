@@ -1,22 +1,18 @@
-import { BookOpenText, PenLine, LibraryBig, Settings, History } from "lucide-react";
-import {NavLink} from "react-router";
-import {viewPaths,type ViewId} from "@/navigation/routes";
-import { cn } from "@/lib/utils";
-import {useT} from "@/i18n/useT";
+import { BookOpenText, PenLine, LibraryBig, Settings, History } from "lucide-react"
+import { NavLink } from "react-router"
+import { viewPaths, type ViewId } from "@/navigation/routes"
+import { cn } from "@/lib/utils"
+import { useT } from "@/i18n/useT"
 
 const items: { id: ViewId; icon: typeof BookOpenText }[] = [
   { id: "reader", icon: BookOpenText },
   { id: "writer", icon: PenLine },
   { id: "library", icon: LibraryBig },
   { id: "history", icon: History },
-];
+]
 
-export function ActivityBar({
-  view,
-}: {
-  view?: ViewId;
-}) {
-  const {t}=useT();
+export function ActivityBar({ view }: { view?: ViewId }) {
+  const { t } = useT()
   return (
     <div className="flex h-full w-12 flex-col items-center border-r border-border bg-card py-2">
       {items.slice(0, 4).map((it) => (
@@ -52,5 +48,5 @@ export function ActivityBar({
         <Settings className="h-[18px] w-[18px]" strokeWidth={1.8} />
       </NavLink>
     </div>
-  );
+  )
 }

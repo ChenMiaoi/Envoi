@@ -4,7 +4,7 @@ This file exercises every styled element of the reading preview: headings, empha
 
 ## Typography
 
-Body text sits at a softened foreground tone for long reading sessions. **Bold phrases pick up the theme's warm accent**, *italic stays neutral*, and ~~strikethrough~~ is muted. Inline code like `compile(root)` renders as a bordered chip, and links such as the [ACM acmart class](https://www.ctan.org/pkg/acmart) carry a translucent underline that solidifies on hover.
+Body text sits at a softened foreground tone for long reading sessions. **Bold phrases pick up the theme's warm accent**, _italic stays neutral_, and ~~strikethrough~~ is muted. Inline code like `compile(root)` renders as a bordered chip, and links such as the [ACM acmart class](https://www.ctan.org/pkg/acmart) carry a translucent underline that solidifies on hover.
 
 ### Third-level heading
 
@@ -56,11 +56,11 @@ Used sparingly for sub-subsections.
 
 ## Tables
 
-| Model | Seq len | Heads | Throughput | Accuracy |
-|-------|--------:|------:|-----------:|---------:|
-| Tiny  | 512     | 8     | 41.2k tok/s | 71.3%   |
-| Small | 1024    | 12    | 18.7k tok/s | 74.8%   |
-| Base  | 2048    | 16    | 9.4k tok/s  | 79.1%   |
+| Model | Seq len | Heads |  Throughput | Accuracy |
+| ----- | ------: | ----: | ----------: | -------: |
+| Tiny  |     512 |     8 | 41.2k tok/s |    71.3% |
+| Small |    1024 |    12 | 18.7k tok/s |    74.8% |
+| Base  |    2048 |    16 |  9.4k tok/s |    79.1% |
 
 Tables render with a rounded frame, tinted header row, and zebra striping.
 
@@ -87,4 +87,4 @@ $$
 
 ---
 
-*End of showcase. Delete nothing; this file is the visual regression reference for the prose layer.*
+_End of showcase. Delete nothing; this file is the visual regression reference for the prose layer._

@@ -11,7 +11,10 @@ export default defineConfig({
     build: {
       outDir: "dist/main",
       rollupOptions: {
-        input: { index: path.resolve(import.meta.dirname, "electron/main/index.ts"), backend: path.resolve(import.meta.dirname, "electron/main/backend.mjs") },
+        input: {
+          index: path.resolve(import.meta.dirname, "electron/main/index.ts"),
+          backend: path.resolve(import.meta.dirname, "electron/main/backend.mjs"),
+        },
       },
     },
   },

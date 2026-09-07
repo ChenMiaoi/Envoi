@@ -1,10 +1,31 @@
-export function gitRuntime(): { available: boolean; version?: string; error?: string };
-export function gitInitAt(root: string): Promise<unknown>;
-export function gitStatusAt(root: string): Promise<unknown>;
-export function gitLogAt(root: string, extra?: Record<string, unknown>): Promise<unknown>;
-export function gitShowAt(root: string, extra: Record<string, unknown>): Promise<unknown>;
-export function initializeBoundGit(input: { directory: string; proof: string; proofKind?: string }): Promise<unknown>;
-export function readBoundGitStatus(input: { directory: string; proof: string; proofKind?: string }): Promise<unknown>;
-export function readBoundGitLog(input: { directory: string; proof: string; proofKind?: string }): Promise<unknown>;
-export function readBoundGitShow(input: { directory: string; proof: string; proofKind?: string; commit?: string }): Promise<unknown>;
-export function verifyProjectBinding(input: { directory: string; proof: string; proofKind?: string }): Promise<{ ok: boolean }>;
+export function gitRuntime(): { available: boolean; version?: string; error?: string }
+export function gitInitAt(root: string): Promise<unknown>
+export function gitStatusAt(root: string): Promise<unknown>
+export function gitLogAt(root: string, extra?: Record<string, unknown>): Promise<unknown>
+export function gitShowAt(root: string, extra: Record<string, unknown>): Promise<unknown>
+export function initializeBoundGit(input: {
+  directory: string
+  proof: string
+  proofKind?: string
+}): Promise<unknown>
+export function readBoundGitStatus(input: {
+  directory: string
+  proof: string
+  proofKind?: string
+}): Promise<unknown>
+export function readBoundGitLog(input: {
+  directory: string
+  proof: string
+  proofKind?: string
+}): Promise<unknown>
+export function readBoundGitShow(input: {
+  directory: string
+  proof: string
+  proofKind?: string
+  commit?: string
+}): Promise<unknown>
+export function verifyProjectBinding(input: {
+  directory: string
+  proof: string
+  proofKind?: string
+}): Promise<{ ok: boolean }>

@@ -14,5 +14,5 @@ export function BrandMark({ className }: { className?: string }) {
         d="M2.5 20.3c3.9 1.1 8.9.7 12.6-1.4 1.9-1.1 3.5-2.6 4.7-4.4-1 2-2.6 3.7-4.5 4.9-3.8 2.4-8.9 2.7-12.8.9z"
       />
     </svg>
-  );
+  )
 }

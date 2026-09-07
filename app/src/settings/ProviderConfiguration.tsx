@@ -1,32 +1,363 @@
-import { useEffect, useRef, useState } from 'react';
-import { ExternalLink, KeyRound, LogIn } from 'lucide-react';
-import { agentRequest, type AgentStatus } from '@/lib/agentClient';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { providerHelp } from './providerHelp';
-import {useT} from '@/i18n/useT';
+import { useEffect, useRef, useState } from "react"
+import { ExternalLink, KeyRound, LogIn } from "lucide-react"
+import { agentRequest, type AgentStatus } from "@/lib/agentClient"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { providerHelp } from "./providerHelp"
+import { useT } from "@/i18n/useT"
 
-type Provider = AgentStatus['providers'][number];
-interface OAuthJob { id:string; state:string; url?:string; instructions?:string; error?:string; prompt?:{message:string;placeholder?:string;options?:{id:string;label:string}[]} }
-const field='w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:ring-1 focus-visible:ring-ring';
-export function ProviderConfiguration({provider,onSaved}:{provider:Provider;onSaved:()=>void}) {
-  const [key,setKey]=useState(''),[mode,setMode]=useState(provider.oauth?'login':'key'),[busy,setBusy]=useState(false),[message,setMessage]=useState(''),[job,setJob]=useState<OAuthJob|null>(null),[answer,setAnswer]=useState('');
-  const active=useRef(true),jobId=useRef<string|undefined>(undefined),saved=useRef(onSaved);saved.current=onSaved;
-  const {t}=useT();
-  const help=providerHelp[provider.id];
-  const keySupported=provider.apiKey!==false;
-  useEffect(()=>{active.current=true;return()=>{active.current=false;if(jobId.current)void agentRequest('oauth/cancel',{id:jobId.current}).catch(()=>{});};},[]);
-  useEffect(()=>{if(!job)return;if(job.state==='done'){if(jobId.current){jobId.current=undefined;saved.current();}return;}if(['failed','cancelled'].includes(job.state)){jobId.current=undefined;setMessage(job.error||t('settings.provider.loginCancelled'));return;}const timer=setInterval(()=>{void agentRequest<OAuthJob>('oauth/status',{id:job.id}).then(result=>{if(!active.current)return;setJob(result);}).catch(()=>{if(active.current)setMessage(t('settings.provider.loginStatusUnavailable'));});},1200);return()=>clearInterval(timer);},[job, t]);
-  async function saveKey(){setBusy(true);setMessage('');try{const result=await agentRequest<{validation?:{message:string}}>('credential',{provider:provider.id,key});if(active.current){setKey('');setMessage(result.validation?.message??t('settings.ai.saved'));saved.current();}}catch(error){if(active.current)setMessage((error as Error).message);}finally{if(active.current)setBusy(false);}}
-  async function login(){setBusy(true);setMessage('');try{const result=await agentRequest<{id:string}>('oauth/start',{provider:provider.id});if(!active.current){void agentRequest('oauth/cancel',{id:result.id});return;}jobId.current=result.id;setJob({id:result.id,state:'starting'});}catch(error){if(active.current)setMessage((error as Error).message);}finally{if(active.current)setBusy(false);}}
-  function openAuthorization(){if(!job?.url)return;try{const url=new URL(job.url);if(!['https:','http:'].includes(url.protocol))throw Error();const popup=window.open(url.href,'_blank');if(popup){popup.opener=null;setMessage(t('settings.provider.completeLogin'));}else setMessage(t('settings.provider.popupBlocked'));}catch{setMessage(t('settings.provider.invalidAuthUrl'));}}
-  return <div className="space-y-4">
-    {provider.oauth&&keySupported&&<div className="flex gap-1 rounded-lg bg-muted/50 p-1"><button onClick={()=>setMode('login')} className={`flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-1.5 text-xs ${mode==='login'?'bg-background text-foreground':'text-muted-foreground'}`}><LogIn className="h-3.5 w-3.5" />{t('settings.provider.login')}</button><button onClick={()=>{setMode('key');if(jobId.current)void agentRequest('oauth/cancel',{id:jobId.current}).catch(()=>{});}} className={`flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-1.5 text-xs ${mode==='key'?'bg-background text-foreground':'text-muted-foreground'}`}><KeyRound className="h-3.5 w-3.5" />API Key</button></div>}
-    {mode==='key'&&keySupported?<form onSubmit={event=>{event.preventDefault();void saveKey();}} className="space-y-3"><div className="flex items-center justify-between"><label htmlFor={`key-${provider.id}`} className="text-xs text-muted-foreground">API Key</label>{help&&<a href={help.url} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">{t('settings.provider.getApiKey')}<ExternalLink className="h-3 w-3" /></a>}</div><input id={`key-${provider.id}`} autoFocus type="password" autoComplete="off" spellCheck={false} value={key} onChange={event=>setKey(event.target.value)} className={field} placeholder={t('settings.provider.pasteApiKey')} /><button disabled={busy||!key.trim()} type="submit" className="w-full rounded-lg bg-primary px-3 py-2 text-sm text-primary-foreground disabled:opacity-40">{busy?t('settings.provider.checking'):t('common.save')}</button></form>:provider.oauth?<div className="space-y-3">{!job||['done','failed','cancelled'].includes(job.state)?<button disabled={busy} onClick={()=>void login()} className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-3 py-2 text-sm text-primary-foreground disabled:opacity-40"><LogIn className="h-4 w-4" />{t('settings.provider.loginWith',{name:provider.name||provider.id})}</button>:<>{job.url&&<><button onClick={openAuthorization} className="w-full rounded-lg bg-primary px-3 py-2 text-sm text-primary-foreground">{t('settings.provider.openAuthPage')}</button><a href={job.url} target="_blank" rel="noreferrer" className="block text-xs text-muted-foreground">{t('settings.provider.authLink')}</a></>}{job.instructions&&<p className="break-words text-xs text-muted-foreground">{job.instructions}</p>}{job.prompt&&<form className="space-y-2" onSubmit={event=>{event.preventDefault();void agentRequest<OAuthJob>('oauth/answer',{id:job.id,answer}).then(result=>{setAnswer('');setJob(result);}).catch(error=>setMessage(error.message));}}><label className="block text-xs text-muted-foreground">{job.prompt.message}</label>{job.prompt.options?<select value={answer} onChange={event=>setAnswer(event.target.value)} className={field}><option value="">{t('settings.provider.pleaseSelect')}</option>{job.prompt.options.map(option=><option value={option.id} key={option.id}>{option.label}</option>)}</select>:<input type="password" autoComplete="off" value={answer} onChange={event=>setAnswer(event.target.value)} placeholder={job.prompt.placeholder} className={field} />}<button className="rounded-lg bg-primary px-3 py-2 text-xs text-primary-foreground">{t('settings.provider.continue')}</button></form>}<button onClick={()=>void agentRequest<OAuthJob>('oauth/cancel',{id:job.id}).then(setJob).catch(error=>setMessage(error.message))} className="text-xs text-muted-foreground">{t('settings.provider.cancelLogin')}</button></>}</div>:<p className="text-xs text-muted-foreground">{t('settings.provider.cloudCredentials')}{help&&<a href={help.url} target="_blank" rel="noreferrer" className="ml-2 underline">{t('settings.provider.officialDocs')}</a>}</p>}
-    {provider.auth.source==='stored'&&<button disabled={busy} className="text-xs text-muted-foreground hover:text-foreground" onClick={()=>{if(confirm(t('settings.provider.removeConfirm')))void agentRequest('credential',{provider:provider.id,remove:true}).then(()=>{setMessage(t('settings.provider.removed'));saved.current();}).catch(error=>setMessage(error.message));}}>{t('settings.provider.remove')}</button>}
-    {message&&<p role="status" className="text-xs text-muted-foreground">{message}</p>}
-  </div>;
+type Provider = AgentStatus["providers"][number]
+interface OAuthJob {
+  id: string
+  state: string
+  url?: string
+  instructions?: string
+  error?: string
+  prompt?: { message: string; placeholder?: string; options?: { id: string; label: string }[] }
 }
-export function ProviderConfigurationDialog({provider,onClose,onSaved}:{provider:Provider|null;onClose:()=>void;onSaved:()=>void}){
- const {t}=useT();
- return <Dialog open={!!provider} onOpenChange={open=>{if(!open)onClose();}}><DialogContent className="max-h-[85vh] overflow-y-auto rounded-2xl sm:max-w-sm"><DialogHeader><DialogTitle className="flex items-center gap-2 text-base"><KeyRound className="h-4 w-4 text-muted-foreground" />{provider?.name||provider?.id}</DialogTitle><DialogDescription className="text-xs">{provider?.auth.configured?t('common.manageConnection'):t('settings.provider.connectProvider')}</DialogDescription></DialogHeader>{provider&&<ProviderConfiguration key={provider.id} provider={provider} onSaved={()=>{onClose();onSaved();}}/>}</DialogContent></Dialog>;
+const field =
+  "w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:ring-1 focus-visible:ring-ring"
+export function ProviderConfiguration({
+  provider,
+  onSaved,
+}: {
+  provider: Provider
+  onSaved: () => void
+}) {
+  const [key, setKey] = useState(""),
+    [mode, setMode] = useState(provider.oauth ? "login" : "key"),
+    [busy, setBusy] = useState(false),
+    [message, setMessage] = useState(""),
+    [job, setJob] = useState<OAuthJob | null>(null),
+    [answer, setAnswer] = useState("")
+  const active = useRef(true),
+    jobId = useRef<string | undefined>(undefined),
+    saved = useRef(onSaved)
+  saved.current = onSaved
+  const { t } = useT()
+  const help = providerHelp[provider.id]
+  const keySupported = provider.apiKey !== false
+  useEffect(() => {
+    active.current = true
+    return () => {
+      active.current = false
+      if (jobId.current) void agentRequest("oauth/cancel", { id: jobId.current }).catch(() => {})
+    }
+  }, [])
+  useEffect(() => {
+    if (!job) return
+    if (job.state === "done") {
+      if (jobId.current) {
+        jobId.current = undefined
+        saved.current()
+      }
+      return
+    }
+    if (["failed", "cancelled"].includes(job.state)) {
+      jobId.current = undefined
+      setMessage(job.error || t("settings.provider.loginCancelled"))
+      return
+    }
+    const timer = setInterval(() => {
+      void agentRequest<OAuthJob>("oauth/status", { id: job.id })
+        .then((result) => {
+          if (!active.current) return
+          setJob(result)
+        })
+        .catch(() => {
+          if (active.current) setMessage(t("settings.provider.loginStatusUnavailable"))
+        })
+    }, 1200)
+    return () => clearInterval(timer)
+  }, [job, t])
+  async function saveKey() {
+    setBusy(true)
+    setMessage("")
+    try {
+      const result = await agentRequest<{ validation?: { message: string } }>("credential", {
+        provider: provider.id,
+        key,
+      })
+      if (active.current) {
+        setKey("")
+        setMessage(result.validation?.message ?? t("settings.ai.saved"))
+        saved.current()
+      }
+    } catch (error) {
+      if (active.current) setMessage((error as Error).message)
+    } finally {
+      if (active.current) setBusy(false)
+    }
+  }
+  async function login() {
+    setBusy(true)
+    setMessage("")
+    try {
+      const result = await agentRequest<{ id: string }>("oauth/start", { provider: provider.id })
+      if (!active.current) {
+        void agentRequest("oauth/cancel", { id: result.id })
+        return
+      }
+      jobId.current = result.id
+      setJob({ id: result.id, state: "starting" })
+    } catch (error) {
+      if (active.current) setMessage((error as Error).message)
+    } finally {
+      if (active.current) setBusy(false)
+    }
+  }
+  function openAuthorization() {
+    if (!job?.url) return
+    try {
+      const url = new URL(job.url)
+      if (!["https:", "http:"].includes(url.protocol)) throw Error()
+      const popup = window.open(url.href, "_blank")
+      if (popup) {
+        popup.opener = null
+        setMessage(t("settings.provider.completeLogin"))
+      } else setMessage(t("settings.provider.popupBlocked"))
+    } catch {
+      setMessage(t("settings.provider.invalidAuthUrl"))
+    }
+  }
+  return (
+    <div className="space-y-4">
+      {provider.oauth && keySupported && (
+        <div className="flex gap-1 rounded-lg bg-muted/50 p-1">
+          <button
+            onClick={() => setMode("login")}
+            className={`flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-1.5 text-xs ${mode === "login" ? "bg-background text-foreground" : "text-muted-foreground"}`}
+          >
+            <LogIn className="h-3.5 w-3.5" />
+            {t("settings.provider.login")}
+          </button>
+          <button
+            onClick={() => {
+              setMode("key")
+              if (jobId.current)
+                void agentRequest("oauth/cancel", { id: jobId.current }).catch(() => {})
+            }}
+            className={`flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-1.5 text-xs ${mode === "key" ? "bg-background text-foreground" : "text-muted-foreground"}`}
+          >
+            <KeyRound className="h-3.5 w-3.5" />
+            API Key
+          </button>
+        </div>
+      )}
+      {mode === "key" && keySupported ? (
+        <form
+          onSubmit={(event) => {
+            event.preventDefault()
+            void saveKey()
+          }}
+          className="space-y-3"
+        >
+          <div className="flex items-center justify-between">
+            <label htmlFor={`key-${provider.id}`} className="text-xs text-muted-foreground">
+              API Key
+            </label>
+            {help && (
+              <a
+                href={help.url}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+              >
+                {t("settings.provider.getApiKey")}
+                <ExternalLink className="h-3 w-3" />
+              </a>
+            )}
+          </div>
+          <input
+            id={`key-${provider.id}`}
+            autoFocus
+            type="password"
+            autoComplete="off"
+            spellCheck={false}
+            value={key}
+            onChange={(event) => setKey(event.target.value)}
+            className={field}
+            placeholder={t("settings.provider.pasteApiKey")}
+          />
+          <button
+            disabled={busy || !key.trim()}
+            type="submit"
+            className="w-full rounded-lg bg-primary px-3 py-2 text-sm text-primary-foreground disabled:opacity-40"
+          >
+            {busy ? t("settings.provider.checking") : t("common.save")}
+          </button>
+        </form>
+      ) : provider.oauth ? (
+        <div className="space-y-3">
+          {!job || ["done", "failed", "cancelled"].includes(job.state) ? (
+            <button
+              disabled={busy}
+              onClick={() => void login()}
+              className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-3 py-2 text-sm text-primary-foreground disabled:opacity-40"
+            >
+              <LogIn className="h-4 w-4" />
+              {t("settings.provider.loginWith", { name: provider.name || provider.id })}
+            </button>
+          ) : (
+            <>
+              {job.url && (
+                <>
+                  <button
+                    onClick={openAuthorization}
+                    className="w-full rounded-lg bg-primary px-3 py-2 text-sm text-primary-foreground"
+                  >
+                    {t("settings.provider.openAuthPage")}
+                  </button>
+                  <a
+                    href={job.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="block text-xs text-muted-foreground"
+                  >
+                    {t("settings.provider.authLink")}
+                  </a>
+                </>
+              )}
+              {job.instructions && (
+                <p className="break-words text-xs text-muted-foreground">{job.instructions}</p>
+              )}
+              {job.prompt && (
+                <form
+                  className="space-y-2"
+                  onSubmit={(event) => {
+                    event.preventDefault()
+                    void agentRequest<OAuthJob>("oauth/answer", { id: job.id, answer })
+                      .then((result) => {
+                        setAnswer("")
+                        setJob(result)
+                      })
+                      .catch((error) => setMessage(error.message))
+                  }}
+                >
+                  <label className="block text-xs text-muted-foreground">
+                    {job.prompt.message}
+                  </label>
+                  {job.prompt.options ? (
+                    <select
+                      value={answer}
+                      onChange={(event) => setAnswer(event.target.value)}
+                      className={field}
+                    >
+                      <option value="">{t("settings.provider.pleaseSelect")}</option>
+                      {job.prompt.options.map((option) => (
+                        <option value={option.id} key={option.id}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      type="password"
+                      autoComplete="off"
+                      value={answer}
+                      onChange={(event) => setAnswer(event.target.value)}
+                      placeholder={job.prompt.placeholder}
+                      className={field}
+                    />
+                  )}
+                  <button className="rounded-lg bg-primary px-3 py-2 text-xs text-primary-foreground">
+                    {t("settings.provider.continue")}
+                  </button>
+                </form>
+              )}
+              <button
+                onClick={() =>
+                  void agentRequest<OAuthJob>("oauth/cancel", { id: job.id })
+                    .then(setJob)
+                    .catch((error) => setMessage(error.message))
+                }
+                className="text-xs text-muted-foreground"
+              >
+                {t("settings.provider.cancelLogin")}
+              </button>
+            </>
+          )}
+        </div>
+      ) : (
+        <p className="text-xs text-muted-foreground">
+          {t("settings.provider.cloudCredentials")}
+          {help && (
+            <a href={help.url} target="_blank" rel="noreferrer" className="ml-2 underline">
+              {t("settings.provider.officialDocs")}
+            </a>
+          )}
+        </p>
+      )}
+      {provider.auth.source === "stored" && (
+        <button
+          disabled={busy}
+          className="text-xs text-muted-foreground hover:text-foreground"
+          onClick={() => {
+            if (confirm(t("settings.provider.removeConfirm")))
+              void agentRequest("credential", { provider: provider.id, remove: true })
+                .then(() => {
+                  setMessage(t("settings.provider.removed"))
+                  saved.current()
+                })
+                .catch((error) => setMessage(error.message))
+          }}
+        >
+          {t("settings.provider.remove")}
+        </button>
+      )}
+      {message && (
+        <p role="status" className="text-xs text-muted-foreground">
+          {message}
+        </p>
+      )}
+    </div>
+  )
+}
+export function ProviderConfigurationDialog({
+  provider,
+  onClose,
+  onSaved,
+}: {
+  provider: Provider | null
+  onClose: () => void
+  onSaved: () => void
+}) {
+  const { t } = useT()
+  return (
+    <Dialog
+      open={!!provider}
+      onOpenChange={(open) => {
+        if (!open) onClose()
+      }}
+    >
+      <DialogContent className="max-h-[85vh] overflow-y-auto rounded-2xl sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-base">
+            <KeyRound className="h-4 w-4 text-muted-foreground" />
+            {provider?.name || provider?.id}
+          </DialogTitle>
+          <DialogDescription className="text-xs">
+            {provider?.auth.configured
+              ? t("common.manageConnection")
+              : t("settings.provider.connectProvider")}
+          </DialogDescription>
+        </DialogHeader>
+        {provider && (
+          <ProviderConfiguration
+            key={provider.id}
+            provider={provider}
+            onSaved={() => {
+              onClose()
+              onSaved()
+            }}
+          />
+        )}
+      </DialogContent>
+    </Dialog>
+  )
 }

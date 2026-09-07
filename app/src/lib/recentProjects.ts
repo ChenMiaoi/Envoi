@@ -1,66 +1,202 @@
-import {nativeBasename,nativePathWithin} from '@/lib/nativePath';
-import {envoi} from './desktop';
-import {translate} from '@/i18n/runtime';
-import {nativeMigrate,nativePut,nativeGet,encodeNative} from "./localData";
-import {projectConfigFile} from './managementDir';
-export interface RecentProject { id: string; name: string; projectId?: string; path?: string; updated: number }
+import { nativeBasename, nativePathWithin } from "@/lib/nativePath"
+import { envoi } from "./desktop"
+import { translate } from "@/i18n/runtime"
+import { nativeMigrate, nativePut, nativeGet, encodeNative } from "./localData"
+import { projectConfigFile } from "./managementDir"
+export interface RecentProject {
+  id: string
+  name: string
+  projectId?: string
+  path?: string
+  updated: number
+}
 async function database() {
   return await new Promise<IDBDatabase>((resolve, reject) => {
-    const request = indexedDB.open("paperdesk-projects", 2);
-    request.onupgradeneeded = () => { for (const name of ["recent", "roots"]) if (!request.result.objectStoreNames.contains(name)) request.result.createObjectStore(name, { keyPath: "id" }); };
-    request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error);
-  });
+    const request = indexedDB.open("paperdesk-projects", 2)
+    request.onupgradeneeded = () => {
+      for (const name of ["recent", "roots"])
+        if (!request.result.objectStoreNames.contains(name))
+          request.result.createObjectStore(name, { keyPath: "id" })
+    }
+    request.onsuccess = () => resolve(request.result)
+    request.onerror = () => reject(request.error)
+  })
 }
 async function cachedRecentProjects(): Promise<RecentProject[]> {
-  const db = await database();
-  try { return await new Promise((resolve, reject) => { const request = db.transaction("recent").objectStore("recent").getAll(); request.onsuccess = () => resolve((request.result as (RecentProject & { directory?: unknown })[]).map(value => { const entry={...value};delete entry.directory;return entry; }).sort((a,b) => b.updated-a.updated)); request.onerror = () => reject(request.error); }); } finally { db.close(); }
+  const db = await database()
+  try {
+    return await new Promise((resolve, reject) => {
+      const request = db.transaction("recent").objectStore("recent").getAll()
+      request.onsuccess = () =>
+        resolve(
+          (request.result as (RecentProject & { directory?: unknown })[])
+            .map((value) => {
+              const entry = { ...value }
+              delete entry.directory
+              return entry
+            })
+            .sort((a, b) => b.updated - a.updated),
+        )
+      request.onerror = () => reject(request.error)
+    })
+  } finally {
+    db.close()
+  }
 }
-async function remember(store: 'recent' | 'roots', rootPath: string) {
-  rootPath = await envoi().canonicalDirectory(rootPath);
-  const previous = await (store === 'recent' ? recentProjects() : authorizedRoots());
-  let identity:string|undefined;try{identity=JSON.parse((await projectConfigFile(rootPath))?.text??'{}').projectId;}catch{/* Authorized roots need not be projects. */}
-  const existing=previous.find(entry=>entry.path===rootPath)??previous.find(entry=>identity&&entry.projectId===identity);
-  const id=existing?.id??identity??crypto.randomUUID();
-  const db = await database();
-  try { await new Promise<void>((resolve, reject) => { const transaction = db.transaction(store, "readwrite"); transaction.objectStore(store).put({ id, name: nativeBasename(rootPath), projectId:identity, path: rootPath, updated: Date.now() }); transaction.oncomplete = () => resolve(); transaction.onerror = () => reject(transaction.error); }); } finally { db.close(); }
-  await syncRegistry(store,[],[id]);
+async function remember(store: "recent" | "roots", rootPath: string) {
+  rootPath = await envoi().canonicalDirectory(rootPath)
+  const previous = await (store === "recent" ? recentProjects() : authorizedRoots())
+  let identity: string | undefined
+  try {
+    identity = JSON.parse((await projectConfigFile(rootPath))?.text ?? "{}").projectId
+  } catch {
+    /* Authorized roots need not be projects. */
+  }
+  const existing =
+    previous.find((entry) => entry.path === rootPath) ??
+    previous.find((entry) => identity && entry.projectId === identity)
+  const id = existing?.id ?? identity ?? crypto.randomUUID()
+  const db = await database()
+  try {
+    await new Promise<void>((resolve, reject) => {
+      const transaction = db.transaction(store, "readwrite")
+      transaction.objectStore(store).put({
+        id,
+        name: nativeBasename(rootPath),
+        projectId: identity,
+        path: rootPath,
+        updated: Date.now(),
+      })
+      transaction.oncomplete = () => resolve()
+      transaction.onerror = () => reject(transaction.error)
+    })
+  } finally {
+    db.close()
+  }
+  await syncRegistry(store, [], [id])
 }
-export const rememberProject = (rootPath: string) => remember('recent', rootPath);
-export const rememberRoot = (rootPath: string) => remember('roots', rootPath);
+export const rememberProject = (rootPath: string) => remember("recent", rootPath)
+export const rememberRoot = (rootPath: string) => remember("roots", rootPath)
 async function cachedAuthorizedRoots(): Promise<RecentProject[]> {
-  const db = await database();
-  try { return await new Promise((resolve, reject) => { const request = db.transaction("roots").objectStore("roots").getAll(); request.onsuccess = () => resolve((request.result as (RecentProject & { directory?: unknown })[]).map(value => { const entry={...value};delete entry.directory;return entry; }).sort((a,b) => b.updated-a.updated)); request.onerror = () => reject(request.error); }); } finally { db.close(); }
+  const db = await database()
+  try {
+    return await new Promise((resolve, reject) => {
+      const request = db.transaction("roots").objectStore("roots").getAll()
+      request.onsuccess = () =>
+        resolve(
+          (request.result as (RecentProject & { directory?: unknown })[])
+            .map((value) => {
+              const entry = { ...value }
+              delete entry.directory
+              return entry
+            })
+            .sort((a, b) => b.updated - a.updated),
+        )
+      request.onerror = () => reject(request.error)
+    })
+  } finally {
+    db.close()
+  }
 }
-export async function forgetRecentProject(id:string){
- const entry=(await recentProjects()).find(item=>item.id===id);
- const selected=entry?.path?await envoi().canonicalDirectory(entry.path).catch(()=>entry.path):undefined;
- const roots=selected?(await Promise.all((await authorizedRoots()).map(async item=>({item,path:item.path?await envoi().canonicalDirectory(item.path).catch(()=>item.path):undefined})))).filter(value=>value.path===selected).map(value=>value.item):[];
- await forgetDeletedRecords([{store:'recent',id},...roots.map(item=>({store:'roots',id:item.id}))]);
+export async function forgetRecentProject(id: string) {
+  const entry = (await recentProjects()).find((item) => item.id === id)
+  const selected = entry?.path
+    ? await envoi()
+        .canonicalDirectory(entry.path)
+        .catch(() => entry.path)
+    : undefined
+  const roots = selected
+    ? (
+        await Promise.all(
+          (await authorizedRoots()).map(async (item) => ({
+            item,
+            path: item.path
+              ? await envoi()
+                  .canonicalDirectory(item.path)
+                  .catch(() => item.path)
+              : undefined,
+          })),
+        )
+      )
+        .filter((value) => value.path === selected)
+        .map((value) => value.item)
+    : []
+  await forgetDeletedRecords([
+    { store: "recent", id },
+    ...roots.map((item) => ({ store: "roots", id: item.id })),
+  ])
 }
-export async function matchingProjectRecords(rootPath:string){
- const recent=await recentProjects(),roots=await authorizedRoots();const ids:{store:string;id:string}[]=[];
- for(const [store,entries] of [['recent',recent],['roots',roots]] as const)for(const entry of entries)if(entry.path&&(nativePathWithin(entry.path,rootPath)))ids.push({store,id:entry.id});
- return ids;
+export async function matchingProjectRecords(rootPath: string) {
+  const recent = await recentProjects(),
+    roots = await authorizedRoots()
+  const ids: { store: string; id: string }[] = []
+  for (const [store, entries] of [
+    ["recent", recent],
+    ["roots", roots],
+  ] as const)
+    for (const entry of entries)
+      if (entry.path && nativePathWithin(entry.path, rootPath)) ids.push({ store, id: entry.id })
+  return ids
 }
-export async function forgetDeletedRecords(ids:{store:string;id:string}[]){
- const db=await database();try{await new Promise<void>((resolve,reject)=>{const tx=db.transaction(['recent','roots'],'readwrite');for(const item of ids)tx.objectStore(item.store).delete(item.id);tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error);});}finally{db.close();}
-await syncRegistry('recent',ids.filter(item=>item.store==='recent').map(item=>item.id));await syncRegistry('roots',ids.filter(item=>item.store==='roots').map(item=>item.id));
+export async function forgetDeletedRecords(ids: { store: string; id: string }[]) {
+  const db = await database()
+  try {
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction(["recent", "roots"], "readwrite")
+      for (const item of ids) tx.objectStore(item.store).delete(item.id)
+      tx.oncomplete = () => resolve()
+      tx.onerror = () => reject(tx.error)
+    })
+  } finally {
+    db.close()
+  }
+  await syncRegistry(
+    "recent",
+    ids.filter((item) => item.store === "recent").map((item) => item.id),
+  )
+  await syncRegistry(
+    "roots",
+    ids.filter((item) => item.store === "roots").map((item) => item.id),
+  )
 }
 
-async function records(store:'recent'|'roots'):Promise<RecentProject[]> {
- const cached=await (store==='recent'?cachedRecentProjects():cachedAuthorizedRoots());
- if(typeof window==='undefined')return cached;
- try{const native=await nativeMigrate(store,await encodeNative(cached));return (native.value as RecentProject[]).sort((a,b)=>b.updated-a.updated);}catch(error){window.dispatchEvent(new CustomEvent('envoi:storage-warning',{detail:translate('project.recentDisconnected')+(error as Error).message}));return cached;}
+async function records(store: "recent" | "roots"): Promise<RecentProject[]> {
+  const cached = await (store === "recent" ? cachedRecentProjects() : cachedAuthorizedRoots())
+  if (typeof window === "undefined") return cached
+  try {
+    const native = await nativeMigrate(store, await encodeNative(cached))
+    return (native.value as RecentProject[]).sort((a, b) => b.updated - a.updated)
+  } catch (error) {
+    window.dispatchEvent(
+      new CustomEvent("envoi:storage-warning", {
+        detail: translate("project.recentDisconnected") + (error as Error).message,
+      }),
+    )
+    return cached
+  }
 }
-export const recentProjects=()=>records('recent');
-export const authorizedRoots=()=>records('roots');
-async function syncRegistry(store:'recent'|'roots',remove:string[]=[],changed:string[]=[]) {
- if(typeof window==='undefined')return;
- const cached=await (store==='recent'?cachedRecentProjects():cachedAuthorizedRoots());
- for(let attempt=0;attempt<3;attempt++){
-  const current=await nativeGet<RecentProject[]>(store);
-  const merged=new Map((current?.value??[]).map(entry=>[entry.id,entry]));for(const entry of cached.filter(entry=>changed.includes(entry.id)))merged.set(entry.id,{...merged.get(entry.id),...entry});for(const id of remove)merged.delete(id);
-  try{await nativePut(store,await encodeNative([...merged.values()]),'default',{expectedRevision:current?.revision??0});return;}
-  catch(error){if(attempt===2||!String((error as Error).message).includes('另一窗口修改'))throw error;}
- }
+export const recentProjects = () => records("recent")
+export const authorizedRoots = () => records("roots")
+async function syncRegistry(
+  store: "recent" | "roots",
+  remove: string[] = [],
+  changed: string[] = [],
+) {
+  if (typeof window === "undefined") return
+  const cached = await (store === "recent" ? cachedRecentProjects() : cachedAuthorizedRoots())
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const current = await nativeGet<RecentProject[]>(store)
+    const merged = new Map((current?.value ?? []).map((entry) => [entry.id, entry]))
+    for (const entry of cached.filter((entry) => changed.includes(entry.id)))
+      merged.set(entry.id, { ...merged.get(entry.id), ...entry })
+    for (const id of remove) merged.delete(id)
+    try {
+      await nativePut(store, await encodeNative([...merged.values()]), "default", {
+        expectedRevision: current?.revision ?? 0,
+      })
+      return
+    } catch (error) {
+      if (attempt === 2 || !String((error as Error).message).includes("另一窗口修改")) throw error
+    }
+  }
 }

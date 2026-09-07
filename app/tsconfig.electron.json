@@ -1,8 +1,15 @@
 {
   "compilerOptions": {
-    "target": "ES2023", "module": "ESNext", "moduleResolution": "bundler",
-    "types": ["node"], "lib": ["ES2023", "DOM"], "strict": true,
-    "allowJs": true, "checkJs": false, "skipLibCheck": true, "noEmit": true
+    "target": "ES2023",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "types": ["node"],
+    "lib": ["ES2023", "DOM"],
+    "strict": true,
+    "allowJs": true,
+    "checkJs": false,
+    "skipLibCheck": true,
+    "noEmit": true
   },
   "include": ["electron", "electron.vite.config.ts"]
 }

@@ -1,35 +1,300 @@
-import {mkdir,readFile,writeFile,rename,realpath,lstat,stat,appendFile} from 'node:fs/promises';import {existsSync,renameSync} from 'node:fs';import {randomUUID,randomBytes,createHash} from 'node:crypto';import path from 'node:path';import os from 'node:os';
-function defaultDataDir(){const current=path.join(os.homedir(),'.envoi'),legacy=path.join(os.homedir(),'.paperdesk');if(existsSync(legacy)&&!existsSync(current))try{renameSync(legacy,current);}catch{return legacy;}return current;}
-export const dataDir=path.resolve(process.env.ENVOI_DATA_DIR??process.env.PAPERDESK_DATA_DIR??defaultDataDir());
-export async function readProjectConfig(root){root=await realpath(root);for(const name of ['.envoi','.paperdesk']){const file=path.join(root,name,'project.json');try{if(await realpath(file)!==file)throw Error('项目配置不可通过符号链接读取');return {file,config:await jsonFile(file,null)};}catch(error){if(error.code==='ENOENT')continue;throw error;}}return {file:path.join(root,'.envoi','project.json'),config:null};}
-const allowed=new Set(['preferences','library','recent','session','roots','bindings']);
-export async function atomicJson(file,value){await mkdir(path.dirname(file),{recursive:true,mode:0o700});const temporary=file+'.'+randomUUID()+'.tmp';await writeFile(temporary,JSON.stringify(value,null,2)+'\n',{mode:0o600});await rename(temporary,file);}
-export async function jsonFile(file,fallback){try{return JSON.parse(await readFile(file,'utf8'));}catch(error){if(error.code==='ENOENT')return fallback;throw Error('本机数据文件无法读取，请检查或从备份恢复。');}}
-export function safeId(value){if(typeof value!=='string'||['__proto__','constructor','prototype'].includes(value)||!(/^[a-zA-Z0-9_-]{1,100}$/).test(value))throw Error('无效数据标识');return value;}
-export async function verifyDirectory({directory,proof,proofKind}){if(typeof directory!=='string'||!path.isAbsolute(directory)||typeof proof!=='string'||!/^\w{64}$/.test(proof))throw Error('缺少有效项目目录授权');const root=await realpath(directory),marker=path.join(root,'.envoi',proofKind==='agent'?`agent-proof-${proof}`:'git-proof');if(!(await lstat(marker)).isFile()||await realpath(marker)!==marker||await readFile(marker,'utf8')!==proof)throw Error('项目目录授权证明不匹配');return root;}
-export async function trustedRoot(directory){if(typeof directory!=='string'||!path.isAbsolute(directory))throw Error('缺少有效项目目录');const root=await realpath(directory).catch(error=>{if(error.code==='ENOENT')throw Error('项目目录位置不存在或已移动。');throw error;});if(!(await stat(root)).isDirectory())throw Error('项目路径不是目录');return root;}
-const locks=new Map();
-export function withDataLock(key,run){const previous=locks.get(key)??Promise.resolve();const current=previous.catch(()=>{}).then(run);locks.set(key,current);return current.finally(()=>{if(locks.get(key)===current)locks.delete(key);});}
-export async function registerProject(root,options={}){root=await realpath(root);return withDataLock('projects',()=>registerProjectLocked(root,options));}
-async function registerProjectLocked(root,{copy=false}={}){
- const found=await readProjectConfig(root);let config=found.config;if(!config){const legacy=await jsonFile(path.join(root,'paperdesk.json'),{});config=Object.fromEntries(['projectId','main','name','template','dataStatus','buildDirectory','settings','ai','engine'].filter(key=>legacy[key]!==undefined).map(key=>[key,legacy[key]]));}
- const linked=await lstat(path.join(root,'.git')).then(info=>info.isFile(),()=>false);
- const indexFile=path.join(dataDir,'projects/index.json'),index=await jsonFile(indexFile,{});let id=linked?'worktree-'+createHash('sha256').update(root).digest('hex').slice(0,32):config.projectId;
- if(id){safeId(id);if(['global','empty'].includes(id))throw Error('项目使用了保留身份，请检查项目配置');}const previous=id&&index[id];
- if(previous&&previous.path!==root){let oldExists=false;try{await stat(previous.path);oldExists=true;}catch(error){if(!['ENOENT','ENOTDIR'].includes(error.code))throw Error('无法确认原项目位置，未合并身份，请检查目录访问权限');}if(oldExists&&!copy)throw Error('项目身份冲突：原目录仍存在。若这是副本，请明确选择“作为独立副本连接”。');if(copy)id=undefined;}
- id??=randomUUID();const saved={...config,projectId:id};if(!linked&&config.projectId!==id)await atomicJson(path.join(root,'.envoi','project.json'),saved);const info=await stat(root);index[id]={id,name:path.basename(root),path:root,device:info.dev,inode:info.ino,updated:Date.now()};await atomicJson(indexFile,index);return index[id];
+import {
+  mkdir,
+  readFile,
+  writeFile,
+  rename,
+  realpath,
+  lstat,
+  stat,
+  appendFile,
+} from "node:fs/promises"
+import { existsSync, renameSync } from "node:fs"
+import { randomUUID, randomBytes, createHash } from "node:crypto"
+import path from "node:path"
+import os from "node:os"
+function defaultDataDir() {
+  const current = path.join(os.homedir(), ".envoi"),
+    legacy = path.join(os.homedir(), ".paperdesk")
+  if (existsSync(legacy) && !existsSync(current))
+    try {
+      renameSync(legacy, current)
+    } catch {
+      return legacy
+    }
+  return current
 }
-export async function projectRoot(id){if(id==='global')throw Error('请选择已连接的项目');const entry=(await jsonFile(path.join(dataDir,'projects/index.json'),{}))[safeId(id)];if(!entry)throw Error('项目尚未连接本机服务');const root=await realpath(entry.path).catch(()=>{throw Error('项目目录已移动，请重新打开并连接新位置。');});const info=await stat(root);if(info.dev!==entry.device||info.ino!==entry.inode)throw Error('目录已被替换，请重新连接以确认项目身份');const {config}=await readProjectConfig(root);const linked=await lstat(path.join(root,'.git')).then(info=>info.isFile(),()=>false);const actual=linked?'worktree-'+createHash('sha256').update(root).digest('hex').slice(0,32):config?.projectId;if(actual!==id)throw Error('项目身份已改变，请重新连接');return root;}
+export const dataDir = path.resolve(
+  process.env.ENVOI_DATA_DIR ?? process.env.PAPERDESK_DATA_DIR ?? defaultDataDir(),
+)
+export async function readProjectConfig(root) {
+  root = await realpath(root)
+  for (const name of [".envoi", ".paperdesk"]) {
+    const file = path.join(root, name, "project.json")
+    try {
+      if ((await realpath(file)) !== file) throw Error("项目配置不可通过符号链接读取")
+      return { file, config: await jsonFile(file, null) }
+    } catch (error) {
+      if (error.code === "ENOENT") continue
+      throw error
+    }
+  }
+  return { file: path.join(root, ".envoi", "project.json"), config: null }
+}
+const allowed = new Set(["preferences", "library", "recent", "session", "roots", "bindings"])
+export async function atomicJson(file, value) {
+  await mkdir(path.dirname(file), { recursive: true, mode: 0o700 })
+  const temporary = file + "." + randomUUID() + ".tmp"
+  await writeFile(temporary, JSON.stringify(value, null, 2) + "\n", { mode: 0o600 })
+  await rename(temporary, file)
+}
+export async function jsonFile(file, fallback) {
+  try {
+    return JSON.parse(await readFile(file, "utf8"))
+  } catch (error) {
+    if (error.code === "ENOENT") return fallback
+    throw Error("本机数据文件无法读取，请检查或从备份恢复。")
+  }
+}
+export function safeId(value) {
+  if (
+    typeof value !== "string" ||
+    ["__proto__", "constructor", "prototype"].includes(value) ||
+    !/^[a-zA-Z0-9_-]{1,100}$/.test(value)
+  )
+    throw Error("无效数据标识")
+  return value
+}
+export async function verifyDirectory({ directory, proof, proofKind }) {
+  if (
+    typeof directory !== "string" ||
+    !path.isAbsolute(directory) ||
+    typeof proof !== "string" ||
+    !/^\w{64}$/.test(proof)
+  )
+    throw Error("缺少有效项目目录授权")
+  const root = await realpath(directory),
+    marker = path.join(root, ".envoi", proofKind === "agent" ? `agent-proof-${proof}` : "git-proof")
+  if (
+    !(await lstat(marker)).isFile() ||
+    (await realpath(marker)) !== marker ||
+    (await readFile(marker, "utf8")) !== proof
+  )
+    throw Error("项目目录授权证明不匹配")
+  return root
+}
+export async function trustedRoot(directory) {
+  if (typeof directory !== "string" || !path.isAbsolute(directory)) throw Error("缺少有效项目目录")
+  const root = await realpath(directory).catch((error) => {
+    if (error.code === "ENOENT") throw Error("项目目录位置不存在或已移动。")
+    throw error
+  })
+  if (!(await stat(root)).isDirectory()) throw Error("项目路径不是目录")
+  return root
+}
+const locks = new Map()
+export function withDataLock(key, run) {
+  const previous = locks.get(key) ?? Promise.resolve()
+  const current = previous.catch(() => {}).then(run)
+  locks.set(key, current)
+  return current.finally(() => {
+    if (locks.get(key) === current) locks.delete(key)
+  })
+}
+export async function registerProject(root, options = {}) {
+  root = await realpath(root)
+  return withDataLock("projects", () => registerProjectLocked(root, options))
+}
+async function registerProjectLocked(root, { copy = false } = {}) {
+  const found = await readProjectConfig(root)
+  let config = found.config
+  if (!config) {
+    const legacy = await jsonFile(path.join(root, "paperdesk.json"), {})
+    config = Object.fromEntries(
+      [
+        "projectId",
+        "main",
+        "name",
+        "template",
+        "dataStatus",
+        "buildDirectory",
+        "settings",
+        "ai",
+        "engine",
+      ]
+        .filter((key) => legacy[key] !== undefined)
+        .map((key) => [key, legacy[key]]),
+    )
+  }
+  const linked = await lstat(path.join(root, ".git")).then(
+    (info) => info.isFile(),
+    () => false,
+  )
+  const indexFile = path.join(dataDir, "projects/index.json"),
+    index = await jsonFile(indexFile, {})
+  let id = linked
+    ? "worktree-" + createHash("sha256").update(root).digest("hex").slice(0, 32)
+    : config.projectId
+  if (id) {
+    safeId(id)
+    if (["global", "empty"].includes(id)) throw Error("项目使用了保留身份，请检查项目配置")
+  }
+  const previous = id && index[id]
+  if (previous && previous.path !== root) {
+    let oldExists = false
+    try {
+      await stat(previous.path)
+      oldExists = true
+    } catch (error) {
+      if (!["ENOENT", "ENOTDIR"].includes(error.code))
+        throw Error("无法确认原项目位置，未合并身份，请检查目录访问权限")
+    }
+    if (oldExists && !copy)
+      throw Error("项目身份冲突：原目录仍存在。若这是副本，请明确选择“作为独立副本连接”。")
+    if (copy) id = undefined
+  }
+  id ??= randomUUID()
+  const saved = { ...config, projectId: id }
+  if (!linked && config.projectId !== id)
+    await atomicJson(path.join(root, ".envoi", "project.json"), saved)
+  const info = await stat(root)
+  index[id] = {
+    id,
+    name: path.basename(root),
+    path: root,
+    device: info.dev,
+    inode: info.ino,
+    updated: Date.now(),
+  }
+  await atomicJson(indexFile, index)
+  return index[id]
+}
+export async function projectRoot(id) {
+  if (id === "global") throw Error("请选择已连接的项目")
+  const entry = (await jsonFile(path.join(dataDir, "projects/index.json"), {}))[safeId(id)]
+  if (!entry) throw Error("项目尚未连接本机服务")
+  const root = await realpath(entry.path).catch(() => {
+    throw Error("项目目录已移动，请重新打开并连接新位置。")
+  })
+  const info = await stat(root)
+  if (info.dev !== entry.device || info.ino !== entry.inode)
+    throw Error("目录已被替换，请重新连接以确认项目身份")
+  const { config } = await readProjectConfig(root)
+  const linked = await lstat(path.join(root, ".git")).then(
+    (info) => info.isFile(),
+    () => false,
+  )
+  const actual = linked
+    ? "worktree-" + createHash("sha256").update(root).digest("hex").slice(0, 32)
+    : config?.projectId
+  if (actual !== id) throw Error("项目身份已改变，请重新连接")
+  return root
+}
 
+export function localDataPlugin() {
+  const token = randomBytes(32).toString("hex")
+  return {
+    name: "envoi-local-data",
+    configureServer(server) {
+      server.middlewares.use(async (req, res, next) => {
+        if (!req.url?.startsWith("/api/envoi/data")) return next()
+        const host = req.headers.host ?? ""
+        if (
+          !/^(127\.0\.0\.1|localhost|\[::1\]):\d+$/.test(host) ||
+          !(
+            req.headers.origin === `http://${host}` ||
+            (!req.headers.origin && req.headers["sec-fetch-site"] === "same-origin")
+          )
+        ) {
+          res.statusCode = 403
+          res.end()
+          return
+        }
+        res.setHeader("Content-Type", "application/json")
+        res.setHeader("Cache-Control", "no-store")
+        try {
+          if (req.method === "GET" && req.url === "/api/envoi/data") {
+            res.end(JSON.stringify({ available: true, token, dataDir }))
+            return
+          }
+          if (req.method !== "POST" || req.headers["x-envoi-token"] !== token) {
+            res.statusCode = 403
+            throw Error("请求未获授权")
+          }
+          let body = ""
+          for await (const chunk of req) {
+            body += chunk
+            if (body.length > 150_000_000) throw Error("数据超过本机传输上限")
+          }
+          const input = JSON.parse(body)
+          if (req.url === "/api/envoi/data/bind") {
+            const root = await verifyDirectory(input)
+            res.end(
+              JSON.stringify({
+                project: await registerProject(root, { copy: input.copy === true }),
+              }),
+            )
+            return
+          }
+          const result = await dataStore(input)
+          res.statusCode = result.status
+          res.end(JSON.stringify(result.body))
+        } catch (error) {
+          if (res.statusCode === 200) res.statusCode = 400
+          res.end(JSON.stringify({ error: error.message }))
+        }
+      })
+    },
+  }
+}
+export async function dataStore(input) {
+  if (!allowed.has(input.store)) throw Error("未知数据类别")
+  const key = safeId(input.key ?? "default"),
+    file = path.join(dataDir, "storage", input.store, key + ".json")
+  return withDataLock(file, async () => {
+    const current = await jsonFile(file, null)
+    if (input.action === "get") return { status: 200, body: current }
+    if (input.action !== "put") throw Error("未知数据操作")
+    if (input.expectedRevision !== undefined && input.expectedRevision !== (current?.revision ?? 0))
+      return {
+        status: 409,
+        body: {
+          error: "本机数据已被另一窗口修改，请刷新后重试。",
+          revision: current?.revision ?? 0,
+        },
+      }
+    if (input.migrate && current) {
+      if (JSON.stringify(input.value) === JSON.stringify(current.value))
+        return { status: 200, body: current }
+      const hash = createHash("sha256").update(JSON.stringify(input.value)).digest("hex")
+      const backup = path.join(dataDir, "migration", input.store + "-" + key + "-" + hash + ".json")
+      const exists = await lstat(backup).then(
+        () => true,
+        () => false,
+      )
+      if (!exists) await atomicJson(backup, { value: input.value, at: Date.now() })
+      return { status: 200, body: { ...current, migration: { archived: true, new: !exists } } }
+    }
+    const result = { revision: (current?.revision ?? 0) + 1, value: input.value }
+    await atomicJson(file, result)
+    return { status: 200, body: result }
+  })
+}
 
-export function localDataPlugin(){const token=randomBytes(32).toString('hex');return {name:'envoi-local-data',configureServer(server){server.middlewares.use(async(req,res,next)=>{if(!req.url?.startsWith('/api/envoi/data'))return next();const host=req.headers.host??'';if(!/^(127\.0\.0\.1|localhost|\[::1\]):\d+$/.test(host)||!(req.headers.origin===`http://${host}`||(!req.headers.origin&&req.headers['sec-fetch-site']==='same-origin'))){res.statusCode=403;res.end();return;}res.setHeader('Content-Type','application/json');res.setHeader('Cache-Control','no-store');try{if(req.method==='GET'&&req.url==='/api/envoi/data'){res.end(JSON.stringify({available:true,token,dataDir}));return;}if(req.method!=='POST'||req.headers['x-envoi-token']!==token){res.statusCode=403;throw Error('请求未获授权');}let body='';for await(const chunk of req){body+=chunk;if(body.length>150_000_000)throw Error('数据超过本机传输上限');}const input=JSON.parse(body);
- if(req.url==='/api/envoi/data/bind'){const root=await verifyDirectory(input);res.end(JSON.stringify({project:await registerProject(root,{copy:input.copy===true})}));return;}
- const result=await dataStore(input);res.statusCode=result.status;res.end(JSON.stringify(result.body));
- }catch(error){if(res.statusCode===200)res.statusCode=400;res.end(JSON.stringify({error:error.message}));}});}};}
-export async function dataStore(input){if(!allowed.has(input.store))throw Error('未知数据类别');const key=safeId(input.key??'default'),file=path.join(dataDir,'storage',input.store,key+'.json');return withDataLock(file,async()=>{const current=await jsonFile(file,null);
- if(input.action==='get')return {status:200,body:current};
- if(input.action!=='put')throw Error('未知数据操作');if(input.expectedRevision!==undefined&&input.expectedRevision!==(current?.revision??0))return {status:409,body:{error:'本机数据已被另一窗口修改，请刷新后重试。',revision:current?.revision??0}};
- if(input.migrate&&current){if(JSON.stringify(input.value)===JSON.stringify(current.value))return {status:200,body:current};const hash=createHash('sha256').update(JSON.stringify(input.value)).digest('hex');const backup=path.join(dataDir,'migration',input.store+'-'+key+'-'+hash+'.json');const exists=await lstat(backup).then(()=>true,()=>false);if(!exists)await atomicJson(backup,{value:input.value,at:Date.now()});return {status:200,body:{...current,migration:{archived:true,new:!exists}}};}
- const result={revision:(current?.revision??0)+1,value:input.value};await atomicJson(file,result);return {status:200,body:result};});}
-
-export async function logEvent(event){try{const folder=path.join(dataDir,'logs');await mkdir(folder,{recursive:true,mode:0o700});const safe=Object.fromEntries(['type','project','session','status'].filter(key=>typeof event[key]==='string').map(key=>[key,event[key]]));await appendFile(path.join(folder,new Date().toISOString().slice(0,10)+'.jsonl'),JSON.stringify({at:new Date().toISOString(),...safe})+'\n',{mode:0o600});}catch{/* Core operations report their own storage failure; logging is best effort. */}}
+export async function logEvent(event) {
+  try {
+    const folder = path.join(dataDir, "logs")
+    await mkdir(folder, { recursive: true, mode: 0o700 })
+    const safe = Object.fromEntries(
+      ["type", "project", "session", "status"]
+        .filter((key) => typeof event[key] === "string")
+        .map((key) => [key, event[key]]),
+    )
+    await appendFile(
+      path.join(folder, new Date().toISOString().slice(0, 10) + ".jsonl"),
+      JSON.stringify({ at: new Date().toISOString(), ...safe }) + "\n",
+      { mode: 0o600 },
+    )
+  } catch {
+    /* Core operations report their own storage failure; logging is best effort. */
+  }
+}

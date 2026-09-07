@@ -26,16 +26,16 @@ The compile service accepts only an allowlisted engine and project-relative file
 
 Only templates that passed actual isolated compilation on this machine are shown:
 
-| Catalog item | Official implementation | Scope | Source / license |
-| --- | --- | --- | --- |
-| Article | LaTeX `article` | General | https://www.latex-project.org/ — LPPL |
-| ACM conference | `acmart` / `sigconf` | Template family | https://www.acm.org/publications/proceedings-template — LPPL 1.3+ |
-| ACM journal | `acmart` / `acmsmall` | Template family | Same ACM source/license |
-| IEEE conference | `IEEEtran[conference]` | Template family | https://conferences.ieeeauthorcenter.ieee.org/write-your-paper/authoring-tools-and-templates/ — LPPL 1.3 |
-| IEEE journal | `IEEEtran[journal]` | Template family | https://www.michaelshell.org/tex/ieeetran/ — LPPL 1.3 |
-| Springer LNCS | `llncs` / `splncs04` | Proceedings family | https://www.springer.com/gp/computer-science/lncs/forthcoming-proceedings — CC BY 4.0, Springer |
-| Elsevier journal | `elsarticle` | Journal family | https://ctan.org/pkg/elsarticle — LPPL 1.3+ |
-| PMLR | `jmlr[pmlr]` | ML proceedings family | https://proceedings.mlr.press/faq.html — LPPL 1.3+ |
+| Catalog item     | Official implementation | Scope                 | Source / license                                                                                         |
+| ---------------- | ----------------------- | --------------------- | -------------------------------------------------------------------------------------------------------- |
+| Article          | LaTeX `article`         | General               | https://www.latex-project.org/ — LPPL                                                                    |
+| ACM conference   | `acmart` / `sigconf`    | Template family       | https://www.acm.org/publications/proceedings-template — LPPL 1.3+                                        |
+| ACM journal      | `acmart` / `acmsmall`   | Template family       | Same ACM source/license                                                                                  |
+| IEEE conference  | `IEEEtran[conference]`  | Template family       | https://conferences.ieeeauthorcenter.ieee.org/write-your-paper/authoring-tools-and-templates/ — LPPL 1.3 |
+| IEEE journal     | `IEEEtran[journal]`     | Template family       | https://www.michaelshell.org/tex/ieeetran/ — LPPL 1.3                                                    |
+| Springer LNCS    | `llncs` / `splncs04`    | Proceedings family    | https://www.springer.com/gp/computer-science/lncs/forthcoming-proceedings — CC BY 4.0, Springer          |
+| Elsevier journal | `elsarticle`            | Journal family        | https://ctan.org/pkg/elsarticle — LPPL 1.3+                                                              |
+| PMLR             | `jmlr[pmlr]`            | ML proceedings family | https://proceedings.mlr.press/faq.html — LPPL 1.3+                                                       |
 
 The skeleton text is original; official class/bibliography files are provided by the installed TeX distribution, not modified or copied into generated projects. Each generated project includes `TEMPLATE.md`. The catalog distinguishes conference/journal/general categories; its schema reserves optional venue and year fields for future verified venue-specific releases. No specific conference-year submission compliance is claimed. ACM starts with `nonacm` for drafting; users must apply the target venue's submission settings/metadata before submission. JMLR's current journal style is `jmlr2e`, distinct from PMLR's `jmlr`, and is not presented as implemented here.
 
@@ -89,7 +89,6 @@ Checks: `test-git-status.mjs`, `test-git-log.mjs`, `test-diagnostics.mjs`, `test
 ## Paper library
 
 The library (`/library`) stores papers in IndexedDB, shared across projects. PDF imports take the filename as a placeholder title, then a deterministic background pass enriches them: publisher-embedded XMP/Info metadata (read with the bundled pdf.js) is used directly; a DOI from that metadata or from first-page identifier regex (line-break hyphenation joined) is resolved through Crossref (CORS, no key; BibTeX via its content-negotiation endpoint); an arXiv id resolves through its DataCite DOI (`10.48550/arxiv.*`, CORS-enabled, unlike the arXiv API); otherwise the largest-font first-page lines serve only as a Crossref `query.title` hint and a hit counts solely on normalized exact title equality, so stored fields always come from publisher metadata or registries and failures leave the entry untouched. Online enrichment never overwrites fields the user edited. Imports are deduplicated by citation key and by a size+first-64KB SHA-256 fingerprint. "引用到当前项目" appends the entry's BibTeX (Crossref's, or synthesized with a generated `authorYearWord` key) to the bibliography file named by the root document's `\\bibliography`, refusing duplicate keys; the key written always matches the one inside the BibTeX entry. The header exports the whole library as BibTeX (entries without usable metadata are skipped and counted); detail panels download individual attachments. Opening an attachment advances 待读 to 在读. `test-library.mjs` covers identifier extraction, Crossref/arXiv mapping, BibTeX synthesis/export, dedupe and sort orders.
-
 
 Repository layout: application commands and tool-test paths in this document run from `app/` unless explicitly prefixed with `app/`; root npm scripts wrap the common workflows. Example sources now live in `examples/demo/`. Legacy `/demo/` assets remain for manually recovered sessions only. `npm run demo:snapshot` exports to the explicit example build directory and never injects startup data.
 

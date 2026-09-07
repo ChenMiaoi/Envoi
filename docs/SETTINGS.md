@@ -29,7 +29,10 @@ A connected writable project can override compiler, ChkTeX enablement and disabl
 Overrides are stored in `.envoi/project.json`:
 
 ```json
-{"main":"main.tex","settings":{"version":1,"overrides":{"engine":"xelatex","disabledRules":[26]}}}
+{
+  "main": "main.tex",
+  "settings": { "version": 1, "overrides": { "engine": "xelatex", "disabledRules": [26] } }
+}
 ```
 
 New `.envoi/project.json` takes precedence over the pre-rename `.paperdesk/project.json` and the legacy root `paperdesk.json`. A settings save migrates known shareable metadata and explicit overrides, retaining the untouched legacy file as a backup so unknown fields are not deleted or copied into shared configuration. Competing or externally changed new files are rejected. Git rules expose only `.envoi/project.json`; other management files remain ignored. Writes preserve unrelated new-project metadata and reject dirty or externally changed configuration files. A project change does not modify another project's configuration. Built-in snapshots, unavailable permissions and moved directories disable project settings with an explanation. After a directory move, open its new location; repeated Git authorization cannot restore the old filesystem handle.

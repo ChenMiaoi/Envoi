@@ -11,11 +11,11 @@ function invoke<T>(channel: string, ...args: unknown[]): Promise<T> {
 // agentStatus agentRequest agentChat onAgentEvent
 // fsList fsRead fsWrite fsWriteFiles fsMkdir fsRemove fsRename fsRemoveTree assetUrl
 const bridge: EnvoiBridge = {
-  library: (root,input) => invoke('envoi:library',root,input),
-  workspaces: (root, input) => invoke('envoi:workspaces', root, input),
-  windowColors: colors => invoke('envoi:window-colors', colors),
-  exampleDirectory: () => invoke('envoi:example-directory'),
-  canonicalDirectory: directory => invoke('envoi:canonical-directory', directory),
+  library: (root, input) => invoke("envoi:library", root, input),
+  workspaces: (root, input) => invoke("envoi:workspaces", root, input),
+  windowColors: (colors) => invoke("envoi:window-colors", colors),
+  exampleDirectory: () => invoke("envoi:example-directory"),
+  canonicalDirectory: (directory) => invoke("envoi:canonical-directory", directory),
   trustDirectory: (directory) => invoke("envoi:trust-directory", directory),
   pickDirectory: () => invoke("envoi:pick-directory"),
   bindProject: (directory, opts) => invoke("envoi:bind-project", directory, opts),
@@ -41,17 +41,21 @@ const bridge: EnvoiBridge = {
   agentRequest: (route, body) => invoke("envoi:agent-request", route, body),
   agentChat: (params) => invoke("envoi:agent-chat", params),
   onAgentEvent: (cb) => {
-    const listener = (_event: unknown, payload: { projectId: string; [k: string]: unknown }) => cb(payload)
+    const listener = (_event: unknown, payload: { projectId: string; [k: string]: unknown }) =>
+      cb(payload)
     ipcRenderer.on("envoi:agent-event", listener)
     return () => ipcRenderer.removeListener("envoi:agent-event", listener)
   },
 
-  closeProject: root => invoke('envoi:close-project', root),
-  watchProject: root => invoke('envoi:watch-project', root),
-  onFilesChanged: cb => {
-    const listener = (_event: unknown, payload: {root: string; paths: string[]; error?: string}) => cb(payload)
-    ipcRenderer.on('envoi:files-changed', listener)
-    return () => ipcRenderer.removeListener('envoi:files-changed', listener)
+  closeProject: (root) => invoke("envoi:close-project", root),
+  watchProject: (root) => invoke("envoi:watch-project", root),
+  onFilesChanged: (cb) => {
+    const listener = (
+      _event: unknown,
+      payload: { root: string; paths: string[]; error?: string },
+    ) => cb(payload)
+    ipcRenderer.on("envoi:files-changed", listener)
+    return () => ipcRenderer.removeListener("envoi:files-changed", listener)
   },
   fsChildren: (root) => invoke("envoi:fs-children", root),
   fsList: (root) => invoke("envoi:fs-list", root),

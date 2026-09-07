@@ -1,28 +1,117 @@
-import {useT} from '@/i18n/useT';
-import {useState} from 'react';
-import {ChevronRight,ChevronsDownUp,ChevronsUpDown} from 'lucide-react';
-import type {OutlineNode} from '@/lib/paperOutline';
-import type {SourceLocation} from '@/lib/paperSources';
-export function PaperOutline({nodes,warnings,onLocate}:{nodes:OutlineNode[];warnings:string[];onLocate:(location:SourceLocation,title:string)=>void}) {
- const {t}=useT();
- const [expanded,setExpanded]=useState<Set<string>>(new Set());
- const [selected,setSelected]=useState('');
- function all(items:OutlineNode[]):string[]{return items.flatMap(node=>[node.id,...all(node.children)]);}
- function render(items:OutlineNode[],depth=0){return items.map(node=>{
-  const open=expanded.has(node.id),active=selected===node.id;
-  return <li key={node.id}>
-   <div className={`group flex items-start rounded-md transition-colors ${active?'bg-primary/10 text-primary':'text-foreground/80 hover:bg-secondary/70'}`}>
-    {node.children.length?<button aria-label={`${open?t('common.collapse'):t('common.expand')} ${node.number} ${node.title}`} aria-expanded={open} className="mt-1.5 shrink-0 rounded p-0.5 text-muted-foreground hover:text-primary" onClick={()=>setExpanded(current=>{const next=new Set(current);if(open)next.delete(node.id);else next.add(node.id);return next;})}><ChevronRight className={`h-3 w-3 transition-transform ${open?'rotate-90':''}`} /></button>:<span className="w-4 shrink-0" />}
-    <button title={`${node.number ? node.number+' ' : ''}${node.title}\n${node.location.path}`} aria-current={active?'location':undefined} onClick={()=>{setSelected(node.id);onLocate(node.location,`${node.number ? node.number+' ' : ''}${node.title}`);}} className={`min-w-0 flex-1 py-2 pr-1.5 text-left text-[11.5px] leading-[1.45] ${depth===0?'font-medium':''}`}>
-     {node.number&&<span className="mr-1.5 font-editor text-[10px] text-muted-foreground">{node.number}</span>}<span className="break-words">{node.title}</span>
-    </button>
-   </div>
-   {open&&node.children.length>0&&<ul className="ml-2 border-l border-border/70 pl-1.5">{render(node.children,depth+1)}</ul>}
-  </li>;
- });}
- return <nav aria-label={t('outline.ariaLabel')}>
-  <div className="mb-2 flex items-center justify-between px-1 text-[10px] text-muted-foreground"><span title={t('outline.hint')}>{t('outline.heading')}</span><div className="flex gap-1"><button title={t('outline.expandAll')} aria-label={t('outline.expandAllAria')} className="rounded p-1 hover:bg-secondary" onClick={()=>setExpanded(new Set(all(nodes)))}><ChevronsUpDown className="h-3 w-3" /></button><button title={t('outline.collapseAll')} aria-label={t('outline.collapseAllAria')} className="rounded p-1 hover:bg-secondary" onClick={()=>setExpanded(new Set())}><ChevronsDownUp className="h-3 w-3" /></button></div></div>
-  {nodes.length?<ul className="space-y-0.5">{render(nodes)}</ul>:<p className="px-2 py-4 text-xs text-muted-foreground">{t('outline.empty')}</p>}
-  {!!warnings.length&&<details className="mt-3 px-2 text-[10px] text-warning"><summary>{t('outline.warnings',{count:warnings.length})}</summary>{warnings.map(w=><p key={w} className="mt-1 break-words">{w}</p>)}</details>}
- </nav>;
+import { useT } from "@/i18n/useT"
+import { useState } from "react"
+import { ChevronRight, ChevronsDownUp, ChevronsUpDown } from "lucide-react"
+import type { OutlineNode } from "@/lib/paperOutline"
+import type { SourceLocation } from "@/lib/paperSources"
+export function PaperOutline({
+  nodes,
+  warnings,
+  onLocate,
+}: {
+  nodes: OutlineNode[]
+  warnings: string[]
+  onLocate: (location: SourceLocation, title: string) => void
+}) {
+  const { t } = useT()
+  const [expanded, setExpanded] = useState<Set<string>>(new Set())
+  const [selected, setSelected] = useState("")
+  function all(items: OutlineNode[]): string[] {
+    return items.flatMap((node) => [node.id, ...all(node.children)])
+  }
+  function render(items: OutlineNode[], depth = 0) {
+    return items.map((node) => {
+      const open = expanded.has(node.id),
+        active = selected === node.id
+      return (
+        <li key={node.id}>
+          <div
+            className={`group flex items-start rounded-md transition-colors ${active ? "bg-primary/10 text-primary" : "text-foreground/80 hover:bg-secondary/70"}`}
+          >
+            {node.children.length ? (
+              <button
+                aria-label={`${open ? t("common.collapse") : t("common.expand")} ${node.number} ${node.title}`}
+                aria-expanded={open}
+                className="mt-1.5 shrink-0 rounded p-0.5 text-muted-foreground hover:text-primary"
+                onClick={() =>
+                  setExpanded((current) => {
+                    const next = new Set(current)
+                    if (open) next.delete(node.id)
+                    else next.add(node.id)
+                    return next
+                  })
+                }
+              >
+                <ChevronRight
+                  className={`h-3 w-3 transition-transform ${open ? "rotate-90" : ""}`}
+                />
+              </button>
+            ) : (
+              <span className="w-4 shrink-0" />
+            )}
+            <button
+              title={`${node.number ? node.number + " " : ""}${node.title}\n${node.location.path}`}
+              aria-current={active ? "location" : undefined}
+              onClick={() => {
+                setSelected(node.id)
+                onLocate(node.location, `${node.number ? node.number + " " : ""}${node.title}`)
+              }}
+              className={`min-w-0 flex-1 py-2 pr-1.5 text-left text-[11.5px] leading-[1.45] ${depth === 0 ? "font-medium" : ""}`}
+            >
+              {node.number && (
+                <span className="mr-1.5 font-editor text-[10px] text-muted-foreground">
+                  {node.number}
+                </span>
+              )}
+              <span className="break-words">{node.title}</span>
+            </button>
+          </div>
+          {open && node.children.length > 0 && (
+            <ul className="ml-2 border-l border-border/70 pl-1.5">
+              {render(node.children, depth + 1)}
+            </ul>
+          )}
+        </li>
+      )
+    })
+  }
+  return (
+    <nav aria-label={t("outline.ariaLabel")}>
+      <div className="mb-2 flex items-center justify-between px-1 text-[10px] text-muted-foreground">
+        <span title={t("outline.hint")}>{t("outline.heading")}</span>
+        <div className="flex gap-1">
+          <button
+            title={t("outline.expandAll")}
+            aria-label={t("outline.expandAllAria")}
+            className="rounded p-1 hover:bg-secondary"
+            onClick={() => setExpanded(new Set(all(nodes)))}
+          >
+            <ChevronsUpDown className="h-3 w-3" />
+          </button>
+          <button
+            title={t("outline.collapseAll")}
+            aria-label={t("outline.collapseAllAria")}
+            className="rounded p-1 hover:bg-secondary"
+            onClick={() => setExpanded(new Set())}
+          >
+            <ChevronsDownUp className="h-3 w-3" />
+          </button>
+        </div>
+      </div>
+      {nodes.length ? (
+        <ul className="space-y-0.5">{render(nodes)}</ul>
+      ) : (
+        <p className="px-2 py-4 text-xs text-muted-foreground">{t("outline.empty")}</p>
+      )}
+      {!!warnings.length && (
+        <details className="mt-3 px-2 text-[10px] text-warning">
+          <summary>{t("outline.warnings", { count: warnings.length })}</summary>
+          {warnings.map((w) => (
+            <p key={w} className="mt-1 break-words">
+              {w}
+            </p>
+          ))}
+        </details>
+      )}
+    </nav>
+  )
 }

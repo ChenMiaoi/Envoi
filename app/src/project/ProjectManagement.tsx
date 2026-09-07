@@ -1,35 +1,343 @@
-import {nativeBasename,nativePathWithin} from '@/lib/nativePath';
-import {useEffect,useState} from 'react';
-import {useT} from '@/i18n/useT';
-import {useProject} from './context';import {dirtyFiles} from '@/lib/projectFiles';import {emptyProject} from '@/lib/initialProject';import {closeProjectSession} from '@/lib/projectSession';
-import {recentProjects,forgetRecentProject,matchingProjectRecords,forgetDeletedRecords,type RecentProject} from '@/lib/recentProjects';
-import {matchingGitBindings,forgetGitBindings} from '@/lib/gitBinding';import {verifyDeletionTarget,deleteVerifiedProject,type DeletionTarget} from '@/lib/projectManagement';
-import {Dialog,DialogContent,DialogHeader,DialogTitle,DialogDescription} from '@/components/ui/dialog';
-export function ProjectManagement(){
- const {t}=useT();const {project,setProject,closeProject,saveAll,busy,saving,setBusy,setMessage}=useProject();const [removing,setRemoving]=useState<RecentProject|null>(null),[mode,setMode]=useState<'close'|'manage'|null>(null),[recent,setRecent]=useState<RecentProject[]>([]),[target,setTarget]=useState<string|null>(null),[plan,setPlan]=useState<DeletionTarget|null>(null),[typed,setTyped]=useState(''),[discard,setDiscard]=useState(false),[message,status]=useState('');
- useEffect(()=>{const close=()=>{setRemoving(null);setMode('close');setDiscard(false);status('');},manage=()=>{setMode('manage');status('');void recentProjects().then(setRecent).catch(error=>status(error.message));};window.addEventListener('envoi:close-project',close);window.addEventListener('envoi:manage-projects',manage);return()=>{window.removeEventListener('envoi:close-project',close);window.removeEventListener('envoi:manage-projects',manage);};},[]);
- const choose=(directory:string)=>{setTarget(directory);setPlan(null);setTyped('');setDiscard(false);status('');};
- const forget=async(entry:RecentProject)=>{await forgetRecentProject(entry.id);setRecent(items=>items.filter(item=>item.id!==entry.id));window.dispatchEvent(new Event('envoi:recent-updated'));status(t('project.removedRecent'));};
- const remove=async(entry:RecentProject)=>{
-  if(busy||saving)return;
-  if((entry.path===project.rootPath||entry.projectId===project.id)&&project.id!=='empty'){
-   setRemoving(entry);setMode('close');setDiscard(false);status('');return;
+import { nativeBasename, nativePathWithin } from "@/lib/nativePath"
+import { useEffect, useState } from "react"
+import { useT } from "@/i18n/useT"
+import { useProject } from "./context"
+import { dirtyFiles } from "@/lib/projectFiles"
+import { emptyProject } from "@/lib/initialProject"
+import { closeProjectSession } from "@/lib/projectSession"
+import {
+  recentProjects,
+  forgetRecentProject,
+  matchingProjectRecords,
+  forgetDeletedRecords,
+  type RecentProject,
+} from "@/lib/recentProjects"
+import { matchingGitBindings, forgetGitBindings } from "@/lib/gitBinding"
+import {
+  verifyDeletionTarget,
+  deleteVerifiedProject,
+  type DeletionTarget,
+} from "@/lib/projectManagement"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog"
+export function ProjectManagement() {
+  const { t } = useT()
+  const { project, setProject, closeProject, saveAll, busy, saving, setBusy, setMessage } =
+    useProject()
+  const [removing, setRemoving] = useState<RecentProject | null>(null),
+    [mode, setMode] = useState<"close" | "manage" | null>(null),
+    [recent, setRecent] = useState<RecentProject[]>([]),
+    [target, setTarget] = useState<string | null>(null),
+    [plan, setPlan] = useState<DeletionTarget | null>(null),
+    [typed, setTyped] = useState(""),
+    [discard, setDiscard] = useState(false),
+    [message, status] = useState("")
+  useEffect(() => {
+    const close = () => {
+        setRemoving(null)
+        setMode("close")
+        setDiscard(false)
+        status("")
+      },
+      manage = () => {
+        setMode("manage")
+        status("")
+        void recentProjects()
+          .then(setRecent)
+          .catch((error) => status(error.message))
+      }
+    window.addEventListener("envoi:close-project", close)
+    window.addEventListener("envoi:manage-projects", manage)
+    return () => {
+      window.removeEventListener("envoi:close-project", close)
+      window.removeEventListener("envoi:manage-projects", manage)
+    }
+  }, [])
+  const choose = (directory: string) => {
+    setTarget(directory)
+    setPlan(null)
+    setTyped("")
+    setDiscard(false)
+    status("")
   }
-  setBusy(true);try{await forget(entry);}catch(error){status(t('project.removeFailed',{error:(error as Error).message}));}finally{setBusy(false);}
- };
- const finishClose=async()=>{
-  try{await closeProject(discard);if(removing)await forget(removing);setMode(null);}
-  catch(error){setMessage((error as Error).message);status((error as Error).message);}
- };
+  const forget = async (entry: RecentProject) => {
+    await forgetRecentProject(entry.id)
+    setRecent((items) => items.filter((item) => item.id !== entry.id))
+    window.dispatchEvent(new Event("envoi:recent-updated"))
+    status(t("project.removedRecent"))
+  }
+  const remove = async (entry: RecentProject) => {
+    if (busy || saving) return
+    if (
+      (entry.path === project.rootPath || entry.projectId === project.id) &&
+      project.id !== "empty"
+    ) {
+      setRemoving(entry)
+      setMode("close")
+      setDiscard(false)
+      status("")
+      return
+    }
+    setBusy(true)
+    try {
+      await forget(entry)
+    } catch (error) {
+      status(t("project.removeFailed", { error: (error as Error).message }))
+    } finally {
+      setBusy(false)
+    }
+  }
+  const finishClose = async () => {
+    try {
+      await closeProject(discard)
+      if (removing) await forget(removing)
+      setMode(null)
+    } catch (error) {
+      setMessage((error as Error).message)
+      status((error as Error).message)
+    }
+  }
 
- const destroy=async()=>{if(!plan||busy||saving)return;setBusy(true);try{const isCurrent=!!project.rootPath&&(nativePathWithin(project.rootPath,plan.path));if(isCurrent&&dirtyFiles(project).length&&!discard)throw Error(t('project.errorUnsavedChanges'));const records=await matchingProjectRecords(plan.path),bindingKeys=await matchingGitBindings(plan.path);await deleteVerifiedProject(plan,typed);
-   const warnings:string[]=[];try{await forgetDeletedRecords(records);}catch{warnings.push(t('project.warnRecentCleanup'));}try{await forgetGitBindings(bindingKeys);}catch{warnings.push(t('project.warnBindingCleanup'));}
-   if(isCurrent){const empty=emptyProject();try{await closeProjectSession(project,true);}catch{warnings.push(t('project.warnSessionCleanup'));}if(import.meta.hot)import.meta.hot.data.project=empty;setProject(current=>current.id===project.id?empty:current);}
-   setTarget(null);setPlan(null);try{setRecent(await recentProjects());}catch{warnings.push(t('project.warnRecentRefresh'));}window.dispatchEvent(new Event('envoi:recent-updated'));setMessage(warnings.join('；'));status(t('project.deletedPermanently',{suffix:warnings.length?'；'+warnings.join('；'):''}));
-  }catch(error){status((error as Error).message);}finally{setBusy(false);}};
- return <Dialog open={mode!==null} onOpenChange={open=>{if(!open&&!busy&&!saving){setMode(null);setTarget(null);setPlan(null);}}}><DialogContent className="max-h-[85vh] overflow-auto sm:max-w-xl"><DialogHeader><DialogTitle>{mode==='close'?(removing?t('project.removeRecord'):t('command.project-close')):t('command.project-manage')}</DialogTitle><DialogDescription>{mode==='close'?(removing?t('project.manageDesc'):t('project.closeDesc',{name:project.name})):t('project.manageDesc')}</DialogDescription></DialogHeader>
- {mode==='close'?<><p className="text-sm">{dirtyFiles(project).length?t('project.unsavedFilesCount',{count:dirtyFiles(project).length}):t('project.closeReturnsEmpty')}</p>{dirtyFiles(project).length>0&&<><button disabled={busy||saving} className="text-left text-sm text-primary" onClick={()=>void saveAll()}>{t('project.saveAllFirst')}</button><label className="flex gap-2 text-sm"><input type="checkbox" checked={discard} onChange={e=>setDiscard(e.target.checked)} />{t('project.discardUnsaved')}</label></>}<button disabled={busy||saving||(!discard&&dirtyFiles(project).length>0)} onClick={()=>void finishClose()} className="rounded bg-primary px-3 py-2 text-sm text-primary-foreground disabled:opacity-40">{removing?t('project.removeRecord'):t('project.closeProject')}</button></>:<><div className="flex items-center justify-between border-b border-border pb-3"><span className="text-sm">{t('project.currentName',{name:project.name})}</span><button disabled={busy||saving||!project.rootPath} className="text-xs text-danger disabled:opacity-40" onClick={()=>project.rootPath&&choose(project.rootPath)}>{t('project.deleteCurrentDirectory')}</button></div><div className="space-y-2">{recent.length?recent.map(entry=><div key={entry.id} className="flex items-center gap-3 rounded border border-border px-3 py-2"><span className="min-w-0 flex-1 truncate text-sm">{entry.name}</span><button disabled={busy||saving} className="text-xs text-primary" onClick={()=>void remove(entry)}>{t('project.removeRecord')}</button><button disabled={busy||saving} className="text-xs text-danger" onClick={()=>entry.path?choose(entry.path):status(t('project.reopenToVerify'))}>{t('project.deleteDirectory')}</button></div>):<p className="text-sm text-muted-foreground">{t('project.noRecentProjects')}</p>}</div>
- {target&&<div className="space-y-3 rounded border border-danger/40 p-4"><h3 className="text-sm font-medium">{t('project.deleteForeverHeading',{name:nativeBasename(target)})}</h3><p className="text-xs text-muted-foreground">{t('project.deleteForeverDesc')}</p><button disabled={busy||saving} className="text-sm text-primary" onClick={async()=>{try{setPlan(await verifyDeletionTarget(target));status('');}catch(error){setPlan(null);status((error as Error).name==='AbortError'?t('project.selectionCancelled'):(error as Error).message);}}}>{t('project.verifyParent')}</button>{plan&&<><p className="break-all text-sm">{t('project.verifiedDirectory',{label:plan.label})}</p><p className="text-xs text-muted-foreground">{t('project.verifiedNote')}</p><input aria-label={t('project.confirmNameAria')} value={typed} onChange={e=>setTyped(e.target.value)} placeholder={t('project.typeNamePlaceholder',{name:plan.name})} className="w-full rounded border border-input bg-background p-2 text-sm" />{dirtyFiles(project).length>0&&<label className="flex gap-2 text-xs"><input type="checkbox" checked={discard} onChange={e=>setDiscard(e.target.checked)} />{t('project.discardIfCurrent')}</label>}<button disabled={busy||saving||typed!==plan.name} className="rounded bg-red-500 px-3 py-2 text-sm text-white disabled:opacity-40" onClick={()=>void destroy()}>{t('project.confirmDelete')}</button></>}<button disabled={busy} className="ml-3 text-xs text-muted-foreground" onClick={()=>{setTarget(null);setPlan(null);}}>{t('project.cancelDelete')}</button></div>}</>}
- {(busy||saving)&&<p className="text-xs text-muted-foreground">{t('project.waitForOperation')}</p>}{message&&<p role="status" className="text-sm text-warning">{message}</p>}
- </DialogContent></Dialog>;
+  const destroy = async () => {
+    if (!plan || busy || saving) return
+    setBusy(true)
+    try {
+      const isCurrent = !!project.rootPath && nativePathWithin(project.rootPath, plan.path)
+      if (isCurrent && dirtyFiles(project).length && !discard)
+        throw Error(t("project.errorUnsavedChanges"))
+      const records = await matchingProjectRecords(plan.path),
+        bindingKeys = await matchingGitBindings(plan.path)
+      await deleteVerifiedProject(plan, typed)
+      const warnings: string[] = []
+      try {
+        await forgetDeletedRecords(records)
+      } catch {
+        warnings.push(t("project.warnRecentCleanup"))
+      }
+      try {
+        await forgetGitBindings(bindingKeys)
+      } catch {
+        warnings.push(t("project.warnBindingCleanup"))
+      }
+      if (isCurrent) {
+        const empty = emptyProject()
+        try {
+          await closeProjectSession(project, true)
+        } catch {
+          warnings.push(t("project.warnSessionCleanup"))
+        }
+        if (import.meta.hot) import.meta.hot.data.project = empty
+        setProject((current) => (current.id === project.id ? empty : current))
+      }
+      setTarget(null)
+      setPlan(null)
+      try {
+        setRecent(await recentProjects())
+      } catch {
+        warnings.push(t("project.warnRecentRefresh"))
+      }
+      window.dispatchEvent(new Event("envoi:recent-updated"))
+      setMessage(warnings.join("；"))
+      status(
+        t("project.deletedPermanently", {
+          suffix: warnings.length ? "；" + warnings.join("；") : "",
+        }),
+      )
+    } catch (error) {
+      status((error as Error).message)
+    } finally {
+      setBusy(false)
+    }
+  }
+  return (
+    <Dialog
+      open={mode !== null}
+      onOpenChange={(open) => {
+        if (!open && !busy && !saving) {
+          setMode(null)
+          setTarget(null)
+          setPlan(null)
+        }
+      }}
+    >
+      <DialogContent className="max-h-[85vh] overflow-auto sm:max-w-xl">
+        <DialogHeader>
+          <DialogTitle>
+            {mode === "close"
+              ? removing
+                ? t("project.removeRecord")
+                : t("command.project-close")
+              : t("command.project-manage")}
+          </DialogTitle>
+          <DialogDescription>
+            {mode === "close"
+              ? removing
+                ? t("project.manageDesc")
+                : t("project.closeDesc", { name: project.name })
+              : t("project.manageDesc")}
+          </DialogDescription>
+        </DialogHeader>
+        {mode === "close" ? (
+          <>
+            <p className="text-sm">
+              {dirtyFiles(project).length
+                ? t("project.unsavedFilesCount", { count: dirtyFiles(project).length })
+                : t("project.closeReturnsEmpty")}
+            </p>
+            {dirtyFiles(project).length > 0 && (
+              <>
+                <button
+                  disabled={busy || saving}
+                  className="text-left text-sm text-primary"
+                  onClick={() => void saveAll()}
+                >
+                  {t("project.saveAllFirst")}
+                </button>
+                <label className="flex gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={discard}
+                    onChange={(e) => setDiscard(e.target.checked)}
+                  />
+                  {t("project.discardUnsaved")}
+                </label>
+              </>
+            )}
+            <button
+              disabled={busy || saving || (!discard && dirtyFiles(project).length > 0)}
+              onClick={() => void finishClose()}
+              className="rounded bg-primary px-3 py-2 text-sm text-primary-foreground disabled:opacity-40"
+            >
+              {removing ? t("project.removeRecord") : t("project.closeProject")}
+            </button>
+          </>
+        ) : (
+          <>
+            <div className="flex items-center justify-between border-b border-border pb-3">
+              <span className="text-sm">{t("project.currentName", { name: project.name })}</span>
+              <button
+                disabled={busy || saving || !project.rootPath}
+                className="text-xs text-danger disabled:opacity-40"
+                onClick={() => project.rootPath && choose(project.rootPath)}
+              >
+                {t("project.deleteCurrentDirectory")}
+              </button>
+            </div>
+            <div className="space-y-2">
+              {recent.length ? (
+                recent.map((entry) => (
+                  <div
+                    key={entry.id}
+                    className="flex items-center gap-3 rounded border border-border px-3 py-2"
+                  >
+                    <span className="min-w-0 flex-1 truncate text-sm">{entry.name}</span>
+                    <button
+                      disabled={busy || saving}
+                      className="text-xs text-primary"
+                      onClick={() => void remove(entry)}
+                    >
+                      {t("project.removeRecord")}
+                    </button>
+                    <button
+                      disabled={busy || saving}
+                      className="text-xs text-danger"
+                      onClick={() =>
+                        entry.path ? choose(entry.path) : status(t("project.reopenToVerify"))
+                      }
+                    >
+                      {t("project.deleteDirectory")}
+                    </button>
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-muted-foreground">{t("project.noRecentProjects")}</p>
+              )}
+            </div>
+            {target && (
+              <div className="space-y-3 rounded border border-danger/40 p-4">
+                <h3 className="text-sm font-medium">
+                  {t("project.deleteForeverHeading", { name: nativeBasename(target) })}
+                </h3>
+                <p className="text-xs text-muted-foreground">{t("project.deleteForeverDesc")}</p>
+                <button
+                  disabled={busy || saving}
+                  className="text-sm text-primary"
+                  onClick={async () => {
+                    try {
+                      setPlan(await verifyDeletionTarget(target))
+                      status("")
+                    } catch (error) {
+                      setPlan(null)
+                      status(
+                        (error as Error).name === "AbortError"
+                          ? t("project.selectionCancelled")
+                          : (error as Error).message,
+                      )
+                    }
+                  }}
+                >
+                  {t("project.verifyParent")}
+                </button>
+                {plan && (
+                  <>
+                    <p className="break-all text-sm">
+                      {t("project.verifiedDirectory", { label: plan.label })}
+                    </p>
+                    <p className="text-xs text-muted-foreground">{t("project.verifiedNote")}</p>
+                    <input
+                      aria-label={t("project.confirmNameAria")}
+                      value={typed}
+                      onChange={(e) => setTyped(e.target.value)}
+                      placeholder={t("project.typeNamePlaceholder", { name: plan.name })}
+                      className="w-full rounded border border-input bg-background p-2 text-sm"
+                    />
+                    {dirtyFiles(project).length > 0 && (
+                      <label className="flex gap-2 text-xs">
+                        <input
+                          type="checkbox"
+                          checked={discard}
+                          onChange={(e) => setDiscard(e.target.checked)}
+                        />
+                        {t("project.discardIfCurrent")}
+                      </label>
+                    )}
+                    <button
+                      disabled={busy || saving || typed !== plan.name}
+                      className="rounded bg-red-500 px-3 py-2 text-sm text-white disabled:opacity-40"
+                      onClick={() => void destroy()}
+                    >
+                      {t("project.confirmDelete")}
+                    </button>
+                  </>
+                )}
+                <button
+                  disabled={busy}
+                  className="ml-3 text-xs text-muted-foreground"
+                  onClick={() => {
+                    setTarget(null)
+                    setPlan(null)
+                  }}
+                >
+                  {t("project.cancelDelete")}
+                </button>
+              </div>
+            )}
+          </>
+        )}
+        {(busy || saving) && (
+          <p className="text-xs text-muted-foreground">{t("project.waitForOperation")}</p>
+        )}
+        {message && (
+          <p role="status" className="text-sm text-warning">
+            {message}
+          </p>
+        )}
+      </DialogContent>
+    </Dialog>
+  )
 }

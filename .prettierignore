@@ -1,0 +1,23 @@
+.git/
+node_modules/
+
+# Generated application output and caches
+app/dist/
+app/dist-ssr/
+app/public/pdfjs/
+app/release/
+app/tmp/
+coverage/
+examples/*/build/
+examples/*/output/
+*.tsbuildinfo
+*.log
+
+# Dependency lockfiles and local project data
+package-lock.json
+app/package-lock.json
+examples/*/.envoi/
+
+# Binary or minified assets
+**/*.min.*
+**/*.map

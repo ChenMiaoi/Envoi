@@ -1,6 +1,16 @@
-import assert from 'node:assert/strict';import {toolInfo,validateChktexPath,configureTools} from '../server/tool-config.mjs';
-const info=toolInfo();if(!info.chktex.available){console.log('SKIP tool-config: ChkTeX unavailable —',info.chktex.error);process.exit(0);}
-assert.match(validateChktexPath(info.chktex.path),/(?:^|[\\/])chktex(?:\.exe)?$/i);assert.equal(info.texlab.integrationAvailable,false);
-assert.throws(()=>validateChktexPath('/bin/sh'));assert.throws(()=>validateChktexPath('chktex --shell-command'));
-await assert.rejects(configureTools({chktexPath:'/bin/sh'}));await assert.rejects(configureTools({command:'echo injected'}));
-console.log('PASS detected ChkTeX/version and validated executable-only configuration; wrong binary/commands rejected without changing tool settings');
+import assert from "node:assert/strict"
+import { toolInfo, validateChktexPath, configureTools } from "../server/tool-config.mjs"
+const info = toolInfo()
+if (!info.chktex.available) {
+  console.log("SKIP tool-config: ChkTeX unavailable —", info.chktex.error)
+  process.exit(0)
+}
+assert.match(validateChktexPath(info.chktex.path), /(?:^|[\\/])chktex(?:\.exe)?$/i)
+assert.equal(info.texlab.integrationAvailable, false)
+assert.throws(() => validateChktexPath("/bin/sh"))
+assert.throws(() => validateChktexPath("chktex --shell-command"))
+await assert.rejects(configureTools({ chktexPath: "/bin/sh" }))
+await assert.rejects(configureTools({ command: "echo injected" }))
+console.log(
+  "PASS detected ChkTeX/version and validated executable-only configuration; wrong binary/commands rejected without changing tool settings",
+)

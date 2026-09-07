@@ -1,8 +1,18 @@
-import { useState } from "react";
-import { ChevronDown, ChevronRight, FileText, FileType2, FileCode2, BookMarked, Image, FolderOpen, Folder } from "lucide-react";
-import { cn } from "@/lib/utils";
-import {useT} from "@/i18n/useT";
-import type { FileNode } from "@/data/workspace";
+import { useState } from "react"
+import {
+  ChevronDown,
+  ChevronRight,
+  FileText,
+  FileType2,
+  FileCode2,
+  BookMarked,
+  Image,
+  FolderOpen,
+  Folder,
+} from "lucide-react"
+import { cn } from "@/lib/utils"
+import { useT } from "@/i18n/useT"
+import type { FileNode } from "@/data/workspace"
 
 const kindIcon: Record<string, typeof FileText> = {
   pdf: BookMarked,
@@ -10,7 +20,7 @@ const kindIcon: Record<string, typeof FileText> = {
   latex: FileCode2,
   bib: FileType2,
   image: Image,
-};
+}
 
 const kindColor: Record<string, string> = {
   pdf: "text-[hsl(var(--hue-red))]",
@@ -18,7 +28,7 @@ const kindColor: Record<string, string> = {
   latex: "text-[hsl(var(--hue-green))]",
   bib: "text-[hsl(var(--hue-orange))]",
   image: "text-[hsl(var(--hue-violet))]",
-};
+}
 
 function TreeItem({
   node,
@@ -26,15 +36,15 @@ function TreeItem({
   activeId,
   onOpen,
 }: {
-  node: FileNode;
-  depth: number;
-  activeId: string | null;
-  onOpen: (n: FileNode) => void;
+  node: FileNode
+  depth: number
+  activeId: string | null
+  onOpen: (n: FileNode) => void
 }) {
-  const [open, setOpen] = useState(true);
-  const isFolder = node.kind === "folder";
-  const Icon = isFolder ? (open ? FolderOpen : Folder) : kindIcon[node.kind] ?? FileText;
-  const active = node.id === activeId;
+  const [open, setOpen] = useState(true)
+  const isFolder = node.kind === "folder"
+  const Icon = isFolder ? (open ? FolderOpen : Folder) : (kindIcon[node.kind] ?? FileText)
+  const active = node.id === activeId
 
   return (
     <div>
@@ -56,10 +66,21 @@ function TreeItem({
           <span className="w-3.5 shrink-0" />
         )}
         <Icon
-          className={cn("h-3.5 w-3.5 shrink-0", isFolder ? "text-muted-foreground" : kindColor[node.kind])}
+          className={cn(
+            "h-3.5 w-3.5 shrink-0",
+            isFolder ? "text-muted-foreground" : kindColor[node.kind],
+          )}
           strokeWidth={1.8}
         />
-        <span title={node.name} className={cn("truncate",node.id==='project-root'&&"text-[13px] font-semibold text-foreground")}>{node.name}</span>
+        <span
+          title={node.name}
+          className={cn(
+            "truncate",
+            node.id === "project-root" && "text-[13px] font-semibold text-foreground",
+          )}
+        >
+          {node.name}
+        </span>
       </button>
       {isFolder &&
         open &&
@@ -67,7 +88,7 @@ function TreeItem({
           <TreeItem key={c.id} node={c} depth={depth + 1} activeId={activeId} onOpen={onOpen} />
         ))}
     </div>
-  );
+  )
 }
 
 export function FileTree({
@@ -76,17 +97,29 @@ export function FileTree({
   onOpen,
   rootName,
 }: {
-  rootName?: string;
-  nodes: FileNode[];
-  activeId: string | null;
-  onOpen: (n: FileNode) => void;
+  rootName?: string
+  nodes: FileNode[]
+  activeId: string | null
+  onOpen: (n: FileNode) => void
 }) {
-  const {t}=useT();
+  const { t } = useT()
   return (
     <div className="scrollbar-thin h-full overflow-y-auto px-1.5 py-2">
-      {rootName?<TreeItem key={rootName} node={{id:'project-root',name:rootName,kind:'folder',children:nodes}} depth={0} activeId={activeId} onOpen={onOpen}/>:nodes.length?nodes.map((n) => (
-        <TreeItem key={n.id} node={n} depth={0} activeId={activeId} onOpen={onOpen} />
-      )):<p className="px-3 py-2 text-xs text-muted-foreground">{t('project.notOpen')}</p>}
+      {rootName ? (
+        <TreeItem
+          key={rootName}
+          node={{ id: "project-root", name: rootName, kind: "folder", children: nodes }}
+          depth={0}
+          activeId={activeId}
+          onOpen={onOpen}
+        />
+      ) : nodes.length ? (
+        nodes.map((n) => (
+          <TreeItem key={n.id} node={n} depth={0} activeId={activeId} onOpen={onOpen} />
+        ))
+      ) : (
+        <p className="px-3 py-2 text-xs text-muted-foreground">{t("project.notOpen")}</p>
+      )}
     </div>
-  );
+  )
 }

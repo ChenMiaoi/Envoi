@@ -1,1 +1,1 @@
-export {LibraryView as ProjectLibrary} from "@/views/LibraryView";
+export { LibraryView as ProjectLibrary } from "@/views/LibraryView"

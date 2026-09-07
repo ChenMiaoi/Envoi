@@ -34,14 +34,14 @@ The example uses explicit synthetic data; it is not a published paper or hardwar
 
 ## Common commands
 
-| Command | Purpose |
-| --- | --- |
-| `npm run build` | Type-check and build the app |
-| `npm test` | Project, outline, diagnostic and parser tests |
-| `npm run test:local` | Actual local TeX/Git/ChkTeX checks; requires installed tools |
-| `npm run demo:build` | Compile the example and refresh the bundled snapshot |
-| `npm run test:demo` | Verify PDF destinations, fingerprints and diagnostic recovery |
-| `npm run demo:snapshot` | Refresh the snapshot from an already compiled example |
+| Command                 | Purpose                                                       |
+| ----------------------- | ------------------------------------------------------------- |
+| `npm run build`         | Type-check and build the app                                  |
+| `npm test`              | Project, outline, diagnostic and parser tests                 |
+| `npm run test:local`    | Actual local TeX/Git/ChkTeX checks; requires installed tools  |
+| `npm run demo:build`    | Compile the example and refresh the bundled snapshot          |
+| `npm run test:demo`     | Verify PDF destinations, fingerprints and diagnostic recovery |
+| `npm run demo:snapshot` | Refresh the snapshot from an already compiled example         |
 
 Figure regeneration is optional: `python3 app/scripts/generate-demo-figures.py` requires NumPy and Matplotlib. The generator remains in development tools, outside the example’s writing directory.
 

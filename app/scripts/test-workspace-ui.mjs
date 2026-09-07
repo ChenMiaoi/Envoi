@@ -1,92 +1,138 @@
-import {_electron} from 'playwright';
-import {createRequire} from 'node:module';
-import {realpath,mkdtemp,mkdir,readFile,rm} from 'node:fs/promises';
-import {tmpdir} from 'node:os';
-import path from 'node:path';
-import assert from 'node:assert/strict';
-const require=createRequire(import.meta.url),keep=!!process.env.ENVOI_WORKSPACE_PREVIEW_DIR;
-let temp=keep?path.resolve(process.env.ENVOI_WORKSPACE_PREVIEW_DIR):await mkdtemp(path.join(tmpdir(),'envoi-workspace-ui-'));
-await mkdir(temp,{recursive:true});temp=await realpath(temp);
-let app;
-try{
- app=await _electron.launch({executablePath:require('electron'),args:[path.resolve('.'),'--user-data-dir='+path.join(temp,'profile')],env:{...process.env,ENVOI_DATA_DIR:path.join(temp,'data')}});
- await app.evaluate(({dialog})=>{globalThis.originalWorkspaceDialog=dialog.showMessageBox;dialog.showMessageBox=async()=>({response:0,checkboxChecked:false});});
- const page=await app.firstWindow(),errors=[];page.on('pageerror',e=>errors.push(e.message));
- await page.getByTestId('welcome-page').waitFor();
- await page.getByRole('button',{name:/打开示例项目/}).click();
- await page.getByTestId('welcome-page').waitFor({state:'hidden'});
- await page.getByRole('button',{name:'main.tex',exact:true}).waitFor();
- await page.waitForFunction(()=>location.hash==='#/reader');
- const main=(await page.evaluate(()=>window.envoi.dataGet('recent'))).value[0].path;
- const mainId=(await page.evaluate(()=>window.envoi.dataGet('session','current'))).value.id;
- await page.evaluate(()=>location.hash='/history');
- await page.getByRole('heading',{name:'版本与实验',exact:true}).waitFor();
- await page.getByRole('button',{name:'新建实验',exact:true}).click();
- await page.getByRole('textbox',{name:'实验名称',exact:true}).fill('注意力模型 · 基线复现');
- await page.getByRole('textbox',{name:'实验说明',exact:true}).fill('复用 demo 的确定性合成数据，演示结果保存与来源追溯。');
- await page.getByRole('button',{name:'创建实验',exact:true}).click();
- await page.getByRole('heading',{name:'注意力模型 · 基线复现',exact:true}).waitFor();
- await page.getByRole('button',{name:'打开工作区',exact:true}).click();
- await page.waitForFunction(()=>location.hash==='#/reader');
- await page.waitForFunction(id=>document.querySelector('[aria-label^="项目："]')?.textContent&&!location.hash.includes('/history'),mainId);
- const state=await page.evaluate(()=>window.envoi.dataGet('session','current'));
- assert.notEqual(state.value.id,mainId);
- const first=state.value.rootPath;
- assert.equal(await readFile(path.join(first,'.envoi/project.json'),'utf8'),await readFile(path.join(main,'.envoi/project.json'),'utf8'));
- await page.evaluate(()=>location.hash='/history');
- await page.getByRole('button',{name:'保存结果',exact:true}).click();
- await page.getByRole('textbox',{name:'结果名称',exact:true}).fill('注意力模型基线 · 合成数据');
- await page.getByRole('textbox',{name:'实验说明',exact:true}).fill('使用 demo 已有的 21 组确定性模型数据演示归档流程。这些数据不是硬件实测结果。原始数据和源码归档均保存在主工作区。');
- await page.getByRole('textbox',{name:'运行命令与参数',exact:true}).fill('已有 demo 模型输出；本次仅演示结果归档，未重新运行实验');
- await page.getByLabel('data/model-data.csv',{exact:true}).check();
- await page.getByRole('button',{name:'保存结果',exact:true}).click();
- await page.getByRole('heading',{name:'注意力模型基线 · 合成数据',exact:true}).waitFor();
- const records=await page.evaluate(root=>window.envoi.workspaces(root,{action:'results'}),main);
- assert.equal(records.length,1);
- await page.getByRole('button',{name:'新建实验',exact:true}).click();
- await page.getByRole('textbox',{name:'实验名称',exact:true}).fill('带宽敏感性 · 待探索');
- await page.getByRole('textbox',{name:'实验说明',exact:true}).fill('独立探索带宽假设对模型结果的影响，尚未运行。');
- await page.getByRole('button',{name:'创建实验',exact:true}).click();
- await page.getByRole('heading',{name:'带宽敏感性 · 待探索',exact:true}).waitFor();
- await page.locator('aside button').filter({hasText:'主工作区'}).click();
- await page.getByRole('button',{name:'打开工作区',exact:true}).click();
- await page.waitForFunction(()=>location.hash==='#/reader');
- await page.evaluate(()=>location.hash='/history');
- await page.getByRole('button',{name:'已保存结果',exact:true}).click();
- await page.getByRole('heading',{name:'注意力模型基线 · 合成数据',exact:true}).waitFor();
- await page.getByRole('button',{name:'切换工作区：主工作区',exact:true}).click();
- await page.getByRole('menuitem',{name:'新建工作区…',exact:true}).click();
- await page.getByRole('textbox',{name:'工作区名称',exact:true}).fill('菜单创建的实验');
- await page.getByRole('button',{name:'创建并打开',exact:true}).click();
- await page.getByRole('button',{name:'切换工作区：菜单创建的实验',exact:true}).waitFor();
- await page.waitForFunction(()=>location.hash==='#/reader');
- await page.getByRole('button',{name:'切换工作区：菜单创建的实验',exact:true}).click();
- await page.getByRole('menuitem',{name:'重命名当前工作区…',exact:true}).click();
- await page.getByRole('textbox',{name:'工作区名称',exact:true}).fill('带宽扫描实验');
- await page.getByRole('button',{name:'保存名称',exact:true}).click();
- await page.getByRole('button',{name:'切换工作区：带宽扫描实验',exact:true}).waitFor();
- await page.evaluate(()=>location.hash='/reader');
- await page.getByRole('button',{name:'带宽扫描实验',exact:true}).waitFor();
- await page.getByRole('button',{name:'切换工作区：带宽扫描实验',exact:true}).click();
- await page.getByRole('menuitem',{name:/主工作区.*main/}).click();
- await page.getByRole('button',{name:'切换工作区：主工作区',exact:true}).waitFor();
- await page.evaluate(()=>location.hash='/history');
- await page.getByRole('button',{name:'已保存结果',exact:true}).click();
- await page.getByRole('heading',{name:'注意力模型基线 · 合成数据',exact:true}).waitFor();
- await page.setViewportSize({width:760,height:650});
- assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
- await page.setViewportSize({width:1440,height:900});
- await mkdir('tmp',{recursive:true});await page.screenshot({path:path.resolve('tmp/workspaces-preview.png')});
- assert.deepEqual(errors,[]);
- console.log('PASS workspace UI: create, inspect, switch, isolated identity, save result, return to main, narrow layout');
- console.log('PREVIEW_MAIN='+main);
- if(keep){
-  // Release Playwright's fixed test viewport before handing the native window
-  // to the user. Otherwise maximizing leaves the renderer at 1440 x 900.
-  const cdp=await page.context().newCDPSession(page);
-  await cdp.send('Emulation.clearDeviceMetricsOverride');
-  await cdp.detach();
-  await app.evaluate(({dialog})=>{dialog.showMessageBox=globalThis.originalWorkspaceDialog;delete globalThis.originalWorkspaceDialog;});
-  console.log('Preview remains open. Data: '+temp);await new Promise(resolve=>app.on('close',resolve));
- }
-}finally{if(app)await app.close().catch(()=>{});if(!keep)await rm(temp,{recursive:true,force:true,maxRetries:3});}
+import { _electron } from "playwright"
+import { createRequire } from "node:module"
+import { realpath, mkdtemp, mkdir, readFile, rm } from "node:fs/promises"
+import { tmpdir } from "node:os"
+import path from "node:path"
+import assert from "node:assert/strict"
+const require = createRequire(import.meta.url),
+  keep = !!process.env.ENVOI_WORKSPACE_PREVIEW_DIR
+let temp = keep
+  ? path.resolve(process.env.ENVOI_WORKSPACE_PREVIEW_DIR)
+  : await mkdtemp(path.join(tmpdir(), "envoi-workspace-ui-"))
+await mkdir(temp, { recursive: true })
+temp = await realpath(temp)
+let app
+try {
+  app = await _electron.launch({
+    executablePath: require("electron"),
+    args: [path.resolve("."), "--user-data-dir=" + path.join(temp, "profile")],
+    env: { ...process.env, ENVOI_DATA_DIR: path.join(temp, "data") },
+  })
+  await app.evaluate(({ dialog }) => {
+    globalThis.originalWorkspaceDialog = dialog.showMessageBox
+    dialog.showMessageBox = async () => ({ response: 0, checkboxChecked: false })
+  })
+  const page = await app.firstWindow(),
+    errors = []
+  page.on("pageerror", (e) => errors.push(e.message))
+  await page.getByTestId("welcome-page").waitFor()
+  await page.getByRole("button", { name: /打开示例项目/ }).click()
+  await page.getByTestId("welcome-page").waitFor({ state: "hidden" })
+  await page.getByRole("button", { name: "main.tex", exact: true }).waitFor()
+  await page.waitForFunction(() => location.hash === "#/reader")
+  const main = (await page.evaluate(() => window.envoi.dataGet("recent"))).value[0].path
+  const mainId = (await page.evaluate(() => window.envoi.dataGet("session", "current"))).value.id
+  await page.evaluate(() => (location.hash = "/history"))
+  await page.getByRole("heading", { name: "版本与实验", exact: true }).waitFor()
+  await page.getByRole("button", { name: "新建实验", exact: true }).click()
+  await page.getByRole("textbox", { name: "实验名称", exact: true }).fill("注意力模型 · 基线复现")
+  await page
+    .getByRole("textbox", { name: "实验说明", exact: true })
+    .fill("复用 demo 的确定性合成数据，演示结果保存与来源追溯。")
+  await page.getByRole("button", { name: "创建实验", exact: true }).click()
+  await page.getByRole("heading", { name: "注意力模型 · 基线复现", exact: true }).waitFor()
+  await page.getByRole("button", { name: "打开工作区", exact: true }).click()
+  await page.waitForFunction(() => location.hash === "#/reader")
+  await page.waitForFunction(
+    (id) =>
+      document.querySelector('[aria-label^="项目："]')?.textContent &&
+      !location.hash.includes("/history"),
+    mainId,
+  )
+  const state = await page.evaluate(() => window.envoi.dataGet("session", "current"))
+  assert.notEqual(state.value.id, mainId)
+  const first = state.value.rootPath
+  assert.equal(
+    await readFile(path.join(first, ".envoi/project.json"), "utf8"),
+    await readFile(path.join(main, ".envoi/project.json"), "utf8"),
+  )
+  await page.evaluate(() => (location.hash = "/history"))
+  await page.getByRole("button", { name: "保存结果", exact: true }).click()
+  await page
+    .getByRole("textbox", { name: "结果名称", exact: true })
+    .fill("注意力模型基线 · 合成数据")
+  await page
+    .getByRole("textbox", { name: "实验说明", exact: true })
+    .fill(
+      "使用 demo 已有的 21 组确定性模型数据演示归档流程。这些数据不是硬件实测结果。原始数据和源码归档均保存在主工作区。",
+    )
+  await page
+    .getByRole("textbox", { name: "运行命令与参数", exact: true })
+    .fill("已有 demo 模型输出；本次仅演示结果归档，未重新运行实验")
+  await page.getByLabel("data/model-data.csv", { exact: true }).check()
+  await page.getByRole("button", { name: "保存结果", exact: true }).click()
+  await page.getByRole("heading", { name: "注意力模型基线 · 合成数据", exact: true }).waitFor()
+  const records = await page.evaluate(
+    (root) => window.envoi.workspaces(root, { action: "results" }),
+    main,
+  )
+  assert.equal(records.length, 1)
+  await page.getByRole("button", { name: "新建实验", exact: true }).click()
+  await page.getByRole("textbox", { name: "实验名称", exact: true }).fill("带宽敏感性 · 待探索")
+  await page
+    .getByRole("textbox", { name: "实验说明", exact: true })
+    .fill("独立探索带宽假设对模型结果的影响，尚未运行。")
+  await page.getByRole("button", { name: "创建实验", exact: true }).click()
+  await page.getByRole("heading", { name: "带宽敏感性 · 待探索", exact: true }).waitFor()
+  await page.locator("aside button").filter({ hasText: "主工作区" }).click()
+  await page.getByRole("button", { name: "打开工作区", exact: true }).click()
+  await page.waitForFunction(() => location.hash === "#/reader")
+  await page.evaluate(() => (location.hash = "/history"))
+  await page.getByRole("button", { name: "已保存结果", exact: true }).click()
+  await page.getByRole("heading", { name: "注意力模型基线 · 合成数据", exact: true }).waitFor()
+  await page.getByRole("button", { name: "切换工作区：主工作区", exact: true }).click()
+  await page.getByRole("menuitem", { name: "新建工作区…", exact: true }).click()
+  await page.getByRole("textbox", { name: "工作区名称", exact: true }).fill("菜单创建的实验")
+  await page.getByRole("button", { name: "创建并打开", exact: true }).click()
+  await page.getByRole("button", { name: "切换工作区：菜单创建的实验", exact: true }).waitFor()
+  await page.waitForFunction(() => location.hash === "#/reader")
+  await page.getByRole("button", { name: "切换工作区：菜单创建的实验", exact: true }).click()
+  await page.getByRole("menuitem", { name: "重命名当前工作区…", exact: true }).click()
+  await page.getByRole("textbox", { name: "工作区名称", exact: true }).fill("带宽扫描实验")
+  await page.getByRole("button", { name: "保存名称", exact: true }).click()
+  await page.getByRole("button", { name: "切换工作区：带宽扫描实验", exact: true }).waitFor()
+  await page.evaluate(() => (location.hash = "/reader"))
+  await page.getByRole("button", { name: "带宽扫描实验", exact: true }).waitFor()
+  await page.getByRole("button", { name: "切换工作区：带宽扫描实验", exact: true }).click()
+  await page.getByRole("menuitem", { name: /主工作区.*main/ }).click()
+  await page.getByRole("button", { name: "切换工作区：主工作区", exact: true }).waitFor()
+  await page.evaluate(() => (location.hash = "/history"))
+  await page.getByRole("button", { name: "已保存结果", exact: true }).click()
+  await page.getByRole("heading", { name: "注意力模型基线 · 合成数据", exact: true }).waitFor()
+  await page.setViewportSize({ width: 760, height: 650 })
+  assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth))
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await mkdir("tmp", { recursive: true })
+  await page.screenshot({ path: path.resolve("tmp/workspaces-preview.png") })
+  assert.deepEqual(errors, [])
+  console.log(
+    "PASS workspace UI: create, inspect, switch, isolated identity, save result, return to main, narrow layout",
+  )
+  console.log("PREVIEW_MAIN=" + main)
+  if (keep) {
+    // Release Playwright's fixed test viewport before handing the native window
+    // to the user. Otherwise maximizing leaves the renderer at 1440 x 900.
+    const cdp = await page.context().newCDPSession(page)
+    await cdp.send("Emulation.clearDeviceMetricsOverride")
+    await cdp.detach()
+    await app.evaluate(({ dialog }) => {
+      dialog.showMessageBox = globalThis.originalWorkspaceDialog
+      delete globalThis.originalWorkspaceDialog
+    })
+    console.log("Preview remains open. Data: " + temp)
+    await new Promise((resolve) => app.on("close", resolve))
+  }
+} finally {
+  if (app) await app.close().catch(() => {})
+  if (!keep) await rm(temp, { recursive: true, force: true, maxRetries: 3 })
+}
