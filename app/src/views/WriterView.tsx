@@ -147,7 +147,7 @@ export function WriterView({
               </button>
             ))}
           </div>
-          <div className="scrollbar-thin min-h-0 flex-1 overflow-y-auto p-2">
+          <div className="envoi-scrollbar min-h-0 flex-1 overflow-y-auto p-2">
             {tab === "outline" && (
               <PaperOutline
                 nodes={outline.nodes}

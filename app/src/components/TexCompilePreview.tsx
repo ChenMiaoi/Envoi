@@ -717,7 +717,7 @@ export function TexCompilePreview({
           {navigationNotice}
         </p>
       )}
-      <div className="scrollbar-thin min-h-0 flex-1 overflow-y-auto overflow-x-hidden p-3">
+      <div className="envoi-scrollbar min-h-0 flex-1 overflow-y-auto overflow-x-hidden p-3">
         <div data-content-typography="pdf" ref={containerRef} className="flex w-full flex-col">
           {error && (
             <p role="alert" className="p-3 text-sm text-danger">
@@ -751,7 +751,7 @@ export function TexCompilePreview({
       </div>
       <div id={logId} hidden={!logOpen} className="shrink-0 border-t border-border bg-card p-3">
         <div className="mb-1 text-[11px] text-muted-foreground">{t("compile.loadLog")}</div>
-        <div className="scrollbar-thin max-h-20 overflow-auto text-[11px] leading-relaxed text-muted-foreground">
+        <div className="envoi-scrollbar max-h-20 overflow-auto text-[11px] leading-relaxed text-muted-foreground">
           {logs.map((log, index) => (
             <div key={index}>{log}</div>
           ))}

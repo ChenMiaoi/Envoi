@@ -82,7 +82,7 @@ function CommandList({ className, ...props }: React.ComponentProps<typeof Comman
     <CommandPrimitive.List
       data-slot="command-list"
       className={cn(
-        "min-h-0 max-h-[min(360px,calc(100vh-7rem))] scroll-py-1 overflow-x-hidden overflow-y-auto overscroll-contain [scrollbar-gutter:stable] scrollbar-thin",
+        "min-h-0 max-h-[min(360px,calc(100vh-7rem))] scroll-py-1 overflow-x-hidden overflow-y-auto overscroll-contain [scrollbar-gutter:stable] envoi-scrollbar",
         className,
       )}
       {...props}

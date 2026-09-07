@@ -346,6 +346,47 @@
   * {
     @apply border-border;
   }
+  /* Share themed scrollbars across every panel, including nested editor scrollers. */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track,
+  ::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    min-height: 28px;
+    min-width: 28px;
+    border: 2px solid transparent;
+    border-radius: 999px;
+    background: hsl(var(--scrollbar));
+    background-clip: padding-box;
+  }
+  ::-webkit-scrollbar-thumb:hover,
+  ::-webkit-scrollbar-thumb:active {
+    background-color: hsl(var(--scrollbar-hover));
+  }
+  ::-webkit-scrollbar-button {
+    display: none;
+    width: 0;
+    height: 0;
+  }
+  @supports not selector(::-webkit-scrollbar) {
+    * {
+      scrollbar-width: thin;
+      scrollbar-color: hsl(var(--scrollbar)) transparent;
+    }
+  }
+  @media (forced-colors: active) {
+    ::-webkit-scrollbar-thumb {
+      background-color: CanvasText;
+    }
+    ::-webkit-scrollbar-thumb:hover,
+    ::-webkit-scrollbar-thumb:active {
+      background-color: Highlight;
+    }
+  }
   html,
   body,
   #root {
@@ -374,19 +415,9 @@
   .bg-editor {
     background-color: hsl(var(--editor));
   }
-  .scrollbar-thin::-webkit-scrollbar {
+  .envoi-scrollbar::-webkit-scrollbar {
     width: 8px;
     height: 8px;
-  }
-  .scrollbar-thin::-webkit-scrollbar-thumb {
-    background: hsl(var(--scrollbar));
-    border-radius: 8px;
-  }
-  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-    background: hsl(var(--scrollbar-hover));
-  }
-  .scrollbar-thin::-webkit-scrollbar-corner {
-    background: transparent;
   }
   .scrollbar-none {
     scrollbar-width: none;

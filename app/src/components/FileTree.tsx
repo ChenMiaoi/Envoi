@@ -104,7 +104,7 @@ export function FileTree({
 }) {
   const { t } = useT()
   return (
-    <div className="scrollbar-thin h-full overflow-y-auto px-1.5 py-2">
+    <div className="envoi-scrollbar h-full overflow-y-auto px-1.5 py-2">
       {rootName ? (
         <TreeItem
           key={rootName}

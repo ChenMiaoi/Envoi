@@ -209,7 +209,7 @@ export function LatexEditor({
                   )
               : undefined
           }
-          className="scrollbar-thin absolute inset-0 h-full w-full resize-none overflow-x-hidden overflow-y-auto bg-transparent px-3.5 py-3 font-editor text-transparent caret-primary outline-none selection:bg-primary/25 selection:text-transparent"
+          className="envoi-scrollbar absolute inset-0 h-full w-full resize-none overflow-x-hidden overflow-y-auto bg-transparent px-3.5 py-3 font-editor text-transparent caret-primary outline-none selection:bg-primary/25 selection:text-transparent"
           style={{
             ...typography,
             whiteSpace: "pre-wrap",

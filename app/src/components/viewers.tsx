@@ -28,7 +28,7 @@ export function MarkdownViewer({
   const { project } = useProject()
   const { t } = useT()
   return (
-    <div className="scrollbar-thin h-full overflow-y-auto">
+    <div className="envoi-scrollbar h-full overflow-y-auto">
       <div
         data-content-typography="preview"
         style={{
@@ -118,7 +118,7 @@ export function LatexViewer({ source }: { source: string }) {
   return (
     <div
       data-content-typography="editor"
-      className="scrollbar-thin flex h-full overflow-auto bg-editor"
+      className="envoi-scrollbar flex h-full overflow-auto bg-editor"
     >
       <div className="flex min-h-full w-full">
         <div
@@ -169,7 +169,7 @@ export function BibViewer({ source }: { source: string }) {
         fontFamily: textFonts[preferences.previewFontFamily].css,
         fontSize: preferences.previewFontSize,
       }}
-      className="bib-preview scrollbar-thin h-full overflow-y-auto px-6 py-5"
+      className="bib-preview envoi-scrollbar h-full overflow-y-auto px-6 py-5"
     >
       <div className="mx-auto max-w-[640px] space-y-3">
         <div className="mb-4 text-[11px] uppercase tracking-widest text-muted-foreground">

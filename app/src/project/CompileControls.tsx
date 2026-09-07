@@ -212,7 +212,7 @@ export function CompileControls({ hasPdf = false }: { hasPdf?: boolean }) {
         </div>
       </div>
       {open && (
-        <pre className="scrollbar-thin max-h-36 overflow-auto whitespace-pre-wrap break-all border-t border-border p-3 text-[10px] text-muted-foreground">
+        <pre className="envoi-scrollbar max-h-36 overflow-auto whitespace-pre-wrap break-all border-t border-border p-3 text-[10px] text-muted-foreground">
           {project.compileLog ? safeDiagnosticText(project.compileLog) : t("compile.logHint")}
         </pre>
       )}
