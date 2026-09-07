@@ -647,10 +647,12 @@
 
 /* ---------- 数据表格（CSV / TSV 预览编辑） ---------- */
 .data-table-frame {
-  display: inline-block;
+  width: fit-content;
+  max-width: 100%;
+  max-height: 100%;
   border: 1px solid hsl(var(--border));
-  border-radius: 12px;
-  overflow: hidden;
+  border-radius: 8px;
+  overflow: auto;
   background: hsl(var(--card) / 0.5);
 }
 .data-table {
@@ -686,8 +688,42 @@
 .data-table td + td {
   border-left: 1px solid hsl(var(--border) / 0.35);
 }
-.data-table textarea {
+.data-table tr[data-header] th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: hsl(var(--card));
+  box-shadow: 0 1px 0 hsl(var(--border));
+}
+.data-table tr[data-header] th[scope="row"] {
+  z-index: 3;
+}
+.data-table th[scope="col"] {
+  font-weight: 600;
+  text-align: left;
+  border-left: 1px solid hsl(var(--border) / 0.35);
+}
+.data-table .data-table-cell {
+  display: block;
+  width: 100%;
+  min-height: 36px;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  padding: 8px 12px;
+  resize: none;
+  overflow: hidden;
+  white-space: pre;
+  overflow-wrap: normal;
+  font: inherit;
+  line-height: 20px;
   font-variant-numeric: tabular-nums;
+  background: transparent;
+  outline: none;
+}
+.data-table .data-table-cell:focus {
+  background: hsl(var(--accent) / 0.5);
+  box-shadow: inset 0 0 0 1px hsl(var(--primary));
 }
 
 /* ---------- 编译预览（论文页） ---------- */

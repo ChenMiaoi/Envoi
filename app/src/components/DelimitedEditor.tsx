@@ -3,6 +3,9 @@ import { parseDelimited, editDelimitedCell } from "@/lib/delimited"
 import { usePreferences } from "@/settings/context"
 import { textFonts, editorFonts } from "@/settings/model"
 import { useT } from "@/i18n/useT"
+const isNumeric = (value: string) =>
+  /^\s*[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?\s*$/.test(value)
+
 export function DelimitedEditor({
   source,
   delimiter,
@@ -24,6 +27,10 @@ export function DelimitedEditor({
       return { rows: [], error: (error as Error).message }
     }
   }, [source, delimiter])
+  const hasHeader =
+    parsed.rows.length > 1 &&
+    parsed.rows[0].every((cell) => cell.value.trim() && !isNumeric(cell.value)) &&
+    parsed.rows.slice(1).some((row) => row.some((cell) => isNumeric(cell.value)))
   useLayoutEffect(() => {
     const table = tableRef.current
     if (!table) return
@@ -37,6 +44,7 @@ export function DelimitedEditor({
         visibility: "hidden",
         whiteSpace: "pre",
         font: computed.font,
+        fontWeight: hasHeader ? "600" : computed.fontWeight,
         letterSpacing: computed.letterSpacing,
         tabSize: computed.tabSize,
       })
@@ -66,7 +74,7 @@ export function DelimitedEditor({
     return () => {
       active = false
     }
-  }, [parsed.rows, preferences.previewFontSize, preferences.previewFontFamily])
+  }, [parsed.rows, hasHeader, preferences.previewFontSize, preferences.previewFontFamily])
   if (parsed.error)
     return (
       <div className="flex h-full flex-col">
@@ -110,13 +118,13 @@ export function DelimitedEditor({
   return (
     <div
       data-content-typography="preview"
-      className="h-full overflow-auto p-4"
+      className="h-full min-w-0 overflow-hidden p-4"
       style={{
         fontFamily: textFonts[preferences.previewFontFamily].css,
         fontSize: preferences.previewFontSize,
       }}
     >
-      <div className="data-table-frame">
+      <div className="data-table-frame envoi-scrollbar">
         <table ref={tableRef} className="data-table table-fixed">
           <colgroup>
             {Array.from(
@@ -128,26 +136,31 @@ export function DelimitedEditor({
           </colgroup>
           <tbody>
             {parsed.rows.map((row, r) => (
-              <tr key={r}>
+              <tr key={r} data-header={hasHeader && r === 0 ? true : undefined}>
                 <th scope="row" className="px-2 text-[.8em] font-normal">
                   {r + 1}
                 </th>
                 {row.map((cell, c) => {
-                  const numeric =
-                    /^\s*-?[\d,]*\.?\d+\s*$/.test(cell.value) && cell.value.trim() !== ""
+                  const numeric = isNumeric(cell.value)
+                  const Cell = hasHeader && r === 0 ? "th" : "td"
                   return (
-                    <td key={c} className="align-top">
+                    <Cell
+                      key={c}
+                      scope={hasHeader && r === 0 ? "col" : undefined}
+                      className="align-top"
+                    >
                       <textarea
                         aria-label={t("editor.cellAria", { r: r + 1, c: c + 1 })}
                         readOnly={readOnly}
-                        rows={Math.min(8, Math.max(1, cell.value.split("\n").length))}
+                        wrap="off"
+                        rows={Math.max(1, cell.value.split(/\r\n|\r|\n/).length)}
                         value={cell.value}
                         onChange={(event) =>
                           onChange(editDelimitedCell(source, cell, event.target.value, delimiter))
                         }
-                        className={`block min-h-9 w-full resize-y bg-transparent px-3 py-2 leading-relaxed outline-none focus:bg-accent/50 focus:ring-1 focus:ring-inset focus:ring-primary${numeric ? " text-right" : ""}`}
+                        className={`data-table-cell${numeric ? " text-right" : ""}`}
                       />
-                    </td>
+                    </Cell>
                   )
                 })}
               </tr>
