@@ -1,6 +1,6 @@
 # Development
 
-Use Node.js 22.12+ and install dependencies with `npm run setup` from the root. The dependency lockfile is `app/package-lock.json`; the root package only forwards commands and does not create a second dependency installation.
+Use Node.js 22.13+ and install dependencies with `npm run setup` from the root. The dependency lockfile is `app/package-lock.json`; the root package only forwards commands and does not create a second dependency installation.
 
 Run `npm run dev` to launch the Electron desktop application. The desktop shell and preload bridge live in `app/electron/`. Application code stays in `app/src/`; fixed local tool adapters are in `app/server/`. Tests and developer utilities stay beside that application in `app/tests/` and `app/scripts/`.
 

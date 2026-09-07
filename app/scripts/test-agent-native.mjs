@@ -49,6 +49,20 @@ try{
  assert.equal((await post('agent/session',{projectId:copyId,sessionId})).response.status,400);
  await post('agent/chat',{projectId:id,sessionId,message:'Second turn',dirty:false});assert(transportRequests.at(-1).messages.some(message=>JSON.stringify(message).includes('Verify local protocol')));
  const freshConversation=(await post('agent/new',{projectId:id})).body;assert.equal(freshConversation.messages.length,0);assert.notEqual(freshConversation.id,sessionId);assert.equal((await post('agent/sessions',{projectId:id})).body.activeId,freshConversation.id);const searched=(await post('agent/sessions',{projectId:id,query:'Second turn'})).body;assert.deepEqual(searched.sessions.map(row=>row.id),[sessionId]);assert.equal((await post('agent/session',{projectId:id,sessionId})).body.messages.length,4);assert.equal((await post('agent/sessions',{projectId:id})).body.activeId,sessionId);
+
+ // Paper conversations use project-local storage and never share a transcript with another paper.
+ const {libraryRequest}=await import('../server/research-library.mjs');
+ await libraryRequest(moved,{action:'import',papers:[{title:'Paper A',notes:'A'},{title:'Paper B',notes:'B'}]});
+ const [paperA,paperB]=(await libraryRequest(moved,{action:'list'})).papers;
+ const paperChat=await post('agent/chat',{projectId:id,paperId:paperA.id,message:'Discuss Paper A',context:'Paper A source',dirty:false});assert(paperChat.body.includes('Protocol verified'));
+ assert.deepEqual(transportRequests.at(-1).tools.map(tool=>tool.function.name),['research_note']);
+ const paperRecord=(await libraryRequest(moved,{action:'get',paperId:paperA.id})).state.chat;
+ assert.equal(paperRecord.messages[0].text,'Discuss Paper A');assert(paperRecord.piFile);
+ assert.equal((await libraryRequest(moved,{action:'get',paperId:paperB.id})).state.chat,undefined);
+ await post('agent/chat',{projectId:id,paperId:paperB.id,message:'Discuss Paper B',dirty:false});assert(!JSON.stringify(transportRequests.at(-1).messages).includes('Discuss Paper A'));
+ await post('agent/chat',{projectId:id,paperId:paperA.id,sessionId:paperRecord.id,message:'Continue Paper A',dirty:false});assert(JSON.stringify(transportRequests.at(-1).messages).includes('Discuss Paper A'));
+ assert.equal((await post('agent/sessions',{projectId:id})).body.sessions.length,2);
+ console.log('PASS paper AI: real SDK streaming, dedicated note tool, project-local transcript and per-paper continuation');
  const rejected=await post('agent/chat',{projectId:copyId,message:'MODEL_REJECT_REQUEST',dirty:false});assert.match(rejected.body,/Model hy3-preview-free is not supported/);await post('agent/new',{projectId:copyId});
  const failed=await post('agent/chat',{projectId:copyId,message:'FAIL_REQUEST',dirty:false});assert(failed.body.includes('error'));const failedList=(await post('agent/sessions',{projectId:copyId})).body;assert.equal(failedList.sessions[0].status,'failed');await post('agent/new',{projectId:copyId});
  const controller=new AbortController();const waiting=fetch(app.url+'/api/envoi/agent/chat',{method:'POST',signal:controller.signal,headers:{Origin:app.url,'Content-Type':'application/json','X-Envoi-Token':ai.token},body:JSON.stringify({projectId:id,sessionId,message:'HOLD_REQUEST',dirty:false})});const stream=await waiting;

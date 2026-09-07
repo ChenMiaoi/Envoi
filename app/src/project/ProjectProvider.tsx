@@ -40,6 +40,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     const off = envoi().onFilesChanged(change => {
       if (change.root !== root) return;
       if (change.error) {setMessage(change.error); return;}
+      if(change.paths.length&&change.paths.every(p=>p==='.envoi/library'||p.startsWith('.envoi/library/')))return;
       pending = true; clearTimeout(timer); timer = setTimeout(() => void refresh(), 200);
     });
     void envoi().watchProject(root).then(() => {if (!disposed) void refresh();}).catch(error => {if (!disposed) setMessage(error.message);});

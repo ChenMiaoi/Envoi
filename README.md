@@ -4,7 +4,7 @@ A local academic writing workspace with a LaTeX editor, automatic outline, paper
 
 ## Quick start
 
-Requires Node.js 22.12+ and npm. From this repository root:
+Requires Node.js 22.13+ and npm. From this repository root:
 
 ```sh
 npm run setup

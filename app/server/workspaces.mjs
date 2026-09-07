@@ -1,6 +1,6 @@
 import {execFile} from 'node:child_process';
 import {promisify} from 'node:util';
-import {mkdir,realpath,lstat,writeFile,copyFile,rename,rm,readdir,rmdir} from 'node:fs/promises';
+import {mkdir,realpath,stat,lstat,writeFile,copyFile,rename,rm,readdir,rmdir} from 'node:fs/promises';
 import {randomUUID,createHash} from 'node:crypto';
 import path from 'node:path';
 import {createReadStream} from 'node:fs';
@@ -119,4 +119,19 @@ export async function listWorkspaceResults(root){
  const names=await readdir(folder).catch(error=>{if(error.code==='ENOENT')return [];throw error;});
  const records=[];for(const name of names){if(!/^[a-f0-9-]{36}$/.test(name))continue;const value=await jsonFile(path.join(folder,name,'result.json'),null);if(value)records.push(value);}
  return records.sort((a,b)=>b.created.localeCompare(a.created));
+}
+
+// Reading state must not run `git status` across every experiment.
+const researchRoots=new Map();
+export async function researchWorkspaceRoot(root){
+ root=await realpath(root);const cached=researchRoots.get(root);
+ if(cached&&Date.now()-cached.checked<2000){
+  const modified=await stat(cached.file).then(s=>s.mtimeMs,()=>0);
+  if(modified===cached.modified)return realpath(cached.main);
+ }
+ const repo=await repository(root),state=await jsonFile(repo.file,null),items=await entries(root);
+ const main=state?.main??items[0]?.worktree;
+ if(!main||!items.some(item=>path.resolve(item.worktree)===path.resolve(main)))throw Error('主工作区不可用');
+ const canonical=await realpath(main);researchRoots.set(root,{main:canonical,file:repo.file,modified:await stat(repo.file).then(s=>s.mtimeMs,()=>0),checked:Date.now()});
+ return canonical;
 }

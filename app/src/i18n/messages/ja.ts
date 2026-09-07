@@ -228,6 +228,7 @@ const ja: Messages = {
  'chat.expandHistory':'チャット履歴を展開',
  'chat.fileContext':'ファイル：{label}\n編集バッファ（未保存の下書きを含む場合があります）\n{text}',
  'chat.history':'チャット履歴',
+  'chat.paperHistoryScope': 'この論文の会話',
  'chat.historyScope':'現在のプロジェクト · ローカルのチャット履歴',
  'chat.messageCount':'{n} 件のメッセージ',
  'chat.newChat':'新しいチャット',

@@ -1,3 +1,4 @@
+import {PdfRenderScheduler} from '@/lib/pdfRenderScheduler';
 import {useT} from "@/i18n/useT";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import {matchBookmark} from "@/lib/pdfSync";
@@ -93,8 +94,15 @@ function createLinkService(documentRef: React.RefObject<PDFDocumentProxy | null>
   return service as unknown as PDFLinkService;
 }
 
-function PdfPage({ page, width, dpr, linkService, onError, highlight, separator, onClickPoint }: { separator?: boolean; highlight?: number; page: PDFPageProxy; width: number; dpr: number; linkService: PDFLinkService | null; onClickPoint?: (page: number, x: number, y: number) => void; onError: (message: string) => void }) {
+function PdfPage({ scheduler, page, width, dpr, linkService, onError, highlight, separator, onClickPoint }: { scheduler:PdfRenderScheduler;separator?: boolean; highlight?: number; page: PDFPageProxy; width: number; dpr: number; linkService: PDFLinkService | null; onClickPoint?: (page: number, x: number, y: number) => void; onError: (message: string) => void }) {
   const {t}=useT();
+  const figureRef=useRef<HTMLElement>(null);
+  const [visible,setVisible]=useState(false);
+  useEffect(()=>{
+    const figure=figureRef.current;if(!figure)return;
+    const observer=new IntersectionObserver(([entry])=>setVisible(entry.isIntersecting),{root:figure.parentElement?.parentElement,rootMargin:'300px 0px'});
+    observer.observe(figure);return()=>observer.disconnect();
+  },[]);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const textRef = useRef<HTMLDivElement>(null);
   const annotationRef = useRef<HTMLDivElement>(null);
@@ -103,36 +111,35 @@ function PdfPage({ page, width, dpr, linkService, onError, highlight, separator,
   const height = width * original.height / original.width;
   const scale = width / original.width;
   useEffect(() => {
-    const canvas = canvasRef.current, text = textRef.current;
-    if (!canvas || !text || !width) return;
-    let active = true;
-    // 位图密度跟随 DPR；32M 像素内存预算避免极端宽度下画布过大。
-    const density = Math.min(dpr, Math.sqrt(32_000_000 / (width * height)));
-    const bitmapViewport = page.getViewport({ scale: scale * density });
-    canvas.width = Math.ceil(bitmapViewport.width);
-    canvas.height = Math.ceil(bitmapViewport.height);
-    text.innerHTML = "";
-    const task = page.render({ canvas, viewport: bitmapViewport });
-    const textLayer = new TextLayer({ textContentSource: page.streamTextContent(), container: text, viewport: page.getViewport({ scale }) });
-    Promise.all([task.promise, textLayer.render()]).then(() => { if (active) setError(""); }).catch((reason: Error) => {
-      if (active && reason.name !== "RenderingCancelledException") {
-        const message = t('compile.renderPageFailed',{page:page.pageNumber,message:reason.message});
-        setError(message); onError(message);
-      }
+    const canvas = canvasRef.current, text = textRef.current, annotationElement=annotationRef.current;
+    if (!canvas || !text || !width || !visible) return;
+    let active=true;
+    const cancel=scheduler.enqueue(async signal=>{
+      let task:ReturnType<PDFPageProxy['render']>|undefined,textLayer:TextLayer|undefined;
+      const abort=()=>{task?.cancel();textLayer?.cancel();};signal.addEventListener('abort',abort,{once:true});
+      try{
+        await scheduler.wait(signal);if(!active||signal.aborted)return;
+        const density=Math.min(dpr,2,Math.sqrt(4_000_000/(width*height)));
+        const bitmapViewport=page.getViewport({scale:scale*density});
+        canvas.width=Math.ceil(bitmapViewport.width);canvas.height=Math.ceil(bitmapViewport.height);text.innerHTML='';
+        task=page.render({canvas,viewport:bitmapViewport});
+        task.onContinue=(resume:()=>void)=>{void scheduler.wait(signal).then(()=>{if(active&&!signal.aborted)resume();}).catch(()=>{});};
+        await task.promise;await scheduler.wait(signal);if(!active||signal.aborted)return;
+        textLayer=new TextLayer({textContentSource:page.streamTextContent(),container:text,viewport:page.getViewport({scale})});
+        await textLayer.render();await scheduler.wait(signal);if(!active||signal.aborted)return;
+        const annotation=annotationRef.current;
+        if(annotation){
+          const viewport=page.getViewport({scale}).clone({dontFlip:true});
+          const annotations=await page.getAnnotations({intent:'display'});
+          if(active&&!signal.aborted){annotation.innerHTML='';const layer=new AnnotationLayer({div:annotation,page,viewport,linkService,accessibilityManager:undefined,annotationCanvasMap:undefined,annotationEditorUIManager:undefined,structTreeLayer:undefined,commentManager:undefined,annotationStorage:undefined});await layer.render({viewport,div:annotation,page,linkService:linkService as PDFLinkService,annotations,renderForms:false});}
+        }
+        if(active)setError('');
+      }catch(reason){const failure=reason as Error;if(active&&!signal.aborted&&failure.name!=='RenderingCancelledException'){const message=t('compile.renderPageFailed',{page:page.pageNumber,message:failure.message});setError(message);onError(message);}}
+      finally{signal.removeEventListener('abort',abort);}
     });
-    return () => { active = false; task.cancel(); textLayer.cancel(); };
-  },[page, width, height, scale, dpr, onError, t]);
-  useEffect(() => {
-    const annotation = annotationRef.current;
-    if (!annotation || !width) return;
-    let active = true;
-    annotation.innerHTML = "";
-    const viewport = page.getViewport({ scale }).clone({ dontFlip: true });
-    const layer = new AnnotationLayer({ div: annotation, page, viewport, linkService, accessibilityManager: undefined, annotationCanvasMap: undefined, annotationEditorUIManager: undefined, structTreeLayer: undefined, commentManager: undefined, annotationStorage: undefined });
-    page.getAnnotations({ intent: "display" }).then((list) => active ? layer.render({ viewport, div: annotation, page, linkService: linkService as PDFLinkService, annotations: list, renderForms: false }) : undefined).catch(() => { /* 注释层失败不影响正文渲染 */ });
-    return () => { active = false; };
-  }, [page, width, scale, linkService]);
-  return <figure data-pdf-page={page.pageNumber} className="m-0 shrink-0" aria-label={t('compile.page',{page:page.pageNumber})}>
+    return()=>{active=false;cancel();canvas.width=0;canvas.height=0;text.innerHTML='';if(annotationElement)annotationElement.innerHTML='';};
+  },[page,width,height,scale,dpr,onError,t,visible,linkService,scheduler]);
+  return <figure ref={figureRef} data-pdf-page={page.pageNumber} className="m-0 shrink-0" aria-label={t('compile.page',{page:page.pageNumber})}>
     <div className="relative bg-white" style={{ width, height, "--scale-factor": scale, "--user-unit": 1, "--total-scale-factor": "calc(var(--scale-factor) * var(--user-unit))", "--scale-round-x": "1px", "--scale-round-y": "1px" } as React.CSSProperties} onClick={onClickPoint ? (event) => {
       const selection = window.getSelection();
       if (selection && !selection.isCollapsed) return;
@@ -140,7 +147,7 @@ function PdfPage({ page, width, dpr, linkService, onError, highlight, separator,
       const rect = event.currentTarget.getBoundingClientRect();
       onClickPoint(page.pageNumber, (event.clientX - rect.left) / scale, (event.clientY - rect.top) / scale);
     } : undefined}>
-      <canvas ref={canvasRef} className="block h-full w-full" aria-label={t('compile.pdfPage',{page:page.pageNumber})} />
+      <canvas ref={canvasRef} width={0} height={0} className="block h-full w-full" aria-label={t('compile.pdfPage',{page:page.pageNumber})} />
       {separator&&<span aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-px bg-slate-300/50" />}
       {highlight!==undefined&&<div className="pointer-events-none absolute left-0 right-0 h-6 border-t-2 border-amber-400/60 bg-amber-300/15" style={{top:highlight*width/original.width}} />}
       <div ref={textRef} className="textLayer" />
@@ -150,7 +157,7 @@ function PdfPage({ page, width, dpr, linkService, onError, highlight, separator,
   </figure>;
 }
 
-export function TexCompilePreview({ initialSource, paperOnly = false, target, syncReady, syncData, sourcePaths, syncPoint, onLocateSource }: { target?:{title:string;id:number};syncReady?:boolean|null;paperOnly?: boolean; initialSource?: { file?: File; name: string; url?: string }; syncData?: Uint8Array | null; sourcePaths?: string[]; syncPoint?: { path: string; line: number; id: number }; onLocateSource?: (path: string, line: number) => void }) {
+export function TexCompilePreview({ initialSource, paperOnly = false, target, syncReady, syncData, sourcePaths, syncPoint, onLocateSource, reading, onReadingChange, jump }: { jump?:{page:number;id:number};reading?:{page:number;fraction:number};onReadingChange?:(position:{page:number;fraction:number})=>void;target?:{title:string;id:number};syncReady?:boolean|null;paperOnly?: boolean; initialSource?: { file?: File; name: string; url?: string }; syncData?: Uint8Array | null; sourcePaths?: string[]; syncPoint?: { path: string; line: number; id: number }; onLocateSource?: (path: string, line: number) => void }) {
   const [source, setSource] = useState<{ file?: File; name: string; url?: string }>(initialSource ?? { name: "" });
   const documentRef=useRef<PDFDocumentProxy|null>(null);
   const [syncNotice,setSyncNotice]=useState("");
@@ -165,6 +172,26 @@ export function TexCompilePreview({ initialSource, paperOnly = false, target, sy
   const dpr = useDevicePixelRatio();
   const containerRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const [scheduler]=useState(()=>new PdfRenderScheduler());
+  useEffect(()=>{
+    const scroller=containerRef.current?.parentElement;if(!scroller)return;
+    const pause=()=>scheduler.pause();
+    scroller.addEventListener('wheel',pause,{passive:true});scroller.addEventListener('scroll',pause,{passive:true});
+    return()=>{scroller.removeEventListener('wheel',pause);scroller.removeEventListener('scroll',pause);scheduler.dispose();};
+  },[scheduler]);
+  useEffect(()=>{if(jump&&pages.length)scrollToPagePosition(containerRef.current,jump.page,0);},[jump,pages]);
+  const initialReading=useRef(reading),restoredReading=useRef(false),readingCallback=useRef(onReadingChange);
+  useEffect(()=>{readingCallback.current=onReadingChange;},[onReadingChange]);
+  useEffect(()=>{
+    const container=containerRef.current,scroller=container?.parentElement;
+    if(!container||!scroller||!pages.length||!width)return;
+    if(!restoredReading.current){const position=initialReading.current;if(position){const figure=container.querySelector<HTMLElement>(`[data-pdf-page="${position.page}"]`);if(figure)scroller.scrollTo({top:scroller.scrollTop+figure.getBoundingClientRect().top-scroller.getBoundingClientRect().top+position.fraction*figure.clientHeight,behavior:'instant'});}restoredReading.current=true;}
+    let timer:ReturnType<typeof setTimeout>;let lastPosition:{page:number;fraction:number}|undefined;
+    const save=()=>{if(!scroller.clientHeight){if(lastPosition)readingCallback.current?.(lastPosition);return;}const top=scroller.getBoundingClientRect().top;const figures=Array.from(container.querySelectorAll<HTMLElement>('[data-pdf-page]'));const figure=figures.find(el=>el.getBoundingClientRect().bottom>top+5);if(figure){lastPosition={page:Number(figure.dataset.pdfPage),fraction:Math.max(0,(top-figure.getBoundingClientRect().top)/figure.clientHeight)};readingCallback.current?.(lastPosition);}};
+    const scroll=()=>{clearTimeout(timer);timer=setTimeout(save,250);};scroller.addEventListener('scroll',scroll);
+    return()=>{clearTimeout(timer);save();scroller.removeEventListener('scroll',scroll);};
+  },[pages,width]);
+
   const logId = useId();
   const pagesRef = useRef<PDFPageProxy[]>([]);
   const [linkService, setLinkService] = useState<PDFLinkService | null>(null);
@@ -213,9 +240,11 @@ export function TexCompilePreview({ initialSource, paperOnly = false, target, sy
   useEffect(() => {
     const element = containerRef.current;
     if (!element) return;
-    const observer = new ResizeObserver(([entry]) => setWidth(entry.contentRect.width));
+    // Resize the layout immediately, but rasterize only when dragging settles.
+    let timer:ReturnType<typeof setTimeout>;
+    const observer = new ResizeObserver(([entry]) => {clearTimeout(timer);timer=setTimeout(()=>setWidth(Math.round(entry.contentRect.width)),150);});
     observer.observe(element);
-    return () => observer.disconnect();
+    return () => {clearTimeout(timer);observer.disconnect();};
   }, []);
 
   useEffect(() => {
@@ -289,12 +318,13 @@ export function TexCompilePreview({ initialSource, paperOnly = false, target, sy
         event.target.value = "";
       }} />
     </div>}
+    {onReadingChange&&<div className="flex shrink-0 items-center gap-2 border-b px-3 py-1 text-xs text-muted-foreground"><span>跳转到</span><input aria-label="论文页码" type="number" min={1} max={pages.length||1} defaultValue={reading?.page??1} className="w-16 rounded border bg-background px-2 py-1" onChange={event=>{const page=Number(event.target.value);if(page>=1&&page<=pages.length)scrollToPagePosition(containerRef.current,page,0);}}/><span>/ {pages.length} 页</span></div>}
     {paperOnly&&navigationNotice&&<p role="status" className="shrink-0 px-3 py-1 text-[10px] text-muted-foreground">{navigationNotice}</p>}
     <div className="scrollbar-thin min-h-0 flex-1 overflow-y-auto overflow-x-hidden p-3">
       <div data-content-typography="pdf" ref={containerRef} className="flex w-full flex-col">
       {error && <p role="alert" className="p-3 text-sm text-danger">{error}</p>}
         {!error && !pages.length && <p className="p-3 text-sm text-muted-foreground">{source.name ? t('compile.loadingPdf') : paperOnly ? t('compile.noOutput') : t('compile.noProjectPdf')}</p>}
-        {pages.map((page,index) => <PdfPage separator={index>0} key={page.pageNumber} page={page} width={width} dpr={dpr} linkService={linkService} onError={onRenderError} onClickPoint={syncDb&&onLocateSource?clickPoint:undefined} highlight={highlight?.page===page.pageNumber?highlight.y:undefined} />)}
+        {pages.map((page,index) => <PdfPage scheduler={scheduler} separator={index>0} key={page.pageNumber} page={page} width={width} dpr={dpr} linkService={linkService} onError={onRenderError} onClickPoint={syncDb&&onLocateSource?clickPoint:undefined} highlight={highlight?.page===page.pageNumber?highlight.y:undefined} />)}
       </div>
     </div>
     <div id={logId} hidden={!logOpen} className="shrink-0 border-t border-border bg-card p-3">

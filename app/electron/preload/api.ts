@@ -1,6 +1,7 @@
 // window.envoi 桥接类型（契约第 1 节唯一事实来源）。
 // preload/index.ts 实现此接口；src 侧经 app/src/lib/desktop.ts re-export 消费。
 export interface EnvoiBridge {
+  library(root: string, input: Record<string, unknown>): Promise<unknown>
   workspaces(root: string, input: Record<string, unknown>): Promise<unknown>
   windowColors(colors: {color: string; symbolColor: string}): Promise<void>
   // 目录与项目绑定（无 proof；directory 为绝对路径）
@@ -34,7 +35,7 @@ export interface EnvoiBridge {
   // AI agent
   agentStatus(): Promise<Record<string, unknown>>
   agentRequest(route: string, body: unknown): Promise<unknown>
-  agentChat(params: { projectId: string; sessionId?: string; context?: string; dirty: boolean; message: string }): Promise<{ ok: boolean }>
+  agentChat(params: { projectId: string; sessionId?: string; paperId?: string; context?: string; dirty: boolean; message: string }): Promise<{ ok: boolean }>
   onAgentEvent(cb: (event: { projectId: string; [k: string]: unknown }) => void): () => void
 
   // 项目文件服务（root 必须是已 bindProject 的项目根；relPath 需通过 safePath 规则，主进程二次校验）

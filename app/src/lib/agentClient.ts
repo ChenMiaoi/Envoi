@@ -29,7 +29,7 @@ export async function bindProject(rootPath:string,options:{copy?:boolean}={}){
  try{return await promise;}finally{if(bindings.get(rootPath)===promise)bindings.delete(rootPath); }
 }
 export type ChatEvent={type:'delta'|'thinking';text:string}|{type:'session';id:string}|{type:'tool';phase:string;name:string;isError?:boolean}|{type:'done'}|{type:'error';message:string};
-export async function* agentChat(message:string,options:{projectId:string;sessionId?:string;context?:string;dirty:boolean;signal?:AbortSignal}):AsyncGenerator<ChatEvent>{
+export async function* agentChat(message:string,options:{projectId:string;sessionId?:string;paperId?:string;context?:string;dirty:boolean;signal?:AbortSignal}):AsyncGenerator<ChatEvent>{
  type Item={event:ChatEvent}|{end:true;error?:Error};
  const items:Item[]=[];let wake:(()=>void)|undefined,sessionId=options.sessionId;
  const push=(item:Item)=>{items.push(item);const notify=wake;wake=undefined;notify?.();};
@@ -45,7 +45,7 @@ export async function* agentChat(message:string,options:{projectId:string;sessio
  options.signal?.addEventListener('abort',abort,{once:true});
  try{
   if(options.signal?.aborted)throw new DOMException('Aborted','AbortError');
-  const start=await envoi().agentChat({projectId:options.projectId,sessionId:options.sessionId,context:options.context,dirty:options.dirty,message}).catch(error=>{throw ipcError(error);});
+  const start=await envoi().agentChat({projectId:options.projectId,sessionId:options.sessionId,paperId:options.paperId,context:options.context,dirty:options.dirty,message}).catch(error=>{throw ipcError(error);});
   if(!start.ok)throw Error(translate('ai.requestFailed'));
   for(;;){
    while(items.length){const item=items.shift()!;if('end' in item){if(item.error)throw item.error;return;}yield item.event;}

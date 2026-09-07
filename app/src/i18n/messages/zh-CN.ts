@@ -242,6 +242,7 @@ export const zhCN = {
  'chat.expandHistory':'展开聊天记录',
  'chat.fileContext':'文件：{label}\n编辑缓冲（可能含未保存草稿）\n{text}',
  'chat.history':'对话历史',
+  'chat.paperHistoryScope': '当前论文的会话',
  'chat.historyScope':'当前项目 · 本机对话历史',
  'chat.messageCount':'{n} 条消息',
  'chat.newChat':'新建对话',

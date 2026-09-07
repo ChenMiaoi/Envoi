@@ -1,3 +1,4 @@
+import {libraryRequest,researchRoot} from '../../server/research-library.mjs'
 import {createExampleProject} from './example-project.mjs'
 import {listWorkspaces,createWorkspace,workspaceTarget,saveWorkspaceResult,listWorkspaceResults,renameWorkspace,workspaceName} from '../../server/workspaces.mjs'
 import {toolDirectories} from '../../server/tool-config.mjs'
@@ -134,6 +135,11 @@ async function agentRoot(body: unknown) {
 // ── IPC 通道（契约第 1 节；错误消息沿用中文风格）──
 
 function registerIpc(): void {
+  ipcMain.handle('envoi:library', async (_event, root: string, input: Record<string, unknown>) => {
+    root=await requireBoundRoot(root)
+    await requireBoundRoot(await researchRoot(root))
+    return libraryRequest(root,input)
+  })
   ipcMain.handle('envoi:workspaces', async (_event, root: string, input: {action: string; source?: string; target?: string; name?: string} ) => {
     root=await requireBoundRoot(root)
     if(input.action==='list')return listWorkspaces(root)

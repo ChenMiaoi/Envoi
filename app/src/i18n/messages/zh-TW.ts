@@ -227,6 +227,7 @@ const zhTW: Messages = {
  'chat.expandHistory':'展開聊天記錄',
  'chat.fileContext':'檔案：{label}\n編輯緩衝（可能含未儲存草稿）\n{text}',
  'chat.history':'對話歷史',
+  'chat.paperHistoryScope': '目前論文的對話',
  'chat.historyScope':'當前專案 · 本機對話歷史',
  'chat.messageCount':'{n} 條訊息',
  'chat.newChat':'新建對話',

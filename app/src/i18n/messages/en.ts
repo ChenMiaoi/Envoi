@@ -228,6 +228,7 @@ const en: Messages = {
  'chat.expandHistory':'Expand chat history',
  'chat.fileContext':'File: {label}\nEdit buffer (may contain unsaved draft)\n{text}',
  'chat.history':'Chat history',
+  'chat.paperHistoryScope': 'Conversations for this paper',
  'chat.historyScope':'Current project · local chat history',
  'chat.messageCount':'{n} messages',
  'chat.newChat':'New chat',

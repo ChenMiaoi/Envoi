@@ -11,7 +11,6 @@ import {type MessageKey} from "@/i18n/runtime";
 import {useT} from "@/i18n/useT";
 import {I18nProvider} from "@/i18n";
 import {useSettings} from "@/settings/useSettings";
-import {paperLibrary,libraryAttachment,type LibraryPaper} from "@/lib/paperLibrary";
 import type {ProjectFile} from "@/lib/projectFiles";
 import { ProjectProvider } from "@/project/ProjectProvider";
 import { ProjectMenu } from "@/project/ProjectMenu";
@@ -76,7 +75,7 @@ function ProjectApp() {
   const [visited,setVisited]=useState<Set<ViewId>>(()=>new Set(view?[view]:[]));
   if(view&&!visited.has(view))setVisited(new Set([...visited,view]));
   const [paletteOpen, setPaletteOpen] = useState(false);
-  const [libraryFiles,setLibraryFiles]=useState<ProjectFile[]>([]);
+  const [libraryFiles]=useState<ProjectFile[]>([]);
   const emptyWorkspace=project.id==='empty'&&view!=='library'&&view!=='settings'&&!libraryFiles.length;
   const [openFiles, setOpenFiles] = useState<OpenFile[]>([]);
   const [writerFile,setWriterFile]=useState<{id:string;request:number}|undefined>();
@@ -116,7 +115,6 @@ function ProjectApp() {
     return () => window.removeEventListener("keydown", onKey,true);
   }, [runCommand,effective.bindings,view]);
 
-  const openLibraryPaper=(paper:LibraryPaper)=>{if(paper.status==='待读')void paperLibrary.put([{...paper,status:'在读'}]).then(()=>window.dispatchEvent(new Event('envoi:library-updated')));const file=libraryAttachment(paper),id=`library:${paper.id}`;setLibraryFiles(current=>[...current.filter(item=>item.id!==id),{id,path:paper.attachmentName??file.name,kind:'pdf',file}]);setOpenFiles(current=>current.some(item=>item.id===id)?current:[...current,{id,name:paper.title||file.name,kind:'pdf'}]);setActiveId(id);setView('reader');};
   const openFromPalette = (f: { node: FileNode; path: string }) => {
     setPaletteOpen(false);
     if(f.node.kind==='latex'){openTex(f.node.id);return;}
@@ -164,7 +162,7 @@ function ProjectApp() {
             />
           </section>}
           {project.id!=='empty'&&visited.has("writer") && <section hidden={view!=="writer"} className="h-full" aria-label={t('app.aria.writer')}><WriterView requestedFile={writerFile} problemTarget={problemTarget} /></section>}
-          {visited.has("library") && <section hidden={view!=="library"} className="h-full" aria-label={t('app.aria.library')}><LibraryView onOpen={openLibraryPaper} /></section>}
+          {visited.has("library") && <section hidden={view!=="library"} className="h-full" aria-label={t('app.aria.library')}><LibraryView /></section>}
           {project.id!=='empty'&&visited.has("history") && <section hidden={view!=="history"} className="h-full" aria-label={t('app.aria.history')}><GitHistoryView /></section>}
           {visited.has("settings") && <section hidden={view!=="settings"} className="h-full" aria-label={t('app.aria.settings')}><SettingsView /></section>}
           {!view&&!page.redirect&&<div className="flex h-full flex-col items-center justify-center gap-3"><h1 className="text-lg font-medium">{t('app.notFound.title')}</h1><p className="text-sm text-muted-foreground">{t('app.notFound.body')}</p><Link to="/writer" className="text-sm text-primary">{t('app.notFound.back')}</Link></div>}

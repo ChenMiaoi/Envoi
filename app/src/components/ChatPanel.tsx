@@ -1,16 +1,18 @@
 import { ChatMarkdown } from './ChatMarkdown';
 import { useEffect, useRef, useState } from 'react';
 import { ArrowUp, Mic, Plus, Square, ChevronUp, ChevronDown } from 'lucide-react';
+import type {AgentState} from '@/agent/context';
 import { useAgent } from '@/agent/context';
-import { ChatHistory } from './ChatHistory';
+import { ChatHistory, type ChatHistorySource } from './ChatHistory';
 import { PiModelMenu } from './PiModelMenu';
 import { cn } from '@/lib/utils';
 import {useT} from '@/i18n/useT';
 
 export interface ChatContext { label: string; text: string }
 
-export function ChatPanel({ compact = false, inputOnly = false, context }: { compact?: boolean; inputOnly?: boolean; context?: ChatContext }) {
-  const agent = useAgent();
+export function ChatPanel({ compact = false, inputOnly = false, context, conversation, historySource, placeholder="Ask anything" }: { historySource?:ChatHistorySource; placeholder?:string; conversation?:Pick<AgentState,'record'|'busy'|'error'|'send'|'stop'>;compact?: boolean; inputOnly?: boolean; context?: ChatContext }) {
+  const projectAgent = useAgent();
+  const agent = {...projectAgent,...conversation};
   const {t}=useT();
   const [input, setInput] = useState('');
   const [attempted,setAttempted]=useState(false),[collapsed,setCollapsed]=useState(false),[ratio,setRatio]=useState(.2),[paneHeight,setPaneHeight]=useState(500);
@@ -19,7 +21,7 @@ export function ChatPanel({ compact = false, inputOnly = false, context }: { com
   const transcriptHeight=Math.max(minHeight,Math.min(maxHeight,paneHeight*ratio));
   useEffect(()=>{if(!inputOnly)return;const pane=root.current?.parentElement?.parentElement;if(!pane)return;const measure=()=>setPaneHeight(pane.clientHeight);measure();const observer=new ResizeObserver(measure);observer.observe(pane);return()=>observer.disconnect();},[inputOnly]);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const available = !agent.navigating && agent.ready && !!agent.config?.model && !!agent.status?.models.some(model => model.available && `${model.provider}/${model.id}` === agent.config?.model);
+  const available = !agent.navigating && (!conversation || !projectAgent.busy) && agent.ready && !!agent.config?.model && !!agent.status?.models.some(model => model.available && `${model.provider}/${model.id}` === agent.config?.model);
   useEffect(() => { scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight }); }, [agent.record]);
 
   function send() {
@@ -49,7 +51,7 @@ export function ChatPanel({ compact = false, inputOnly = false, context }: { com
       <div className="px-3 py-3">
         <div className="rounded-[26px] border border-border bg-background px-3.5 pb-2.5 pt-3.5 transition-colors focus-within:border-foreground/20">
           <div className="flex items-end gap-2">
-            <textarea disabled={!available || agent.busy} aria-label={t('chat.askAria')} rows={compact || inputOnly ? 2 : 3} value={input} onChange={event => setInput(event.target.value)} onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); send(); } }} placeholder="Ask anything" className="max-h-40 min-w-0 w-full resize-none overflow-y-auto bg-transparent px-0.5 text-sm leading-6 text-foreground outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-40" />
+            <textarea disabled={!available || agent.busy} aria-label={t('chat.askAria')} rows={compact || inputOnly ? 2 : 3} value={input} onChange={event => setInput(event.target.value)} onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); send(); } }} placeholder={placeholder} className="max-h-40 min-w-0 w-full resize-none overflow-y-auto bg-transparent px-0.5 text-sm leading-6 text-foreground outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-40" />
             <div className="shrink-0 pb-0.5 text-muted-foreground">
               {agent.busy
                 ? <button type="button" onClick={agent.stop} aria-label={t('chat.stop')} className="rounded-full bg-foreground p-2 text-primary-foreground transition-opacity hover:opacity-85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"><Square className="h-4 w-4" /></button>
@@ -59,7 +61,7 @@ export function ChatPanel({ compact = false, inputOnly = false, context }: { com
           <div className="mt-2.5 flex min-w-0 items-center gap-1 text-muted-foreground">
             <button type="button" disabled aria-label={t('chat.addAttachment')} className="shrink-0 rounded-full p-1.5 disabled:pointer-events-none disabled:opacity-40"><Plus className="h-4 w-4" /></button>
             <div className="flex min-w-0 flex-1 items-center gap-0.5 [&_button]:h-7 [&_button]:focus-visible:outline-none [&_button]:focus-visible:ring-1 [&_button]:focus-visible:ring-ring"><PiModelMenu /></div>
-            <ChatHistory key={agent.scope} />
+            {(!conversation||historySource)&&<ChatHistory key={historySource?.scope??agent.scope} source={historySource} />}
             <button type="button" disabled aria-label={t('chat.voiceInput')} className="shrink-0 rounded-full p-1.5 disabled:pointer-events-none disabled:opacity-40"><Mic className="h-4 w-4" /></button>
           </div>
         </div>
