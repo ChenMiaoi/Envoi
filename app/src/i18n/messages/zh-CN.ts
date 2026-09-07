@@ -818,7 +818,7 @@ export const zhCN = {
  "welcome.newHint":"选择模板，开始一篇新论文。",
  "welcome.openHint":"继续本机已有的论文与研究。",
  "welcome.demo":"打开示例项目",
- "welcome.demoHint":"通过一篇完整论文，探索 Envoi。",
+ "welcome.demoHint":"新建独立的本地示例，包含论文、数据和 Git 历史。",
  "welcome.recent":"最近项目",
  "welcome.remove":"移除最近项目：{name}",
  "welcome.noRecent":"这里将留下你的研究足迹",

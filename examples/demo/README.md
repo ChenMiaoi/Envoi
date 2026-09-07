@@ -1,25 +1,25 @@
 # IO-Aware Attention — Envoi demonstration
 
-This is an English illustrative manuscript using the official installed ACM `acmart` class (`sigconf,nonacm`). It is not a submitted paper, an ACM publication, or a report of measured GPU results. The author label explicitly identifies the demonstration. All numeric performance data are deterministic synthetic model outputs.
+This is a complete local writing project with an illustrative English ACM manuscript. All performance data are deterministic synthetic model outputs, not hardware measurements or published results.
 
-- `main.tex`, `chapters/`, `references.bib`: manuscript and four real bibliographic records.
-- `../../app/scripts/generate-demo-figures.py`: deterministic model, figures, and table generator (Python 3, NumPy, Matplotlib).
-- `data/model-data.csv`: all 21 modeled shape records.
-- `assets/`: six 300-dpi PNG figures actually used by the paper, plus generated table source.
-- `.envoi/figure-sources/`: retained vector PDF sources; hidden management artifacts, not duplicate manuscript inputs.
-- `build/main.pdf`: compiled nine-page paper. `build/compile.log`: real compilation transcript. Build output is ignored by Git; it remains available on disk.
-- `paperdesk.json`: root source, engine, build folder, and Git initialization state.
+## Working with this project
 
-Reproduce figures with `python3 ../../app/scripts/generate-demo-figures.py` after installing NumPy and Matplotlib in your chosen Python environment. From the repository’s `app/` directory, `node scripts/build-demo.mjs` uses the same isolated local compiler as Envoi to produce `build/main.pdf`. This Mac has TeX Live 2026; ACM class version is recorded in the PDF metadata and compilation log. Figure generation was checked with Python 3.14, NumPy 2.5.2, Matplotlib 3.11.1.
+- Edit `main.tex` and the files in `chapters/` in Writer, then save and compile with PDFLaTeX. TeX Live with the `acmart` class and its dependencies is required.
+- Browse the five demonstration commits in Git History. Each commit adds an actual stage of the manuscript; these are teaching revisions created now, not recovered research history. No remote is configured and no personal author identity is used to create them.
+- Explore citations in `references.bib`, figures in `assets/`, and the editable table in `data/model-data.csv`.
+- Open `SHOWCASE.md` in Reader to explore Markdown rendering.
+- Compiler output belongs in `build/` and is ignored by Git. The first compilation generates the PDF from this project's source.
 
-The numeric model uses F=4N²d, materialized bytes=8N²+8Nd, tiled bytes=0.5N²+8Nd, P=120e12 FLOP/s, W=1.2e12 bytes/s, compute efficiency=0.60, bandwidth efficiency=0.65, launch overhead=30 microseconds. Times use overhead + max(compute time, transfer time). These are illustrative assumptions, not device specifications.
+Every use of **Open example project** creates a new independent directory under Envoi's global data directory (`~/.envoi/examples`, or `ENVOI_DATA_DIR/examples`). To continue this copy, open it from Recent Projects. Creating another example never resets this copy.
 
-For development, run `npm run demo:git` from the Envoi repository root. This creates a local nested `.git` in this folder with one clearly labelled baseline commit, so the desktop Git status and history panels show the demo independently. Re-running the command preserves existing history and edits. It does not configure a remote, push, or change your Git identity. The initial commit includes only example files already tracked by Envoi; build output and local untracked files remain outside the baseline.
+## Reproduce the figures
 
-The example sources are still ordinary tracked files in the outer Envoi repository, not a submodule. The nested `.git` is local metadata and is not distributed when cloning Envoi, so run the command once on each development checkout. Later source edits are visible to both repositories and can be committed independently.
+From this project directory, install the dependencies in `tools/requirements.txt` in your chosen Python environment, then run:
 
-Envoi's initial view is a bundled snapshot of this directory, explicitly labelled as a snapshot. To edit and save the real files, use Open Project and select this `demo` folder in the native authorization picker. Browser automation has not bypassed that picker.
+```sh
+python tools/generate-figures.py
+```
 
-## Showcase
+The generator lives inside this project and does not depend on the Envoi source checkout. It regenerates `data/model-data.csv` and the PNG/table assets; auxiliary vector files are stored in `.envoi/figure-sources/`.
 
-Open [SHOWCASE.md](SHOWCASE.md) in the reader to see every styled markdown element (headings, callouts, tables, math, code) under the active theme.
+The model uses F=4N²d, materialized bytes=8N²+8Nd, tiled bytes=0.5N²+8Nd, P=120e12 FLOP/s, W=1.2e12 bytes/s, compute efficiency=0.60, bandwidth efficiency=0.65 and launch overhead=30 microseconds. These are illustrative assumptions, not device specifications.

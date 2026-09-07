@@ -803,7 +803,7 @@ const zhTW: Messages = {
  "welcome.newHint":"選擇範本，開始一篇新論文。",
  "welcome.openHint":"繼續本機已有的論文與研究。",
  "welcome.demo":"開啟範例專案",
- "welcome.demoHint":"透過一篇完整論文，探索 Envoi。",
+ "welcome.demoHint":"建立獨立的本機範例，包含論文、資料和 Git 歷史。",
  "welcome.recent":"最近專案",
  "welcome.remove":"移除最近專案：{name}",
  "welcome.noRecent":"這裡將留下你的研究足跡",

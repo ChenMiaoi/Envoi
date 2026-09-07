@@ -150,17 +150,36 @@ try {
  await waitForAsync(reopened,async()=>!(await window.envoi.dataGet('recent')).value.length);
  assert.match(await readFile(path.join(root,'main.tex'),'utf8'),/Desktop test/);
  console.log('PASS: welcome recent removal preserves project files');
- if(process.env.ENVOI_DESKTOP_EXECUTABLE){
-  await instance.evaluate(({app},directory)=>app.setPath('userData',directory),path.join(temp,'profile'));
-  await reopened.getByRole('button',{name:/打开示例项目/}).click();
-  await reopened.getByRole('textbox',{name:'LaTeX 正文编辑器',exact:true}).waitFor();
-  const example=await reopened.evaluate(()=>window.envoi.exampleDirectory());
-  assert.ok(example.includes(path.join('profile','examples','demo')));
-  await reopened.evaluate(async root=>{await window.envoi.fsWrite(root,'example-check.txt',{text:'preserved'});},example);
-  assert.equal(await reopened.evaluate(()=>window.envoi.exampleDirectory()),example);
-  assert.equal(await readFile(path.join(example,'example-check.txt'),'utf8'),'preserved');
-  console.log('PASS: bundled example opens as an editable copy and is not overwritten');
- }
+ // The same creation contract applies to development and packaged applications.
+ const dataErrors=[];instance.process().stderr?.on('data',chunk=>{if(String(chunk).includes("envoi:data-put"))dataErrors.push(String(chunk));});
+ await reopened.getByRole('button',{name:/打开示例项目/}).click();
+ await reopened.getByRole('textbox',{name:'LaTeX 正文编辑器',exact:true}).waitFor();
+ const example=(await reopened.evaluate(()=>window.envoi.dataGet('recent'))).value[0].path;
+ assert.equal(path.dirname(example),path.join(temp,'data','examples'));
+ const history=await reopened.evaluate(root=>window.envoi.gitLog(root),example);
+ assert.equal(history.state,'ready');assert.equal(history.commits.length,5);
+ assert.equal((await reopened.evaluate(root=>window.envoi.gitStatus(root),example)).files.length,0);
+ await reopened.evaluate(()=>location.hash='/history');
+ await reopened.getByText('demo: document reproducibility and workspace walkthrough',{exact:true}).first().waitFor();
+ if(process.env.ENVOI_DEMO_SCREENSHOT)await reopened.screenshot({path:process.env.ENVOI_DEMO_SCREENSHOT});
+ await reopened.evaluate(()=>location.hash='/writer');
+ const exampleEditor=reopened.getByRole('textbox',{name:'LaTeX 正文编辑器',exact:true});
+ const original=await exampleEditor.inputValue();await exampleEditor.fill(original+'\n% Saved demo edit\n');
+ await reopened.evaluate(()=>window.dispatchEvent(new Event('envoi:save')));
+ await waitForAsync(reopened,async root=>(await window.envoi.fsRead(root,'main.tex')).text.includes('% Saved demo edit'),example);
+ await waitForAsync(reopened,async()=>{const record=await window.envoi.dataGet('session','current');return record?.value?.files?.some(file=>file.path==='main.tex'&&file.saved?.includes('% Saved demo edit')&&file.saved===file.text);});
+ await reopened.evaluate(()=>window.dispatchEvent(new Event('envoi:open-example')));
+ await waitForAsync(reopened,async previous=>{const records=(await window.envoi.dataGet('recent'))?.value??[];return records.some(record=>record.path!==previous);},example);
+ const another=(await reopened.evaluate(()=>window.envoi.dataGet('recent'))).value.find(record=>record.path!==example).path;
+ await reopened.getByRole('button',{name:`项目：${path.basename(another)}，打开项目管理`,exact:true}).waitFor();
+ assert.notEqual(another,example);assert.equal(path.dirname(another),path.join(temp,'data','examples'));
+ assert.match(await readFile(path.join(example,'main.tex'),'utf8'),/Saved demo edit/);
+ assert.doesNotMatch(await readFile(path.join(another,'main.tex'),'utf8'),/Saved demo edit/);
+ await reopened.evaluate(root=>window.dispatchEvent(new CustomEvent('envoi:open-recent',{detail:root})),example);
+ await waitForAsync(reopened,()=>document.querySelector('textarea[aria-label="LaTeX 正文编辑器"]')?.value.includes('Saved demo edit'));
+ assert.deepEqual(dataErrors,[]);
+ console.log('PASS: each example creates a real independent project, visible history, normal editor saves and preserved recent copies');
+
 
 
 

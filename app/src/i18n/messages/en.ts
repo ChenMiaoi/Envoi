@@ -805,7 +805,7 @@ const en: Messages = {
  "welcome.newHint":"Choose a template and start a new paper.",
  "welcome.openHint":"Continue a paper or research folder on your computer.",
  "welcome.demo":"Open example project",
- "welcome.demoHint":"Explore Envoi through a complete manuscript.",
+ "welcome.demoHint":"Create an independent local example with a manuscript, data and Git history.",
  "welcome.recent":"Recent projects",
  "welcome.remove":"Remove recent project: {name}",
  "welcome.noRecent":"Your work starts here",

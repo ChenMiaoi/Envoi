@@ -1,7 +1,8 @@
+import {createExampleProject} from './example-project.mjs'
 import {toolDirectories} from '../../server/tool-config.mjs'
 import { app, BrowserWindow, dialog, ipcMain, Menu, protocol, shell } from "electron"
 import { randomBytes } from "node:crypto"
-import { cp, mkdtemp, mkdir, readdir, readFile, stat, realpath, rename, rm } from "node:fs/promises"
+import { mkdir, readdir, readFile, stat, realpath, rename, rm } from "node:fs/promises"
 import path from "node:path"
 
 import type { CompileInput } from "../../server/compiler.mjs"
@@ -131,25 +132,15 @@ async function agentRoot(body: unknown) {
 
 // ── IPC 通道（契约第 1 节；错误消息沿用中文风格）──
 
-let exampleCreation: Promise<string> | undefined
 function registerIpc(): void {
   ipcMain.handle('envoi:window-colors', (event, colors: {color: string; symbolColor: string}) => {
     if (!colors || !/^#[\da-f]{6}$/i.test(colors.color) || !/^#[\da-f]{6}$/i.test(colors.symbolColor)) throw Error('Invalid window colors')
     if (process.platform === 'win32') BrowserWindow.fromWebContents(event.sender)?.setTitleBarOverlay({...colors, height: 40})
   })
-  ipcMain.handle('envoi:example-directory', () => {
-    exampleCreation ??= (async () => {
-      const source=app.isPackaged?path.join(process.resourcesPath,'demo'):path.resolve(import.meta.dirname,'../../../examples/demo')
-      if(!app.isPackaged)return realpath(source)
-      const parent=path.join(app.getPath('userData'),'examples'),target=path.join(parent,'demo')
-      try{return await realpath(target)}catch(error){if((error as NodeJS.ErrnoException).code!=='ENOENT')throw error}
-      await mkdir(parent,{recursive:true})
-      const staging=await mkdtemp(path.join(parent,'.demo-'))
-      try{await cp(source,staging,{recursive:true,filter:entry=>!['.git','.envoi','.paperdesk'].includes(path.basename(entry))});await rename(staging,target);return await realpath(target)}
-      finally{await rm(staging,{recursive:true,force:true})}
-    })().finally(()=>{exampleCreation=undefined})
-    return exampleCreation
-  })
+  ipcMain.handle('envoi:example-directory', () => createExampleProject({
+    source: app.isPackaged ? path.join(process.resourcesPath,'demo') : path.resolve(import.meta.dirname,'../../../examples/demo'),
+    dataDirectory: dataDir,
+  }))
 
   ipcMain.handle("envoi:pick-directory", async (event) => {
     const window = BrowserWindow.fromWebContents(event.sender)

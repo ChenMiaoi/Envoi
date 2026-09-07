@@ -61,7 +61,7 @@ Views load on demand. Git and compilation workers do not load the AI SDK; the AI
 
 A workspace with no open project shows the Envoi welcome page with new/open/example actions, recent projects, settings, shortcuts and LaTeX documentation. Closing a project returns here even from Settings. Successful startup restoration reopens the project; a failed restoration returns here with the reason and a separate recoverable-draft action.
 
-Recent entries open directly and can be removed without deleting files. Development opens `examples/demo` directly. Packaged applications include example resources and create a writable copy under the application's user-data `examples/demo` directory on demand; reopening preserves edits. There is no timed splash screen or startup animation, and no extra permissions beyond the existing workspace trust decision.
+Recent entries open directly and can be removed without deleting files. Every use of Open example project creates a fresh local project under the global data directory's `examples/demo-<unique id>` directory, in both development and packaged builds. The application prepares five real demonstration Git commits and a new project identity before opening it. Previous copies remain available from Recent Projects. Template sources, old build output, AI configuration and identities are not copied. There is no timed splash screen or startup animation, and no extra permissions beyond the existing workspace trust decision.
 
 ## Windows setup and automatic detection
 
@@ -70,3 +70,11 @@ Use Node.js 22.12+ and run `npm run setup`, then `npm run dev` in PowerShell fro
 Settings show the operating system, native machine architecture, running Node architecture, Git version/path, LaTeX root and optional Biber/ChkTeX availability. Tool discovery checks `ENVOI_TEX_BIN` (an optional explicit override), PATH, then common Git, MiKTeX and default TeX Live year directories. Quoted PATH entries and `.exe` names are supported. Nonstandard installations should be added to PATH; there is no full-drive scan or automatic installation. Restart the app after changing the system PATH. Detected fallback directories are also passed to backend and AI processes.
 
 The Windows validation uses TeX Live 2026; finding MiKTeX executables does not certify every MiKTeX configuration. Compilation requires the PDFLaTeX/XeLaTeX, BibTeX and xdvipdfmx programs from the selected TeX directory. Biber remains optional. Windows cancellation stops the compiler process tree. Existing user data stays under `%USERPROFILE%/.envoi` and tool preferences under `%USERPROFILE%/.config/envoi`.
+
+## Example project creation
+
+The bundled demo is a read-only source template. Creation runs Git asynchronously in a private staging directory, with explicit demonstration authorship, current timestamps, no hooks/signing inherited from user configuration, and no remote. Five commits develop the research question, model/design, synthetic evaluation, discussion, and reproducibility documentation. Only the completed, clean repository is published and opened through the ordinary trusted-project flow. Git is required; missing tools or template failures report an error and do not expose a partial project.
+
+Figure regeneration is self-contained in `tools/generate-figures.py`. PDF generation uses the ordinary project compiler and writes ignored build output. Opening a saved copy through Recent Projects never recreates it. `npm run demo:git` is a compatibility command that creates a new global-data demo and prints its path; it no longer initializes a nested repository in the template.
+
+First-run data migration now creates-or-preserves the store under the backend lock. Concurrent initialization cannot race on revision zero; conflicting legacy snapshots are archived without replacing current data. Project binding writes are serialized within a renderer. Normal compare-and-swap checks still reject divergent stale writes.

@@ -805,7 +805,7 @@ const ja: Messages = {
  "welcome.newHint":"テンプレートを選んで新しい論文を作成。",
  "welcome.openHint":"このコンピューターの論文や研究を再開。",
  "welcome.demo":"サンプルを開く",
- "welcome.demoHint":"完成した論文で Envoi を体験。",
+ "welcome.demoHint":"論文・データ・Git 履歴を含む独立したローカルのサンプルを作成します。",
  "welcome.recent":"最近のプロジェクト",
  "welcome.remove":"最近のプロジェクトを削除：{name}",
  "welcome.noRecent":"研究の続きをここから",
