@@ -16,7 +16,7 @@
     "build:desktop": "tsc -b && tsc -p tsconfig.electron.json && electron-vite build --config electron.vite.config.ts",
     "format": "prettier .. --ignore-path ../.prettierignore --write",
     "format:check": "prettier .. --ignore-path ../.prettierignore --check",
-    "package:mac": "npm run build:desktop && electron-builder --mac --config electron-builder.yml",
+    "package:mac": "npm run build:desktop && electron-builder --mac --config electron-builder.yml --publish never",
     "lint": "eslint .",
     "preview": "vite preview",
     "test:references": "node scripts/test-references.mjs",
@@ -34,7 +34,7 @@
     "dev:web": "vite",
     "build:web": "tsc -b && vite build",
     "measure:startup": "node scripts/measure-startup.mjs",
-    "package:win": "npm run build:desktop && electron-builder --win --config electron-builder.yml --config.electronDist=node_modules/electron/dist"
+    "package:win": "npm run build:desktop && electron-builder --win --config electron-builder.yml --publish never"
   },
   "dependencies": {
     "@codemirror/commands": "^6.11.0",
