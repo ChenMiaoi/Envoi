@@ -57,13 +57,12 @@ export function ProjectMenu() {
   },[busy,saving,setBusy,setMessage]);
   const activate = useCallback(async (rootPath: string) => {
     const binding = await bindProject(rootPath); rootPath = binding.project.path;
-    const bindingError = '';
     window.dispatchEvent(new Event('envoi:connection-updated'));
     const next = await restoreProjectSession(await readProject(rootPath));
     let remembered = true;
     try { await rememberProject(rootPath); } catch { remembered = false; }
     setProject(next);
-    setMessage(remembered ? t('project.opened',{name:next.name,bindingError}) : t('project.openedNoRecent',{name:next.name}));
+    setMessage(remembered ? '' : t('project.openedNoRecent',{name:next.name}));
   },[setProject,setMessage,t]);
   useEffect(()=>{
     const create=()=>{setMode('new');setName('');setDiscard(false);setEnableGit(preferences.defaultGit);setMessage('');};
@@ -129,15 +128,15 @@ export function ProjectMenu() {
             if (!/\.(tex|bib|md|txt|csv|sty|cls)$/i.test(name.trim())) throw new Error(t('project.errorFileExtension'));
             await createTextFile(project.rootPath!, name.trim(), "");
             const fresh = await readProject(project.rootPath!).catch((error) => { throw new Error(t('project.errorRefreshFailed',{error:error.message})); });
-            setProject((current) => ({ ...current, ...fresh, compiled: current.compiled, id: current.id, rootId: current.rootId || fresh.rootId, files: fresh.files.map((file) => current.files.find((item) => item.id === file.id) ?? file) })); setMode(null); setMessage(t('project.fileCreated',{name}));
+            setProject((current) => ({ ...current, ...fresh, compiled: current.compiled, id: current.id, rootId: current.rootId || fresh.rootId, files: fresh.files.map((file) => current.files.find((item) => item.id === file.id) ?? file) })); setMode(null); setMessage('');
           } else {
             const rootPath = mode === "new" ? await createPaper(location, name.trim(), template, enableGit) : location;
             if (mode === "new" && enableGit) { try { await initializeLocalGit(rootPath); } catch(error) { throw new Error(t('project.errorGitIncomplete',{error:(error as Error).message})); } }
-            await activate(rootPath); if (mode === "new" && enableGit) setMessage(t('project.gitInitialized')); setMode(null);
+            await activate(rootPath);  setMode(null);
           }
         })}>{busy ? t('project.processing') : mode === "new" ? t('project.createProject') : mode === "file" ? t('project.createFile') : t('project.openCurrentDirectory')}</button></div>
       </DialogContent>
     </Dialog>
-    {!mode && message && <div role="status" className="fixed bottom-4 right-4 z-50 flex max-w-lg gap-3 rounded border border-border bg-card p-3 text-xs shadow-xl"><span>{message}</span><button aria-label={t('project.dismissAria')} onClick={() => setMessage("")}>×</button></div>}
+    {!mode && message && <div role="alert" data-testid="project-notification" className="fixed bottom-9 right-4 z-50 flex max-w-lg gap-3 rounded border border-warning/40 bg-card p-3 text-xs text-warning shadow-xl"><span>{message}</span><button aria-label={t('project.dismissAria')} onClick={() => setMessage("")}>×</button></div>}
   </>;
 }

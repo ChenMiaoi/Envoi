@@ -182,9 +182,13 @@ try {
  await reopened.evaluate(()=>location.hash='/writer');
  await waitForAsync(reopened,()=>document.querySelector('textarea[aria-label="LaTeX 正文编辑器"]')?.value.includes('Saved demo edit'));
  assert.deepEqual(dataErrors,[]);
+ assert.equal(await reopened.getByTestId('project-notification').count(),0,'successful open/save stays quiet');
+ await reopened.evaluate(()=>window.dispatchEvent(new CustomEvent('envoi:storage-warning',{detail:'Notification expiry fixture'})));
+ await reopened.getByTestId('project-notification').waitFor();
+ await reopened.getByTestId('project-notification').waitFor({state:'hidden',timeout:10000});
  console.log('PASS: each example creates a real independent project, visible history, normal editor saves and preserved recent copies');
 
 
 
 
-} finally {await instance?.close();await rm(temp,{recursive:true,force:true});}
+} finally {await instance?.evaluate(({app})=>app.exit(0)).catch(()=>{});await instance?.close().catch(()=>{});await rm(temp,{recursive:true,force:true});}

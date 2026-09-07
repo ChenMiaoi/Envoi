@@ -17,6 +17,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   const [recoverable,setRecoverable]=useState<PaperProject|undefined>();
   const [restored,setRestored] = useState(!!import.meta.hot?.data.project&&import.meta.hot.data.project.id!=='demo');
   const [message, setMessage] = useState("");
+  useEffect(()=>{if(!message)return;const timer=setTimeout(()=>setMessage(''),6000);return()=>clearTimeout(timer);},[message]);
   const [busy, setBusy] = useState(false);
   useEffect(()=>{const listener=(event:Event)=>setMessage((event as CustomEvent<string>).detail);window.addEventListener('envoi:storage-warning',listener);return()=>window.removeEventListener('envoi:storage-warning',listener);},[]);
   const activity = useRef({busy, saving});
@@ -55,12 +56,12 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       await closeProjectSession(current,discard);
       const empty=emptyProject();
       if(import.meta.hot)import.meta.hot.data.project=empty;
-      latest.current=empty;setProjectState(empty);setRecoverable(undefined);setMessage(t('project.closed'));
+      latest.current=empty;setProjectState(empty);setRecoverable(undefined);setMessage('');
     } catch(error) {
       if(current.rootPath)void envoi().watchProject(current.rootPath).catch(()=>{});
       throw error;
     } finally {closing.current=false;activity.current={busy:false,saving};setBusy(false);}
-  },[busy,saving,t]);
+  },[busy,saving]);
   useEffect(()=>{const save=()=>{void saveAll();};window.addEventListener('envoi:save',save);return()=>window.removeEventListener('envoi:save',save);},[saveAll]);
   useEffect(() => {
     if(restored)return;
