@@ -1,0 +1,150 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Validate and test release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: Validate tag and package versions
+        env:
+          TAG_NAME: ${{ github.ref_name }}
+        shell: bash
+        run: |
+          if [[ ! "$TAG_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Tag must match v<major>.<minor>.<patch>; got $TAG_NAME" >&2
+            exit 1
+          fi
+
+          expected_version="${TAG_NAME#v}"
+          root_version="$(node -p "require('./package.json').version")"
+          app_version="$(node -p "require('./app/package.json').version")"
+
+          if [[ "$root_version" != "$expected_version" || "$app_version" != "$expected_version" ]]; then
+            echo "Tag $TAG_NAME must match both package.json versions ($expected_version)." >&2
+            echo "root package: $root_version; app package: $app_version" >&2
+            exit 1
+          fi
+
+      - name: Install dependencies
+        run: npm run setup
+
+      - name: Check formatting
+        run: npm run format:check
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
+
+      - name: Run tests
+        run: npm test
+
+      - name: Run AI tests
+        run: npm run test:ai
+
+  package:
+    name: Package ${{ matrix.platform }}
+    needs: check
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: Windows
+            os: windows-latest
+            package_command: npm run package:win
+            artifact_name: envoi-windows
+            artifact_path: app/release/*.exe
+          - platform: macOS
+            os: macos-latest
+            package_command: npm run package:mac
+            artifact_name: envoi-macos
+            artifact_path: |
+              app/release/*.dmg
+              app/release/*.zip
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: Install dependencies
+        run: npm run setup
+
+      - name: Build installer
+        run: ${{ matrix.package_command }}
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: ${{ matrix.artifact_path }}
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    name: Publish GitHub Release
+    needs: package
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download installer artifacts
+        uses: actions/download-artifact@v5
+        with:
+          path: release-artifacts
+
+      - name: Generate checksums
+        working-directory: release-artifacts
+        shell: bash
+        run: |
+          find . -type f -not -name SHA256SUMS.txt -print0 \
+            | sort -z \
+            | xargs -0 sha256sum > SHA256SUMS.txt
+
+      - name: Create or reuse GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ github.ref_name }}
+        shell: bash
+        run: |
+          if ! gh release view "$TAG_NAME" >/dev/null 2>&1; then
+            gh release create "$TAG_NAME" \
+              --verify-tag \
+              --title "Envoi $TAG_NAME" \
+              --generate-notes
+          fi
+
+      - name: Upload release files
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ github.ref_name }}
+        shell: bash
+        run: |
+          while IFS= read -r -d '' file; do
+            gh release upload "$TAG_NAME" "$file" --clobber
+          done < <(find release-artifacts -type f -print0 | sort -z)

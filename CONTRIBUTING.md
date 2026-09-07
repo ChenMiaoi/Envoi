@@ -13,6 +13,8 @@ Before sharing a change:
 
 `npm run lint` runs the repository ESLint configuration and must pass cleanly. CI (`.github/workflows/ci.yml`) runs on Windows and macOS and enforces lint, build, `npm test`, `test:ai` and `test:local` on every push and pull request; without a TeX toolchain on the runner, TeX-dependent local tests self-skip. Native compiler tests exercise PDFLaTeX and XeLaTeX on both platforms; legacy sandbox tests remain macOS-only. Windows file-symlink tests skip when Developer Mode/elevation is unavailable. `test:demo` (which needs a compiled example PDF from `demo:build`) remains a per-machine step.
 
+Releases are created by pushing an annotated tag whose name and package versions match `v<major>.<minor>.<patch>`, for example `v0.1.0`. See [release instructions](docs/RELEASE.md). The release workflow validates formatting, lint, build and tests, then packages Windows and macOS installers and attaches them to the GitHub Release.
+
 Project access uses one persistent workspace trust decision, shared by all desktop tools. Trusted AI sessions may run local commands. Do not reintroduce browser permission renewal or per-tool approvals. The preload bridge should expose defined application operations. Preserve source edits, report stale diagnostics, and avoid guessing source/PDF locations. Git status is read-only; creating a project must not automatically commit, configure identity or push.
 
 This repository currently has no project-wide license. Licensing decisions belong to the owner; do not label contributions or the overall project with an invented license.
