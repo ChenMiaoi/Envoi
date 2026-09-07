@@ -1,3 +1,4 @@
+import { useProjectTrust } from "@/project/useProjectTrust"
 import { editorFonts } from "@/settings/model"
 import { useSettings } from "@/settings/useSettings"
 import { useEditorLint } from "@/project/useEditorLint"
@@ -45,6 +46,7 @@ export function WriterView({
   const [tab, setTab] = useState<SideTab>("outline")
   const editor = useRef<LatexEditorHandle>(null)
   const { project, edit, busy } = useProject()
+  const trusted = useProjectTrust(project.rootPath)?.trusted
   const sources = useMemo(
     () =>
       project.files
@@ -67,6 +69,7 @@ export function WriterView({
   useEffect(() => {
     const save = (event: Event) => {
       if (
+        trusted &&
         event.cancelable &&
         location.pathname === "/writer" &&
         /\.tex$/i.test(active?.path ?? "")
@@ -77,7 +80,7 @@ export function WriterView({
     }
     window.addEventListener("envoi:save", save, true)
     return () => window.removeEventListener("envoi:save", save, true)
-  }, [location.pathname, active?.path])
+  }, [location.pathname, active?.path, trusted])
 
   useEditorLint(active?.id, active?.path, source)
   const setSource = (text: string) => {

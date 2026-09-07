@@ -1,3 +1,5 @@
+import { ProjectTrust, TrustRequired } from "@/project/ProjectTrust"
+import { useProjectTrust } from "@/project/useProjectTrust"
 import { WelcomePage } from "@/project/WelcomePage"
 import { Toaster } from "@/components/ui/sonner"
 import { usePreferences } from "@/settings/context"
@@ -113,6 +115,7 @@ function ProjectApp() {
   const { t } = useT()
   const { effective } = useSettings()
   const { project } = useProject()
+  const trust = useProjectTrust(project.rootPath)
   const fileTree = useMemo(
     () => projectTree(project.files, project.directories),
     [project.files, project.directories],
@@ -301,7 +304,7 @@ function ProjectApp() {
                 className="h-full"
                 aria-label={t("app.aria.library")}
               >
-                <LibraryView />
+                {project.rootPath && !trust?.trusted ? <TrustRequired /> : <LibraryView />}
               </section>
             )}
             {project.id !== "empty" && visited.has("history") && (
@@ -310,7 +313,7 @@ function ProjectApp() {
                 className="h-full"
                 aria-label={t("app.aria.history")}
               >
-                <GitHistoryView />
+                {trust?.trusted ? <GitHistoryView /> : <TrustRequired />}
               </section>
             )}
             {visited.has("settings") && (
@@ -342,6 +345,7 @@ function ProjectApp() {
           style={{ height: 26 }}
         >
           <div className="flex items-center gap-3">
+            {project.id !== "empty" && <ProjectTrust />}
             {project.id !== "empty" && <GitStatusPanel />}
             {project.id !== "empty" && (
               <ProblemsPanel

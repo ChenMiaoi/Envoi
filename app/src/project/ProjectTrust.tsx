@@ -1,0 +1,136 @@
+import { useProjectTrust } from "./useProjectTrust"
+import { initializeLocalGit } from "@/lib/localGit"
+import { useEffect, useState } from "react"
+import { ShieldCheck, ShieldAlert } from "lucide-react"
+import { envoi, ipcError } from "@/lib/desktop"
+import { useProject } from "./context"
+import { useT } from "@/i18n/useT"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog"
+
+export function ProjectTrust() {
+  const { project } = useProject()
+  const root = project.rootPath
+  const state = useProjectTrust(root)
+  const { t } = useT()
+  const [open, setOpen] = useState(false)
+  const [working, setWorking] = useState(false)
+  const [error, setError] = useState("")
+  const undecided = !!state && !state.decided
+  useEffect(() => {
+    setOpen(false)
+    setError("")
+  }, [root])
+  useEffect(() => {
+    if (undecided) setOpen(true)
+  }, [root, undecided])
+  useEffect(() => {
+    const show = () => {
+      setOpen(true)
+      setError("")
+    }
+    window.addEventListener("envoi:show-trust", show)
+    return () => window.removeEventListener("envoi:show-trust", show)
+  }, [])
+  if (!root) return null
+  async function decide(trusted: boolean) {
+    if (!root || working) return
+    setWorking(true)
+    try {
+      if (
+        typeof envoi().grantProjectTrust !== "function" ||
+        typeof envoi().restrictProject !== "function"
+      )
+        throw Error(t("trust.restart"))
+      if (trusted) {
+        await envoi().grantProjectTrust(root)
+        const config = await envoi()
+          .fsRead(root, ".envoi/project.json")
+          .then((file) => {
+            try {
+              return JSON.parse(file.text ?? "{}")
+            } catch {
+              return {}
+            }
+          })
+          .catch(() => ({}))
+        if (config.git?.requested && config.git?.status === "pending-local-init") {
+          await initializeLocalGit(root)
+          window.dispatchEvent(new Event("envoi:connection-updated"))
+          window.dispatchEvent(new Event("envoi:workspaces-updated"))
+        }
+      } else await envoi().restrictProject(root)
+      setOpen(false)
+    } catch (reason) {
+      setError(ipcError(reason).message)
+    } finally {
+      setWorking(false)
+    }
+  }
+  return (
+    <>
+      <button className="flex items-center gap-1 text-primary" onClick={() => setOpen(true)}>
+        {state?.trusted ? <ShieldCheck size={13} /> : <ShieldAlert size={13} />}
+        {t(state?.trusted ? "trust.trusted" : "trust.restricted")}
+      </button>
+      <Dialog
+        open={open}
+        onOpenChange={(value) => {
+          if (!working) {
+            if (!value && !state?.decided) void decide(false)
+            else setOpen(value)
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{t("trust.title")}</DialogTitle>
+            <DialogDescription>{t("trust.description")}</DialogDescription>
+          </DialogHeader>
+          <p className="break-all text-xs text-muted-foreground">{root}</p>
+          <div className="flex flex-wrap justify-end gap-2">
+            <button
+              disabled={working}
+              className="rounded border px-3 py-2 text-sm"
+              onClick={() => void decide(false)}
+            >
+              {t("trust.continueRestricted")}
+            </button>
+            <button
+              disabled={working}
+              className="rounded bg-primary px-3 py-2 text-sm text-primary-foreground"
+              onClick={() => void decide(true)}
+            >
+              {t("trust.grant")}
+            </button>
+          </div>
+          {error && (
+            <p role="alert" className="text-sm text-warning">
+              {error}
+            </p>
+          )}
+        </DialogContent>
+      </Dialog>
+    </>
+  )
+}
+
+export function TrustRequired() {
+  const { t } = useT()
+  return (
+    <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-sm text-muted-foreground">
+      <p>{t("trust.required")}</p>
+      <button
+        className="text-primary"
+        onClick={() => window.dispatchEvent(new Event("envoi:show-trust"))}
+      >
+        {t("trust.grant")}
+      </button>
+    </div>
+  )
+}

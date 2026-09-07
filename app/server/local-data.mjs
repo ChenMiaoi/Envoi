@@ -104,11 +104,14 @@ export async function registerProject(root, options = {}) {
   root = await realpath(root)
   return withDataLock("projects", () => registerProjectLocked(root, options))
 }
-async function registerProjectLocked(root, { copy = false } = {}) {
-  const found = await readProjectConfig(root)
+async function registerProjectLocked(
+  root,
+  { copy = false, readOnly = false, ignoreConfig = false } = {},
+) {
+  const found = ignoreConfig ? { config: null } : await readProjectConfig(root)
   let config = found.config
   if (!config) {
-    const legacy = await jsonFile(path.join(root, "paperdesk.json"), {})
+    const legacy = ignoreConfig ? {} : await jsonFile(path.join(root, "paperdesk.json"), {})
     config = Object.fromEntries(
       [
         "projectId",
@@ -152,9 +155,10 @@ async function registerProjectLocked(root, { copy = false } = {}) {
       throw Error("项目身份冲突：原目录仍存在。若这是副本，请明确选择“作为独立副本连接”。")
     if (copy) id = undefined
   }
+  if (!id && !copy) id = Object.values(index).find((entry) => entry.path === root)?.id
   id ??= randomUUID()
   const saved = { ...config, projectId: id }
-  if (!linked && config.projectId !== id)
+  if (!readOnly && !linked && config.projectId !== id)
     await atomicJson(path.join(root, ".envoi", "project.json"), saved)
   const info = await stat(root)
   index[id] = {

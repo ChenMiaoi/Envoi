@@ -97,6 +97,12 @@ try {
   await page.getByRole("button", { name: "选择文件夹…", exact: true }).click()
   await page.getByRole("button", { name: "打开当前目录", exact: true }).click()
   await page.waitForFunction(() => document.body.innerText.includes("main.tex"))
+  await page.getByRole("button", { name: "信任项目", exact: true }).click()
+  await page.getByRole("dialog").waitFor({ state: "hidden" })
+  await page.evaluate(async (temp) => {
+    await window.envoi.trustDirectory(temp)
+    await window.envoi.grantProjectTrust(temp)
+  }, temp)
   const result = await page.evaluate(async (root) => {
     const bridge = window.envoi
     const binding = await bridge.bindProject(root)
@@ -233,7 +239,7 @@ try {
   console.log("PASS: backend process isolation and restart after forced exit")
   console.log("PASS: filesystem watch, backend save conflict, native draft compilation")
   prompts = await instance.evaluate(() => globalThis.trustPrompts)
-  assert.equal(prompts, 1)
+  assert.equal(prompts, 0)
   await page.reload()
   await page.waitForFunction(() => location.hash === "#/reader")
   await page.getByRole("button", { name: /项目：/ }).waitFor()

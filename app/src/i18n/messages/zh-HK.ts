@@ -1,6 +1,16 @@
 /** 由 scripts/i18n-traditional.mjs 从 zh-CN.ts 自动生成（OpenCC）。术语覆盖请修改该脚本，勿手改本文件。 */
 import type { Messages } from "./zh-CN"
 const zhHK: Messages = {
+  "trust.gitAfterTrust": "信任新專案後初始化 Git。",
+  "trust.title": "項目安全模式",
+  "trust.description":
+    "限制模式可以閱讀、編輯和儲存檔案。信任後允許編譯、Git 和 AI 工具執行本機命令。",
+  "trust.trusted": "信任模式",
+  "trust.restricted": "限制模式",
+  "trust.continueRestricted": "以限制模式繼續",
+  "trust.grant": "信任項目",
+  "trust.required": "信任項目後可使用此功能。",
+  "trust.restart": "請保存修改並重新啓動應用，以啓用項目安全模式。",
   "project.removeAndClose": "移除並關閉",
   "project.saveAndRemove": "儲存並移除",
   "project.discardAndRemove": "放棄修改並移除",

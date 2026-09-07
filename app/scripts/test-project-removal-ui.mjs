@@ -1,3 +1,4 @@
+import { seedFixtureTrust } from "./fixture-trust.mjs"
 import { _electron } from "playwright"
 import { createRequire } from "node:module"
 import { mkdtemp, mkdir, writeFile, readFile, rm } from "node:fs/promises"
@@ -12,6 +13,8 @@ await mkdir(root)
 await mkdir(other)
 await writeFile(path.join(root, "main.tex"), "Original")
 await writeFile(path.join(other, "main.tex"), "Other")
+await seedFixtureTrust(path.join(temp, "data"), temp)
+
 const app = await _electron.launch({
   executablePath: require("electron"),
   args: [path.resolve("."), "--user-data-dir=" + path.join(temp, "profile")],
@@ -65,7 +68,9 @@ try {
   await page.getByRole("button", { name: "保存并移除", exact: true }).click()
   await page.getByTestId("welcome-page").waitFor()
   assert.equal(await readFile(path.join(root, "main.tex"), "utf8"), "Saved draft")
-  assert.equal((await page.evaluate(() => window.envoi.dataGet("recent"))).value.length, 0)
+  await page.waitForFunction(
+    async () => (await window.envoi.dataGet("recent"))?.value?.length === 0,
+  )
   await open()
   assert.equal(await editor.inputValue(), "Saved draft")
   await page.evaluate(() => window.dispatchEvent(new Event("envoi:manage-projects")))

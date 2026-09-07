@@ -19,7 +19,11 @@ npm run package:win # Windows
 
 ## One workspace trust decision
 
-Opening a folder asks whether to trust its files. Accepting enables Git, LaTeX, AI and file operations together. Declining cancels the opening and leaves the current project intact. Trust is stored outside projects in `~/.envoi/workspace-trust.json` (or `ENVOI_DATA_DIR`) and survives application restarts. Canonical paths prevent duplicate prompts through aliases. Descendants inherit trust; sibling folders do not.
+Projects open before the application asks about trust. Restricted mode allows reading PDFs and documents, manual editing, saving, and file management inside the opened directory. It does not execute Git, compilers, lint tools or project AI tools. The main process enforces these boundaries, including symlink escapes on file access. Restricted opening registers identity in application data without creating project metadata.
+
+The themed in-app dialog offers Trust Project or Continue in Restricted Mode. Dismissing it keeps the project restricted. The status bar displays the current mode and reopens this dialog to change it. Revoking trust stops the affected project tools. Decisions are stored outside projects in `~/.envoi/workspace-trust.json` (or `ENVOI_DATA_DIR`) and survive restarts. Canonical paths handle aliases. Descendants inherit decisions, with explicit child decisions taking precedence; sibling folders do not inherit a child grant. Existing trusted folders keep their trust.
+
+A newly created project that requested Git initialization keeps that request in its project configuration and initializes Git after trust is granted. Opening an untrusted project never grants trust merely to make a tool work. Main/preload changes require a full application restart.
 
 The application no longer uses browser directory handles, permission renewal, Git/agent proof files, manual absolute-path binding, or separate AI read/write approval. The directory picker supplies the path. Browsing a saved location does not create project metadata; opening a project registers its identity. A copied project gets a separate identity if its original directory still exists.
 
@@ -41,7 +45,7 @@ Local data remains in `~/.envoi/`; the renderer retains IndexedDB recovery copie
 
 Packaged navigation uses hash routes. Local assets use the `envoi:` protocol, including PDF fetches. External web links open in the default browser.
 
-`test:desktop` launches the built application against temporary data and project directories. It checks opening through the project menu, one trust prompt, repeated binding, nested writes, Git initialization/status, AI session access, compilation when TeX is installed, local PDF fetching, reopening after restart, external file refresh, save conflicts, native draft compilation, compiler cancellation, and utility-process crash recovery. Backend unit tests also cover concurrent saves, permissions/symlinks, task isolation, and watcher cleanup. Native dialogs are answered by the test only for its temporary fixtures. `ENVOI_DESKTOP_EXECUTABLE` can point at a packaged application executable for the same checks. It does not spend model API credits.
+`test:desktop` launches the built application against temporary data and project directories. It checks opening through the project menu, the in-app trust choice, repeated binding, nested writes, Git initialization/status, AI session access, compilation when TeX is installed, local PDF fetching, reopening after restart, external file refresh, save conflicts, native draft compilation, compiler cancellation, and utility-process crash recovery. Backend unit tests also cover concurrent saves, permissions/symlinks, task isolation, and watcher cleanup. Native dialogs are answered by the test only for its temporary fixtures. `ENVOI_DESKTOP_EXECUTABLE` can point at a packaged application executable for the same checks. It does not spend model API credits.
 
 ## Closing and removing projects
 

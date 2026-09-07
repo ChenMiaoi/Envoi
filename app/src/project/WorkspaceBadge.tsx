@@ -1,3 +1,4 @@
+import { useProjectTrust } from "./useProjectTrust"
 import { useT } from "@/i18n/useT"
 import { useCallback, useEffect, useState } from "react"
 import { useNavigate } from "react-router"
@@ -41,8 +42,12 @@ export function WorkspaceBadge() {
     [error, setError] = useState("")
   const root = project.rootPath,
     locked = busy || saving || working
+  const trusted = useProjectTrust(root)?.trusted
   const refresh = useCallback(async () => {
-    if (!root) return
+    if (!root || !trusted) {
+      setInfo(undefined)
+      return
+    }
     const value = (await envoi().workspaces(root, { action: "list" })) as {
       initialized: boolean
       workspaces: Workspace[]
@@ -53,7 +58,7 @@ export function WorkspaceBadge() {
       setProject((old) =>
         old.rootPath === root && old.name !== current.name ? { ...old, name: current.name } : old,
       )
-  }, [root, setProject])
+  }, [root, setProject, trusted])
   useEffect(() => {
     void refresh().catch(() => {})
     const changed = () => void refresh().catch(() => {})

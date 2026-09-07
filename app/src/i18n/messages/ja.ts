@@ -1,6 +1,16 @@
 /** 日本語メッセージ。zh-CN と完全に同じキーを持つこと。 */
 import type { Messages } from "./zh-CN"
 const ja: Messages = {
+  "trust.gitAfterTrust": "新しいプロジェクトを信頼した後に Git を初期化します。",
+  "trust.title": "プロジェクトのセキュリティ",
+  "trust.description":
+    "制限モードでは閲覧・編集・保存ができます。信頼するとコンパイル、Git、AI ツールによるローカルコマンドの実行を許可します。",
+  "trust.trusted": "信頼済み",
+  "trust.restricted": "制限モード",
+  "trust.continueRestricted": "制限モードで続ける",
+  "trust.grant": "プロジェクトを信頼",
+  "trust.required": "この機能を使うにはプロジェクトを信頼してください。",
+  "trust.restart": "変更を保存し、アプリを再起動してください。",
   "project.removeAndClose": "削除して閉じる",
   "project.saveAndRemove": "保存して一覧から削除",
   "project.discardAndRemove": "変更を破棄して一覧から削除",

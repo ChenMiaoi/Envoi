@@ -1,3 +1,4 @@
+import { restrictedPath } from "./restricted-path.mjs"
 import { diagnostics, operationContext } from "./diagnostics"
 import { randomUUID } from "node:crypto"
 import { libraryRequest, researchRoot } from "../../server/research-library.mjs"
@@ -35,19 +36,7 @@ process.env.PATH = [
 ].join(path.delimiter)
 const workspaceTrust = createWorkspaceTrust(
   path.join(dataDir, "workspace-trust.json"),
-  async (root: string) => {
-    const result = await dialog.showMessageBox({
-      type: "question",
-      title: "信任此目录？",
-      message: "是否信任此目录中的文件？",
-      detail: `${root}\n\n信任后，此目录及子目录的 Git、LaTeX、AI 和文件操作将全部启用，可以运行本机工具和修改文件。以后打开不再询问。`,
-      buttons: ["信任并打开", "取消"],
-      defaultId: 0,
-      cancelId: 1,
-      noLink: true,
-    })
-    return result.response === 0
-  },
+  async () => true,
 )
 
 // ── 与 src/lib/projectFiles.ts 等价的纯函数副本（主进程不跨边界 import src）──
@@ -138,7 +127,14 @@ async function requireBoundRoot(root: string): Promise<string> {
   return resolved
 }
 
+async function requireOpenRoot(root: string): Promise<string> {
+  const resolved = await workspaceTrust.requireOpen(root)
+  bindRoot(resolved)
+  return resolved
+}
+
 async function resolveInside(root: string, relPath: string): Promise<string> {
+  if (!(await workspaceTrust.isTrusted(root))) return restrictedPath(root, relPath)
   return path.join(root, ...safePathParts(relPath))
 }
 
@@ -210,7 +206,7 @@ async function handleAsset(request: Request): Promise<Response> {
 
 // ── 编译单飞（对应当前服务端 running 语义；lint 不支持取消，见契约 §3）──
 
-const compileRequests = new Map<number, Set<{ cancelled: boolean }>>()
+const compileRequests = new Map<number, Set<{ cancelled: boolean; root?: string }>>()
 const compilerBackend = new BackendHost("Compiler")
 const toolsBackend = new BackendHost("Tools")
 const agentBackend = new BackendHost("AI")
@@ -218,6 +214,11 @@ const backends = [compilerBackend, toolsBackend, agentBackend]
 const watchers = new Map<number, () => void>()
 const watchGenerations = new Map<number, number>()
 const projectRoots = new Map<string, string>()
+const activeRoots = new Map<number, string>()
+async function requireToolContext(event: Electron.IpcMainInvokeEvent) {
+  const root = activeRoots.get(event.sender.id)
+  if (root) await workspaceTrust.requireTrust(root)
+}
 async function agentRoot(body: unknown) {
   const id = (body as { projectId?: string } | null)?.projectId
   if (!id) return undefined
@@ -359,11 +360,27 @@ function registerIpc(): void {
     return result.canceled ? null : (result.filePaths[0] ?? null)
   })
 
-  handle("envoi:bind-project", async (_event, directory: string, opts?: { copy?: boolean }) => {
-    const root = await workspaceTrust.trust(directory)
-    const project = await registerProject(root, { copy: opts?.copy ?? true })
+  handle("envoi:bind-project", async (event, directory: string, opts?: { copy?: boolean }) => {
+    const root = await workspaceTrust.open(directory)
+    const trusted = await workspaceTrust.isTrusted(root)
+    let ignoreConfig = false
+    if (!trusted) {
+      for (const rel of [".envoi/project.json", ".paperdesk/project.json", "paperdesk.json"]) {
+        try {
+          await restrictedPath(root, rel)
+        } catch {
+          ignoreConfig = true
+        }
+      }
+    }
+    const project = await registerProject(root, {
+      copy: opts?.copy ?? false,
+      readOnly: !trusted,
+      ignoreConfig,
+    })
     bindRoot(root)
     projectRoots.set(project.id, root)
+    activeRoots.set(event.sender.id, root)
     return { ok: true, project: { id: project.id, path: root, name: project.name } }
   })
 
@@ -373,15 +390,55 @@ function registerIpc(): void {
     return realpath(directory)
   })
   handle("envoi:trust-directory", async (_event, directory: string) => {
-    const root = await workspaceTrust.trust(directory)
+    const root = await workspaceTrust.open(directory)
     bindRoot(root)
     return root
   })
-  handle("envoi:compiler-runtime", () => compilerBackend.call("runtime"))
+  handle("envoi:project-trust", (_event, root: string) => workspaceTrust.status(root))
+  const broadcastTrust = () => {
+    for (const window of BrowserWindow.getAllWindows())
+      window.webContents.send("envoi:trust-changed")
+  }
+  handle("envoi:grant-project-trust", async (_event, directory: string) => {
+    const root = await requireOpenRoot(directory)
+    await workspaceTrust.trust(root)
+    broadcastTrust()
+    return workspaceTrust.status(root)
+  })
+  handle("envoi:restrict-project", async (_event, directory: string) => {
+    const root = await workspaceTrust.restrict(directory)
+    const affected = [...new Set([...projectRoots.values()])].filter((candidate) => {
+      const relative = path.relative(root, candidate)
+      return (
+        !relative ||
+        (!relative.startsWith(".." + path.sep) && relative !== ".." && !path.isAbsolute(relative))
+      )
+    })
+    for (const requests of compileRequests.values()) {
+      for (const request of requests) {
+        if (
+          request.root &&
+          affected.some((candidate) => path.relative(candidate, path.resolve(request.root!)) === "")
+        )
+          request.cancelled = true
+      }
+    }
+    await Promise.all(
+      affected.flatMap((candidate) =>
+        backends.map((backend) => backend.cancel(undefined, candidate)),
+      ),
+    )
+    broadcastTrust()
+    return workspaceTrust.status(root)
+  })
+  handle("envoi:compiler-runtime", async (event) => {
+    await requireToolContext(event)
+    return compilerBackend.call("runtime")
+  })
   handle("envoi:compile", async (event, input: CompileInput) => {
     const owner = event.sender.id,
-      request = { cancelled: false }
-    const requests = compileRequests.get(owner) ?? new Set<{ cancelled: boolean }>()
+      request = { cancelled: false, root: input.rootPath }
+    const requests = compileRequests.get(owner) ?? new Set<{ cancelled: boolean; root?: string }>()
     requests.add(request)
     compileRequests.set(owner, requests)
     try {
@@ -405,14 +462,21 @@ function registerIpc(): void {
     ) =>
       toolsBackend.call("lint", [input], {
         owner: event.sender.id,
-        root: input.rootPath ? await requireBoundRoot(input.rootPath) : undefined,
+        root: await requireBoundRoot(input.rootPath ?? ""),
       }),
   )
-  handle("envoi:tools", () => toolsBackend.call("tools"))
-  handle("envoi:configure-tools", (_event, input: { chktexPath: string | null }) =>
-    toolsBackend.call("configureTools", [input]),
-  )
-  handle("envoi:git-runtime", () => toolsBackend.call("gitRuntime"))
+  handle("envoi:tools", async (event) => {
+    await requireToolContext(event)
+    return toolsBackend.call("tools")
+  })
+  handle("envoi:configure-tools", async (event, input: { chktexPath: string | null }) => {
+    await requireToolContext(event)
+    return toolsBackend.call("configureTools", [input])
+  })
+  handle("envoi:git-runtime", async (event) => {
+    await requireToolContext(event)
+    return toolsBackend.call("gitRuntime")
+  })
   for (const [channel, method] of [
     ["git-init", "gitInit"],
     ["git-status", "gitStatus"],
@@ -453,7 +517,9 @@ function registerIpc(): void {
   )
 
   handle("envoi:agent-status", () => agentBackend.call("agentStatus"))
-  handle("envoi:agent-request", async (_event, route: string, body: unknown) => {
+  handle("envoi:agent-request", async (event, route: string, body: unknown) => {
+    if (["sessions", "session", "new", "history/delete"].includes(route))
+      await requireToolContext(event)
     if (route === "bind") throw Error("请通过打开项目连接目录。")
     const result = (await agentBackend.call("agentRequest", [route, body], {
       root: await agentRoot(body),
@@ -475,6 +541,7 @@ function registerIpc(): void {
     ) => {
       const sender = event.sender
       const root = await agentRoot(params)
+      if (!root) throw Error("请先打开并信任项目。")
       void agentBackend
         .call("agentChat", [params], {
           owner: sender.id,
@@ -498,6 +565,7 @@ function registerIpc(): void {
 
   handle("envoi:close-project", async (event, root: string) => {
     const owner = event.sender.id
+    activeRoots.delete(owner)
     watchGenerations.set(owner, (watchGenerations.get(owner) ?? 0) + 1)
     watchers.get(owner)?.()
     watchers.delete(owner)
@@ -511,7 +579,7 @@ function registerIpc(): void {
     watchers.get(owner)?.()
     watchers.delete(owner)
     if (!directory) return
-    const root = await requireBoundRoot(directory)
+    const root = await requireOpenRoot(directory)
     if (event.sender.isDestroyed() || watchGenerations.get(owner) !== generation) return
     watchers.set(
       owner,
@@ -521,14 +589,14 @@ function registerIpc(): void {
     )
   })
   handle("envoi:fs-children", async (_event, root: string) => {
-    const entries = await readdir(await requireBoundRoot(root), { withFileTypes: true })
+    const entries = await readdir(await requireOpenRoot(root), { withFileTypes: true })
     return entries.map((entry) => ({
       name: entry.name,
       kind: entry.isDirectory() ? "directory" : "file",
     }))
   })
   handle("envoi:fs-list", async (_event, root: string) => {
-    const base = await requireBoundRoot(root)
+    const base = await requireOpenRoot(root)
     const files: { path: string; kind: string; text?: string; version: string }[] = []
     const directories: string[] = []
     const walk = async (directory: string, prefix: string): Promise<void> => {
@@ -539,6 +607,7 @@ function registerIpc(): void {
         )
           continue
         const rel = prefix + entry.name
+        await resolveInside(base, rel)
         if (entry.isDirectory()) {
           directories.push(rel)
           await walk(path.join(directory, entry.name), rel + "/")
@@ -560,13 +629,15 @@ function registerIpc(): void {
     return {
       files,
       directories,
-      name: await workspaceName(base).catch(() => undefined),
+      name: (await workspaceTrust.isTrusted(base))
+        ? await workspaceName(base).catch(() => undefined)
+        : undefined,
       projectId: [...projectRoots].find(([, directory]) => directory === base)?.[0],
     }
   })
 
   handle("envoi:fs-read", async (_event, root: string, relPath: string) => {
-    const target = await resolveInside(await requireBoundRoot(root), relPath)
+    const target = await resolveInside(await requireOpenRoot(root), relPath)
     const bytes = await readFile(await realpath(target))
     const text = isTextPath(relPath) ? decodeText(bytes) : undefined
     return text !== undefined ? { text } : { base64: bytes.toString("base64") }
@@ -576,6 +647,7 @@ function registerIpc(): void {
     base: string,
     file: { path: string; text?: string; base64?: string },
   ): Promise<void> => {
+    await resolveInside(base, file.path)
     await atomicProjectWrite(base, file.path, file)
   }
   handle(
@@ -584,30 +656,34 @@ function registerIpc(): void {
       _event,
       root: string,
       changes: { path: string; text: string; expectedText: string | null }[],
-    ) => saveProjectFiles(await requireBoundRoot(root), changes),
+    ) => {
+      const base = await requireOpenRoot(root)
+      for (const file of changes) await resolveInside(base, file.path)
+      return saveProjectFiles(base, changes)
+    },
   )
   handle(
     "envoi:fs-write",
     async (_event, root: string, relPath: string, content: { text?: string; base64?: string }) => {
-      await writeOne(await requireBoundRoot(root), { path: relPath, ...content })
+      await writeOne(await requireOpenRoot(root), { path: relPath, ...content })
     },
   )
   handle(
     "envoi:fs-write-files",
     async (_event, root: string, files: { path: string; text?: string; base64?: string }[]) => {
-      const base = await requireBoundRoot(root)
+      const base = await requireOpenRoot(root)
       for (const file of files) await writeOne(base, file)
     },
   )
   handle("envoi:fs-mkdir", async (_event, root: string, relPath: string) => {
-    await mkdir(await resolveInside(await requireBoundRoot(root), relPath), { recursive: true })
+    await mkdir(await resolveInside(await requireOpenRoot(root), relPath), { recursive: true })
   })
   handle("envoi:fs-remove", async (_event, root: string, relPath: string) => {
-    const target = await resolveInside(await requireBoundRoot(root), relPath)
+    const target = await resolveInside(await requireOpenRoot(root), relPath)
     await rm(target)
   })
   handle("envoi:fs-rename", async (_event, root: string, from: string, to: string) => {
-    const base = await requireBoundRoot(root)
+    const base = await requireOpenRoot(root)
     await rename(await resolveInside(base, from), await resolveInside(base, to))
   })
   const deletionProtected = [
@@ -636,7 +712,7 @@ function registerIpc(): void {
     return result
   })
   handle("envoi:asset-url", async (_event, root: string, relPath: string) => {
-    const base = await requireBoundRoot(root)
+    const base = await requireOpenRoot(root)
     const parts = safePathParts(relPath)
     return `envoi://${tokensByRoot.get(base)}/${parts.map(encodeURIComponent).join("/")}`
   })

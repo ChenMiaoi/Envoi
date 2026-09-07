@@ -1,6 +1,10 @@
 // window.envoi 桥接类型（契约第 1 节唯一事实来源）。
 // preload/index.ts 实现此接口；src 侧经 app/src/lib/desktop.ts re-export 消费。
 export interface EnvoiBridge {
+  projectTrust(root: string): Promise<{ trusted: boolean; decided: boolean }>
+  grantProjectTrust(root: string): Promise<{ trusted: boolean; decided: boolean }>
+  restrictProject(root: string): Promise<{ trusted: boolean; decided: boolean }>
+  onTrustChanged(listener: () => void): () => void
   diagnosticsInfo(): Promise<{
     directory: string
     maxFileBytes: number

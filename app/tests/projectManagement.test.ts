@@ -182,3 +182,22 @@ test("old desktop bridges cannot invoke legacy permanent deletion", async () => 
   }
   await assert.rejects(verifyDeletionTarget("/papers/paper"), /完全退出/)
 })
+
+test("old desktop bridges require restart before opening or granting access", async () => {
+  installDesktopFixture()
+  const { openDirectory } = await import("../src/lib/desktop")
+  const { bindProject } = await import("../src/lib/agentClient")
+  let called = false
+  Object.assign(window.envoi!, {
+    projectTrust: undefined,
+    trustDirectory: async () => {
+      called = true
+    },
+    bindProject: async () => {
+      called = true
+    },
+  })
+  assert.throws(() => openDirectory("/papers/paper"), /重新启动/)
+  await assert.rejects(bindProject("/papers/paper"), /重新启动/)
+  assert.equal(called, false)
+})

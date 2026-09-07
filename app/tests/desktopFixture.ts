@@ -36,6 +36,8 @@ async function directory(root: string, rel = "", create = false): Promise<TestDi
   return handle
 }
 const bridge = {
+  projectTrust: async () => ({ trusted: true, decided: true }),
+  onTrustChanged: () => () => {},
   fsTrashProject: async () => {
     throw Error("Unexpected trash operation")
   },

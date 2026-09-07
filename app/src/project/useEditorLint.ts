@@ -1,3 +1,4 @@
+import { useProjectTrust } from "./useProjectTrust"
 import { useSettings } from "@/settings/useSettings"
 import { translate } from "@/i18n/runtime"
 import { envoi, ipcError } from "@/lib/desktop"
@@ -6,9 +7,10 @@ import type { Diagnostic } from "@/lib/diagnostics"
 import { useProject } from "./context"
 export function useEditorLint(fileId: string | undefined, path: string | undefined, text: string) {
   const { effective } = useSettings()
-  const enabled = effective.lintEnabled
   const rules = JSON.stringify(effective.disabledRules)
   const { project, setProject } = useProject()
+  const trusted = useProjectTrust(project.rootPath)?.trusted
+  const enabled = effective.lintEnabled && !!trusted
   const projectId = project.id
   useEffect(() => {
     if (!fileId || !path?.endsWith(".tex")) return

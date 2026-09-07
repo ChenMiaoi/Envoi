@@ -1,3 +1,5 @@
+import { useProjectTrust } from "./useProjectTrust"
+import { openDirectory } from "@/lib/desktop"
 import { Notification } from "@/components/Notification"
 import { restoreProjectSession } from "@/lib/projectSession"
 import { bindProject } from "@/lib/agentClient"
@@ -38,6 +40,7 @@ export function ProjectMenu() {
   const { preferences } = usePreferences()
   const { t } = useT()
   const { saveAll, saving, project, setProject, busy, setBusy, message, setMessage } = useProject()
+  const trusted = useProjectTrust(project.rootPath)?.trusted
   const [gitStatus, setGitStatus] = useState(t("project.gitProbing"))
   const [gitAvailable, setGitAvailable] = useState(false)
   const [enableGit, setEnableGit] = useState(preferences.defaultGit)
@@ -53,6 +56,11 @@ export function ProjectMenu() {
   const [discard, setDiscard] = useState(false)
   useEffect(() => {
     if (mode !== "new") return
+    if (project.rootPath && !trusted) {
+      setGitAvailable(true)
+      setGitStatus(t("trust.gitAfterTrust"))
+      return
+    }
     void localGitRuntime()
       .then((result) => {
         setGitAvailable(result.available)
@@ -67,7 +75,7 @@ export function ProjectMenu() {
         setGitAvailable(false)
         setGitStatus(error.message)
       })
-  }, [mode, t])
+  }, [mode, t, trusted, project.rootPath])
   useEffect(() => {
     const open = () => setMode("open")
     window.addEventListener("envoi:open-project", open)
@@ -96,7 +104,7 @@ export function ProjectMenu() {
   }, [setMessage, t])
   const browse = async (next: string[]) => {
     const root = next[next.length - 1]
-    await envoi().trustDirectory(root)
+    await openDirectory(root)
     const listing = await envoi().fsChildren(root)
     const children = listing
       .filter((entry) => entry.kind === "directory")
@@ -542,16 +550,17 @@ export function ProjectMenu() {
                       mode === "new"
                         ? await createPaper(location, name.trim(), template, enableGit)
                         : location
+                    await activate(rootPath)
                     if (mode === "new" && enableGit) {
                       try {
-                        await initializeLocalGit(rootPath)
+                        const state = await envoi().projectTrust(await openDirectory(rootPath))
+                        if (state.trusted) await initializeLocalGit(rootPath)
                       } catch (error) {
                         throw new Error(
                           t("project.errorGitIncomplete", { error: (error as Error).message }),
                         )
                       }
                     }
-                    await activate(rootPath)
                     setMode(null)
                   }
                 })

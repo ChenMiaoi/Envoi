@@ -28,3 +28,9 @@ export function ipcError(error: unknown): Error {
   if (message === original.message) return original
   return new Error(message)
 }
+
+export function openDirectory(root: string) {
+  const bridge = envoi()
+  if (typeof bridge.projectTrust !== "function") throw Error(translate("trust.restart"))
+  return bridge.trustDirectory(root)
+}

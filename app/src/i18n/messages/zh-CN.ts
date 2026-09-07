@@ -3,6 +3,16 @@
  * 插值占位符使用 {name}；翻译文件必须与本文件键集合完全一致（编译期以 Record<MessageKey,string> 保证）。
  */
 export const zhCN = {
+  "trust.gitAfterTrust": "信任新项目后初始化 Git。",
+  "trust.title": "项目安全模式",
+  "trust.description":
+    "限制模式可以阅读、编辑和保存文件。信任后允许编译、Git 和 AI 工具运行本机命令。",
+  "trust.trusted": "信任模式",
+  "trust.restricted": "限制模式",
+  "trust.continueRestricted": "以限制模式继续",
+  "trust.grant": "信任项目",
+  "trust.required": "信任项目后可使用此功能。",
+  "trust.restart": "请保存修改并重新启动应用，以启用项目安全模式。",
   "project.removeAndClose": "移除并关闭",
   "project.saveAndRemove": "保存并移除",
   "project.discardAndRemove": "放弃修改并移除",

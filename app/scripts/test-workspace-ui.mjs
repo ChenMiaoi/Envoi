@@ -1,3 +1,4 @@
+import { seedFixtureTrust } from "./fixture-trust.mjs"
 import { _electron } from "playwright"
 import { createRequire } from "node:module"
 import { realpath, mkdtemp, mkdir, readFile, rm } from "node:fs/promises"
@@ -13,6 +14,7 @@ await mkdir(temp, { recursive: true })
 temp = await realpath(temp)
 let app
 try {
+  await seedFixtureTrust(path.join(temp, "data"), temp)
   app = await _electron.launch({
     executablePath: require("electron"),
     args: [path.resolve("."), "--user-data-dir=" + path.join(temp, "profile")],

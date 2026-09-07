@@ -1,3 +1,6 @@
+import { useProject } from "@/project/context"
+import { TrustRequired } from "@/project/ProjectTrust"
+import { useProjectTrust } from "@/project/useProjectTrust"
 import { ChatMarkdown } from "./ChatMarkdown"
 import { useEffect, useRef, useState } from "react"
 import { ArrowUp, Mic, Plus, Square, ChevronUp, ChevronDown } from "lucide-react"
@@ -28,6 +31,8 @@ export function ChatPanel({
   inputOnly?: boolean
   context?: ChatContext
 }) {
+  const { project } = useProject()
+  const trusted = useProjectTrust(project.rootPath)?.trusted
   const projectAgent = useAgent()
   const agent = { ...projectAgent, ...conversation }
   const { t } = useT()
@@ -75,6 +80,7 @@ export function ChatPanel({
     )
   }
 
+  if (project.rootPath && !trusted) return <TrustRequired />
   return (
     <div
       ref={root}

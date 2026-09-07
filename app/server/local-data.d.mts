@@ -13,5 +13,5 @@ export function dataStore(input: {
 export const dataDir: string
 export function registerProject(
   root: string,
-  options?: { copy?: boolean },
+  options?: { copy?: boolean; readOnly?: boolean; ignoreConfig?: boolean },
 ): Promise<{ id: string; name: string; path: string }>

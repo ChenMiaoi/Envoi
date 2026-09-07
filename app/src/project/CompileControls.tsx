@@ -1,3 +1,4 @@
+import { useProjectTrust } from "./useProjectTrust"
 import { useSettings } from "@/settings/useSettings"
 import { translate } from "@/i18n/runtime"
 import { useT } from "@/i18n/useT"
@@ -11,6 +12,7 @@ export function CompileControls({ hasPdf = false }: { hasPdf?: boolean }) {
   const { t } = useT()
   const { project, getProject, setProject, busy, setBusy, saveAll, saving } = useProject()
   const { effective, configuration, save } = useSettings()
+  const trusted = useProjectTrust(project.rootPath)?.trusted
   const engine = effective.engine
   const [running, setRunning] = useState(false)
   const [open, setOpen] = useState(false)
@@ -19,6 +21,11 @@ export function CompileControls({ hasPdf = false }: { hasPdf?: boolean }) {
   useEffect(() => () => request.current?.abort(), [])
   const run = useCallback(
     async (saveFirst = false) => {
+      if (!trusted) {
+        if (saveFirst) await saveAll()
+        else window.dispatchEvent(new Event("envoi:show-trust"))
+        return
+      }
       if (request.current || busy || saving) return
       const controller = new AbortController()
       request.current = controller
@@ -134,7 +141,7 @@ export function CompileControls({ hasPdf = false }: { hasPdf?: boolean }) {
         request.current = null
       }
     },
-    [busy, saving, getProject, setProject, setBusy, saveAll, engine],
+    [busy, saving, getProject, setProject, setBusy, saveAll, engine, trusted],
   )
   useEffect(() => {
     const compile = () => {

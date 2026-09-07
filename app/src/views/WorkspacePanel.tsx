@@ -1,3 +1,4 @@
+import { openDirectory } from "@/lib/desktop"
 import { useT } from "@/i18n/useT"
 import { Notification } from "@/components/Notification"
 import { useCallback, useEffect, useState, type ReactNode } from "react"
@@ -107,7 +108,7 @@ export function WorkspacePanel({ history }: { history: (root: string) => ReactNo
   }
   async function loadResults() {
     if (!root || !overview) return
-    await envoi().trustDirectory(overview.main)
+    await openDirectory(overview.main)
     setResults((await envoi().workspaces(root, { action: "results" })) as Result[])
   }
   async function open(target: string) {
@@ -159,7 +160,7 @@ export function WorkspacePanel({ history }: { history: (root: string) => ReactNo
               disabled={locked || !w.available}
               onClick={() =>
                 void run(async () => {
-                  await envoi().trustDirectory(w.path)
+                  await openDirectory(w.path)
                   setSelected(w.path)
                   setForm(null)
                 })
@@ -260,7 +261,7 @@ export function WorkspacePanel({ history }: { history: (root: string) => ReactNo
                         name,
                         purpose,
                       })) as { path: string }
-                      await envoi().trustDirectory(created.path)
+                      await openDirectory(created.path)
                       await refresh()
                       setSelected(created.path)
                       setNotice(t("workspace.created"))
@@ -308,8 +309,8 @@ export function WorkspacePanel({ history }: { history: (root: string) => ReactNo
                           disabled={locked || !active.available}
                           onClick={() =>
                             void run(async () => {
-                              await envoi().trustDirectory(selected)
-                              await envoi().trustDirectory(overview!.main)
+                              await openDirectory(selected)
+                              await openDirectory(overview!.main)
                               const listing = await envoi().fsList(selected)
                               setChoices(
                                 listing.files

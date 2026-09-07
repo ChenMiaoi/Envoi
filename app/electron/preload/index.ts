@@ -11,6 +11,14 @@ function invoke<T>(channel: string, ...args: unknown[]): Promise<T> {
 // agentStatus agentRequest agentChat onAgentEvent
 // fsList fsRead fsWrite fsWriteFiles fsMkdir fsRemove fsRename fsTrashProject assetUrl
 const bridge: EnvoiBridge = {
+  projectTrust: (root) => invoke("envoi:project-trust", root),
+  grantProjectTrust: (root) => invoke("envoi:grant-project-trust", root),
+  restrictProject: (root) => invoke("envoi:restrict-project", root),
+  onTrustChanged: (listener) => {
+    const handler = () => listener()
+    ipcRenderer.on("envoi:trust-changed", handler)
+    return () => ipcRenderer.removeListener("envoi:trust-changed", handler)
+  },
   diagnosticsInfo: () => invoke("envoi:diagnostics-info"),
   diagnosticsOpen: () => invoke("envoi:diagnostics-open"),
   diagnosticsExport: () => invoke("envoi:diagnostics-export"),

@@ -84,6 +84,7 @@ const bindings = new Map<
 >()
 // 绑定成功后记录 projectId→rootPath，供项目删除流程清理（gitBinding）。
 export async function bindProject(rootPath: string, options: { copy?: boolean } = {}) {
+  if (typeof envoi().projectTrust !== "function") throw Error(translate("trust.restart"))
   const copy = options.copy ?? false,
     previous = bindings.get(rootPath)
   if (!copy && previous) return previous

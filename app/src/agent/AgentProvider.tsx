@@ -1,3 +1,4 @@
+import { useProjectTrust } from "@/project/useProjectTrust"
 import { translate } from "@/i18n/runtime"
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 import { AgentContext } from "./context"
@@ -33,6 +34,7 @@ export function AgentProvider({ children }: { children: ReactNode }) {
   const { project, setProject, setBusy, saveAll, busy: projectBusy } = useProject(),
     [status, setStatus] = useState<AgentStatus | null>(null),
     [scopes, setScopes] = useState<Record<string, ScopeState>>({})
+  const trusted = useProjectTrust(project.rootPath)?.trusted
   const scope = project.id,
     current = scopes[scope] ?? blank,
     controllers = useRef(new Map<string, AbortController>()),
@@ -51,6 +53,10 @@ export function AgentProvider({ children }: { children: ReactNode }) {
   )
   const refresh = useCallback(async () => {
     const id = scope
+    if (project.rootPath && !trusted) {
+      patch(id, { ...blank })
+      return
+    }
     try {
       const status = await agentStatus()
       setStatus(status)
@@ -92,7 +98,7 @@ export function AgentProvider({ children }: { children: ReactNode }) {
           : (error as Error).message,
       })
     }
-  }, [scope, project.rootPath, setProject, patch])
+  }, [scope, project.rootPath, setProject, patch, trusted])
   useEffect(
     () => () => {
       controllers.current.get(scope)?.abort()

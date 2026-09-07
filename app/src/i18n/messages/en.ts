@@ -1,6 +1,16 @@
 /** English messages. Must contain exactly the same keys as zh-CN. */
 import type { Messages } from "./zh-CN"
 const en: Messages = {
+  "trust.gitAfterTrust": "Git will be initialized after you trust the new project.",
+  "trust.title": "Project Security",
+  "trust.description":
+    "Restricted mode allows reading, editing and saving files. Trust allows compilation, Git and AI tools to run local commands.",
+  "trust.trusted": "Trusted",
+  "trust.restricted": "Restricted Mode",
+  "trust.continueRestricted": "Continue in Restricted Mode",
+  "trust.grant": "Trust Project",
+  "trust.required": "Trust this project to use this feature.",
+  "trust.restart": "Save your changes and restart the app to enable project security modes.",
   "project.removeAndClose": "Remove and Close",
   "project.saveAndRemove": "Save and Remove",
   "project.discardAndRemove": "Discard and Remove",

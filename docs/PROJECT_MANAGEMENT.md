@@ -1,5 +1,7 @@
 # Project management
 
+This document describes the historical browser implementation. For current project removal, trash operations and restricted mode, see [Desktop](DESKTOP.md).
+
 The project menu provides **Close current project** and **Manage projects / remove / delete**.
 
 - Close returns to an empty workspace and persists that choice so refresh does not reopen a recent project. Files, directory authorizations and recent records remain. Dirty buffers require save or explicit discard. Save/compile/project operations must finish first. Session-write failure leaves the project open; new input during the close check prevents closing.

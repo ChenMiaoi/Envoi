@@ -15,7 +15,7 @@ Before sharing a change:
 
 Releases are created by pushing an annotated tag whose name and package versions match `v<major>.<minor>.<patch>`, for example `v0.1.0`. See [release instructions](docs/RELEASE.md). The release workflow validates formatting, lint, build and tests, then packages Windows and macOS installers and attaches them to the GitHub Release.
 
-Project access uses one persistent workspace trust decision, shared by all desktop tools. Trusted AI sessions may run local commands. Do not reintroduce browser permission renewal or per-tool approvals. The preload bridge should expose defined application operations. Preserve source edits, report stale diagnostics, and avoid guessing source/PDF locations. Git status is read-only; creating a project must not automatically commit, configure identity or push.
+Project access separates opening from one persistent workspace trust decision shared by all desktop tools. Restricted projects allow reading and manual editing/saving within the opened directory; execution requires trust enforced by the main process. Trusted AI sessions may run local commands. Do not reintroduce browser permission renewal or per-tool approvals. The preload bridge should expose defined application operations. Preserve source edits, report stale diagnostics, and avoid guessing source/PDF locations. Git status is read-only; creating a project must not automatically commit, configure identity or push.
 
 This repository currently has no project-wide license. Licensing decisions belong to the owner; do not label contributions or the overall project with an invented license.
 

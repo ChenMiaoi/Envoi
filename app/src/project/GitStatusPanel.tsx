@@ -1,3 +1,4 @@
+import { useProjectTrust } from "./useProjectTrust"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { translate } from "@/i18n/runtime"
 import { useT } from "@/i18n/useT"
@@ -16,6 +17,7 @@ import {
 export function GitStatusPanel() {
   const { t } = useT()
   const { project } = useProject()
+  const trusted = useProjectTrust(project.rootPath)?.trusted
   const [open, setOpen] = useState(false),
     [status, setStatus] = useState<GitStatus | null>(null),
     [message, setMessage] = useState(""),
@@ -23,6 +25,11 @@ export function GitStatusPanel() {
   const identity = useRef(project.id)
   identity.current = project.id
   const refresh = useCallback(async () => {
+    if (!trusted) {
+      setStatus(null)
+      setMessage("")
+      return
+    }
     const id = project.id
     setBusy(true)
     setStatus(null)
@@ -46,7 +53,7 @@ export function GitStatusPanel() {
     } finally {
       if (identity.current === id) setBusy(false)
     }
-  }, [project.id, project.rootPath])
+  }, [project.id, project.rootPath, trusted])
   const savedRevision = project.files.map((file) => file.saved ?? "").join("\u0000")
   useEffect(() => {
     void refresh()
@@ -76,6 +83,7 @@ export function GitStatusPanel() {
           : t("git.notConnected")
   const shown =
     message || (dirtyFiles(project).length ? t("git.diskOnly") : busy ? t("git.detecting") : "")
+  if (!trusted) return null
   return (
     <>
       <button

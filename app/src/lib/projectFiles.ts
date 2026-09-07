@@ -1,3 +1,4 @@
+import { openDirectory } from "@/lib/desktop"
 import { nativeBasename } from "@/lib/nativePath"
 import { translate } from "@/i18n/runtime"
 import { projectConfiguration, type ProjectConfiguration } from "../settings/model"
@@ -283,7 +284,7 @@ export async function createPaper(
   enableGit = true,
 ): Promise<string> {
   if (safePath(name).length !== 1) throw new Error(translate("project.nameNoPath"))
-  parentRootPath = await envoi().trustDirectory(parentRootPath)
+  parentRootPath = await openDirectory(parentRootPath)
   const listing = await envoi().fsChildren(parentRootPath)
   if (listing.some((entry) => entry.name === name))
     throw new Error(translate("project.directoryExists", { name }))

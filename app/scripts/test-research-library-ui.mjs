@@ -1,3 +1,4 @@
+import { seedFixtureTrust } from "./fixture-trust.mjs"
 import { _electron } from "playwright"
 import { createRequire } from "node:module"
 import { mkdtemp, realpath, rm, readFile } from "node:fs/promises"
@@ -39,6 +40,7 @@ function pdf() {
 }
 let app
 try {
+  await seedFixtureTrust(path.join(temp, "data"), temp)
   app = await _electron.launch({
     executablePath: require("electron"),
     args: [path.resolve("."), "--user-data-dir=" + path.join(temp, "profile")],

@@ -1,3 +1,4 @@
+import { seedFixtureTrust } from "./fixture-trust.mjs"
 import assert from "node:assert/strict"
 import { createRequire } from "node:module"
 import { mkdtemp } from "node:fs/promises"
@@ -7,6 +8,7 @@ import { _electron } from "playwright"
 
 const require = createRequire(import.meta.url)
 const temp = await mkdtemp(path.join(tmpdir(), "envoi-settings-display-"))
+await seedFixtureTrust(path.join(temp, "data"), temp)
 const instance = await _electron.launch({
   executablePath: require("electron"),
   args: [path.resolve("."), "--user-data-dir=" + path.join(temp, "profile")],
