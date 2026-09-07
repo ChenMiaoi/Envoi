@@ -2,10 +2,11 @@ import assert from 'node:assert/strict';
 import {mkdtemp,writeFile,readFile,rm} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import path from 'node:path';
-import {compileSnapshot,validateSnapshot} from '../server/compiler.mjs';
+import {compileSnapshot,validateSnapshot,runtimeInfo} from '../server/compiler.mjs';
 const snapshot=text=>({engine:'pdflatex',main:'main.tex',files:[{path:'main.tex',base64:Buffer.from(text).toString('base64')}]});
 assert.throws(()=>validateSnapshot({...snapshot('x'),main:'../main.tex'}));
 assert.throws(()=>validateSnapshot({...snapshot('x'),engine:'bash'}));
+const runtime=runtimeInfo();if(!runtime.available){console.log('SKIP compiler: TeX runtime unavailable —',runtime.error);process.exit(0);}
 const folder=await mkdtemp(path.join(tmpdir(),'envoi-security-test-'));
 try{
  const sentinel=path.join(folder,'outside.tex');await writeFile(sentinel,'TOPSECRET_TEST_SENTINEL');

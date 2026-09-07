@@ -1,6 +1,7 @@
 import {build} from 'esbuild';
 import {writeFile,mkdir} from 'node:fs/promises';
-import {compileSnapshot} from '../server/compiler.mjs';
+import {compileSnapshot,runtimeInfo} from '../server/compiler.mjs';
+const runtime=runtimeInfo();if(!runtime.available){console.log('SKIP templates: TeX runtime unavailable —',runtime.error);process.exit(0);}
 await build({entryPoints:['src/lib/paperTemplates.ts'],bundle:true,platform:'node',format:'esm',outfile:'tmp/compile-check/templates.mjs'});
 const {paperTemplates,templateFiles}=await import('../tmp/compile-check/templates.mjs?'+Date.now());
 for(const template of paperTemplates){

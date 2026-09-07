@@ -1,5 +1,5 @@
 import {lintText,lintRuntime} from '../server/lint.mjs';import assert from 'node:assert/strict';
-assert(lintRuntime().available);
+const runtime=lintRuntime();if(!runtime.available){console.log('SKIP lint: ChkTeX unavailable —',runtime.error);process.exit(0);}
 const source='\\begin{document}\nHello world .\n\\end{document}';const result=await lintText({path:'chapters/check.tex',text:source});assert(result.items.some(item=>item.line===2&&item.column===12&&item.code==='26'));
 const corrected=await lintText({path:'chapters/check.tex',text:source.replace('world .','world.')});assert.equal(corrected.items.length,0);
 await assert.rejects(lintText({path:'../outside.tex',text:source}));
