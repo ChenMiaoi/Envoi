@@ -1,3 +1,4 @@
+import { useT } from "@/i18n/useT"
 import { useCallback, useEffect, useState } from "react"
 import { useNavigate } from "react-router"
 import { Check, ChevronDown, Plus, Pencil, GitBranch } from "lucide-react"
@@ -29,6 +30,7 @@ type Workspace = {
   branch: string
 }
 export function WorkspaceBadge() {
+  const { t } = useT()
   const { project, setProject, busy, saving, setMessage } = useProject(),
     navigate = useNavigate()
   const [info, setInfo] = useState<{ root: string; workspaces: Workspace[] }>(),
@@ -156,9 +158,7 @@ export function WorkspaceBadge() {
           <DialogHeader>
             <DialogTitle>{mode === "create" ? "新建工作区" : "重命名工作区"}</DialogTitle>
             <DialogDescription>
-              {mode === "create"
-                ? "从当前提交创建独立实验，创建后直接打开。未提交修改不会带入。"
-                : "名称会显示在顶部、文件树和工作区列表中；目录和 Git 分支保持原样。"}
+              {mode === "create" ? t("workspace.createOpenHint") : t("workspace.renameHint")}
             </DialogDescription>
           </DialogHeader>
           <label className="text-xs">

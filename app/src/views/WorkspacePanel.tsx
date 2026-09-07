@@ -1,3 +1,4 @@
+import { useT } from "@/i18n/useT"
 import { Notification } from "@/components/Notification"
 import { useCallback, useEffect, useState, type ReactNode } from "react"
 import {
@@ -40,6 +41,7 @@ type Result = {
 const button =
   "inline-flex items-center justify-center gap-2 rounded-md border border-border px-3 py-2 text-xs hover:bg-secondary disabled:opacity-40"
 export function WorkspacePanel({ history }: { history: (root: string) => ReactNode }) {
+  const { t } = useT()
   const { project, busy: projectBusy, saving } = useProject()
   const [overview, setOverview] = useState<Overview>(),
     [selected, setSelected] = useState(""),
@@ -120,9 +122,6 @@ export function WorkspacePanel({ history }: { history: (root: string) => ReactNo
       <header className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-border bg-card px-5 py-3">
         <div>
           <h1 className="text-sm font-medium">版本与实验</h1>
-          <p className="mt-1 text-xs text-muted-foreground">
-            论文与成果留在主工作区，实验在独立分支中开展。
-          </p>
         </div>
         <div className="flex gap-2">
           <button
@@ -172,9 +171,9 @@ export function WorkspacePanel({ history }: { history: (root: string) => ReactNo
                 <span className="min-w-0 flex-1 truncate">{w.name}</span>
                 {w.current && <span className="text-[10px] text-primary">当前</span>}
               </div>
-              <p className="mt-2 truncate text-[11px] text-muted-foreground">
-                {w.main ? "论文与结果" : w.purpose || "独立实验工作区"}
-              </p>
+              {w.purpose && (
+                <p className="mt-2 truncate text-[11px] text-muted-foreground">{w.purpose}</p>
+              )}
               <p className="mt-2 flex items-center gap-1 text-[10px] text-muted-foreground">
                 <GitBranch size={11} />
                 {w.branch || "游离提交"} ·{" "}
@@ -182,11 +181,6 @@ export function WorkspacePanel({ history }: { history: (root: string) => ReactNo
               </p>
             </button>
           ))}
-          {overview && !overview.initialized && (
-            <p className="px-2 py-3 text-[11px] leading-5 text-muted-foreground">
-              第一次创建实验时，当前目录将固定为主工作区。实验从当前提交开始，不包含未提交修改。
-            </p>
-          )}
         </aside>
         <main className="flex min-h-0 min-w-0 flex-1 flex-col">
           {form ? (
@@ -202,9 +196,7 @@ export function WorkspacePanel({ history }: { history: (root: string) => ReactNo
                 {form === "create" ? "开始一个实验" : "保存结果到主工作区"}
               </h2>
               <p className="mt-2 text-xs leading-6 text-muted-foreground">
-                {form === "create"
-                  ? "为一个研究问题建立独立工作区。创建后可继续查看，也可打开进入编辑。"
-                  : "复制选中的文件，保存来源提交、代码归档和运行说明。已有结果不会被覆盖，也不会合并实验代码。请先提交代码修改。"}
+                {form === "create" ? t("workspace.createHint") : t("workspace.saveHint")}
               </p>
               <label className="mt-5 block text-xs">
                 {form === "create" ? "实验名称" : "结果名称"}
@@ -271,7 +263,7 @@ export function WorkspacePanel({ history }: { history: (root: string) => ReactNo
                       await envoi().trustDirectory(created.path)
                       await refresh()
                       setSelected(created.path)
-                      setNotice("实验已创建。点击“打开工作区”进入实验。")
+                      setNotice(t("workspace.created"))
                     } else {
                       await envoi().workspaces(root, {
                         action: "save",
@@ -283,7 +275,7 @@ export function WorkspacePanel({ history }: { history: (root: string) => ReactNo
                       })
                       await loadResults()
                       setTab("results")
-                      setNotice("结果已保存到主工作区，包含独立的源码归档。")
+                      setNotice(t("workspace.resultSaved"))
                     }
                     setForm(null)
                   })
@@ -299,9 +291,9 @@ export function WorkspacePanel({ history }: { history: (root: string) => ReactNo
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="min-w-0">
                       <h2 className="text-base font-medium">{active.name}</h2>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {active.purpose || "查看提交历史与已保存的实验成果。"}
-                      </p>
+                      {active.purpose && (
+                        <p className="mt-1 text-xs text-muted-foreground">{active.purpose}</p>
+                      )}
                       <p
                         className="mt-2 break-all text-[10px] text-muted-foreground"
                         title={active.path}
@@ -380,11 +372,8 @@ export function WorkspacePanel({ history }: { history: (root: string) => ReactNo
               )}
               {tab === "changes" && (
                 <div className="flex-1 overflow-auto p-5">
-                  <p className="mb-4 text-xs text-muted-foreground">
-                    相对于该工作区当前提交的文件状态。
-                  </p>
                   {!changes.length ? (
-                    <p className="text-sm text-muted-foreground">工作区干净，没有未提交修改。</p>
+                    <p className="text-sm text-muted-foreground">{t("git.clean")}</p>
                   ) : (
                     changes.map((file) => (
                       <div
@@ -403,9 +392,6 @@ export function WorkspacePanel({ history }: { history: (root: string) => ReactNo
               )}
               {tab === "results" && (
                 <div className="flex-1 overflow-auto p-5">
-                  <p className="mb-4 text-xs text-muted-foreground">
-                    所有结果保存在主工作区的 results 目录，切换实验不会改变保存位置。
-                  </p>
                   {!results.length ? (
                     <div className="rounded-lg border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
                       还没有保存的实验结果。选中实验后，点击“保存结果”。

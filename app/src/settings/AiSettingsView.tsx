@@ -162,7 +162,7 @@ export function AiSettingsView({ scope }: { scope: "global" | "project" }) {
       {!status && <p className="text-xs text-muted-foreground">{t("settings.ai.loading")}</p>}
       {global ? (
         <section className="rounded-xl border border-border bg-card px-5">
-          <Row label={t("settings.ai.providerAccount")} hint={t("settings.ai.providerAccountHint")}>
+          <Row label={t("settings.ai.providerAccount")}>
             <Popover open={providerOpen} onOpenChange={setProviderOpen}>
               <PopoverTrigger asChild>
                 <button
@@ -223,10 +223,7 @@ export function AiSettingsView({ scope }: { scope: "global" | "project" }) {
         </section>
       ) : (
         <section className="rounded-xl border border-border bg-card px-5">
-          <Row
-            label={t("settings.ai.providerAccount")}
-            hint={t("settings.ai.providerAccountHintProject")}
-          >
+          <Row label={t("settings.ai.providerAccount")}>
             <Link className="text-xs text-primary" to="/settings/global/ai">
               {t("settings.ai.manageGlobal")}
             </Link>
@@ -242,7 +239,7 @@ export function AiSettingsView({ scope }: { scope: "global" | "project" }) {
             label={t("common.model")}
             hint={
               global
-                ? t("settings.ai.modelHintGlobal")
+                ? undefined
                 : inherited("model")
                   ? t("settings.ai.modelInherited")
                   : t("common.inheritanceOverride")
@@ -284,7 +281,7 @@ export function AiSettingsView({ scope }: { scope: "global" | "project" }) {
                 : !active
                   ? t("settings.ai.thinkingHintUnavailable")
                   : active.thinkingLevels.length
-                    ? t("settings.ai.thinkingHintLevels")
+                    ? undefined
                     : t("settings.ai.thinkingHintNone")
             }
           >
@@ -330,7 +327,6 @@ export function AiSettingsView({ scope }: { scope: "global" | "project" }) {
               <option value="current">{t("settings.ai.optionCurrentDoc")}</option>
             </select>
           </Row>
-          <p className="py-4 text-xs text-muted-foreground">{t("settings.ai.workspaceTrust")}</p>
         </div>
       </section>
       {global && (

@@ -1,19 +1,31 @@
 /** English messages. Must contain exactly the same keys as zh-CN. */
 import type { Messages } from "./zh-CN"
 const en: Messages = {
+  "workspace.createHint":
+    "Create an experiment from the current commit. Uncommitted changes are excluded.",
+  "workspace.saveHint":
+    "Save selected files and a source archive to the main workspace. Commit the experiment code first.",
+  "workspace.created": "Experiment created.",
+  "workspace.resultSaved": "Results saved to the main workspace.",
+  "workspace.createOpenHint":
+    "Create a workspace from the current commit. Uncommitted changes are excluded.",
+  "workspace.renameHint": "Change the display name.",
+  "library.openProjectFirst": "Open a project first.",
+  "library.startImport": "No papers yet. Choose Add paper to import.",
+  "library.addPaper": "Add paper",
+  "library.pendingMerge": "A note draft needs merging.",
+  "library.saveMerged": "Save merged note",
   "settings.tools.system": "System",
   "settings.update.inaccessible":
     "Release information is currently unavailable. Please try again later.",
   "settings.update.title": "Envoi version",
   "settings.logs.title": "Diagnostic logs",
-  "settings.logs.hint":
-    "Stored locally with size-based rotation (about 5 MB per file, two files). Manuscripts, chat content and credentials are excluded.",
+
   "settings.logs.open": "Open log folder",
   "settings.logs.export": "Export diagnostic logs",
   "settings.logs.exported": "Diagnostic logs exported.",
   "settings.logs.failed": "Unable to open or export logs. Check folder permissions and disk space.",
-  "settings.update.hint":
-    "Check stable releases. Download opens the release page; install the package to update.",
+  "settings.update.hint": "Install the downloaded package to update.",
   "settings.update.check": "Check for updates",
   "settings.update.busy": "Please wait…",
   "settings.update.download": "Download update",
@@ -63,11 +75,11 @@ const en: Messages = {
   "app.aria.history": "History page",
   "app.aria.settings": "Settings page",
   "app.notFound.title": "Page not found",
-  "app.notFound.body": "No page matches this address; your project and edits are kept.",
+  "app.notFound.body": "This page could not be found.",
   "app.notFound.back": "Back to writing",
   "app.statusbar.workspace": "Workspace",
   "app.statusbar.pageNavigation": "Page navigation",
-  "app.statusbar.runtime": "Pi · local runtime",
+  "app.statusbar.runtime": "AI · Connected",
   "app.statusbar.disconnected": "AI · not connected",
   "command.save": "Save all changes",
   "command.palette": "Command palette",
@@ -110,33 +122,26 @@ const en: Messages = {
   "settings.category.compile": "Compile",
   "settings.category.references": "References & versioning",
   "settings.category.ai": "AI services",
-  "settings.header.subtitle":
-    "Global preferences stay on this machine; project overrides are written only to the selected paper configuration.",
+
   "settings.header.global": "Global",
   "settings.header.project": "Current project",
   "settings.navAria": "Settings categories",
   "settings.general.language": "Interface language",
-  "settings.general.languageHint":
-    "Switch the interface language immediately and save it to local preferences; document content and local tool output are not affected.",
+
   "settings.general.theme": "Interface theme",
-  "settings.general.themeHint":
-    "The complete interface palette; the accent below is chosen separately and adjusts automatically with dark/light themes.",
+
   "settings.general.themeAria": "{name} theme",
   "settings.general.accent": "Interface accent",
-  "settings.general.accentHint":
-    "A personal preference, applied immediately to selections, buttons and highlights; it darkens automatically on light themes for contrast.",
+
   "settings.general.accentAria": "{name} accent",
   "settings.general.readerPreviewHeading": "Reader · text preview",
-  "settings.general.freeformNote":
-    "The three typography groups are saved independently; source appearance is set under the Editor category. None of them travel with the paper project.",
+
   "settings.general.projectConnection": "Trusted workspace",
-  "settings.general.projectConnectionHint":
-    "This folder is trusted. Git, LaTeX and AI are enabled without further approvals.",
+  "settings.general.projectConnectionHint": "Trusted",
   "settings.general.movedHeading": "Location moved or inaccessible?",
-  "settings.general.movedHint": "Open the new location; you do not need to reconfigure each tool.",
+  "settings.general.movedHint": "Open the project at its new location.",
   "settings.general.shortcuts": "Keyboard shortcuts",
-  "settings.general.shortcutsHint":
-    "Search, configure and reset command shortcuts on a dedicated page.",
+
   "settings.general.openShortcuts": "Open shortcut settings",
   "settings.general.accessCheck": "Checking project connection…",
   "settings.general.accessNotConnected":
@@ -144,83 +149,62 @@ const en: Messages = {
   "settings.general.accessNoPermission":
     "Directory permission is currently unavailable; restore it from the project menu.",
   "settings.general.accessMoved":
-    "The project directory was moved or no longer exists; open its new location. This is not a Git re-authorization.",
+    "The project folder has moved or is missing. Open its new location.",
   "settings.appearance.uiFont": "Interface font",
   "settings.appearance.previewFont": "Preview text font",
   "settings.appearance.uiSize": "Interface font size",
   "settings.appearance.previewSize": "Preview text size",
-  "settings.appearance.fontHint":
-    "Choose a font family; missing fonts fall back through the listed system defaults, without enumerating installed fonts.",
-  "settings.appearance.uiSizeHint":
-    "13 px is the default baseline; navigation, settings and control text scale proportionally.",
-  "settings.appearance.previewSizeHint":
-    "Only affects reader Markdown and bibliography cards. PDFs, source and paper typography are unaffected.",
+
+  "settings.appearance.previewSizeHint": "Applies to Markdown and reference cards.",
   "settings.editor.font": "Editor font",
-  "settings.editor.fontHint": "Falls back to the system monospace font when unavailable.",
+
   "settings.editor.fontSize": "Font size",
   "settings.editor.lineHeight": "Line height",
   "settings.editor.tabWidth": "Tab display width",
-  "settings.editor.tabWidthHint":
-    "Only changes the displayed tab width; existing text is never rewritten.",
+
   "settings.editor.inheritNote": "Font, size and line height inherit personal preferences.",
   "settings.editor.editGlobalAppearance": "Edit global editor appearance",
   "settings.editor.liveChktex": "Live ChkTeX checks",
-  "settings.editor.liveChktexHint":
-    "Checks the current unsaved text after editing pauses, without compiling or saving files.",
+  "settings.editor.liveChktexHint": "Check LaTeX syntax and typesetting issues.",
   "settings.editor.liveChktexInherited": "{inheritance} · currently {state}",
   "settings.editor.disabledRules": "Disabled rule numbers",
-  "settings.editor.disabledRulesHint":
-    "Only explicit rule numbers are supported; configuration strings are not executed.",
+
   "settings.editor.disabledRulesInherited": "{inheritance} · currently {rules}",
   "settings.editor.noDisabledRules": "no rules disabled",
   "settings.editor.restoreInheritance": "Restore inheritance",
   "settings.editor.rulesAria": "Disabled ChkTeX rules",
-  "settings.editor.rulesPlaceholder": "e.g. 8, 26; leave blank to disable none",
+  "settings.editor.rulesPlaceholder": "For example: 8, 26",
   "settings.editor.rulesError": "Enter integer rule numbers 1–42, separated by commas.",
   "settings.compile.defaultEngine": "Default compile engine",
   "settings.compile.engine": "Compile engine",
-  "settings.compile.engineHintGlobal":
-    "New projects inherit this by default; only engines supported by the current adapter are listed.",
+
   "settings.compile.engineHintProject": "{inheritance} · actually using {engine}",
   "settings.compile.inheritEngine": "Inherit global ({engine})",
   "settings.compile.mainTex": "Paper main TeX file",
-  "settings.compile.mainTexHint":
-    "This belongs only to the current project and is saved to .envoi/project.json.",
-  "settings.compile.note":
-    "Compiling is triggered manually from the toolbar; output is saved in build. There is no automatic compilation or LuaLaTeX toggle.",
+
   "settings.references.defaultGit": "Enable Git for new projects by default",
-  "settings.references.defaultGitHint":
-    "Can still be cancelled when creating; a missing local Git is reported clearly and turns this off.",
+
   "settings.references.management": "Version management",
-  "settings.references.managementHint":
-    "Shows the real local branches and file status of the current project, without auto-committing.",
+
   "settings.references.viewGitStatus": "View Git status",
   "settings.references.bibFiles": "Project Bib files",
-  "settings.references.bibHint":
-    "Which bibliography libraries the paper uses is decided by bibliography/addbibresource declarations in the main TeX file.",
-  "settings.references.zoteroNote":
-    "Zotero sync is not connected yet. Configure AI services on the dedicated AI settings page.",
+
   "settings.tools.probing": "Probing local tools…",
   "settings.tools.notConnected": "Local tools service is not connected",
-  "settings.tools.savedNote":
-    "Tool configuration is saved only in the current user directory on this machine, never into the paper project.",
-  "settings.tools.validatedSaved":
-    "Local tool configuration was validated and saved; upcoming edit checks will use this program.",
+
+  "settings.tools.validatedSaved": "Tool settings saved.",
   "settings.tools.heading": "Local tools · advanced",
-  "settings.tools.latexAvailableHint":
-    "A local TeX toolchain was detected. The service process PATH is used by default; ENVOI_TEX_BIN selects a tool directory.",
+
   "settings.tools.chktexHint":
-    "Auto-detection by default. A custom path must point to a chktex executable that passes version validation; command strings are rejected.",
+    "Leave blank to detect automatically, or enter the ChkTeX executable path.",
   "settings.tools.chktexPathAria": "ChkTeX executable path",
-  "settings.tools.texlabNote":
-    "TexLab: {state}. LSP sessions are not integrated, so no invalid completion or diagnostics toggles are offered.",
+
   "settings.tools.texlabFound": "local program found",
   "settings.tools.texlabMissing": "not detected",
   /* ---------- 迁移增补（fragments 合并） ---------- */
   "ai.noOptions": "No options available",
   "ai.operationFailed": "AI operation failed",
-  "ai.pathRequired":
-    "Enter the directory path in the project connection dialog first; the AI will not use any other workspace.",
+  "ai.pathRequired": "Open a project first.",
   "ai.projectMovedOrInaccessible":
     "The project directory has moved or is inaccessible; reconnect the correct location from the project menu.",
   "ai.projectNotConnected":
@@ -254,12 +238,11 @@ const en: Messages = {
   "assets.noPreviewFile": "No file to preview; provide one via “Open local asset”.",
   "assets.openLocal": "Open local asset",
   "assets.readFailed": "Read failed: {message}",
-  "assets.scope":
-    "Scope: chapters reachable from the main paper; detects includegraphics, includepdf, pgfplotstableread, csvreader and addplot table. Unused means not detected in these syntaxes; macros and graphicspath are not resolved.",
+
   "assets.selectLocal": "Choose local asset",
   "assets.statsIncomplete": "Incomplete statistics: {list}",
   "assets.supportedTypes": "Only images, PDF and CSV are supported.",
-  "assets.unusedInSyntax": "Unused (within supported syntax)",
+  "assets.unusedInSyntax": "No references found",
   "assets.unusedNoContent": "Unused · file content unavailable",
   "assets.unusedPreview": "Unused · click to preview",
   "assets.useLocation": "{asset}: {file} — use {index} of {total}",
@@ -323,20 +306,18 @@ const en: Messages = {
     "Source located; the PDF was not sync-verified or the text has changed. Please recompile.",
   "compile.openPdf": "Open PDF",
   "compile.page": "Page {page}",
-  "compile.panelHint":
-    "This panel reads PDF files; the project build output is updated by the compile action above.",
+
   "compile.parseSuccess": "PDF parsed successfully, {count} pages.",
   "compile.passwordPdf": "This PDF requires a password; choose an unencrypted file.",
   "compile.pdfPage": "PDF page {page}",
   "compile.readingFile": "Reading {name}",
   "compile.renderFailed": "Page rendering failed",
   "compile.renderPageFailed": "Failed to render page {page}: {message}",
-  "compile.renderScaleHint": "Pages are rendered to scale at their original PDF size and rotation.",
+
   "compile.restoredDisk": "Restored on-disk compile record",
   "compile.restoredRecord": "Restored last compile record ({status})",
   "compile.selectLocalPdf": "Choose local PDF",
-  "compile.serviceUnavailable":
-    "The local compile service is unavailable; start it via the project dev service.",
+  "compile.serviceUnavailable": "Compilation service unavailable. Restart the app and try again.",
   "compile.statusCancelled": "cancelled",
   "compile.statusFailed": "failure",
   "compile.statusSuccess": "success",
@@ -359,8 +340,7 @@ const en: Messages = {
   "git.bridgeUnavailable": "Local Git bridge unavailable.",
   "git.initFailed": "Git initialization failed",
   "git.logFailed": "Failed to read Git history",
-  "git.movedNotAuth":
-    "The project directory has moved or no longer exists; open the new location from the project menu. This is not a Git authorization failure.",
+  "git.movedNotAuth": "The project folder has moved or is missing. Open its new location.",
   "git.permissionLost": "Directory permission expired; restore access from the project menu.",
   "git.serviceNotConnected":
     "Local Git service not connected; cannot detect the installation. Start the local service or disable Git.",
@@ -379,8 +359,7 @@ const en: Messages = {
   "history.noBinding":
     "Directory authorized; the local tool path is not connected yet. Complete the project connection once from the project menu.",
   "history.noChanges": "No file changes.",
-  "history.noDirectory":
-    "The built-in snapshot is not bound to a real directory; open a local project to view version history.",
+  "history.noDirectory": "Open a local project first.",
   "history.notInitialized":
     "This project has no Git repository yet; version control can be enabled when creating a project.",
   "history.notLoaded": "Git history not loaded",
@@ -391,15 +370,13 @@ const en: Messages = {
   "library.allYears": "All years",
   "library.attachPdf": "Attach PDF",
   "library.bibTooLarge": "The Bib file exceeds 5 MB; not imported.",
-  "library.citeKeyExists": "Citation key {key} already exists in {path}; not written again.",
+  "library.citeKeyExists": "Citation key {key} already exists in {path}.",
   "library.citeToProject": "Cite in current project (writes .bib)",
-  "library.citeWritten":
-    "Wrote @{key} to {path}; cite it in the text with \\cite{{key}}; it joins compilation after saving the project.",
+  "library.citeWritten": "Added {key} to {path}. Save the project.",
   "library.detail": "Entry details",
   "library.disconnected": "Local library not connected; showing browser backup: ",
   "library.downloadAttachment": "Download attachment",
-  "library.empty":
-    "No papers yet. Import PDFs or Bib metadata to start organizing; compiled output of the current paper is not added automatically.",
+  "library.empty": "No papers yet. Import PDF or BibTeX files to get started.",
   "library.enrich": "Enrich metadata online",
   "library.enrichNotFound":
     "No matching metadata found; check your network and retry, or fill in manually.",
@@ -454,8 +431,7 @@ const en: Messages = {
   "library.saved": "Saved to the local paper library.",
   "library.searchAria": "Search the library",
   "library.searchPlaceholder": "Title, author, tags, year…",
-  "library.selectHint":
-    'Select a paper to view and edit details. "Cite in current project" appends BibTeX to the current paper\\\'s .bib file.',
+  "library.selectHint": "Select a paper to view its details.",
   "library.sortAria": "Sort order",
   "library.sortCreated": "Recently added",
   "library.statusAria": "Paper reading status",
@@ -477,9 +453,8 @@ const en: Messages = {
   "outline.empty": "No sections detected in the text yet.",
   "outline.expandAll": "Expand all",
   "outline.expandAllAria": "Expand all sections",
-  "outline.heading": "Paper outline · auto",
-  "outline.hint":
-    "Recognized from common static LaTeX structure; macros and conditionals are not executed.",
+  "outline.heading": "Outline",
+
   "outline.missingFile": "Missing file: {name}",
   "outline.warnings": "{count} structure hints",
   "preview.missingFile": "File missing",
@@ -523,8 +498,7 @@ const en: Messages = {
   "project.movedNotSaved":
     "The project directory has moved or no longer exists; drafts kept, not saved. Open the new location.",
   "project.nameNoPath": "The project name cannot contain a path.",
-  "project.noHandle":
-    "The current file has no writable local handle; create or open a real project first.",
+  "project.noHandle": "Cannot save this file. Open a local project first.",
   "project.noProject": "No project open",
   "project.notConnected": "No local project connected; drafts kept, nothing written to disk.",
   "project.notOpen": "No project open",
@@ -536,8 +510,8 @@ const en: Messages = {
   "project.restoreFailed":
     "Failed to restore {name}: {message}. Unsaved edits are retained; check the folder location.",
   "project.saveFailed": "Save failed: {message}",
-  "project.saveFileFailed": "Failed to save {path}: {message}. Files saved before this are marked.",
-  "project.savedAll": "All changes saved to the current project directory.",
+  "project.saveFileFailed": "Could not save {path}: {message}",
+  "project.savedAll": "All changes saved.",
   "project.savedWithDirty": "This save is complete; edits made during the save are still unsaved.",
   "project.savingAll": "Saving all changes…",
   "project.sessionNotWritten":
@@ -559,13 +533,10 @@ const en: Messages = {
   "reader.mdPreview": "Rich preview",
   "reader.mdSource": "Source editing",
   "reader.noPdfContent": "This file has no accessible PDF content.",
-  "reader.noPreview":
-    "No preview for this format, or the content is not editable UTF-8 text. The original file is unchanged.",
-  "reader.notText":
-    "This file is not editable UTF-8 text and has no preview; the original file is unchanged.",
+  "reader.noPreview": "Preview is unavailable for this format.",
+  "reader.notText": "This file is not UTF-8 text and cannot be edited.",
   "reader.openHint": "Open a file from the tree on the left",
-  "reader.openHintDetail":
-    "PDF · Markdown · tables open by type; LaTeX files open in the writing page",
+
   "reader.pdfPaging": "PDF original pagination",
   "reader.showChat": "Show AI panel",
   "reader.showTree": "Show file tree",
@@ -594,8 +565,7 @@ const en: Messages = {
   "refs.unresolvedHeading": "Unresolved citations in text",
   "refs.useProjectBib": "Use project Bib",
   "shortcuts.conflict": 'Conflicts with "{label}"; choose another combo.',
-  "shortcuts.noModifier":
-    "The combo needs at least one modifier (Mod / Shift / Alt); bare keys would intercept normal typing.",
+  "shortcuts.noModifier": "Shortcuts must include Ctrl, ⌘, Shift or Alt.",
   "shortcuts.reserved":
     "This combo is reserved for the system, browser, or editor and cannot be overridden.",
   "storage.legacyArchived":
@@ -613,21 +583,20 @@ const en: Messages = {
   "viewer.tsv": "TSV table",
   "writer.currentFileAria": "Current LaTeX file",
   "writer.noLatex": "The project has no LaTeX file; create main.tex from the project menu.",
-  "writer.savedHint": "Sources saved · ready to compile",
+  "writer.savedHint": "Saved",
   "writer.tabAssets": "Assets",
   "writer.tabOutline": "Outline",
   "writer.tabRefs": "References",
-  "writer.unsavedHint": "Unsaved · save all from the menu",
+  "writer.unsavedHint": "Unsaved",
   "compile.cancel": "Cancel compile",
   "compile.cancelled": "Compile cancelled",
   "compile.cancelledOrInterrupted": "Compile cancelled or interrupted · keeping last results",
   "compile.compiling": "Compiling…",
-  "compile.compilingSnapshot":
-    "Compiling the current edits as a temporary snapshot; source files are not saved automatically.",
+  "compile.compilingSnapshot": "Compiling…",
   "compile.compilingStale": "Compiling · showing last diagnostics",
   "compile.diagCacheOnly": " · diagnostics kept in browser cache only (disk write failed)",
   "compile.emptyCancelled": "Compile was cancelled; no complete diagnostics for this run.",
-  "compile.emptyNever": "Compile the current paper to see real errors and warnings here.",
+  "compile.emptyNever": "Compile to see errors and warnings.",
   "compile.emptyNone": "No parsed errors or warnings.",
   "compile.engineAria": "LaTeX engine",
   "compile.globalGroup": "Global / build tools",
@@ -643,8 +612,7 @@ const en: Messages = {
   "compile.lintDisabled": "Disabled in settings",
   "compile.lintPrefix": "Live check",
   "compile.lintWaiting": "Waiting for an editing pause to update",
-  "compile.logHint":
-    "The main file is chosen in Project Settings → Compile, defaulting to main.tex. Compiling uses the current editing snapshot; artifacts are written to the paper\\'s build directory, and source files must be saved separately from the project menu.",
+  "compile.logHint": "No compilation log yet.",
   "compile.neverCompiled": "This paper has not been compiled yet",
   "compile.noLocation": "No reliable source location · view log",
   "compile.openProblemsAria": "Open compile problems list",
@@ -661,20 +629,18 @@ const en: Messages = {
   "compile.successPartial": "Compile succeeded · artifacts not fully saved: {error}",
   "compile.successSaved": "Compile succeeded · saved build/main.pdf in the current project",
   "compile.waitingFirst": "Waiting for first compile",
-  "git.clean": "Working tree clean; no disk changes to commit.",
+  "git.clean": "No uncommitted changes.",
   "git.completeConnection": "Complete the local connection in the project menu…",
   "git.conflict": "Conflict",
   "git.detachedBranch": "Detached HEAD · {branch}",
   "git.detecting": "Checking Git",
-  "git.diskOnly":
-    "Status comes from the local disk; unsaved editor content is not counted in Git status.",
+  "git.diskOnly": "Save your changes to update Git status.",
   "git.notConnected": "Git not connected",
   "git.notInitialized": "Git not initialized",
   "git.notInitializedHint": "This project has not been initialized as a Git repository.",
-  "git.readonlyDesc": "{name} · read-only status; no commits or staging",
+  "git.readonlyDesc": "{name}",
   "git.refreshAria": "Refresh Git status",
-  "git.snapshotUnbound":
-    "The built-in snapshot is not bound to a real directory; open a local project.",
+  "git.snapshotUnbound": "Open a local project first.",
   "git.staged": "Staged ",
   "git.statusUnread": "Git status not read",
   "git.toolNotConnected":
@@ -686,16 +652,16 @@ const en: Messages = {
   "project.aiBindFailed": " AI connection incomplete: {error}",
   "project.aiNotBound":
     " AI is not connected to this directory; enter the selected directory path in the project connection window.",
-  "project.authCancelled": "Opening cancelled; the current project is unchanged.",
+  "project.authCancelled": "Opening canceled.",
   "project.authorizedLocations": "Saved locations",
   "project.cancel": "Cancel",
   "project.cancelDelete": "Cancel Deletion",
   "project.chooseLocation": "Choose folder…",
   "project.closeCurrentEllipsis": "Close Current Project…",
-  "project.closeDesc": "{name} · Files and recent records are kept.",
+  "project.closeDesc": "{name}",
   "project.closeProject": "Close Project",
-  "project.closeReturnsEmpty": "Closing returns to an empty workspace.",
-  "project.closed": "Project closed; files on disk and recent records are kept.",
+
+  "project.closed": "Project closed.",
   "project.confirmDelete": "Confirm Permanent Directory Deletion",
   "project.confirmNameAria": "Confirm the project directory name for deletion",
   "project.connectAsCopy": "Connect as an Independent Copy",
@@ -703,7 +669,7 @@ const en: Messages = {
     "The directory is authorized in the browser. Older projects need the absolute path once when first connecting local tools; Git and other tools then reuse it.",
   "project.connectionPathAria": "Absolute path for the project connection",
   "project.connectionPathPlaceholder": "Local absolute path of the current project directory",
-  "project.connectionSaved": "Project local connection saved; local tools will reuse it.",
+  "project.connectionSaved": "Project connection saved.",
   "project.connectionTitle": "Project Local Connection",
   "project.createFile": "Create File",
   "project.createProject": "Create Project",
@@ -714,19 +680,17 @@ const en: Messages = {
     "Permanently deletes this folder, including papers, attachments, build output and Git history. Check the path and type its name to continue.",
   "project.deleteForeverHeading": "Permanently delete: {name}",
   "project.deletedPermanently": "Directory permanently deleted{suffix}",
-  "project.dialogFileDesc":
-    "New files are written into the current project; existing content is not overwritten.",
+
   "project.dialogFileTitle": "New Project File",
-  "project.dialogIntro": "One paper, one project directory.",
+
   "project.dialogNewTitle": "New Paper Project",
-  "project.dialogOpenDesc":
-    "Choose a local folder. Confirm trust once to enable all project features.",
+  "project.dialogOpenDesc": "Select a project folder.",
   "project.dialogOpenTitle": "Open Paper Project",
   "project.discardIfCurrent": "If deleting the current project, discard its unsaved changes",
   "project.discardOnSwitch": "Discard unsaved changes when switching",
   "project.discardUnsaved": "Discard current unsaved changes",
   "project.dismissAria": "Dismiss project notice",
-  "project.emptyFolderHint": "Real subfolders appear here after you choose a location",
+  "project.emptyFolderHint": "Select a folder first.",
   "project.enableGit": "Enable Git version control",
   "project.errorCloseChanged": "The project changed while closing and was not closed.",
   "project.errorFileExtension": "Use a text extension: .tex, .bib, .md, .txt, .csv, .sty, or .cls.",
@@ -750,38 +714,33 @@ const en: Messages = {
   "project.gitDisabledSuffix": "{error} — Git was auto-disabled; you can still create the project.",
   "project.gitInitialized":
     "Project created and Git repository initialized (main); no commits yet.",
-  "project.gitNote":
-    "Uses local Git to initialize main; no automatic commits. Output PDFs in build are not tracked; input PDFs in assets can be tracked.",
+
   "project.gitProbing": "Detecting local Git…",
   "project.identityAria": "Project: {name}, open project management",
   "project.localConnectionMenu": "Project Local Connection…",
   "project.localPathAria": "Local absolute path of the selected location",
   "project.localPathLabel":
     "Local path of the selected location · fill in once when first connecting local tools",
-  "project.localPathNote":
-    "Directory authorization is reused; browsers do not expose absolute paths, and sub-projects under a connected root inherit automatically.",
+
   "project.localPathPlaceholder": "Local absolute path of the chosen location",
-  "project.manageDesc":
-    "Removing the current project closes it and removes its recent record and folder shortcut, keeping files on disk. Deleting a directory is a separate, permanent action.",
+  "project.manageDesc": "Removing a record keeps files. Deleting a folder cannot be undone.",
   "project.manageMenu": "Manage / Remove / Delete Projects…",
   "project.menuAria": "Envoi project menu",
   "project.menuLabel": "Project / Files",
   "project.nameLabel": "Project Name",
   "project.newFile": "New File…",
   "project.newProject": "New Project…",
-  "project.newProjectStructure":
-    "Creates main.tex, chapters, references.bib, assets, data and build in a new project folder.",
+
   "project.noLocation": "Choose a local folder",
   "project.noRecent": "No recent projects",
   "project.noRecentProjects": "No recent projects.",
   "project.noSubfolders":
     "This directory has no subfolders; you can use the current location directly.",
-  "project.notConnectedHint":
-    "No local project connected yet; open a real directory to create files and save.",
+  "project.notConnectedHint": "Open a local project first.",
   "project.notOpened": "No project open",
   "project.openCurrentDirectory": "Open Current Directory",
   "project.openProjectFolder": "Open Project / Folder…",
-  "project.opened": "Opened {name}; use “Save All” after editing.{bindingError}",
+  "project.opened": "Opened {name}. {bindingError}",
   "project.openedNoRecent": "Opened {name}, but the recent-projects record could not be saved.",
   "project.parentDirAria": "Parent authorized directory",
   "project.pathLabel": "Path Relative to Project",
@@ -800,8 +759,7 @@ const en: Messages = {
     "Failed to save recovery data; the draft is kept in this window and available backups. Save source files and retry.",
   "project.removeFailed": "Removal failed: {error}",
   "project.removeRecord": "Remove Record",
-  "project.removedRecent":
-    "Recent record removed; files on disk and the current project are unchanged.",
+  "project.removedRecent": "Removed from recent projects.",
   "project.reopenToVerify": "Reopen the project directory first to verify the deletion target.",
   "project.restoreUnavailable": "Project restore storage unavailable: {error}",
   "project.restoring": "Restoring last project…",
@@ -834,12 +792,11 @@ const en: Messages = {
   "settings.ai.connectFirst": "Connect the current project first.",
   "settings.ai.context": "Document context",
   "settings.ai.contextAria": "AI document context",
-  "settings.ai.contextHint":
-    "Choose whether to provide the current document\\'s edit buffer to the model.",
+  "settings.ai.contextHint": "Include the current document in AI requests.",
   "settings.ai.fieldBaseUrl": "Base URL",
   "settings.ai.fieldContextWindow": "Context window",
   "settings.ai.fieldMaxTokens": "Max output",
-  "settings.ai.fieldModel": "Real model ID",
+  "settings.ai.fieldModel": "Model ID",
   "settings.ai.fieldName": "Display name",
   "settings.ai.fieldProvider": "Provider ID",
   "settings.ai.globalHeading": "Default model and behavior",
@@ -848,10 +805,9 @@ const en: Messages = {
   "settings.ai.manageGlobal": "Manage global connections",
   "settings.ai.manageProvider": "Manage providers",
   "settings.ai.manualHeading": "Advanced · manually configure a compatible model",
-  "settings.ai.manualHint":
-    "For APIs without catalog adaptation. Fill in the real model and parameters per the provider\\'s documentation, then connect the account after saving.",
+  "settings.ai.manualHint": "Enter model parameters from your provider's documentation.",
   "settings.ai.modelAria": "AI default model",
-  "settings.ai.modelHintGlobal": "Projects inherit this selection by default.",
+
   "settings.ai.modelInherited": "Inheriting global model",
   "settings.ai.notConnected": "No local project is currently connected.",
   "settings.ai.optionCurrentDoc": "Current document",
@@ -861,17 +817,14 @@ const en: Messages = {
   "settings.ai.projectHeading": "Current project · inherit or override",
   "settings.ai.projectSaved": "Project settings saved",
   "settings.ai.providerAccount": "Provider account",
-  "settings.ai.providerAccountHint":
-    "Connect model providers; credentials are stored only on this machine.",
-  "settings.ai.providerAccountHintProject":
-    "The project uses accounts configured on this machine; credentials are not shared with the project.",
+
   "settings.ai.saved": "Saved",
   "settings.ai.searchProvider": "Search providers",
   "settings.ai.thinking": "Thinking level",
   "settings.ai.thinkingAria": "AI default thinking level",
   "settings.ai.thinkingDefault": "Model default",
   "settings.ai.thinkingHigh": "High",
-  "settings.ai.thinkingHintLevels": "Only levels supported by the current model are listed.",
+
   "settings.ai.thinkingHintNoModel": "Available thinking levels appear after selecting a model",
   "settings.ai.thinkingHintNone": "The current model offers no adjustable thinking levels.",
   "settings.ai.thinkingHintUnavailable":
@@ -898,8 +851,7 @@ const en: Messages = {
     "Local preference service not connected; the browser backup is kept and saving can be retried on the next change.",
   "settings.preferences.syncUnavailable":
     "Preferences were changed in another window; local sync is temporarily unavailable.",
-  "settings.project.dirMoved":
-    "The project directory has moved or no longer exists; open the new location from the project menu. Permissions will not be requested repeatedly.",
+  "settings.project.dirMoved": "The project folder has moved or is missing. Open its new location.",
   "settings.project.externallyModified":
     "The project configuration was modified externally or a new one already exists; reopen the project before configuring.",
   "settings.project.gitignoreModified":
@@ -912,8 +864,7 @@ const en: Messages = {
     "The legacy project configuration was modified externally; reopen the project.",
   "settings.project.mainMustBeLatex":
     "The main file must be a LaTeX file inside the current project.",
-  "settings.project.openRealFirst":
-    "Open a real project first; unconnected drafts cannot store project settings.",
+  "settings.project.openRealFirst": "Open a project before changing its settings.",
   "settings.project.saved": "Project settings saved.",
   "settings.project.unsavedEdits":
     "The project configuration has unsaved edits; save before changing project settings.",
@@ -947,8 +898,7 @@ const en: Messages = {
   "settings.shortcuts.allScopes": "All scopes",
   "settings.shortcuts.back": "← Back to general settings",
   "settings.shortcuts.defaultConflict": "Default combination {reason}",
-  "settings.shortcuts.description":
-    "Personal preference stored in this browser. Mod matches both Ctrl and macOS ⌘; modifiers are layered: Mod+Shift switches pages, Mod+Alt triggers actions within the current page. In-page commands only apply on their page. After changing the save key, the default Ctrl/⌘S no longer triggers save. The save command writes all unsaved files of the current project without compiling.",
+  "settings.shortcuts.description": "Mod means Ctrl on Windows or ⌘ on macOS.",
   "settings.shortcuts.modifyAria": "Change shortcut for {label}",
   "settings.shortcuts.recordAria": "Record shortcut for {label}",
   "settings.shortcuts.recordPlaceholder": "Press new combo · Esc to cancel",
@@ -956,7 +906,7 @@ const en: Messages = {
   "settings.shortcuts.resetAll": "Reset all",
   "settings.shortcuts.resetDone": "Default shortcut restored.",
   "settings.shortcuts.resetNoDefault": "Restored to default: this command has no default shortcut.",
-  "settings.shortcuts.saved": "Shortcut saved and effective immediately.",
+  "settings.shortcuts.saved": "Shortcut saved.",
   "settings.shortcuts.scopeAria": "Shortcut scope",
   "settings.shortcuts.scopeGlobal": "Global",
   "settings.shortcuts.searchAria": "Search shortcuts",
@@ -966,23 +916,16 @@ const en: Messages = {
   "settings.tools.restoreAutoDetect": "Restore auto-detect",
   "settings.tools.validateSave": "Validate and save",
 
-  "welcome.eyebrow": "A place for your research",
-  "welcome.tagline": "From the first idea to the final page.",
   "welcome.start": "Get started",
   "welcome.new": "New project",
-  "welcome.newHint": "Choose a template and start a new paper.",
-  "welcome.openHint": "Continue a paper or research folder on your computer.",
+
   "welcome.demo": "Open example project",
-  "welcome.demoHint":
-    "Create an independent local example with a manuscript, data and Git history.",
+  "welcome.demoHint": "Create a copy of the example project.",
   "welcome.recent": "Recent projects",
   "welcome.remove": "Remove recent project: {name}",
-  "welcome.noRecent": "Your work starts here",
-  "welcome.noRecentHint": "Open or create a project to return to it here.",
-  "welcome.footer": "Local files · Focused writing",
+  "welcome.noRecent": "No recent projects",
+
   "welcome.shortcuts": "Keyboard shortcuts",
   "welcome.help": "LaTeX help",
-  "settings.ai.workspaceTrust":
-    "Git, LaTeX, AI and file operations share workspace trust. Trusted folders need no further tool approvals.",
 }
 export default en

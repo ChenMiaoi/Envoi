@@ -3,6 +3,7 @@ import { translate } from "@/i18n/runtime"
 import { useT } from "@/i18n/useT"
 import { GitBranch, RefreshCw } from "lucide-react"
 import { useProject } from "./context"
+import { dirtyFiles } from "@/lib/projectFiles"
 
 import { localGitRuntime, localGitStatus, type GitStatus } from "@/lib/localGit"
 import {
@@ -39,11 +40,7 @@ export function GitStatusPanel() {
       const result = await localGitStatus(project.rootPath)
       if (identity.current !== id) return
       setStatus(result)
-      setMessage(
-        result.state === "not-initialized"
-          ? translate("git.notInitializedHint")
-          : translate("git.diskOnly"),
-      )
+      setMessage(result.state === "not-initialized" ? translate("git.notInitializedHint") : "")
     } catch (error) {
       if (identity.current === id) setMessage((error as Error).message)
     } finally {
@@ -77,12 +74,13 @@ export function GitStatusPanel() {
         : busy
           ? t("git.detecting")
           : t("git.notConnected")
-  const shown = message || t("git.statusUnread")
+  const shown =
+    message || (dirtyFiles(project).length ? t("git.diskOnly") : busy ? t("git.detecting") : "")
   return (
     <>
       <button
         className="flex items-center gap-1 text-primary hover:text-primary/80"
-        title={shown}
+        title={shown || t("command.git")}
         onClick={() => setOpen(true)}
       >
         <GitBranch className="h-3 w-3" />
@@ -98,14 +96,16 @@ export function GitStatusPanel() {
             <DialogDescription>{t("git.readonlyDesc", { name: project.name })}</DialogDescription>
           </DialogHeader>
           <div className="flex items-center justify-between gap-3">
-            <p role="status" className="text-xs text-muted-foreground">
-              {shown}
-            </p>
+            {shown && (
+              <p role="status" className="text-xs text-muted-foreground">
+                {shown}
+              </p>
+            )}
             <button
               disabled={busy}
               aria-label={t("git.refreshAria")}
               onClick={() => void refresh()}
-              className="rounded border border-border p-2"
+              className="ml-auto rounded border border-border p-2"
             >
               <RefreshCw className={`h-3.5 w-3.5 ${busy ? "animate-spin" : ""}`} />
             </button>

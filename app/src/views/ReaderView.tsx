@@ -261,9 +261,6 @@ export function ReaderView({
             {!active ? (
               <div className="flex h-full flex-col items-center justify-center gap-2 text-muted-foreground">
                 <div className="text-[13px]">{t("reader.openHint")}</div>
-                <div className="text-[11px] text-muted-foreground/60">
-                  {t("reader.openHintDetail")}
-                </div>
               </div>
             ) : activeData?.text === undefined && kind !== "image" && kind !== "pdf" ? (
               <p className="p-4 text-sm text-muted-foreground">{t("reader.notText")}</p>

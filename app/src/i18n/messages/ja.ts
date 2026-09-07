@@ -1,20 +1,31 @@
 /** 日本語メッセージ。zh-CN と完全に同じキーを持つこと。 */
 import type { Messages } from "./zh-CN"
 const ja: Messages = {
+  "workspace.createHint": "現在のコミットから実験を作成します。未コミットの変更は含まれません。",
+  "workspace.saveHint":
+    "選択したファイルとソースのアーカイブをメイン作業領域に保存します。先に実験コードをコミットしてください。",
+  "workspace.created": "実験を作成しました。",
+  "workspace.resultSaved": "結果をメイン作業領域に保存しました。",
+  "workspace.createOpenHint":
+    "現在のコミットから作業領域を作成します。未コミットの変更は含まれません。",
+  "workspace.renameHint": "表示名を変更します。",
+  "library.openProjectFirst": "先にプロジェクトを開いてください。",
+  "library.startImport": "文献はまだありません。「文献を追加」からインポートしてください。",
+  "library.addPaper": "文献を追加",
+  "library.pendingMerge": "統合が必要なノートの下書きがあります。",
+  "library.saveMerged": "統合結果を保存",
   "settings.tools.system": "システム環境",
   "settings.update.inaccessible":
     "リリース情報を取得できません。しばらくしてから再試行してください。",
   "settings.update.title": "Envoi バージョン",
   "settings.logs.title": "診断ログ",
-  "settings.logs.hint":
-    "端末内に保存し、サイズでローテーションします（約5 MB、2ファイル）。論文・チャット本文や認証情報は記録しません。",
+
   "settings.logs.open": "ログフォルダーを開く",
   "settings.logs.export": "診断ログをエクスポート",
   "settings.logs.exported": "診断ログをエクスポートしました。",
   "settings.logs.failed":
     "ログを開くかエクスポートできません。フォルダーの権限と空き容量を確認してください。",
-  "settings.update.hint":
-    "正式版を確認します。ダウンロード先でインストーラーを取得し、更新してください。",
+  "settings.update.hint": "インストーラーをダウンロードして更新します。",
   "settings.update.check": "更新を確認",
   "settings.update.busy": "お待ちください…",
   "settings.update.download": "更新をダウンロード",
@@ -64,12 +75,11 @@ const ja: Messages = {
   "app.aria.history": "履歴ページ",
   "app.aria.settings": "設定ページ",
   "app.notFound.title": "ページが見つかりません",
-  "app.notFound.body":
-    "このアドレスに対応するページはありません。プロジェクトと編集内容は保持されています。",
+  "app.notFound.body": "ページが見つかりません。",
   "app.notFound.back": "執筆ページに戻る",
   "app.statusbar.workspace": "ワークスペース",
   "app.statusbar.pageNavigation": "ページナビゲーション",
-  "app.statusbar.runtime": "Pi · ローカル実行",
+  "app.statusbar.runtime": "AI · 接続済み",
   "app.statusbar.disconnected": "AI · 未接続",
   "command.save": "すべての変更を保存",
   "command.palette": "コマンドパレット",
@@ -112,34 +122,26 @@ const ja: Messages = {
   "settings.category.compile": "コンパイル",
   "settings.category.references": "文献とバージョン管理",
   "settings.category.ai": "AI サービス",
-  "settings.header.subtitle":
-    "グローバル設定はこの端末に保存されます。プロジェクト側の上書きは選択した論文設定にのみ書き込まれます。",
+
   "settings.header.global": "グローバル設定",
   "settings.header.project": "現在のプロジェクト",
   "settings.navAria": "設定カテゴリ",
   "settings.general.language": "表示言語",
-  "settings.general.languageHint":
-    "即座に表示言語を切り替えてローカル設定に保存します。論文などの文書内容やローカルツールの出力には影響しません。",
+
   "settings.general.theme": "インターフェースのテーマ",
-  "settings.general.themeHint":
-    "全体の配色セット。下のアクセント色は独立に選択でき、ダーク/ライトテーマに合わせて自動調整されます。",
+
   "settings.general.themeAria": "{name}テーマ",
   "settings.general.accent": "アクセント色",
-  "settings.general.accentHint":
-    "個人設定として選択項目・ボタン・ハイライトに即時適用されます。ライトテーマではコントラストのため自動的に暗くなります。",
+
   "settings.general.accentAria": "{name}アクセント",
   "settings.general.readerPreviewHeading": "閲覧 · テキストプレビュー",
-  "settings.general.freeformNote":
-    "3 つのフォント設定グループは独立して保存されます。ソースの外観は「エディター」カテゴリで設定します。論文プロジェクトとは共有されません。",
+
   "settings.general.projectConnection": "Trusted workspace",
-  "settings.general.projectConnectionHint":
-    "This folder is trusted. Git, LaTeX and AI are enabled without further approvals.",
+  "settings.general.projectConnectionHint": "信頼済み",
   "settings.general.movedHeading": "場所が移動またはアクセス不能ですか？",
-  "settings.general.movedHint":
-    "移設後の新しい場所を開いてください。各ツールを再設定する必要はありません。",
+  "settings.general.movedHint": "移動先のプロジェクトを開いてください。",
   "settings.general.shortcuts": "キーボードショートカット",
-  "settings.general.shortcutsHint":
-    "専用ページでコマンドショートカットを検索・設定・リセットできます。",
+
   "settings.general.openShortcuts": "ショートカット設定を開く",
   "settings.general.accessCheck": "プロジェクト接続を確認中…",
   "settings.general.accessNotConnected":
@@ -147,83 +149,61 @@ const ja: Messages = {
   "settings.general.accessNoPermission":
     "ディレクトリ権限が現在利用できません。プロジェクトメニューから復元してください。",
   "settings.general.accessMoved":
-    "プロジェクトのディレクトリは移動または存在しません。移設先の新しい場所を開いてください。これは Git の再認証ではありません。",
+    "プロジェクトフォルダーが見つかりません。移動先を開いてください。",
   "settings.appearance.uiFont": "インターフェースのフォント",
   "settings.appearance.previewFont": "プレビューのフォント",
   "settings.appearance.uiSize": "インターフェースの文字サイズ",
   "settings.appearance.previewSize": "プレビューの文字サイズ",
-  "settings.appearance.fontHint":
-    "フォントファミリーを選択してください。未インストールのフォントは列挙されたシステムフォールバックに従い、インストール済みフォントの一覧は作りません。",
-  "settings.appearance.uiSizeHint":
-    "13 px を基準とし、ナビゲーション・設定・コントロールの文字は比例して調整されます。",
-  "settings.appearance.previewSizeHint":
-    "閲覧の Markdown と文献カードにのみ影響します。PDF・ソース・論文の組版には影響しません。",
+
+  "settings.appearance.previewSizeHint": "Markdown と文献カードに適用します。",
   "settings.editor.font": "エディターのフォント",
-  "settings.editor.fontHint":
-    "利用できない場合、システムの等幅フォントに自動フォールバックします。",
+
   "settings.editor.fontSize": "文字サイズ",
   "settings.editor.lineHeight": "行間",
   "settings.editor.tabWidth": "タブ表示幅",
-  "settings.editor.tabWidthHint": "タブの表示幅のみ変更し、既存テキストは書き換えません。",
+
   "settings.editor.inheritNote": "フォント・サイズ・行間は個人設定を継承します。",
   "settings.editor.editGlobalAppearance": "グローバルのエディター外観を変更",
   "settings.editor.liveChktex": "リアルタイム ChkTeX チェック",
-  "settings.editor.liveChktexHint":
-    "編集が止まった時点で未保存のテキストをチェックします。コンパイルも保存もしません。",
+  "settings.editor.liveChktexHint": "LaTeX の構文と組版の問題をチェックします。",
   "settings.editor.liveChktexInherited": "{inheritance} · 現在 {state}",
   "settings.editor.disabledRules": "無効化するルール番号",
-  "settings.editor.disabledRulesHint":
-    "明示的なルール番号のみ対応しています。設定文字列は実行されません。",
+
   "settings.editor.disabledRulesInherited": "{inheritance} · 現在 {rules}",
   "settings.editor.noDisabledRules": "無効化ルールなし",
   "settings.editor.restoreInheritance": "継承に戻す",
   "settings.editor.rulesAria": "無効化する ChkTeX ルール",
-  "settings.editor.rulesPlaceholder": "例: 8, 26。空欄で無効化なし",
+  "settings.editor.rulesPlaceholder": "例：8, 26",
   "settings.editor.rulesError": "1–42 の整数のルール番号をカンマ区切りで入力してください。",
   "settings.compile.defaultEngine": "デフォルトのコンパイルエンジン",
   "settings.compile.engine": "コンパイルエンジン",
-  "settings.compile.engineHintGlobal":
-    "新規プロジェクトは既定でこれを継承します。現在のアダプターが対応するエンジンのみ表示されます。",
+
   "settings.compile.engineHintProject": "{inheritance} · 実際には {engine} を使用",
   "settings.compile.inheritEngine": "グローバル設定を継承（{engine}）",
   "settings.compile.mainTex": "論文のメイン TeX ファイル",
-  "settings.compile.mainTexHint":
-    "これは現在のプロジェクトにのみ属し、.envoi/project.json に保存されます。",
-  "settings.compile.note":
-    "コンパイルはツールバーから手動で実行され、出力は build に保存されます。自動コンパイルや LuaLaTeX の切り替えはありません。",
+
   "settings.references.defaultGit": "新規プロジェクトで Git を既定で有効化",
-  "settings.references.defaultGitHint":
-    "作成時にはキャンセルできます。ローカルに Git がない場合は明確に通知され、オフになります。",
+
   "settings.references.management": "バージョン管理",
-  "settings.references.managementHint":
-    "現在のプロジェクトの実際のローカルブランチとファイル状態を表示します。自動コミットはしません。",
+
   "settings.references.viewGitStatus": "Git の状態を表示",
   "settings.references.bibFiles": "プロジェクトの Bib ファイル",
-  "settings.references.bibHint":
-    "論文がどの文献ライブラリを使うかは、メイン TeX の bibliography/addbibresource 宣言で決まります。",
-  "settings.references.zoteroNote":
-    "Zotero 同期はまだ未接続です。AI サービスは専用の AI 設定ページで設定してください。",
+
   "settings.tools.probing": "ローカルツールを検出中…",
   "settings.tools.notConnected": "ローカルツールサービスに接続されていません",
-  "settings.tools.savedNote":
-    "ツール設定はこの端末の現在のユーザーディレクトリにのみ保存され、論文プロジェクトには書き込まれません。",
-  "settings.tools.validatedSaved":
-    "ローカルツール設定を検証して保存しました。今後の編集チェックではこのプログラムを使用します。",
+
+  "settings.tools.validatedSaved": "ツール設定を保存しました。",
   "settings.tools.heading": "ローカルツール · 詳細",
-  "settings.tools.latexAvailableHint":
-    "ローカルの TeX ツールチェーンを検出しました。既定ではサービスプロセスの PATH を使用し、ENVOI_TEX_BIN でツールディレクトリを指定できます。",
-  "settings.tools.chktexHint":
-    "既定では自動検出します。カスタムパスはバージョン検証に合格した chktex 実行ファイルを指す必要があり、コマンド文字列は受け付けません。",
+
+  "settings.tools.chktexHint": "空欄で自動検出するか、ChkTeX の実行ファイルを指定します。",
   "settings.tools.chktexPathAria": "ChkTeX 実行ファイルのパス",
-  "settings.tools.texlabNote":
-    "TexLab: {state}。LSP セッションは統合されていないため、誤った補完や診断の切り替えは提供しません。",
+
   "settings.tools.texlabFound": "ローカルプログラムを検出",
   "settings.tools.texlabMissing": "検出されませんでした",
   /* ---------- 迁移增补（fragments 合并） ---------- */
   "ai.noOptions": "選択肢がありません",
   "ai.operationFailed": "AI 操作に失敗しました",
-  "ai.pathRequired":
-    "先にプロジェクト接続ウィンドウでディレクトリパスを入力してください。AI は他のワークスペースを使用しません。",
+  "ai.pathRequired": "先にプロジェクトを開いてください。",
   "ai.projectMovedOrInaccessible":
     "プロジェクトディレクトリが移動したかアクセスできません。プロジェクトメニューから正しい場所を再接続してください。",
   "ai.projectNotConnected":
@@ -258,12 +238,11 @@ const ja: Messages = {
     "プレビューできる実体ファイルがありません。「ローカル素材を開く」でファイルを指定できます。",
   "assets.openLocal": "ローカル素材を開く",
   "assets.readFailed": "読み込みに失敗しました：{message}",
-  "assets.scope":
-    "範囲：メイン論文から到達可能な章。includegraphics、includepdf、pgfplotstableread、csvreader、addplot table を検出します。「未使用」はこれらの構文で検出されないことを意味します。マクロや graphicspath は解釈しません。",
+
   "assets.selectLocal": "ローカル素材を選択",
   "assets.statsIncomplete": "統計が不完全です：{list}",
   "assets.supportedTypes": "画像、PDF、CSV のみサポートしています。",
-  "assets.unusedInSyntax": "未使用（対応構文内）",
+  "assets.unusedInSyntax": "参照未検出",
   "assets.unusedNoContent": "未使用 · ファイル内容を利用できません",
   "assets.unusedPreview": "未使用 · クリックでプレビュー",
   "assets.useLocation": "{asset}：{file} {index}/{total} 件目",
@@ -329,8 +308,7 @@ const ja: Messages = {
     "ソースを特定しました。PDF は同期検証されていないか、本文が変更されています。再コンパイルしてください。",
   "compile.openPdf": "PDF を開く",
   "compile.page": "{page} ページ",
-  "compile.panelHint":
-    "このパネルは PDF ファイルを読み込みます。プロジェクトのコンパイル結果は上のコンパイル操作で更新されます。",
+
   "compile.parseSuccess": "PDF の解析に成功しました。全 {count} ページです。",
   "compile.passwordPdf":
     "この PDF にはパスワードが必要です。暗号化されていないファイルを選択してください。",
@@ -338,12 +316,11 @@ const ja: Messages = {
   "compile.readingFile": "{name} を読み込み中",
   "compile.renderFailed": "ページのレンダリングに失敗しました",
   "compile.renderPageFailed": "{page} ページのレンダリングに失敗しました：{message}",
-  "compile.renderScaleHint": "ページは PDF 本来のサイズと回転方向で等比レンダリングされます。",
+
   "compile.restoredDisk": "ディスク上のコンパイル記録を復元しました",
   "compile.restoredRecord": "前回のコンパイル（{status}）の記録を復元しました",
   "compile.selectLocalPdf": "ローカル PDF を選択",
-  "compile.serviceUnavailable":
-    "ローカルコンパイルサービスが利用できません。プロジェクト開発サービスから起動してください。",
+  "compile.serviceUnavailable": "コンパイルサービスを利用できません。アプリを再起動してください。",
   "compile.statusCancelled": "キャンセル",
   "compile.statusFailed": "失敗",
   "compile.statusSuccess": "成功",
@@ -367,8 +344,7 @@ const ja: Messages = {
   "git.bridgeUnavailable": "ローカル Git ブリッジが利用できません。",
   "git.initFailed": "Git の初期化に失敗しました",
   "git.logFailed": "Git 履歴の読み取りに失敗しました",
-  "git.movedNotAuth":
-    "プロジェクトディレクトリが移動したか存在しません。プロジェクトメニューから新しい場所を開いてください。Git の認証失効ではありません。",
+  "git.movedNotAuth": "プロジェクトフォルダーが見つかりません。移動先を開いてください。",
   "git.permissionLost":
     "ディレクトリの権限が失効しています。プロジェクトメニューから権限を再付与してください。",
   "git.serviceNotConnected":
@@ -388,8 +364,7 @@ const ja: Messages = {
   "history.noBinding":
     "ディレクトリは承認済みですが、ローカルツールのパスが未接続です。プロジェクトメニューから接続を完了してください。",
   "history.noChanges": "ファイルの変更はありません。",
-  "history.noDirectory":
-    "内蔵スナップショットは実際のディレクトリに紐付いていません。ローカルプロジェクトを開いて履歴を表示してください。",
+  "history.noDirectory": "先にローカルプロジェクトを開いてください。",
   "history.notInitialized":
     "このプロジェクトはまだ Git リポジトリが初期化されていません。プロジェクト作成時にバージョン管理を有効にできます。",
   "history.notLoaded": "Git 履歴は未読み込み",
@@ -400,17 +375,14 @@ const ja: Messages = {
   "library.allYears": "すべての年",
   "library.attachPdf": "PDF を関連付け",
   "library.bibTooLarge": "Bib ファイルが 5 MB を超えています。インポートされていません。",
-  "library.citeKeyExists":
-    "引用キー {key} は {path} にすでに存在するため、重複して書き込まれませんでした。",
+  "library.citeKeyExists": "引用キー {key} は {path} に存在します。",
   "library.citeToProject": "現在のプロジェクトに引用（.bib に書き込み）",
-  "library.citeWritten":
-    "@{key} を {path} に書き込みました。本文では \\cite{{key}} で引用します。プロジェクト保存後にコンパイルへ反映されます。",
+  "library.citeWritten": "{key} を {path} に追加しました。プロジェクトを保存してください。",
   "library.detail": "文献の詳細",
   "library.disconnected":
     "ローカルライブラリに接続されていません。ブラウザのバックアップを表示します：",
   "library.downloadAttachment": "添付をダウンロード",
-  "library.empty":
-    "まだ収蔵がありません。PDF や Bib メタデータをインポートして整理を開始できます。現在の論文のコンパイル成果物は自動では追加されません。",
+  "library.empty": "文献はまだありません。PDF または BibTeX をインポートしてください。",
   "library.enrich": "オンラインでメタデータを補完",
   "library.enrichNotFound":
     "一致するメタデータが見つかりません。ネットワークを確認して再試行するか、手動で入力してください。",
@@ -469,8 +441,7 @@ const ja: Messages = {
   "library.saved": "ローカル論文ライブラリに保存しました。",
   "library.searchAria": "ライブラリを検索",
   "library.searchPlaceholder": "タイトル、著者、タグ、年…",
-  "library.selectHint":
-    "文献を選択すると詳細を表示・編集できます。「現在のプロジェクトに引用」は BibTeX を現在の論文の .bib ファイルに追加します。",
+  "library.selectHint": "文献を選択して詳細を表示します。",
   "library.sortAria": "並べ替え",
   "library.sortCreated": "最近追加",
   "library.statusAria": "文献の読書ステータス",
@@ -492,8 +463,8 @@ const ja: Messages = {
   "outline.empty": "本文に章がまだ認識されていません。",
   "outline.expandAll": "すべて展開",
   "outline.expandAllAria": "すべての章を展開",
-  "outline.heading": "論文目次 · 自動",
-  "outline.hint": "一般的な LaTeX の静的構造から認識します。マクロや条件分岐は実行しません。",
+  "outline.heading": "アウトライン",
+
   "outline.missingFile": "不足ファイル：{name}",
   "outline.warnings": "{count} 件の構造に関するヒント",
   "preview.missingFile": "ファイルがありません",
@@ -537,8 +508,7 @@ const ja: Messages = {
   "project.movedNotSaved":
     "プロジェクトディレクトリが移動したか存在しません。下書きは保持され、保存されていません。新しい場所を開いてください。",
   "project.nameNoPath": "プロジェクト名にパスを含めることはできません。",
-  "project.noHandle":
-    "現在のファイルには書き込み可能なローカルハンドルがありません。先に実際のプロジェクトを新規作成または開いてください。",
+  "project.noHandle": "保存できません。先にローカルプロジェクトを開いてください。",
   "project.noProject": "プロジェクト未オープン",
   "project.notConnected":
     "ローカルプロジェクトに接続されていません。下書きは保持され、ディスクには書き込まれていません。",
@@ -552,9 +522,8 @@ const ja: Messages = {
   "project.restoreFailed":
     "Failed to restore {name}: {message}. Unsaved edits are retained; check the folder location.",
   "project.saveFailed": "保存に失敗しました：{message}",
-  "project.saveFileFailed":
-    "{path} の保存に失敗しました：{message}。それまでに保存に成功したファイルはマーク済みです。",
-  "project.savedAll": "すべての変更が現在のプロジェクトディレクトリに保存されました。",
+  "project.saveFileFailed": "{path} を保存できませんでした：{message}",
+  "project.savedAll": "すべての変更を保存しました。",
   "project.savedWithDirty":
     "今回の保存は完了しました。保存中に行われた新しい変更はまだ保存されていません。",
   "project.savingAll": "すべての変更を保存中…",
@@ -579,13 +548,10 @@ const ja: Messages = {
   "reader.mdPreview": "整形プレビュー",
   "reader.mdSource": "ソース編集",
   "reader.noPdfContent": "このファイルにはアクセス可能な PDF 内容がありません。",
-  "reader.noPreview":
-    "この形式のプレビューはないか、内容が編集可能な UTF-8 テキストではありません。元のファイルは変更されません。",
-  "reader.notText":
-    "このファイルは編集可能な UTF-8 テキストではないためプレビューがありません。元のファイルは変更されません。",
+  "reader.noPreview": "この形式はプレビューできません。",
+  "reader.notText": "UTF-8 テキストではないため編集できません。",
   "reader.openHint": "左のツリーからファイルを開いてください",
-  "reader.openHintDetail":
-    "PDF · Markdown · 表は種類ごとに開きます。LaTeX ファイルは執筆ページへ移動します",
+
   "reader.pdfPaging": "PDF 原ページネーション",
   "reader.showChat": "AI パネルを表示",
   "reader.showTree": "ツリーを表示",
@@ -615,8 +581,7 @@ const ja: Messages = {
   "refs.unresolvedHeading": "本文中の未解決の引用",
   "refs.useProjectBib": "プロジェクト Bib を使用",
   "shortcuts.conflict": "「{label}」と競合しています。別の組み合わせを選択してください。",
-  "shortcuts.noModifier":
-    "修飾キー（Mod / Shift / Alt）を少なくとも1つ含めてください。裸のキーは通常の入力を妨げます。",
+  "shortcuts.noModifier": "ショートカットには Ctrl、⌘、Shift、Alt のいずれかが必要です。",
   "shortcuts.reserved":
     "この組み合わせはシステム・ブラウザ・エディターに予約されており、上書きできません。",
   "storage.legacyArchived":
@@ -635,21 +600,20 @@ const ja: Messages = {
   "writer.currentFileAria": "現在の LaTeX ファイル",
   "writer.noLatex":
     "プロジェクトに LaTeX ファイルがありません。プロジェクトメニューから main.tex を作成してください。",
-  "writer.savedHint": "ソース保存済み · コンパイル可能",
+  "writer.savedHint": "保存済み",
   "writer.tabAssets": "素材",
   "writer.tabOutline": "アウトライン",
   "writer.tabRefs": "参考文献",
-  "writer.unsavedHint": "未保存 · メニューからすべて保存",
+  "writer.unsavedHint": "未保存",
   "compile.cancel": "コンパイルをキャンセル",
   "compile.cancelled": "コンパイルはキャンセルされました",
   "compile.cancelledOrInterrupted": "コンパイルがキャンセルまたは中断されました · 前回の結果を保持",
   "compile.compiling": "コンパイル中…",
-  "compile.compilingSnapshot":
-    "現在の編集内容を一時スナップショットとしてコンパイルしています。ソースファイルは自動保存されません。",
+  "compile.compilingSnapshot": "コンパイル中…",
   "compile.compilingStale": "コンパイル中 · 前回の診断を表示",
   "compile.diagCacheOnly": " · 診断はブラウザキャッシュのみに保持（ディスクへの書き込みに失敗）",
   "compile.emptyCancelled": "コンパイルがキャンセルされたため、今回の完全な診断はありません。",
-  "compile.emptyNever": "現在の論文をコンパイルすると、実際のエラーや警告がここに表示されます。",
+  "compile.emptyNever": "コンパイルするとエラーと警告を確認できます。",
   "compile.emptyNone": "解析されたエラーや警告はありません。",
   "compile.engineAria": "LaTeX エンジン",
   "compile.globalGroup": "グローバル / ビルドツール",
@@ -665,8 +629,7 @@ const ja: Messages = {
   "compile.lintDisabled": "設定で無効になっています",
   "compile.lintPrefix": "リアルタイムチェック",
   "compile.lintWaiting": "編集の一時停止後に更新します",
-  "compile.logHint":
-    "メインファイルはプロジェクト設定 → コンパイルで選択し、デフォルトは main.tex です。コンパイルは現在の編集スナップショットを使用し、成果物は論文の build に書き込まれます。ソースファイルはプロジェクトメニューから別途保存してください。",
+  "compile.logHint": "コンパイルログはまだありません。",
   "compile.neverCompiled": "この論文はまだコンパイルされていません",
   "compile.noLocation": "信頼できるソース位置なし · ログを表示",
   "compile.openProblemsAria": "コンパイル問題一覧を開く",
@@ -683,20 +646,18 @@ const ja: Messages = {
   "compile.successPartial": "コンパイル成功 · 成果物を完全に保存できませんでした：{error}",
   "compile.successSaved": "コンパイル成功 · 現在のプロジェクトに build/main.pdf を保存しました",
   "compile.waitingFirst": "初回コンパイル待ち",
-  "git.clean": "ワークツリーはクリーンです。コミット待ちのディスク変更はありません。",
+  "git.clean": "未コミットの変更はありません。",
   "git.completeConnection": "プロジェクトメニューでローカル接続を完了…",
   "git.conflict": "競合",
   "git.detachedBranch": "HEAD 分離 · {branch}",
   "git.detecting": "Git 確認中",
-  "git.diskOnly":
-    "ステータスはローカルディスク由来です。エディタの未保存内容は Git ステータスに含まれません。",
+  "git.diskOnly": "未保存の変更があります。保存すると Git 状態が更新されます。",
   "git.notConnected": "Git 未接続",
   "git.notInitialized": "Git 未初期化",
   "git.notInitializedHint": "このプロジェクトは Git リポジトリとして初期化されていません。",
-  "git.readonlyDesc": "{name} · 読み取り専用ステータス。コミットやステージングは行いません",
+  "git.readonlyDesc": "{name}",
   "git.refreshAria": "Git ステータスを更新",
-  "git.snapshotUnbound":
-    "内蔵スナップショットは実際のディレクトリに紐付けられていません。ローカルプロジェクトを開いてください。",
+  "git.snapshotUnbound": "先にローカルプロジェクトを開いてください。",
   "git.staged": "ステージ済み ",
   "git.statusUnread": "Git ステータス未取得",
   "git.toolNotConnected":
@@ -708,16 +669,16 @@ const ja: Messages = {
   "project.aiBindFailed": " AI 接続が完了していません：{error}",
   "project.aiNotBound":
     " AI はこのディレクトリに未接続です。プロジェクト接続ウィンドウで選択したディレクトリパスを入力してください。",
-  "project.authCancelled": "Opening cancelled; the current project is unchanged.",
+  "project.authCancelled": "開く操作をキャンセルしました。",
   "project.authorizedLocations": "Saved locations",
   "project.cancel": "キャンセル",
   "project.cancelDelete": "削除をキャンセル",
   "project.chooseLocation": "Choose folder…",
   "project.closeCurrentEllipsis": "現在のプロジェクトを閉じる…",
-  "project.closeDesc": "{name} · ファイルと最近の記録は保持されます。",
+  "project.closeDesc": "{name}",
   "project.closeProject": "プロジェクトを閉じる",
-  "project.closeReturnsEmpty": "閉じると空のワークスペースに戻ります。",
-  "project.closed": "プロジェクトを閉じました。ディスク上のファイルと最近の記録は保持されます。",
+
+  "project.closed": "プロジェクトを閉じました。",
   "project.confirmDelete": "ディレクトリの完全削除を確認",
   "project.confirmNameAria": "削除するプロジェクトディレクトリ名の確認",
   "project.connectAsCopy": "独立したコピーとして接続",
@@ -725,8 +686,7 @@ const ja: Messages = {
     "ディレクトリはブラウザーで認可済みです。古いプロジェクトはローカルツール初回接続時に絶対パスの補足が必要です。その後 Git などのツールで共通利用されます。",
   "project.connectionPathAria": "プロジェクト接続の絶対パス",
   "project.connectionPathPlaceholder": "現在のプロジェクトディレクトリのローカル絶対パス",
-  "project.connectionSaved":
-    "プロジェクトのローカル接続を保存しました。以後ローカルツールがこの接続を再利用します。",
+  "project.connectionSaved": "プロジェクトの接続を保存しました。",
   "project.connectionTitle": "プロジェクトのローカル接続",
   "project.createFile": "ファイルを作成",
   "project.createProject": "プロジェクトを作成",
@@ -737,19 +697,17 @@ const ja: Messages = {
     "Permanently deletes this folder, including papers, attachments, build output and Git history. Check the path and type its name to continue.",
   "project.deleteForeverHeading": "完全に削除：{name}",
   "project.deletedPermanently": "ディレクトリを完全に削除しました{suffix}",
-  "project.dialogFileDesc":
-    "新しいファイルは現在のプロジェクトに書き込まれ、既存の内容は上書きされません。",
+
   "project.dialogFileTitle": "新規プロジェクトファイル",
-  "project.dialogIntro": "1 編の論文につき 1 つのプロジェクトディレクトリ。",
+
   "project.dialogNewTitle": "新規論文プロジェクト",
-  "project.dialogOpenDesc":
-    "Choose a local folder. Confirm trust once to enable all project features.",
+  "project.dialogOpenDesc": "プロジェクトフォルダーを選択してください。",
   "project.dialogOpenTitle": "論文プロジェクトを開く",
   "project.discardIfCurrent": "現在のプロジェクトを削除する場合、その未保存の変更を破棄",
   "project.discardOnSwitch": "切り替え時に未保存の変更を破棄",
   "project.discardUnsaved": "現在の未保存の変更を破棄",
   "project.dismissAria": "プロジェクト通知を閉じる",
-  "project.emptyFolderHint": "場所を選択すると、実際のサブフォルダーがここに表示されます",
+  "project.emptyFolderHint": "先にフォルダーを選択してください。",
   "project.enableGit": "Git バージョン管理を有効化",
   "project.errorCloseChanged": "クローズ中にプロジェクトが変更されたため、閉じられませんでした。",
   "project.errorFileExtension":
@@ -775,37 +733,32 @@ const ja: Messages = {
     "{error}。Git を自動的にオフにしました。プロジェクトの作成は続行できます。",
   "project.gitInitialized":
     "プロジェクトを作成し、Git リポジトリを初期化しました（main）。コミットはまだありません。",
-  "project.gitNote":
-    "ローカル Git で main を初期化します。自動コミットは行いません。build 内の成果物 PDF は追跡されず、assets 内の入力 PDF は追跡可能です。",
+
   "project.gitProbing": "ローカル Git を検出中…",
   "project.identityAria": "プロジェクト：{name}、プロジェクト管理を開く",
   "project.localConnectionMenu": "プロジェクトのローカル接続…",
   "project.localPathAria": "選択した場所のローカル絶対パス",
   "project.localPathLabel": "選択した場所のローカルパス · ローカルツール初回接続時に一度だけ入力",
-  "project.localPathNote":
-    "ディレクトリ認可は再利用されます。ブラウザーは絶対パスを提供しないため、接続済みルートのサブプロジェクトは自動的に継承します。",
+
   "project.localPathPlaceholder": "選択した場所のローカル絶対パス",
-  "project.manageDesc":
-    "現在のプロジェクトを一覧から削除すると閉じられ、最近の記録とフォルダーのショートカットが削除されます。ファイルは保持されます。ディレクトリの削除は別の永続的な操作です。",
+  "project.manageDesc": "履歴の削除ではファイルは残ります。フォルダーの削除は取り消せません。",
   "project.manageMenu": "プロジェクトの管理 / 除去 / 削除…",
   "project.menuAria": "Envoi プロジェクトメニュー",
   "project.menuLabel": "プロジェクト / ファイル",
   "project.nameLabel": "プロジェクト名",
   "project.newFile": "新規ファイル…",
   "project.newProject": "新規プロジェクト…",
-  "project.newProjectStructure":
-    "Creates main.tex, chapters, references.bib, assets, data and build in a new project folder.",
+
   "project.noLocation": "Choose a local folder",
   "project.noRecent": "No recent projects",
   "project.noRecentProjects": "最近のプロジェクトはありません。",
   "project.noSubfolders":
     "このディレクトリにサブフォルダーはありません。現在の場所をそのまま使用できます。",
-  "project.notConnectedHint":
-    "ローカルプロジェクトに未接続です。実際のディレクトリを開くとファイルの作成と保存ができます。",
+  "project.notConnectedHint": "先にローカルプロジェクトを開いてください。",
   "project.notOpened": "プロジェクト未オープン",
   "project.openCurrentDirectory": "現在のディレクトリを開く",
   "project.openProjectFolder": "プロジェクト / フォルダーを開く…",
-  "project.opened": "{name} を開きました。編集後は「すべて保存」を使用してください。{bindingError}",
+  "project.opened": "{name} を開きました。{bindingError}",
   "project.openedNoRecent": "{name} を開きましたが、最近のプロジェクト記録を保存できませんでした。",
   "project.parentDirAria": "一つ上の認可済みディレクトリ",
   "project.pathLabel": "プロジェクト内の相対パス",
@@ -824,8 +777,7 @@ const ja: Messages = {
     "復元データの保存に失敗しました。下書きは現在のウィンドウと利用可能なバックアップに保持されています。ソースファイルを保存して再試行してください。",
   "project.removeFailed": "削除に失敗しました：{error}",
   "project.removeRecord": "記録を削除",
-  "project.removedRecent":
-    "最近の記録を削除しました。ディスク上のファイルと現在のプロジェクトは変更されていません。",
+  "project.removedRecent": "最近のプロジェクトから削除しました。",
   "project.reopenToVerify":
     "削除対象を検証するため、先にプロジェクトディレクトリを開き直してください。",
   "project.restoreUnavailable": "プロジェクト復元ストレージが利用できません：{error}",
@@ -860,11 +812,11 @@ const ja: Messages = {
   "settings.ai.connectFirst": "先に現在のプロジェクトを接続してください。",
   "settings.ai.context": "ドキュメントコンテキスト",
   "settings.ai.contextAria": "AI ドキュメントコンテキスト",
-  "settings.ai.contextHint": "現在のドキュメントの編集バッファをモデルに提供するか選択します。",
+  "settings.ai.contextHint": "現在の文書を AI に送信します。",
   "settings.ai.fieldBaseUrl": "サービス URL",
   "settings.ai.fieldContextWindow": "コンテキストウィンドウ",
   "settings.ai.fieldMaxTokens": "最大出力",
-  "settings.ai.fieldModel": "実際のモデル ID",
+  "settings.ai.fieldModel": "モデル ID",
   "settings.ai.fieldName": "表示名",
   "settings.ai.fieldProvider": "プロバイダー識別子",
   "settings.ai.globalHeading": "デフォルトのモデルと動作",
@@ -874,9 +826,9 @@ const ja: Messages = {
   "settings.ai.manageProvider": "プロバイダーを管理",
   "settings.ai.manualHeading": "詳細 · 互換モデルを手動設定",
   "settings.ai.manualHint":
-    "カタログ未対応の API 向けです。プロバイダーのドキュメントに従って実際のモデルとパラメータを入力し、保存後にアカウントを接続してください。",
+    "サービスのドキュメントに従ってモデルのパラメーターを入力してください。",
   "settings.ai.modelAria": "AI デフォルトモデル",
-  "settings.ai.modelHintGlobal": "プロジェクトはデフォルトでこの選択を継承します。",
+
   "settings.ai.modelInherited": "グローバルモデルを継承",
   "settings.ai.notConnected": "現在ローカルプロジェクトに接続されていません。",
   "settings.ai.optionCurrentDoc": "現在のドキュメント",
@@ -886,17 +838,14 @@ const ja: Messages = {
   "settings.ai.projectHeading": "現在のプロジェクト · 継承または上書き",
   "settings.ai.projectSaved": "プロジェクト設定を保存しました",
   "settings.ai.providerAccount": "プロバイダーアカウント",
-  "settings.ai.providerAccountHint":
-    "モデルプロバイダーに接続します。認証情報はこのマシンにのみ保存されます。",
-  "settings.ai.providerAccountHintProject":
-    "プロジェクトはこのマシンで設定済みのアカウントを使用します。認証情報はプロジェクトと共有されません。",
+
   "settings.ai.saved": "保存しました",
   "settings.ai.searchProvider": "プロバイダーを検索",
   "settings.ai.thinking": "思考レベル",
   "settings.ai.thinkingAria": "AI デフォルト思考レベル",
   "settings.ai.thinkingDefault": "モデルのデフォルト",
   "settings.ai.thinkingHigh": "高",
-  "settings.ai.thinkingHintLevels": "現在のモデルがサポートするレベルのみ表示されます。",
+
   "settings.ai.thinkingHintNoModel": "モデルを選択すると利用可能な思考レベルが表示されます",
   "settings.ai.thinkingHintNone": "現在のモデルには調整可能な思考レベルがありません。",
   "settings.ai.thinkingHintUnavailable": "現在の選択はモデルカタログで利用できません。",
@@ -922,8 +871,7 @@ const ja: Messages = {
     "ローカル設定サービスに接続されていません。ブラウザーのバックアップは保持され、次回の変更時に保存を再試行できます。",
   "settings.preferences.syncUnavailable":
     "別のウィンドウで設定が変更されました。ローカル同期は一時的に利用できません。",
-  "settings.project.dirMoved":
-    "プロジェクトディレクトリーが移動されたか存在しません。プロジェクトメニューから新しい場所を開いてください。権限は繰り返し要求されません。",
+  "settings.project.dirMoved": "プロジェクトフォルダーが見つかりません。移動先を開いてください。",
   "settings.project.externallyModified":
     "プロジェクト設定が外部で変更されたか、新しい設定が既に存在します。プロジェクトを開き直してから設定してください。",
   "settings.project.gitignoreModified":
@@ -935,8 +883,7 @@ const ja: Messages = {
     "旧プロジェクト設定が外部で変更されました。プロジェクトを開き直してください。",
   "settings.project.mainMustBeLatex":
     "メインファイルは現在のプロジェクト内の LaTeX ファイルである必要があります。",
-  "settings.project.openRealFirst":
-    "先に実際のプロジェクトを開いてください。未接続の下書きにはプロジェクト設定を書き込めません。",
+  "settings.project.openRealFirst": "プロジェクトを開いてから設定を変更してください。",
   "settings.project.saved": "プロジェクト設定を保存しました。",
   "settings.project.unsavedEdits":
     "プロジェクト設定に未保存の編集があります。先に保存してから設定を変更してください。",
@@ -971,8 +918,7 @@ const ja: Messages = {
   "settings.shortcuts.allScopes": "すべての範囲",
   "settings.shortcuts.back": "← 一般設定に戻る",
   "settings.shortcuts.defaultConflict": "デフォルトの組み合わせ：{reason}",
-  "settings.shortcuts.description":
-    "このブラウザーに保存される個人設定です。Mod は Ctrl と macOS ⌘ の両方に一致します。修飾キーは階層化されています：Mod+Shift でページ切り替え、Mod+Alt で現在のページ内アクションを実行します。ページ内コマンドは対応するページでのみ有効です。保存キーを変更すると、デフォルトの Ctrl/⌘S では保存されなくなります。保存コマンドは現在のプロジェクトの未保存ファイルをすべて書き込みますが、コンパイルはしません。",
+  "settings.shortcuts.description": "Mod は Windows の Ctrl、macOS の ⌘ を表します。",
   "settings.shortcuts.modifyAria": "{label}のショートカットを変更",
   "settings.shortcuts.recordAria": "{label}のショートカットを入力",
   "settings.shortcuts.recordPlaceholder": "新しい組み合わせを押下 · Esc でキャンセル",
@@ -981,7 +927,7 @@ const ja: Messages = {
   "settings.shortcuts.resetDone": "デフォルトのショートカットに戻しました。",
   "settings.shortcuts.resetNoDefault":
     "デフォルトに戻しました。このコマンドにはデフォルトのショートカットがありません。",
-  "settings.shortcuts.saved": "ショートカットを保存し、即時有効になりました。",
+  "settings.shortcuts.saved": "ショートカットを保存しました。",
   "settings.shortcuts.scopeAria": "ショートカットの範囲",
   "settings.shortcuts.scopeGlobal": "グローバル",
   "settings.shortcuts.searchAria": "ショートカットを検索",
@@ -991,22 +937,16 @@ const ja: Messages = {
   "settings.tools.restoreAutoDetect": "自動検出に戻す",
   "settings.tools.validateSave": "検証して保存",
 
-  "welcome.eyebrow": "研究を、ここから",
-  "welcome.tagline": "最初のアイデアから、論文の最後のページまで。",
   "welcome.start": "はじめる",
   "welcome.new": "新規プロジェクト",
-  "welcome.newHint": "テンプレートを選んで新しい論文を作成。",
-  "welcome.openHint": "このコンピューターの論文や研究を再開。",
+
   "welcome.demo": "サンプルを開く",
-  "welcome.demoHint": "論文・データ・Git 履歴を含む独立したローカルのサンプルを作成します。",
+  "welcome.demoHint": "サンプルのコピーを作成します。",
   "welcome.recent": "最近のプロジェクト",
   "welcome.remove": "最近のプロジェクトを削除：{name}",
-  "welcome.noRecent": "研究の続きをここから",
-  "welcome.noRecentHint": "プロジェクトを開くか作成すると、ここから再開できます。",
-  "welcome.footer": "ローカルファイル · 執筆に集中",
+  "welcome.noRecent": "最近のプロジェクトはありません。",
+
   "welcome.shortcuts": "キーボードショートカット",
   "welcome.help": "LaTeX ヘルプ",
-  "settings.ai.workspaceTrust":
-    "Git, LaTeX, AI and file operations share workspace trust. Trusted folders need no further tool approvals.",
 }
 export default ja

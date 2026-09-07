@@ -37,7 +37,7 @@ function TextAppearance({ kind }: { kind: "ui" | "preview" }) {
     sizeLabel = t(ui ? "settings.appearance.uiSize" : "settings.appearance.previewSize")
   return (
     <>
-      <Row label={fontLabel} hint={t("settings.appearance.fontHint")}>
+      <Row label={fontLabel}>
         <select
           aria-label={fontLabel}
           className={input}
@@ -51,10 +51,7 @@ function TextAppearance({ kind }: { kind: "ui" | "preview" }) {
           ))}
         </select>
       </Row>
-      <Row
-        label={sizeLabel}
-        hint={t(ui ? "settings.appearance.uiSizeHint" : "settings.appearance.previewSizeHint")}
-      >
+      <Row label={sizeLabel} hint={ui ? undefined : t("settings.appearance.previewSizeHint")}>
         <select
           aria-label={sizeLabel}
           className={input}
@@ -165,9 +162,11 @@ function LocalTools() {
   return (
     <div className="mt-6 rounded-xl border border-border bg-background/40 p-4">
       <h3 className="text-sm font-medium">{t("settings.tools.heading")}</h3>
-      <p role="status" className="mt-2 text-xs text-muted-foreground">
-        {t(tools ? "settings.tools.savedNote" : "settings.tools.probing")}
-      </p>
+      {!tools && (
+        <p role="status" className="mt-2 text-xs text-muted-foreground">
+          {t("settings.tools.probing")}
+        </p>
+      )}
       {tools && (
         <>
           {tools.system && (
@@ -200,11 +199,7 @@ function LocalTools() {
           )}
           <Row
             label="LaTeX"
-            hint={
-              tools.latex.available
-                ? tools.latex.root || t("settings.tools.latexAvailableHint")
-                : tools.latex.error
-            }
+            hint={tools.latex.available ? tools.latex.root || undefined : tools.latex.error}
           >
             <span className="text-xs">
               {tools.latex.available ? t("common.available") : t("common.unavailable")}
@@ -229,15 +224,6 @@ function LocalTools() {
               {t("settings.tools.restoreAutoDetect")}
             </button>
           </div>
-          <p className="mt-4 text-xs text-muted-foreground">
-            {t("settings.tools.texlabNote", {
-              state: t(
-                tools.texlab.available
-                  ? "settings.tools.texlabFound"
-                  : "settings.tools.texlabMissing",
-              ),
-            })}
-          </p>
         </>
       )}
     </div>
@@ -302,7 +288,6 @@ export function SettingsView() {
         <div className="flex items-center justify-between gap-4">
           <div>
             <h1 className="text-xl font-semibold">{t("view.settings")}</h1>
-            <p className="mt-1 text-xs text-muted-foreground">{t("settings.header.subtitle")}</p>
           </div>
           <div className="flex rounded-lg border border-border bg-card p-1">
             {(["global", "project"] as const).map((value) => (
@@ -358,10 +343,7 @@ export function SettingsView() {
                     {category === "general" &&
                       (global ? (
                         <>
-                          <Row
-                            label={t("settings.general.language")}
-                            hint={t("settings.general.languageHint")}
-                          >
+                          <Row label={t("settings.general.language")}>
                             <select
                               aria-label={t("settings.general.language")}
                               className={input}
@@ -376,10 +358,7 @@ export function SettingsView() {
                             </select>
                           </Row>
                           <TextAppearance kind="ui" />
-                          <Row
-                            label={t("settings.general.theme")}
-                            hint={t("settings.general.themeHint")}
-                          >
+                          <Row label={t("settings.general.theme")}>
                             <div className="flex flex-wrap gap-2">
                               {Object.entries(themes).map(([id, theme]) => (
                                 <button
@@ -412,10 +391,7 @@ export function SettingsView() {
                               ))}
                             </div>
                           </Row>
-                          <Row
-                            label={t("settings.general.accent")}
-                            hint={t("settings.general.accentHint")}
-                          >
+                          <Row label={t("settings.general.accent")}>
                             {Object.entries(accents).map(([id, color]) => (
                               <button
                                 key={id}
@@ -436,9 +412,6 @@ export function SettingsView() {
                             {t("settings.general.readerPreviewHeading")}
                           </h3>
                           <TextAppearance kind="preview" />
-                          <p className="py-4 text-xs text-muted-foreground">
-                            {t("settings.general.freeformNote")}
-                          </p>
                         </>
                       ) : (
                         <>
@@ -470,10 +443,7 @@ export function SettingsView() {
                       <>
                         {global ? (
                           <>
-                            <Row
-                              label={t("settings.editor.font")}
-                              hint={t("settings.editor.fontHint")}
-                            >
+                            <Row label={t("settings.editor.font")}>
                               <select
                                 aria-label={t("settings.editor.font")}
                                 className={input}
@@ -515,10 +485,7 @@ export function SettingsView() {
                                 ))}
                               </select>
                             </Row>
-                            <Row
-                              label={t("settings.editor.tabWidth")}
-                              hint={t("settings.editor.tabWidthHint")}
-                            >
+                            <Row label={t("settings.editor.tabWidth")}>
                               <select
                                 aria-label={t("settings.editor.tabWidth")}
                                 className={input}
@@ -585,7 +552,7 @@ export function SettingsView() {
                           label={t("settings.editor.disabledRules")}
                           hint={
                             global
-                              ? t("settings.editor.disabledRulesHint")
+                              ? undefined
                               : t("settings.editor.disabledRulesInherited", {
                                   inheritance: inheritance("disabledRules"),
                                   rules:
@@ -625,7 +592,7 @@ export function SettingsView() {
                           )}
                           hint={
                             global
-                              ? t("settings.compile.engineHintGlobal")
+                              ? undefined
                               : t("settings.compile.engineHintProject", {
                                   inheritance: inheritance("engine"),
                                   engine: effective.engine,
@@ -670,10 +637,7 @@ export function SettingsView() {
                           )}
                         </Row>
                         {!global && (
-                          <Row
-                            label={t("settings.compile.mainTex")}
-                            hint={t("settings.compile.mainTexHint")}
-                          >
+                          <Row label={t("settings.compile.mainTex")}>
                             <select
                               disabled={busy}
                               aria-label={t("settings.compile.mainTexAria")}
@@ -691,17 +655,11 @@ export function SettingsView() {
                             </select>
                           </Row>
                         )}
-                        <p className="py-4 text-xs text-muted-foreground">
-                          {t("settings.compile.note")}
-                        </p>
                       </>
                     )}
                     {category === "references" &&
                       (global ? (
-                        <Row
-                          label={t("settings.references.defaultGit")}
-                          hint={t("settings.references.defaultGitHint")}
-                        >
+                        <Row label={t("settings.references.defaultGit")}>
                           <input
                             aria-label={t("settings.references.defaultGit")}
                             type="checkbox"
@@ -711,10 +669,7 @@ export function SettingsView() {
                         </Row>
                       ) : (
                         <>
-                          <Row
-                            label={t("settings.references.management")}
-                            hint={t("settings.references.managementHint")}
-                          >
+                          <Row label={t("settings.references.management")}>
                             <button
                               className={input}
                               onClick={() => window.dispatchEvent(new Event("envoi:show-git"))}
@@ -722,10 +677,7 @@ export function SettingsView() {
                               {t("settings.references.viewGitStatus")}
                             </button>
                           </Row>
-                          <Row
-                            label={t("settings.references.bibFiles")}
-                            hint={t("settings.references.bibHint")}
-                          >
+                          <Row label={t("settings.references.bibFiles")}>
                             <div className="text-right text-xs text-muted-foreground">
                               {project.files
                                 .filter((file) => file.kind === "bib")
@@ -734,19 +686,13 @@ export function SettingsView() {
                                 ))}
                             </div>
                           </Row>
-                          <p className="py-4 text-xs text-muted-foreground">
-                            {t("settings.references.zoteroNote")}
-                          </p>
                         </>
                       ))}
                   </div>
                 )}
                 {global && category === "general" && (
                   <div className="mt-5 rounded-xl border border-border bg-card px-5">
-                    <Row
-                      label={t("settings.general.shortcuts")}
-                      hint={t("settings.general.shortcutsHint")}
-                    >
+                    <Row label={t("settings.general.shortcuts")}>
                       <Link className="text-xs text-primary" to="/settings/global/shortcuts">
                         {t("settings.general.openShortcuts")}
                       </Link>

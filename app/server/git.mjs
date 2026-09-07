@@ -52,8 +52,7 @@ async function boundRoot({ directory, proof, proofKind }) {
   )
     throw Error("Invalid directory binding")
   const root = await realpath(directory).catch((error) => {
-    if (error.code === "ENOENT")
-      throw Error("项目目录位置不存在或已移动，请在项目菜单打开新位置；这不是 Git 授权失效。")
+    if (error.code === "ENOENT") throw Error("项目目录已移动或不存在，请打开新位置。")
     throw error
   })
   const marker = path.join(

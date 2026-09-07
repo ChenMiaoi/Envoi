@@ -77,7 +77,7 @@ export function PaperOutline({
   return (
     <nav aria-label={t("outline.ariaLabel")}>
       <div className="mb-2 flex items-center justify-between px-1 text-[10px] text-muted-foreground">
-        <span title={t("outline.hint")}>{t("outline.heading")}</span>
+        <span>{t("outline.heading")}</span>
         <div className="flex gap-1">
           <button
             title={t("outline.expandAll")}

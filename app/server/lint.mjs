@@ -10,7 +10,7 @@ export function lintRuntime() {
     execFileSync(executable, ["-W"], { windowsHide: true, timeout: 3000, stdio: "ignore" })
     return { available: true, name: "ChkTeX", path: executable }
   } catch {
-    return { available: false, error: "本机未发现可用 ChkTeX，实时检查不可用；未自动安装。" }
+    return { available: false, error: "未检测到 ChkTeX，请安装后启用实时检查。" }
   }
 }
 export async function lintText(input, { signal, trustedRoot } = {}) {

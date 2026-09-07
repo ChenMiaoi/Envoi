@@ -257,7 +257,10 @@ export function ProjectMenu() {
           if (!open && !busy) setMode(null)
         }}
       >
-        <DialogContent className="gap-0 overflow-hidden p-0 max-h-[90vh] overflow-y-auto sm:max-w-[850px]">
+        <DialogContent
+          aria-describedby={mode === "file" ? undefined : "project-open-description"}
+          className="gap-0 overflow-hidden p-0 max-h-[90vh] overflow-y-auto sm:max-w-[850px]"
+        >
           <DialogHeader className="border-b border-border px-6 py-5">
             <DialogTitle>
               {mode === "new"
@@ -266,10 +269,11 @@ export function ProjectMenu() {
                   ? t("project.dialogFileTitle")
                   : t("project.dialogOpenTitle")}
             </DialogTitle>
-            <DialogDescription>
-              {t("project.dialogIntro")}
-              {mode === "file" ? t("project.dialogFileDesc") : t("project.dialogOpenDesc")}
-            </DialogDescription>
+            {mode !== "file" && (
+              <DialogDescription id="project-open-description">
+                {t("project.dialogOpenDesc")}
+              </DialogDescription>
+            )}
           </DialogHeader>
           <div className="flex min-h-72">
             <aside className="w-44 shrink-0 border-r border-border bg-background/40 p-3">
@@ -462,11 +466,6 @@ export function ProjectMenu() {
                 </div>
               )}
               {mode === "new" && (
-                <p className="text-[11px] text-muted-foreground">
-                  {t("project.newProjectStructure")}
-                </p>
-              )}
-              {mode === "new" && (
                 <div className="space-y-1 text-xs">
                   <label className="flex items-center gap-2">
                     <input
@@ -476,7 +475,6 @@ export function ProjectMenu() {
                     />
                     {t("project.enableGit")}
                   </label>
-                  <p className="text-[10px] text-muted-foreground">{t("project.gitNote")}</p>
                   <p role="status" className="text-[10px] text-muted-foreground">
                     {gitStatus}
                   </p>

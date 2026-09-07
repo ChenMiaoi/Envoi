@@ -49,13 +49,13 @@ export function WelcomePage() {
       event: "envoi:new-project",
       icon: FilePlus2,
       title: "welcome.new",
-      description: "welcome.newHint",
+      description: undefined,
     },
     {
       event: "envoi:open-project",
       icon: FolderOpen,
       title: "command.project-open",
-      description: "welcome.openHint",
+      description: undefined,
     },
     {
       event: "envoi:open-example",
@@ -72,13 +72,9 @@ export function WelcomePage() {
             <BrandMark className="h-12 w-12" />
           </div>
           <div>
-            <p className="mb-1 text-[10px] font-medium uppercase tracking-[0.3em] text-muted-foreground">
-              {t("welcome.eyebrow")}
-            </p>
             <h1 className="font-serif text-5xl italic tracking-tight">
               Envoi<span className="text-primary">.</span>
             </h1>
-            <p className="mt-3 text-sm text-muted-foreground">{t("welcome.tagline")}</p>
           </div>
         </header>
         <div className="flex flex-col gap-8">
@@ -101,7 +97,7 @@ export function WelcomePage() {
                   <action.icon className="h-5 w-5 shrink-0 text-primary" />
                   <span className="min-w-0 flex-1">
                     <span className="block text-sm font-medium">{t(action.title)}</span>
-                    {!hasRecent && (
+                    {!hasRecent && action.description && (
                       <span className="mt-1 block text-xs leading-relaxed text-muted-foreground">
                         {t(action.description)}
                       </span>

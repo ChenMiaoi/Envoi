@@ -184,11 +184,11 @@ export function ProjectManagement() {
         </DialogHeader>
         {mode === "close" ? (
           <>
-            <p className="text-sm">
-              {dirtyFiles(project).length
-                ? t("project.unsavedFilesCount", { count: dirtyFiles(project).length })
-                : t("project.closeReturnsEmpty")}
-            </p>
+            {dirtyFiles(project).length > 0 && (
+              <p className="text-sm">
+                {t("project.unsavedFilesCount", { count: dirtyFiles(project).length })}
+              </p>
+            )}
             {dirtyFiles(project).length > 0 && (
               <>
                 <button

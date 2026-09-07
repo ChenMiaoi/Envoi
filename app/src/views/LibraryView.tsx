@@ -1,3 +1,4 @@
+import { useT } from "@/i18n/useT"
 import { Notification } from "@/components/Notification"
 import { useEffect, useRef, useState, useCallback } from "react"
 import { bibliographyNames } from "@/lib/bibliography"
@@ -38,6 +39,7 @@ function PaperWorkspace({
   active: boolean
   onChanged: () => void
 }) {
+  const { t } = useT()
   const agent = useAgent()
   const { project, edit: editProject } = useProject()
   const [detail, setDetail] = useState<PaperDetail>(),
@@ -368,7 +370,7 @@ function PaperWorkspace({
             </header>
             {detail.drafts?.map((d) => (
               <div key={d.id} className="border-b p-2 text-xs">
-                有一份冲突笔记草稿已保留。
+                {t("library.pendingMerge")}
                 <button
                   onClick={() => {
                     blocked.current = true
@@ -460,7 +462,7 @@ function PaperWorkspace({
                     void flush()
                   }}
                 >
-                  保存我整理后的内容
+                  {t("library.saveMerged")}
                 </button>
                 <button
                   className={field}
@@ -510,6 +512,7 @@ function PaperWorkspace({
   )
 }
 export function LibraryView() {
+  const { t } = useT()
   const { project } = useProject()
   const root = project.rootPath
   const [index, setIndex] = useState<LibraryIndex>(),
@@ -568,7 +571,7 @@ export function LibraryView() {
   if (!root)
     return (
       <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-        请先打开研究项目，再收集与这个 idea 相关的论文。
+        {t("library.openProjectFirst")}
       </div>
     )
   const groups = [...new Set(index?.papers.map((p) => p.collection || "未分类") ?? [])]
@@ -580,7 +583,7 @@ export function LibraryView() {
           {index?.papers.length ?? 0} 篇 · 当前研究
         </span>
         <button disabled={busy} onClick={() => input.current?.click()}>
-          添加论文 / 导入资料
+          {t("library.addPaper")}
         </button>
         <button disabled={busy} onClick={() => void importPapers(true)}>
           从旧论文库导入
@@ -666,7 +669,7 @@ export function LibraryView() {
               ))}
               {!index?.papers.length && (
                 <p className="py-6 text-xs leading-6 text-muted-foreground">
-                  添加相关工作、研究方法和背景论文，围绕当前 idea 开始阅读。
+                  {t("library.startImport")}
                 </p>
               )}
             </nav>

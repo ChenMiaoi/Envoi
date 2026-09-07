@@ -543,7 +543,7 @@ export function TexCompilePreview({
       setPages([])
       setError("")
       setStatus(t("compile.loadingPdf"))
-      setLogs([t("compile.readingFile", { name: source.name }), t("compile.panelHint")])
+      setLogs([t("compile.readingFile", { name: source.name })])
       if (!source.file && !source.url) {
         setStatus(t("compile.noPdfSelected"))
         setLogs([t("compile.noPreviewablePdf")])
@@ -571,7 +571,6 @@ export function TexCompilePreview({
         setLogs((previous) => [
           ...previous,
           t("compile.parseSuccess", { count: document!.numPages }),
-          t("compile.renderScaleHint"),
         ])
       } catch (reason) {
         if (!active) return

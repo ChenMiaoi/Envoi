@@ -104,7 +104,7 @@ export function AssetsPanel({
           }
         }}
       />
-      <p className="text-muted-foreground">{t("assets.scope")}</p>
+
       {!!paper.missing.length && (
         <p className="text-warning">
           {t("assets.statsIncomplete", { list: paper.missing.join("；") })}
