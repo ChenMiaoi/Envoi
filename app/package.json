@@ -25,7 +25,7 @@
     "i18n:inventory": "node scripts/i18n-inventory.mjs",
     "predev:desktop": "node scripts/sync-pdfjs-assets.mjs",
     "prebuild:desktop": "node scripts/sync-pdfjs-assets.mjs",
-    "test:desktop": "node --test scripts/test-workspace-trust.mjs scripts/test-desktop-backend.mjs scripts/test-example-project.mjs && node scripts/test-desktop-smoke.mjs",
+    "test:desktop": "node --test scripts/test-workspace-trust.mjs scripts/test-desktop-backend.mjs scripts/test-example-project.mjs scripts/test-workspaces.mjs && node scripts/test-desktop-smoke.mjs && node scripts/test-workspace-ui.mjs",
     "dev:web": "vite",
     "build:web": "tsc -b && vite build",
     "measure:startup": "node scripts/measure-startup.mjs",

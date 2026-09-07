@@ -1,4 +1,4 @@
-import { BookOpenText, PenLine, LibraryBig, Settings, FlaskConical, History } from "lucide-react";
+import { BookOpenText, PenLine, LibraryBig, Settings, History } from "lucide-react";
 import {NavLink} from "react-router";
 import {viewPaths,type ViewId} from "@/navigation/routes";
 import { cn } from "@/lib/utils";
@@ -38,12 +38,6 @@ export function ActivityBar({
           <it.icon className="h-[18px] w-[18px]" strokeWidth={1.8} />
         </NavLink>
       ))}
-      <button
-        title={t("app.experimentsSoon")}
-        className="mb-1.5 flex h-10 w-10 cursor-not-allowed items-center justify-center rounded-lg text-muted-foreground/40"
-      >
-        <FlaskConical className="h-[18px] w-[18px]" strokeWidth={1.8} />
-      </button>
       <div className="flex-1" />
       <NavLink
         to={viewPaths.settings}

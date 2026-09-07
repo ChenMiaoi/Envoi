@@ -1,4 +1,5 @@
 import {createExampleProject} from './example-project.mjs'
+import {listWorkspaces,createWorkspace,workspaceTarget,saveWorkspaceResult,listWorkspaceResults,renameWorkspace,workspaceName} from '../../server/workspaces.mjs'
 import {toolDirectories} from '../../server/tool-config.mjs'
 import { app, BrowserWindow, dialog, ipcMain, Menu, protocol, shell } from "electron"
 import { randomBytes } from "node:crypto"
@@ -133,6 +134,23 @@ async function agentRoot(body: unknown) {
 // ── IPC 通道（契约第 1 节；错误消息沿用中文风格）──
 
 function registerIpc(): void {
+  ipcMain.handle('envoi:workspaces', async (_event, root: string, input: {action: string; source?: string; target?: string; name?: string} ) => {
+    root=await requireBoundRoot(root)
+    if(input.action==='list')return listWorkspaces(root)
+    if(input.action==='create')return createWorkspace(root,input)
+    if(input.action==='rename')return renameWorkspace(root,input)
+    if(input.action==='target')return workspaceTarget(root,input.target)
+    if(input.action==='results'){
+      await requireBoundRoot((await listWorkspaces(root)).main)
+      return listWorkspaceResults(root)
+    }
+    if(input.action==='save'){
+      await requireBoundRoot(await workspaceTarget(root,input.source))
+      await requireBoundRoot((await listWorkspaces(root)).main)
+      return saveWorkspaceResult(root,input)
+    }
+    throw Error('未知工作区操作')
+  })
   ipcMain.handle('envoi:window-colors', (event, colors: {color: string; symbolColor: string}) => {
     if (!colors || !/^#[\da-f]{6}$/i.test(colors.color) || !/^#[\da-f]{6}$/i.test(colors.symbolColor)) throw Error('Invalid window colors')
     if (process.platform === 'win32') BrowserWindow.fromWebContents(event.sender)?.setTitleBarOverlay({...colors, height: 40})
@@ -266,7 +284,7 @@ function registerIpc(): void {
     }
     await walk(base, "")
     files.sort((a, b) => a.path.localeCompare(b.path))
-    return { files, directories }
+    return { files, directories, name: await workspaceName(base).catch(()=>undefined), projectId: [...projectRoots].find(([,directory])=>directory===base)?.[0] }
   })
 
   ipcMain.handle("envoi:fs-read", async (_event, root: string, relPath: string) => {

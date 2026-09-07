@@ -89,14 +89,14 @@ try {
  console.log('PASS: backend process isolation and restart after forced exit');
  console.log('PASS: filesystem watch, backend save conflict, native draft compilation');
  prompts=await instance.evaluate(()=>globalThis.trustPrompts);assert.equal(prompts,1);
- await page.reload();await page.locator('button').first().waitFor();if(result.runtime.available)await page.locator('canvas').first().waitFor({timeout:20000});
+ await page.reload();await page.waitForFunction(()=>location.hash==='#/reader');await page.getByRole('button',{name:/项目：/}).waitFor();await page.evaluate(()=>location.hash='/writer');if(result.runtime.available)await page.locator('canvas').first().waitFor({timeout:20000});
  if(process.env.ENVOI_SMOKE_SCREENSHOT)await page.screenshot({path:process.env.ENVOI_SMOKE_SCREENSHOT});
  assert.deepEqual(errors,[]);
  console.log('PASS: first trust, repeat binding, nested writes, Git, AI access, compiler', {prompts,compiled:result.compile?.ok});
  await instance.close();instance=null;
  instance=await _electron.launch({executablePath:process.env.ENVOI_DESKTOP_EXECUTABLE ?? require('electron'),args:[path.resolve('.'), '--user-data-dir='+path.join(temp,'profile')],env:{...process.env,ENVOI_DATA_DIR:path.join(temp,'data')}});
  await instance.evaluate(({dialog})=>{globalThis.trustPrompts=0;dialog.showMessageBox=async()=>{globalThis.trustPrompts++;return {response:1}}});
- const reopened=await instance.firstWindow();await reopened.waitForFunction(()=>!!window.envoi);await reopened.getByRole('textbox',{name:'LaTeX 正文编辑器',exact:true}).waitFor();
+ const reopened=await instance.firstWindow();await reopened.waitForFunction(()=>!!window.envoi);await reopened.waitForFunction(()=>location.hash==='#/reader');await reopened.evaluate(()=>location.hash='/writer');await reopened.getByRole('textbox',{name:'LaTeX 正文编辑器',exact:true}).waitFor();
  await reopened.evaluate(root=>window.envoi.bindProject(root),root);
  assert.equal(await instance.evaluate(()=>globalThis.trustPrompts),0);
  console.log('PASS: persisted trust across restart');
@@ -153,7 +153,8 @@ try {
  // The same creation contract applies to development and packaged applications.
  const dataErrors=[];instance.process().stderr?.on('data',chunk=>{if(String(chunk).includes("envoi:data-put"))dataErrors.push(String(chunk));});
  await reopened.getByRole('button',{name:/打开示例项目/}).click();
- await reopened.getByRole('textbox',{name:'LaTeX 正文编辑器',exact:true}).waitFor();
+ await reopened.getByTestId('welcome-page').waitFor({state:'hidden'});
+ await reopened.waitForFunction(()=>location.hash==='#/reader');
  const example=(await reopened.evaluate(()=>window.envoi.dataGet('recent'))).value[0].path;
  assert.equal(path.dirname(example),path.join(temp,'data','examples'));
  const history=await reopened.evaluate(root=>window.envoi.gitLog(root),example);
@@ -176,6 +177,9 @@ try {
  assert.match(await readFile(path.join(example,'main.tex'),'utf8'),/Saved demo edit/);
  assert.doesNotMatch(await readFile(path.join(another,'main.tex'),'utf8'),/Saved demo edit/);
  await reopened.evaluate(root=>window.dispatchEvent(new CustomEvent('envoi:open-recent',{detail:root})),example);
+ await reopened.getByRole('button',{name:`项目：${path.basename(example)}，打开项目管理`,exact:true}).waitFor();
+ await reopened.waitForFunction(()=>location.hash==='#/reader');
+ await reopened.evaluate(()=>location.hash='/writer');
  await waitForAsync(reopened,()=>document.querySelector('textarea[aria-label="LaTeX 正文编辑器"]')?.value.includes('Saved demo edit'));
  assert.deepEqual(dataErrors,[]);
  console.log('PASS: each example creates a real independent project, visible history, normal editor saves and preserved recent copies');

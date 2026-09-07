@@ -34,7 +34,7 @@ export const zhCN = {
  'view.reader':'阅读配置',
  'view.writer':'写作配置',
  'view.library':'论文库',
- 'view.history':'版本历史',
+ 'view.history':'版本与实验',
  'view.settings':'设置',
  /* ---------- 应用外壳 ---------- */
  'app.searchPlaceholder':'搜索文件、命令…',
@@ -61,7 +61,7 @@ export const zhCN = {
  'command.view-reader':'阅读页',
  'command.view-writer':'写作页',
  'command.view-library':'论文库',
- 'command.view-history':'版本历史',
+ 'command.view-history':'版本与实验',
  'command.view-settings':'设置',
  'command.project-open':'打开项目',
  'command.project-manage':'管理项目',

@@ -78,3 +78,20 @@ The bundled demo is a read-only source template. Creation runs Git asynchronousl
 Figure regeneration is self-contained in `tools/generate-figures.py`. PDF generation uses the ordinary project compiler and writes ignored build output. Opening a saved copy through Recent Projects never recreates it. `npm run demo:git` is a compatibility command that creates a new global-data demo and prints its path; it no longer initializes a nested repository in the template.
 
 First-run data migration now creates-or-preserves the store under the backend lock. Concurrent initialization cannot race on revision zero; conflicting legacy snapshots are archived without replacing current data. Project binding writes are serialized within a renderer. Normal compare-and-swap checks still reject divergent stale writes.
+
+## Research workspaces (first version)
+
+The Git page now groups worktrees under **Versions and experiments**. The first experiment creation fixes the current repository root as the main workspace in the shared Git directory's `envoi-workspaces.json`. Names and purposes stay outside tracked project files. Existing Git worktrees are listed too. Experiments start at the current HEAD, not at uncommitted editor or disk changes, and are created under the global data directory's `worktrees/` tree. Inspecting a workspace does not switch the editor; opening it uses the normal trusted project flow and requires saving current edits first.
+
+Linked worktrees have path-derived local identities for drafts and AI sessions. Their tracked `.envoi/project.json` remains unchanged, so opening a worktree does not dirty its checkout or share the main project's recovery buffers. The top bar identifies the current workspace. File changes and commit history are scoped to the selected directory.
+
+The top-bar workspace badge opens a switcher with named workspaces, create-and-open, and rename-current actions. Display names persist in the shared workspace registry and appear in the project header and file-tree root. Renaming changes neither the physical directory nor the Git branch. The main workspace can also be named.
+
+Opening, creating, restoring or switching projects/workspaces enters the first resource/reader view. The writer remains available through the activity bar or by opening a LaTeX file.
+
+
+Saving results copies explicitly selected ordinary files into a new `results/<id>/files/` directory in the main workspace. `result.json` records the source commit, experiment, file hashes, time and user-supplied command/conclusion. A standalone `source.bundle` preserves committed source history even if the experiment branch is later removed; it is locally retained and ignored by Git. Back up the whole results directory if that code archive is required elsewhere. Tracked experiment changes must be committed first; untracked files must be committed or selected as outputs. Nothing is merged or committed automatically. Large results remain normal local files; this version does not implement remote artifact storage or retention policies.
+
+Trusted AI sessions expose `research_workspace` for list/create/select/results/save. Selection retargets that task's subsequent coding tools without navigating the visible editor. Each chat invocation begins in its bound project; it does not inherit another task's worktree selection. The existing active-task navigation guard remains in this first version; background multi-workspace task scheduling is not implemented. Worktree deletion and applying results to manuscript figures remain explicit manual workflows.
+
+`test-workspaces.mjs` checks identity isolation, source bundle restoration, result paths and AI tool selection without a remote model. `test-workspace-ui.mjs` exercises the complete flow using the existing demo's synthetic data. Setting `ENVOI_WORKSPACE_PREVIEW_DIR` to a new directory keeps the resulting demo window and data available for review; it does not alter the normal app profile.

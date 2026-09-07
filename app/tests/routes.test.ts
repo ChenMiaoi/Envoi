@@ -9,16 +9,16 @@ function ready(router:ReturnType<typeof createMemoryRouter>,pathname:string){
 function routerAt(path:string){return createMemoryRouter([{path:'*',loader:({request})=>{const page=resolvePage(new URL(request.url).pathname);if(page.redirect)return redirect(page.redirect);return page.view??'not-found';}}],{initialEntries:[path]});}
 test('all workspace paths resolve directly, root and trailing slash canonicalize, unknown paths stay not-found',()=>{
  for(const [view,path] of Object.entries(viewPaths))assert.equal(resolvePage(path).view,view);
- assert.equal(resolvePage('/').redirect,'/writer');assert.equal(resolvePage('/settings').redirect,'/settings/global/general');assert.equal(resolvePage('/settings/global/ai').view,'settings');assert.equal(resolvePage('/settings/project/ai').view,'settings');assert.equal(resolvePage('/reader/').redirect,'/reader');assert.deepEqual(resolvePage('/unknown'),{});assert.deepEqual(resolvePage('/reader/private/path'),{});
+ assert.equal(resolvePage('/').redirect,'/reader');assert.equal(resolvePage('/settings').redirect,'/settings/global/general');assert.equal(resolvePage('/settings/global/ai').view,'settings');assert.equal(resolvePage('/settings/project/ai').view,'settings');assert.equal(resolvePage('/reader/').redirect,'/reader');assert.deepEqual(resolvePage('/unknown'),{});assert.deepEqual(resolvePage('/reader/private/path'),{});
 });
 test('router supports root redirect, page navigation and browser history back/forward',async()=>{
  const router=routerAt('/');try{
-  await ready(router,'/writer');assert.equal(router.state.loaderData['0'],'writer');
-  await router.navigate('/reader');await ready(router,'/reader');
+  await ready(router,'/reader');assert.equal(router.state.loaderData['0'],'reader');
+  await router.navigate('/writer');await ready(router,'/writer');
   await router.navigate('/library');await ready(router,'/library');
-  await router.navigate(-1);await ready(router,'/reader');
   await router.navigate(-1);await ready(router,'/writer');
-  await router.navigate(1);await ready(router,'/reader');
+  await router.navigate(-1);await ready(router,'/reader');
+  await router.navigate(1);await ready(router,'/writer');
   await router.navigate('/does-not-exist');await ready(router,'/does-not-exist');assert.equal(router.state.loaderData['0'],'not-found');
  }finally{router.dispose();}
 });

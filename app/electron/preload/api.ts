@@ -1,6 +1,7 @@
 // window.envoi 桥接类型（契约第 1 节唯一事实来源）。
 // preload/index.ts 实现此接口；src 侧经 app/src/lib/desktop.ts re-export 消费。
 export interface EnvoiBridge {
+  workspaces(root: string, input: Record<string, unknown>): Promise<unknown>
   windowColors(colors: {color: string; symbolColor: string}): Promise<void>
   // 目录与项目绑定（无 proof；directory 为绝对路径）
   exampleDirectory(): Promise<string>
@@ -41,7 +42,7 @@ export interface EnvoiBridge {
   watchProject(root: string | null): Promise<void>
   onFilesChanged(cb: (event: {root: string; paths: string[]; error?: string}) => void): () => void
   fsChildren(root: string): Promise<{name: string; kind: "directory" | "file"}[]>
-  fsList(root: string): Promise<{ files: { path: string; kind: string; text?: string; version?: string }[]; directories: string[] }>
+  fsList(root: string): Promise<{ name?: string; projectId?: string; files: { path: string; kind: string; text?: string; version?: string }[]; directories: string[] }>
   fsRead(root: string, relPath: string): Promise<{ text?: string; base64?: string }>
   fsSave(root: string, changes: {path: string; text: string; expectedText: string | null}[]): Promise<{saved: string[]; error?: string}>
   fsWrite(root: string, relPath: string, content: { text?: string; base64?: string }): Promise<void>

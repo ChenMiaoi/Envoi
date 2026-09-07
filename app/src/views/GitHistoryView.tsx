@@ -6,6 +6,7 @@ import {localGitLog,localGitShow,type GitCommit,type GitLog,type GitShow} from '
 import {layoutGraph} from '@/lib/gitGraph';
 import {cn} from '@/lib/utils';
 import {useT} from '@/i18n/useT';
+import {WorkspacePanel} from './WorkspacePanel';
 
 /** 车道颜色随主题的 hue 槽位解析；SVG 表现属性支持 var() 引用。 */
 const LANE_COLORS=['yellow','blue','green','red','violet','orange','cyan','pink'].map(name=>`hsl(var(--hue-${name}))`);
@@ -57,8 +58,10 @@ function CommitDetail({show,error,busy}:{show?:GitShow;error:string;busy:boolean
  </div>;
 }
 
-export function GitHistoryView(){
- const {project}=useProject();
+export function GitHistoryView(){return <WorkspacePanel history={root=><CommitHistoryView key={root} directory={root}/>}/>;}
+function CommitHistoryView({directory}:{directory:string}){
+ const {project:currentProject}=useProject();
+ const project={...currentProject,rootPath:directory};
  const {t}=useT();
  const [log,setLog]=useState<GitLog|null>(null),[message,setMessage]=useState(()=>t('history.notLoaded')),[busy,setBusy]=useState(false);
  const [selected,setSelected]=useState<string|null>(null);

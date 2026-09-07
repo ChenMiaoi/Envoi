@@ -11,6 +11,7 @@ function invoke<T>(channel: string, ...args: unknown[]): Promise<T> {
 // agentStatus agentRequest agentChat onAgentEvent
 // fsList fsRead fsWrite fsWriteFiles fsMkdir fsRemove fsRename fsRemoveTree assetUrl
 const bridge: EnvoiBridge = {
+  workspaces: (root, input) => invoke('envoi:workspaces', root, input),
   windowColors: colors => invoke('envoi:window-colors', colors),
   exampleDirectory: () => invoke('envoi:example-directory'),
   canonicalDirectory: directory => invoke('envoi:canonical-directory', directory),

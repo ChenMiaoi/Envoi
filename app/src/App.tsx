@@ -2,6 +2,7 @@ import {WelcomePage} from '@/project/WelcomePage';
 import {usePreferences} from '@/settings/context';
 import {envoi} from '@/lib/desktop';
 import {ProjectIdentity} from '@/project/ProjectIdentity';
+import {WorkspaceBadge} from '@/project/WorkspaceBadge';
 import {useAgent} from '@/agent/context';
 import {AgentProvider} from "@/agent/AgentProvider";
 import {commands,matchBinding,commandChordLabel,resolveBindings,type Command} from "@/navigation/shortcuts";
@@ -58,7 +59,7 @@ function flatten(nodes: FileNode[], prefix = ""): { node: FileNode; path: string
 export default function App() { return <PreferencesProvider><I18nProvider><ProjectProvider><AgentProvider><ProjectSession /></AgentProvider></ProjectProvider></I18nProvider></PreferencesProvider>; }
 function ProjectSession() {
  const {project}=useProject(),navigate=useNavigate(),previous=useRef<string|undefined>(undefined);
- useEffect(()=>{if(previous.current===project.id)return;previous.current=project.id;void navigate('/writer',{replace:true});},[project.id,navigate]);
+ useEffect(()=>{if(previous.current===project.id)return;previous.current=project.id;void navigate('/reader',{replace:true});},[project.id,navigate]);
  return <ProjectApp key={project.id}/>;
 }
 function ProjectApp() {
@@ -132,7 +133,7 @@ function ProjectApp() {
       {/* The macOS traffic lights share the content area; keep controls clear of them. */}
       <div className={emptyWorkspace ? "hidden" : `flex h-10 shrink-0 items-center border-b border-border bg-card ${mac ? "window-drag pl-[80px]" : windows ? "window-drag pr-[150px]" : ""}`}>
         <div className="flex min-w-0 max-w-[55%] items-center gap-2 pl-3.5">
-          <div className="shrink-0"><ProjectMenu /></div><ProjectIdentity />
+          <div className="shrink-0"><ProjectMenu /></div><ProjectIdentity /><WorkspaceBadge />
           
         </div>
         <div className="flex min-w-0 flex-1 justify-center px-3">
