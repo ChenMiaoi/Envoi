@@ -5,6 +5,7 @@ import { realpath, mkdtemp, readFile, writeFile, rm, mkdir, symlink } from "node
 import { tmpdir } from "node:os"
 import path from "node:path"
 const temp = await realpath(await mkdtemp(path.join(tmpdir(), "envoi-workspaces-")))
+const readText = async (file) => (await readFile(file, "utf8")).replaceAll("\r\n", "\n")
 // Exercise a noncanonical data directory, as with RUNNER~1 on Windows CI.
 await mkdir(path.join(temp, "actual-data"))
 await symlink(
@@ -39,13 +40,13 @@ test("workspaces isolate identities and edits, preserve result provenance, and b
       purpose: "使用现有演示数据验证保存流程",
     })
     assert.equal(created.path, await realpath(created.path))
-    const original = await readFile(path.join(created.path, ".envoi/project.json"), "utf8")
+    const original = await readText(path.join(created.path, ".envoi/project.json"))
     const experiment = await registerProject(created.path, { copy: true })
     assert.equal(await projectRoot(experiment.id), created.path)
     assert.equal(await projectRoot(main.id), root)
     assert.notEqual(main.id, experiment.id)
     assert.equal((await registerProject(created.path, { copy: true })).id, experiment.id)
-    assert.equal(await readFile(path.join(created.path, ".envoi/project.json"), "utf8"), original)
+    assert.equal(await readText(path.join(created.path, ".envoi/project.json")), original)
     assert.equal((await listWorkspaces(created.path)).main, root)
     await renameWorkspace(root, { target: created.path, name: "带宽扫描" })
     assert.equal(await workspaceName(created.path), "带宽扫描")
@@ -53,7 +54,7 @@ test("workspaces isolate identities and edits, preserve result provenance, and b
       (await listWorkspaces(created.path)).workspaces.find((w) => w.current).name,
       "带宽扫描",
     )
-    assert.equal(await readFile(path.join(created.path, ".envoi/project.json"), "utf8"), original)
+    assert.equal(await readText(path.join(created.path, ".envoi/project.json")), original)
     await assert.rejects(renameWorkspace(root, { target: created.path, name: "  " }), /名称/)
     const result = await saveWorkspaceResult(root, {
       source: created.path,
@@ -73,12 +74,12 @@ test("workspaces isolate identities and edits, preserve result provenance, and b
       { windowsHide: true, stdio: "pipe" },
     )
     assert.equal(
-      await readFile(path.join(temp, "restored-source", "main.tex"), "utf8"),
-      await readFile(path.join(created.path, "main.tex"), "utf8"),
+      await readText(path.join(temp, "restored-source", "main.tex")),
+      await readText(path.join(created.path, "main.tex")),
     )
     assert.equal(
-      await readFile(path.join(root, "results", result.id, "files/data/model-data.csv"), "utf8"),
-      await readFile(path.join(created.path, "data/model-data.csv"), "utf8"),
+      await readText(path.join(root, "results", result.id, "files/data/model-data.csv")),
+      await readText(path.join(created.path, "data/model-data.csv")),
     )
     await assert.rejects(
       saveWorkspaceResult(root, { source: created.path, title: "escape", files: ["../main.tex"] }),
@@ -93,7 +94,7 @@ test("workspaces isolate identities and edits, preserve result provenance, and b
       .find((t) => t.name === "write")
       .execute("write", { path: "ai-experiment.txt", content: "isolated experiment" })
     assert.equal(
-      await readFile(path.join(created.path, "ai-experiment.txt"), "utf8"),
+      await readText(path.join(created.path, "ai-experiment.txt")),
       "isolated experiment",
     )
     await assert.rejects(readFile(path.join(root, "ai-experiment.txt")))
@@ -114,7 +115,7 @@ test("workspaces isolate identities and edits, preserve result provenance, and b
       }),
       /先提交/,
     )
-    assert.notEqual(await readFile(path.join(root, "main.tex"), "utf8"), "changed experiment")
+    assert.notEqual(await readText(path.join(root, "main.tex")), "changed experiment")
   } finally {
     await rm(temp, { recursive: true, force: true, maxRetries: 3 })
   }

@@ -1,4 +1,4 @@
-import { watch } from "node:fs"
+import { realpathSync, watch } from "node:fs"
 export function watchProjectDirectory(root, notify, { delay = 180, maxDelay = 1000 } = {}) {
   let timer,
     maximum,
@@ -13,7 +13,11 @@ export function watchProjectDirectory(root, notify, { delay = 180, maxDelay = 10
     paths.clear()
     notify({ root, paths: changed })
   }
-  const watcher = watch(root, { recursive: true }, (_type, filename) => {
+  // Windows can return long paths from ReadDirectoryChangesW while the
+  // runner gives Node an 8.3 short path from os.tmpdir(). libuv aborts when
+  // those prefixes differ, so watch the native canonical path instead.
+  const watchRoot = process.platform === "win32" ? realpathSync.native(root) : root
+  const watcher = watch(watchRoot, { recursive: true }, (_type, filename) => {
     const relative = filename?.toString().replaceAll("\\", "/") ?? ""
     // Library state is maintained by its own service, not the manuscript snapshot.
     if (relative === ".envoi/library" || relative.startsWith(".envoi/library/")) return
