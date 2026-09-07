@@ -2,6 +2,18 @@
 import type { Messages } from "./zh-CN"
 const ja: Messages = {
   "settings.tools.system": "システム環境",
+  "settings.update.inaccessible":
+    "リリース情報を取得できません。しばらくしてから再試行してください。",
+  "settings.update.title": "Envoi バージョン",
+  "settings.update.hint":
+    "正式版を確認します。ダウンロード先でインストーラーを取得し、更新してください。",
+  "settings.update.check": "更新を確認",
+  "settings.update.busy": "お待ちください…",
+  "settings.update.download": "更新をダウンロード",
+  "settings.update.error": "失敗しました。再試行してください",
+  "settings.update.unpublished": "正式版はまだ公開されていません。",
+  "settings.update.available": "新しいバージョン",
+  "settings.update.current": "最新バージョンです。",
   "common.save": "保存",
   "common.close": "閉じる",
   "common.enabled": "オン",

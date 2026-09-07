@@ -2,6 +2,18 @@
 import type { Messages } from "./zh-CN"
 const en: Messages = {
   "settings.tools.system": "System",
+  "settings.update.inaccessible":
+    "Release information is currently unavailable. Please try again later.",
+  "settings.update.title": "Envoi version",
+  "settings.update.hint":
+    "Check stable releases. Download opens the release page; install the package to update.",
+  "settings.update.check": "Check for updates",
+  "settings.update.busy": "Please wait…",
+  "settings.update.download": "Download update",
+  "settings.update.error": "Operation failed; try again",
+  "settings.update.unpublished": "No stable release published yet.",
+  "settings.update.available": "New version available",
+  "settings.update.current": "You are up to date.",
   "common.save": "Save",
   "common.close": "Close",
   "common.enabled": "On",

@@ -4,6 +4,16 @@
  */
 export const zhCN = {
   "settings.tools.system": "系统环境",
+  "settings.update.inaccessible": "暂时无法获取发布信息，请稍后重试。",
+  "settings.update.title": "Envoi 版本",
+  "settings.update.hint": "检查正式版本；下载更新将打开发布页，请下载安装包完成更新。",
+  "settings.update.check": "检查更新",
+  "settings.update.busy": "请稍候…",
+  "settings.update.download": "下载更新",
+  "settings.update.error": "操作失败，请重试",
+  "settings.update.unpublished": "尚未发布正式版本。",
+  "settings.update.available": "发现新版本",
+  "settings.update.current": "已是最新版本。",
   /* ---------- 通用 ---------- */
   "common.save": "保存",
   "common.close": "关闭",

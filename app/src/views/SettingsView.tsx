@@ -1,5 +1,6 @@
 import { SettingsRow as Row } from "@/settings/SettingsRow"
 import { AiSettingsView } from "@/settings/AiSettingsView"
+import { UpdateSettings } from "@/settings/UpdateSettings"
 import { notify } from "@/lib/notifications"
 import { Notification } from "@/components/Notification"
 import { ShortcutsView } from "@/settings/ShortcutsView"
@@ -752,6 +753,7 @@ export function SettingsView() {
                   </div>
                 )}
                 {global && category === "compile" && <LocalTools />}
+                {global && category === "general" && <UpdateSettings />}
               </>
             )}
           </div>

@@ -2,6 +2,16 @@
 import type { Messages } from "./zh-CN"
 const zhHK: Messages = {
   "settings.tools.system": "系統環境",
+  "settings.update.inaccessible": "暫時無法取得發佈資訊，請稍後重試。",
+  "settings.update.title": "Envoi 版本",
+  "settings.update.hint": "檢查正式版本；下載更新將開啟發佈頁，請下載安裝包完成更新。",
+  "settings.update.check": "檢查更新",
+  "settings.update.busy": "請稍候…",
+  "settings.update.download": "下載更新",
+  "settings.update.error": "操作失敗，請重試",
+  "settings.update.unpublished": "尚未發佈正式版本。",
+  "settings.update.available": "發現新版本",
+  "settings.update.current": "已是最新版本。",
   "common.save": "保存",
   "common.close": "關閉",
   "common.enabled": "開啓",

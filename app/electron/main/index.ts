@@ -1,5 +1,6 @@
 import { libraryRequest, researchRoot } from "../../server/research-library.mjs"
 import { createExampleProject } from "./example-project.mjs"
+import { checkUpdate } from "./updates.mjs"
 import {
   listWorkspaces,
   createWorkspace,
@@ -224,6 +225,18 @@ async function agentRoot(body: unknown) {
 // ── IPC 通道（契约第 1 节；错误消息沿用中文风格）──
 
 function registerIpc(): void {
+  let updateUrl: string | undefined
+  ipcMain.handle("envoi:app-version", () => app.getVersion())
+  ipcMain.handle("envoi:check-update", async () => {
+    updateUrl = undefined
+    const result = await checkUpdate(app.getVersion())
+    if (result.status === "available") updateUrl = result.url
+    return result
+  })
+  ipcMain.handle("envoi:download-update", async () => {
+    if (!updateUrl) throw Error("Check for updates first")
+    await shell.openExternal(updateUrl)
+  })
   ipcMain.handle("envoi:library", async (_event, root: string, input: Record<string, unknown>) => {
     root = await requireBoundRoot(root)
     await requireBoundRoot(await researchRoot(root))
