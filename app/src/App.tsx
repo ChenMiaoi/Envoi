@@ -58,7 +58,7 @@ function flatten(nodes: FileNode[], prefix = ""): { node: FileNode; path: string
 export default function App() { return <PreferencesProvider><I18nProvider><ProjectProvider><AgentProvider><ProjectSession /></AgentProvider></ProjectProvider></I18nProvider></PreferencesProvider>; }
 function ProjectSession() {
  const {project}=useProject(),navigate=useNavigate(),previous=useRef<string|undefined>(undefined);
- useEffect(()=>{if(previous.current===project.id)return;previous.current=project.id;if(project.id==='empty')void navigate('/writer',{replace:true});},[project.id,navigate]);
+ useEffect(()=>{if(previous.current===project.id)return;previous.current=project.id;void navigate('/writer',{replace:true});},[project.id,navigate]);
  return <ProjectApp key={project.id}/>;
 }
 function ProjectApp() {
