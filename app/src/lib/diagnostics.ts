@@ -4,11 +4,12 @@ export interface Diagnostic {id:string;column?:number;source?:'compile'|'lint';s
 export interface CompileDiagnostics {items:Diagnostic[];timestamp?:number;engine?:string;signature:string;rootId:string;status:'running'|'success'|'failed'|'cancelled';log:string}
 export function safeDiagnosticText(text:string){return text.replace(/(?:\/(?:[^\s()]+\/)*envoi-tex-[^/\s]+\/project\/)/g,'').replace(/\/(?:[^\s()]+\/)+([^\s()]+)/g,'$1');}
 export function parseDiagnostics(log:string,files:Pick<ProjectFile,'path'|'text'>[],failed=false):Diagnostic[]{
+ log=log.replace(/\r+\n/g,'\n');
  const parts=log.split(/\n\[(pdflatex|xelatex|bibtex|xdvipdfmx)\]\n/);let lastTex='',bib='';
  for(let i=1;i<parts.length;i+=2){if(['pdflatex','xelatex'].includes(parts[i]))lastTex=parts[i+1];if(parts[i]==='bibtex')bib+=parts[i+1]+'\n';}
  let text=lastTex?lastTex+'\n'+bib:log;
- for(let pass=0;pass<6;pass++)text=text.replace(/(\((?:\/|\.\/)[^()\s]*)\r?\n([^\s()]+)/g,(whole,left:string,right:string)=>/\.(?:tex|bib|sty|cls|def|aux|clo)$/.test(left)?whole:left+right);
- text=text.replace(/(^\/[^\s()]*?)\r?\n([^\s()]+\.(?:tex|bib|sty|cls):\d+:)/gm,'$1$2');
+ for(let pass=0;pass<6;pass++)text=text.replace(/(\((?:[a-z]:[\\/]|\/|\.\/)[^()\s]*)\n([^\s()]+)/gi,(whole,left:string,right:string)=>/\.(?:tex|bib|sty|cls|def|aux|clo)$/.test(left)?whole:left+right);
+ text=text.replace(/(^(?:[a-z]:[\\/]|\/)[^\s()]*?)\n([^\s()]+\.(?:tex|bib|sty|cls):\d+:)/gim,'$1$2');
  const lines=text.split('\n'),stack:(string|undefined)[]=[],items:Diagnostic[]=[];
  const mapPath=(raw:string)=>{const normalized=raw.replace(/\\/g,'/').replace(/^.*\/project\//,'').replace(/^\.\//,'');return files.find(file=>file.path===normalized)?.path;};
  const add=(severity:Diagnostic['severity'],message:string,path?:string,line?:number)=>{const file=files.find(f=>f.path===path);const validLine=line&&file?.text!==undefined&&line<=file.text.split('\n').length?line:undefined;const clean=safeDiagnosticText(message).trim();if(!items.some(i=>i.severity===severity&&i.message===clean&&i.path===path&&i.line===validLine))items.push({id:String(items.length),severity,message:clean,path,line:validLine});};
