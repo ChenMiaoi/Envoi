@@ -62,7 +62,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       throw error;
     } finally {closing.current=false;activity.current={busy:false,saving};setBusy(false);}
   },[busy,saving]);
-  useEffect(()=>{const save=()=>{void saveAll();};window.addEventListener('envoi:save',save);return()=>window.removeEventListener('envoi:save',save);},[saveAll]);
+  useEffect(()=>{const save=(event:Event)=>{if(!event.defaultPrevented)void saveAll();};window.addEventListener('envoi:save',save);return()=>window.removeEventListener('envoi:save',save);},[saveAll]);
   useEffect(() => {
     if(restored)return;
     let active=true;
@@ -81,5 +81,5 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("beforeunload", beforeUnload);
   }, [project]);
   if(!restored)return <div className="flex h-screen items-center justify-center bg-background text-sm text-muted-foreground">{t('project.restoring')}</div>;
-  return <ProjectContext.Provider value={{ closeProject,saveAll,saving,message, setMessage, project, setProject, busy, setBusy, edit: (id, text) => setProject((current) => ({ ...current, files: current.files.map((file) => file.id === id ? { ...file, text } : file) })) }}>{recoverable&&<div className="fixed bottom-9 right-3 z-50 flex max-w-lg items-center justify-between gap-3 rounded-lg border border-border bg-card px-4 py-2 text-xs text-muted-foreground shadow-lg"><span>{t('project.recoverableFound')}</span><button disabled={busy||saving||dirtyFiles(project).length>0} title={t('project.recoverableTitle')} className="text-primary disabled:opacity-40" onClick={()=>{setProject({...recoverable,id:'recovered:'+recoverable.id,name:t('project.recoveredDraftName')});setRecoverable(undefined);}}>{t('project.recoverOldSession')}</button></div>}{children}</ProjectContext.Provider>;
+  return <ProjectContext.Provider value={{ getProject:()=>latest.current,closeProject,saveAll,saving,message, setMessage, project, setProject, busy, setBusy, edit: (id, text) => setProject((current) => ({ ...current, files: current.files.map((file) => file.id === id ? { ...file, text } : file) })) }}>{recoverable&&<div className="fixed bottom-9 right-3 z-50 flex max-w-lg items-center justify-between gap-3 rounded-lg border border-border bg-card px-4 py-2 text-xs text-muted-foreground shadow-lg"><span>{t('project.recoverableFound')}</span><button disabled={busy||saving||dirtyFiles(project).length>0} title={t('project.recoverableTitle')} className="text-primary disabled:opacity-40" onClick={()=>{setProject({...recoverable,id:'recovered:'+recoverable.id,name:t('project.recoveredDraftName')});setRecoverable(undefined);}}>{t('project.recoverOldSession')}</button></div>}{children}</ProjectContext.Provider>;
 }

@@ -102,7 +102,7 @@ function ProjectApp() {
     if(command.id==='palette'){setPaletteOpen(v=>!v);return;}
     if(command.view){setView(command.view);return;}
     if(command.id==='compile'){setView('writer');setTimeout(()=>window.dispatchEvent(new Event('envoi:compile')),0);return;}
-    if(command.event)window.dispatchEvent(new CustomEvent(command.event,{detail:command.detail}));
+    if(command.event)window.dispatchEvent(new CustomEvent(command.event,{detail:command.detail,cancelable:true}));
   },[setView]);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {

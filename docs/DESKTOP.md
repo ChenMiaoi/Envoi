@@ -89,6 +89,7 @@ The top-bar workspace badge opens a switcher with named workspaces, create-and-o
 
 Opening, creating, restoring or switching projects/workspaces enters the first resource/reader view. The writer remains available through the activity bar or by opening a LaTeX file.
 
+The save shortcut (Ctrl+S / Cmd+S by default) saves and then compiles when the writer is showing a LaTeX source. Save conflicts prevent compilation. Unchanged source can be recompiled; repeated requests during a run coalesce into one follow-up using the latest saved project. Cancel clears the queued request. Other views and non-LaTeX files retain save-only behavior. Status stays in the compile panel without success notifications.
 
 Saving results copies explicitly selected ordinary files into a new `results/<id>/files/` directory in the main workspace. `result.json` records the source commit, experiment, file hashes, time and user-supplied command/conclusion. A standalone `source.bundle` preserves committed source history even if the experiment branch is later removed; it is locally retained and ignored by Git. Back up the whole results directory if that code archive is required elsewhere. Tracked experiment changes must be committed first; untracked files must be committed or selected as outputs. Nothing is merged or committed automatically. Large results remain normal local files; this version does not implement remote artifact storage or retention policies.
 

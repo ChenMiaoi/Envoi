@@ -15,6 +15,7 @@ import { ReferencesPanel } from "@/components/ReferencesPanel";
 import { ChatPanel } from "@/components/ChatPanel";
 import { LatexEditor, type LatexEditorHandle } from "@/components/LatexEditor";
 import {useT} from "@/i18n/useT";
+import {useLocation} from 'react-router';
 
 
 const sideTabs = [
@@ -25,6 +26,7 @@ const sideTabs = [
 type SideTab = (typeof sideTabs)[number]["id"];
 
 export function WriterView({problemTarget,requestedFile}:{requestedFile?:{id:string;request:number};problemTarget?:import("@/project/ProblemsPanel").ProblemTarget}) {
+  const location=useLocation();
   const {effective}=useSettings();
   const [pdfTarget,setPdfTarget] = useState<{title:string;id:number}|undefined>();
   const {t}=useT();
@@ -40,6 +42,10 @@ export function WriterView({problemTarget,requestedFile}:{requestedFile?:{id:str
   const editable=project.files.filter(file=>file.text!==undefined);
   const active = editable.find((file) => file.id === activeId) ?? sources[0];
   const source = active?.text ?? "";
+  useEffect(()=>{
+    const save=(event:Event)=>{if(event.cancelable&&location.pathname==='/writer'&&/\.tex$/i.test(active?.path??'')){event.preventDefault();window.dispatchEvent(new Event('envoi:save-compile'));}};
+    window.addEventListener('envoi:save',save,true);return()=>window.removeEventListener('envoi:save',save,true);
+  },[location.pathname,active?.path]);
 
   useEditorLint(active?.id,active?.path,source);
   const setSource = (text: string) => { if (active && !busy) edit(active.id, text); };
