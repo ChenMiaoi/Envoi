@@ -1,3 +1,6 @@
+import { useGitStatus } from "@/project/gitStatusContext"
+import { useProject } from "@/project/context"
+import { gitDecoration } from "@/lib/gitDecoration"
 import { useState } from "react"
 import {
   ChevronDown,
@@ -45,6 +48,19 @@ function TreeItem({
   const isFolder = node.kind === "folder"
   const Icon = isFolder ? (open ? FolderOpen : Folder) : (kindIcon[node.kind] ?? FileText)
   const active = node.id === activeId
+  const { status } = useGitStatus()
+  const { project } = useProject()
+  const path = isFolder ? node.id : project.files.find((file) => file.id === node.id)?.path
+  const change = status?.files.find((file) => file.path === path)
+  const decoration = !isFolder && change ? gitDecoration(change) : undefined
+  const changedFolder =
+    isFolder &&
+    status?.files.some(
+      (file) =>
+        node.id === "project-root" ||
+        file.path.startsWith(node.id + "/") ||
+        file.originalPath?.startsWith(node.id + "/"),
+    )
 
   return (
     <div>
@@ -75,12 +91,27 @@ function TreeItem({
         <span
           title={node.name}
           className={cn(
-            "truncate",
+            "min-w-0 truncate",
+            decoration?.color,
             node.id === "project-root" && "text-[13px] font-semibold text-foreground",
           )}
         >
           {node.name}
         </span>
+        {decoration && (
+          <span
+            aria-hidden="true"
+            className={cn("ml-auto shrink-0 text-[10px] font-semibold", decoration.color)}
+          >
+            {decoration.badge}
+          </span>
+        )}
+        {changedFolder && (
+          <span
+            aria-hidden="true"
+            className="ml-auto h-1.5 w-1.5 shrink-0 rounded-full bg-muted-foreground"
+          />
+        )}
       </button>
       {isFolder &&
         open &&

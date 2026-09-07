@@ -1,3 +1,4 @@
+import { GitStatusProvider } from "@/project/GitStatusProvider"
 import { ProjectTrust, TrustRequired } from "@/project/ProjectTrust"
 import { useProjectTrust } from "@/project/useProjectTrust"
 import { WelcomePage } from "@/project/WelcomePage"
@@ -108,7 +109,11 @@ function ProjectSession() {
     previous.current = project.id
     void navigate("/reader", { replace: true })
   }, [project.id, navigate])
-  return <ProjectApp key={project.id} />
+  return (
+    <GitStatusProvider key={project.id}>
+      <ProjectApp />
+    </GitStatusProvider>
+  )
 }
 function ProjectApp() {
   const agent = useAgent()

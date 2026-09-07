@@ -1,12 +1,12 @@
 import { useProjectTrust } from "./useProjectTrust"
-import { useCallback, useEffect, useRef, useState } from "react"
-import { translate } from "@/i18n/runtime"
+import { useEffect, useState } from "react"
 import { useT } from "@/i18n/useT"
 import { GitBranch, RefreshCw } from "lucide-react"
 import { useProject } from "./context"
 import { dirtyFiles } from "@/lib/projectFiles"
 
-import { localGitRuntime, localGitStatus, type GitStatus } from "@/lib/localGit"
+import { useGitStatus } from "./gitStatusContext"
+import { gitDecoration } from "@/lib/gitDecoration"
 import {
   Dialog,
   DialogContent,
@@ -18,51 +18,8 @@ export function GitStatusPanel() {
   const { t } = useT()
   const { project } = useProject()
   const trusted = useProjectTrust(project.rootPath)?.trusted
-  const [open, setOpen] = useState(false),
-    [status, setStatus] = useState<GitStatus | null>(null),
-    [message, setMessage] = useState(""),
-    [busy, setBusy] = useState(false)
-  const identity = useRef(project.id)
-  identity.current = project.id
-  const refresh = useCallback(async () => {
-    if (!trusted) {
-      setStatus(null)
-      setMessage("")
-      return
-    }
-    const id = project.id
-    setBusy(true)
-    setStatus(null)
-    try {
-      if (!project.rootPath) {
-        setMessage(translate("git.snapshotUnbound"))
-        return
-      }
-      const runtime = await localGitRuntime()
-      if (identity.current !== id) return
-      if (!runtime.available) {
-        setMessage(runtime.error!)
-        return
-      }
-      const result = await localGitStatus(project.rootPath)
-      if (identity.current !== id) return
-      setStatus(result)
-      setMessage(result.state === "not-initialized" ? translate("git.notInitializedHint") : "")
-    } catch (error) {
-      if (identity.current === id) setMessage((error as Error).message)
-    } finally {
-      if (identity.current === id) setBusy(false)
-    }
-  }, [project.id, project.rootPath, trusted])
-  const savedRevision = project.files.map((file) => file.saved ?? "").join("\u0000")
-  useEffect(() => {
-    void refresh()
-  }, [refresh, savedRevision])
-  useEffect(() => {
-    const listener = () => void refresh()
-    window.addEventListener("envoi:connection-updated", listener)
-    return () => window.removeEventListener("envoi:connection-updated", listener)
-  }, [refresh])
+  const [open, setOpen] = useState(false)
+  const { status, message, busy, refresh } = useGitStatus()
   useEffect(() => {
     const listener = () => {
       setOpen(true)
@@ -135,7 +92,7 @@ export function GitStatusPanel() {
                           ? t("git.untracked")
                           : `${file.index !== " " ? t("git.staged") : ""}${file.worktree !== " " ? t("git.worktreeModified") : ""}`}
                     </span>
-                    <span className="min-w-0 break-all">
+                    <span className={`min-w-0 break-all ${gitDecoration(file).color}`}>
                       {file.originalPath ? `${file.originalPath} → ` : ""}
                       {file.path}
                     </span>
