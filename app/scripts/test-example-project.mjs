@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {mkdtemp,readFile,writeFile,readdir,rm} from 'node:fs/promises';
+import {realpath,mkdtemp,readFile,writeFile,readdir,rm} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import path from 'node:path';
 import {execFileSync} from 'node:child_process';
@@ -10,7 +10,7 @@ import {gitLogAt,gitStatusAt} from '../server/git.mjs';
 import {compileSnapshot,runtimeInfo} from '../server/compiler.mjs';
 
 test('examples are independent real repositories, with complete history and clean working trees',async()=>{
- const temp=await mkdtemp(path.join(tmpdir(),'envoi example test '));
+ const temp=await realpath(await mkdtemp(path.join(tmpdir(),'envoi example test ')));
  const source=path.resolve('../examples/demo'),git=detectTool('git');
  const run=(cwd,...args)=>execFileSync(git,args,{cwd,encoding:'utf8',windowsHide:true});
  try{

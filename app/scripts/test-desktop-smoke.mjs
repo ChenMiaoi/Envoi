@@ -1,12 +1,12 @@
 import {createRequire} from 'node:module';
-import {mkdtemp, mkdir, writeFile, readFile, rm} from 'node:fs/promises';
+import {realpath,mkdtemp, mkdir, writeFile, readFile, rm} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import path from 'node:path';
 import assert from 'node:assert/strict';
 async function waitForAsync(page,predicate,arg){const deadline=Date.now()+30000;while(!await page.evaluate(predicate,arg)){if(Date.now()>deadline)throw Error('Async desktop condition timed out');await new Promise(resolve=>setTimeout(resolve,50));}}
 const require=createRequire(import.meta.url);
 const {_electron}=require(process.env.ENVOI_PLAYWRIGHT ?? 'playwright');
-const temp=await mkdtemp(path.join(tmpdir(),'envoi-desktop-smoke-'));
+const temp=await realpath(await mkdtemp(path.join(tmpdir(),'envoi-desktop-smoke-')));
 const root=path.join(temp,'paper with spaces');await mkdir(root);
 await writeFile(path.join(root,'trusted-extra.tex'),'Local project input');
 await writeFile(path.join(root,'main.tex'),'\\documentclass{article}\n\\begin{document}Desktop test\\end{document}');

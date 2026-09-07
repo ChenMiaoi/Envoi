@@ -1,7 +1,7 @@
 import {mkdir,readFile,writeFile,rename,realpath,lstat,stat,appendFile} from 'node:fs/promises';import {existsSync,renameSync} from 'node:fs';import {randomUUID,randomBytes,createHash} from 'node:crypto';import path from 'node:path';import os from 'node:os';
 function defaultDataDir(){const current=path.join(os.homedir(),'.envoi'),legacy=path.join(os.homedir(),'.paperdesk');if(existsSync(legacy)&&!existsSync(current))try{renameSync(legacy,current);}catch{return legacy;}return current;}
 export const dataDir=path.resolve(process.env.ENVOI_DATA_DIR??process.env.PAPERDESK_DATA_DIR??defaultDataDir());
-export async function readProjectConfig(root){for(const name of ['.envoi','.paperdesk']){const file=path.join(root,name,'project.json');try{if(await realpath(file)!==file)throw Error('项目配置不可通过符号链接读取');return {file,config:await jsonFile(file,null)};}catch(error){if(error.code==='ENOENT')continue;throw error;}}return {file:path.join(root,'.envoi','project.json'),config:null};}
+export async function readProjectConfig(root){root=await realpath(root);for(const name of ['.envoi','.paperdesk']){const file=path.join(root,name,'project.json');try{if(await realpath(file)!==file)throw Error('项目配置不可通过符号链接读取');return {file,config:await jsonFile(file,null)};}catch(error){if(error.code==='ENOENT')continue;throw error;}}return {file:path.join(root,'.envoi','project.json'),config:null};}
 const allowed=new Set(['preferences','library','recent','session','roots','bindings']);
 export async function atomicJson(file,value){await mkdir(path.dirname(file),{recursive:true,mode:0o700});const temporary=file+'.'+randomUUID()+'.tmp';await writeFile(temporary,JSON.stringify(value,null,2)+'\n',{mode:0o600});await rename(temporary,file);}
 export async function jsonFile(file,fallback){try{return JSON.parse(await readFile(file,'utf8'));}catch(error){if(error.code==='ENOENT')return fallback;throw Error('本机数据文件无法读取，请检查或从备份恢复。');}}
@@ -10,7 +10,7 @@ export async function verifyDirectory({directory,proof,proofKind}){if(typeof dir
 export async function trustedRoot(directory){if(typeof directory!=='string'||!path.isAbsolute(directory))throw Error('缺少有效项目目录');const root=await realpath(directory).catch(error=>{if(error.code==='ENOENT')throw Error('项目目录位置不存在或已移动。');throw error;});if(!(await stat(root)).isDirectory())throw Error('项目路径不是目录');return root;}
 const locks=new Map();
 export function withDataLock(key,run){const previous=locks.get(key)??Promise.resolve();const current=previous.catch(()=>{}).then(run);locks.set(key,current);return current.finally(()=>{if(locks.get(key)===current)locks.delete(key);});}
-export function registerProject(root,options={}){return withDataLock('projects',()=>registerProjectLocked(root,options));}
+export async function registerProject(root,options={}){root=await realpath(root);return withDataLock('projects',()=>registerProjectLocked(root,options));}
 async function registerProjectLocked(root,{copy=false}={}){
  const found=await readProjectConfig(root);let config=found.config;if(!config){const legacy=await jsonFile(path.join(root,'paperdesk.json'),{});config=Object.fromEntries(['projectId','main','name','template','dataStatus','buildDirectory','settings','ai','engine'].filter(key=>legacy[key]!==undefined).map(key=>[key,legacy[key]]));}
  const linked=await lstat(path.join(root,'.git')).then(info=>info.isFile(),()=>false);

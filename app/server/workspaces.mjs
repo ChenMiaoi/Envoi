@@ -47,8 +47,9 @@ export async function createWorkspace(root,input){
   try{
   const state=await registry(repo,true),id=randomUUID(),branch='experiment/'+id.slice(0,8);
   const base=(await git(repo.root,['rev-parse','HEAD'])).trim();
-  const target=path.join(dataDir,'worktrees',createHash('sha256').update(repo.common).digest('hex').slice(0,16),id);
-  await mkdir(path.dirname(target),{recursive:true});
+  const parent=path.join(dataDir,'worktrees',createHash('sha256').update(repo.common).digest('hex').slice(0,16));
+  await mkdir(parent,{recursive:true});
+  const target=path.join(await realpath(parent),id);
   await git(repo.root,['worktree','add','-b',branch,target,base]);
   state.experiments[target]={name:input.name.trim(),purpose:String(input.purpose??'').slice(0,2000),base,created:new Date().toISOString()};
   await atomicJson(repo.file,state);

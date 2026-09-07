@@ -1,11 +1,14 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {execFileSync} from 'node:child_process';
-import {mkdtemp,readFile,writeFile,rm} from 'node:fs/promises';
+import {realpath,mkdtemp,readFile,writeFile,rm,mkdir,symlink} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import path from 'node:path';
-const temp=await mkdtemp(path.join(tmpdir(),'envoi-workspaces-'));
-process.env.ENVOI_DATA_DIR=temp;
+const temp=await realpath(await mkdtemp(path.join(tmpdir(),'envoi-workspaces-')));
+// Exercise a noncanonical data directory, as with RUNNER~1 on Windows CI.
+await mkdir(path.join(temp,'actual-data'));
+await symlink(path.join(temp,'actual-data'),path.join(temp,'data-alias'),process.platform==='win32'?'junction':'dir');
+process.env.ENVOI_DATA_DIR=path.join(temp,'data-alias');
 const {createExampleProject}=await import('../electron/main/example-project.mjs');
 const {createWorkspace,listWorkspaces,saveWorkspaceResult,listWorkspaceResults,workspaceTarget,renameWorkspace,workspaceName}=await import('../server/workspaces.mjs');
 const {registerProject,projectRoot}=await import('../server/local-data.mjs');
@@ -13,7 +16,10 @@ test('workspaces isolate identities and edits, preserve result provenance, and b
  try{
   const root=await createExampleProject({source:path.resolve('../examples/demo'),dataDirectory:temp});
   const main=await registerProject(root);
+  const alias=path.join(temp,'project-alias');await symlink(root,alias,process.platform==='win32'?'junction':'dir');
+  assert.equal((await registerProject(alias)).id,main.id);
   const created=await createWorkspace(root,{name:'敏感性分析',purpose:'使用现有演示数据验证保存流程'});
+  assert.equal(created.path,await realpath(created.path));
   const original=await readFile(path.join(created.path,'.envoi/project.json'),'utf8');
   const experiment=await registerProject(created.path,{copy:true});
   assert.equal(await projectRoot(experiment.id),created.path);assert.equal(await projectRoot(main.id),root);assert.notEqual(main.id,experiment.id);assert.equal((await registerProject(created.path,{copy:true})).id,experiment.id);

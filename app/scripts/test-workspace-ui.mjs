@@ -1,12 +1,12 @@
 import {_electron} from 'playwright';
 import {createRequire} from 'node:module';
-import {mkdtemp,mkdir,readFile,rm} from 'node:fs/promises';
+import {realpath,mkdtemp,mkdir,readFile,rm} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import path from 'node:path';
 import assert from 'node:assert/strict';
 const require=createRequire(import.meta.url),keep=!!process.env.ENVOI_WORKSPACE_PREVIEW_DIR;
-const temp=keep?path.resolve(process.env.ENVOI_WORKSPACE_PREVIEW_DIR):await mkdtemp(path.join(tmpdir(),'envoi-workspace-ui-'));
-await mkdir(temp,{recursive:true});
+let temp=keep?path.resolve(process.env.ENVOI_WORKSPACE_PREVIEW_DIR):await mkdtemp(path.join(tmpdir(),'envoi-workspace-ui-'));
+await mkdir(temp,{recursive:true});temp=await realpath(temp);
 let app;
 try{
  app=await _electron.launch({executablePath:require('electron'),args:[path.resolve('.'),'--user-data-dir='+path.join(temp,'profile')],env:{...process.env,ENVOI_DATA_DIR:path.join(temp,'data')}});

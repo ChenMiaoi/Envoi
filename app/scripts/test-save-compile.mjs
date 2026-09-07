@@ -1,10 +1,10 @@
 import {_electron} from 'playwright';
 import {createRequire} from 'node:module';
-import {mkdtemp,mkdir,writeFile,readFile,rm} from 'node:fs/promises';
+import {realpath,mkdtemp,mkdir,writeFile,readFile,rm} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import path from 'node:path';
 import assert from 'node:assert/strict';
-const require=createRequire(import.meta.url),temp=await mkdtemp(path.join(tmpdir(),'envoi-save-compile-')),root=path.join(temp,'paper');
+const require=createRequire(import.meta.url),temp=await realpath(await mkdtemp(path.join(tmpdir(),'envoi-save-compile-'))),root=path.join(temp,'paper');
 await mkdir(root);await writeFile(path.join(root,'main.tex'),'\\documentclass{article}\n\\begin{document}Initial\\end{document}');await writeFile(path.join(root,'notes.md'),'Notes');
 let app;
 const pause=ms=>new Promise(r=>setTimeout(r,ms));
