@@ -113,6 +113,9 @@ jobs:
     permissions:
       contents: write
     steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
       - name: Download installer artifacts
         uses: actions/download-artifact@v5
         with:
