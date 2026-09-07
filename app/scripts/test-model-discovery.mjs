@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import {mkdtemp,rm,readdir,readFile} from 'node:fs/promises';
 import os from 'node:os';import path from 'node:path';
-import {AuthStorage,ModelRegistry} from '@mariozechner/pi-coding-agent';
-import {getSupportedThinkingLevels} from '@mariozechner/pi-ai';
+import {ModelRegistry,ModelRuntime} from '@earendil-works/pi-coding-agent';
+import {InMemoryCredentialStore,getSupportedThinkingLevels} from '@earendil-works/pi-ai';
 import {createModelDiscovery,parseDirectory,registerDiscoveredModels,runtimeModels} from '../server/model-discovery.mjs';
 const directory=await mkdtemp(path.join(os.tmpdir(),'envoi-model-discovery-'));
 try{
@@ -12,9 +12,9 @@ try{
  const discovery=createModelDiscovery({directory,fetcher,now:()=>clock});
  const first=await discovery.discover('opencode','account-one');assert.equal(first.state,'live');assert.equal(calls,2);
  assert.deepEqual(first.ids,['actual-new-model']);assert.deepEqual(first.models.map(m=>m.id),first.ids);
- const auth=AuthStorage.inMemory({opencode:{type:'api_key',key:'account-one'}}),registry=ModelRegistry.inMemory(auth);
+ const credentials=new InMemoryCredentialStore();await credentials.modify('opencode',async()=>({type:'api_key',key:'account-one'}));const modelRuntime=await ModelRuntime.create({credentials,refreshOnCreate:false});const registry=new ModelRegistry(modelRuntime);
  registerDiscoveredModels(registry,'opencode',first);assert.deepEqual(registry.getAll().filter(m=>m.provider==='opencode').map(m=>m.id),first.ids);
- const runtime=registry.find('opencode','actual-new-model');assert.equal(runtime.api,'openai-completions');assert.equal(runtime.baseUrl,'https://opencode.ai/zen/v1');assert.deepEqual(getSupportedThinkingLevels(runtime),['low','high']);assert.equal((await registry.getApiKeyAndHeaders(runtime)).apiKey,'account-one');assert(!registry.find('opencode','hy3-preview-free'));
+ const discoveredModel=registry.find('opencode','actual-new-model');assert.equal(discoveredModel.api,'openai-completions');assert.equal(discoveredModel.baseUrl,'https://opencode.ai/zen/v1');assert.deepEqual(getSupportedThinkingLevels(discoveredModel),['low','high']);assert.equal((await registry.getApiKeyAndHeaders(discoveredModel)).apiKey,'account-one');assert(!registry.find('opencode','hy3-preview-free'));
  clock+=100;assert.equal((await discovery.discover('opencode','account-one')).state,'cache');assert.equal(calls,2);
  clock+=300001;assert.equal((await discovery.discover('opencode','account-one')).state,'live');assert.equal(calls,3);
  const restart=createModelDiscovery({directory,fetcher,now:()=>clock});assert.equal((await restart.discover('opencode','account-one')).state,'cache');assert.equal(calls,3);

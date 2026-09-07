@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "description": "Envoi local academic writing workspace",
   "engines": {
-    "node": ">=22.13"
+    "node": ">=24"
   },
   "scripts": {
     "setup": "npm --prefix app ci",

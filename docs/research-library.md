@@ -22,7 +22,7 @@ PDF and BibTeX import reuse the existing metadata extraction. The old global lib
 
 Export produces a JSON archive with metadata, attachments, note bodies/history, reading state and conversation transcripts. Import preserves paper IDs into an empty destination, skipping existing papers. Runtime Pi files are not embedded; imported conversations continue from the retained transcript. To retain every runtime artifact, close the application and copy the complete `.envoi/library` directory with the project. The data directory is private project data, excluded from ordinary Git merging by the standard project ignore rules.
 
-Development requires Node.js 22.13+ for the built-in SQLite module; Electron supplies its own runtime. Tests: `node --test scripts/test-research-library.mjs`, `node scripts/test-research-library-ui.mjs`, and `node scripts/test-agent-native.mjs` from `app/`.
+Development requires Node.js 24+ for the built-in SQLite module; Electron supplies its own runtime. Tests: `node --test scripts/test-research-library.mjs`, `node scripts/test-research-library-ui.mjs`, and `node scripts/test-agent-native.mjs` from `app/`.
 
 Reading-position updates resolve the research root without scanning Git status in each worktree. Root lookups have a short cache invalidated by registry changes. Library and Git worktree administrative events do not refresh manuscript snapshots; external manuscript edits still do. Rasterization waits for resize events to settle. UI regressions verify note autosaves do not allocate new PDF bitmaps.
 

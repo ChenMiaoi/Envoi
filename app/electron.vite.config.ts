@@ -1,5 +1,6 @@
 import path from "node:path"
 import react from "@vitejs/plugin-react"
+import tailwindcss from "@tailwindcss/vite"
 import { defineConfig, externalizeDepsPlugin } from "electron-vite"
 
 // main 使用 ESM；sandbox preload 使用 CJS。
@@ -27,7 +28,7 @@ export default defineConfig({
   renderer: {
     root: import.meta.dirname,
     base: "./",
-    plugins: [react()],
+    plugins: [tailwindcss(), react()],
     resolve: {
       alias: {
         "@": path.resolve(import.meta.dirname, "src"),

@@ -1,4 +1,4 @@
-import {createCodingTools} from '@mariozechner/pi-coding-agent';
+import {createCodingTools} from '@earendil-works/pi-coding-agent';
 import {listWorkspaces,createWorkspace,workspaceTarget,saveWorkspaceResult,listWorkspaceResults} from './workspaces.mjs';
 
 // Each chat owns its selection. Changing the visible editor never retargets a tool.

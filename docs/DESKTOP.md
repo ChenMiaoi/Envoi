@@ -65,7 +65,7 @@ Recent entries open directly and can be removed without deleting files. Every us
 
 ## Windows setup and automatic detection
 
-Use Node.js 22.12+ and run `npm run setup`, then `npm run dev` in PowerShell from the repository root. No Bash shell is needed for these commands. AI shell tools may require their own shell installation.
+Use Node.js 24+ and run `npm run setup`, then `npm run dev` in PowerShell from the repository root. No Bash shell is needed for these commands. AI shell tools may require their own shell installation.
 
 Settings show the operating system, native machine architecture, running Node architecture, Git version/path, LaTeX root and optional Biber/ChkTeX availability. Tool discovery checks `ENVOI_TEX_BIN` (an optional explicit override), PATH, then common Git, MiKTeX and default TeX Live year directories. Quoted PATH entries and `.exe` names are supported. Nonstandard installations should be added to PATH; there is no full-drive scan or automatic installation. Restart the app after changing the system PATH. Detected fallback directories are also passed to backend and AI processes.
 
