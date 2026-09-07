@@ -28,3 +28,6 @@ __pycache__/
 *.local
 *.swp
 *.swo
+
+# Desktop installers and unpacked applications
+/app/release/

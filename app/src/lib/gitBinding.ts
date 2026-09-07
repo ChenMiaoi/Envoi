@@ -1,15 +1,16 @@
-import {translate} from '@/i18n/runtime';
-import {nativeGet,nativePut,nativeMigrate} from './localData';
-import {projectConfigFile,managementDirectory} from './managementDir';
-interface Binding {directory:FileSystemDirectoryHandle;path:string}
-let migrated:Promise<void>|undefined;
-async function migrateBindings(all:Binding[]){
- if(typeof window==='undefined')return;
- migrated??=(async()=>{const legacy:Record<string,string>={};for(const entry of all){let id='legacy:'+entry.path;try{id=(JSON.parse((await projectConfigFile(entry.directory))?.text??'{}').projectId)||id;}catch{/* Preserve path hints even when browser authorization expired. */}legacy[id]=entry.path;}const current=await nativeMigrate('bindings',legacy);const merged={...legacy,...current.value};if(JSON.stringify(merged)!==JSON.stringify(current.value))await nativePut('bindings',merged,'default',{expectedRevision:current.revision});})().catch(error=>{migrated=undefined;throw error;});
- return migrated;
+import {nativeGet,nativePut} from './localData';
+// 绑定存储：projectId → 项目根绝对路径，由 agentClient.bindProject 在绑定成功后记录。
+export async function rememberGitPath(projectId:string,path:string){
+ const current=await nativeGet<Record<string,string>>('bindings');
+ await nativePut('bindings',{...current?.value,[projectId]:path},'default',{expectedRevision:current?current.revision:0});
 }
-async function db(){return new Promise<IDBDatabase>((resolve,reject)=>{const r=indexedDB.open('paperdesk-git-bindings',1);r.onupgradeneeded=()=>r.result.createObjectStore('bindings',{autoIncrement:true});r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);});}
-export async function gitPath(directory:FileSystemDirectoryHandle){const database=await db();try{const all=await new Promise<Binding[]>((resolve,reject)=>{const r=database.transaction('bindings').objectStore('bindings').getAll();r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);});await migrateBindings(all).catch(error=>{window.dispatchEvent(new CustomEvent('envoi:storage-warning',{detail:translate('git.bindingMigrationIncomplete')+error.message}));});try{const identity=JSON.parse((await projectConfigFile(directory))?.text??'{}').projectId;if(identity&&typeof window!=='undefined'){const bindings=await nativeGet<Record<string,string>>('bindings');if(bindings?.value[identity])return bindings.value[identity];}}catch{/* Browser handles remain reconnect hints if native storage is unavailable. */}try{const state=await managementDirectory(directory);const file=await state?.getFileHandle('connection.json');const connection=JSON.parse(await (await file!.getFile()).text());if(typeof connection.path==='string'&&connection.path.startsWith('/'))return connection.path;}catch{/* Legacy projects can complete this once in the project connection window. */}for(const entry of all.reverse())if(await directory.isSameEntry(entry.directory))return entry.path;for(const entry of all){const relative=await entry.directory.resolve(directory);if(relative)return entry.path.replace(/\/$/,'')+(relative.length?'/'+relative.join('/'):'');}}finally{database.close();}}
-export async function rememberGitPath(directory:FileSystemDirectoryHandle,path:string){if(typeof window!=='undefined'){const identity=JSON.parse((await projectConfigFile(directory).catch(()=>undefined))?.text??'{}').projectId;if(identity){const previous=await nativeMigrate<Record<string,string>>('bindings',{});await nativePut('bindings',{...previous.value,[identity]:path},'default',{expectedRevision:previous.revision});}}const database=await db();try{await new Promise<void>((resolve,reject)=>{const tx=database.transaction('bindings','readwrite');tx.objectStore('bindings').add({directory,path});tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error);});}finally{database.close();}}
-export async function matchingGitBindingKeys(directory:FileSystemDirectoryHandle){const database=await db();try{const entries=await new Promise<{key:IDBValidKey;value:Binding}[]>((resolve,reject)=>{const result:{key:IDBValidKey;value:Binding}[]=[];const request=database.transaction('bindings').objectStore('bindings').openCursor();request.onsuccess=()=>{const cursor=request.result;if(!cursor){resolve(result);return;}result.push({key:cursor.key,value:cursor.value});cursor.continue();};request.onerror=()=>reject(request.error);});const keys:IDBValidKey[]=[];for(const entry of entries)try{if(await directory.isSameEntry(entry.value.directory)||await directory.resolve(entry.value.directory)!==null)keys.push(entry.key);}catch{/* Keep unrelated handles. */}return keys;}finally{database.close();}}
-export async function forgetGitBindingKeys(keys:IDBValidKey[]){const database=await db();try{const removed=await Promise.all(keys.map(key=>new Promise<Binding|undefined>((resolve,reject)=>{const request=database.transaction('bindings').objectStore('bindings').get(key);request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error);})));if(typeof window!=='undefined'){const current=await nativeGet<Record<string,string>>('bindings');if(current)await nativePut('bindings',Object.fromEntries(Object.entries(current.value).filter(([,path])=>!removed.some(entry=>entry?.path===path))),'default',{expectedRevision:current.revision});}await new Promise<void>((resolve,reject)=>{const tx=database.transaction('bindings','readwrite');for(const key of keys)tx.objectStore('bindings').delete(key);tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error);});}finally{database.close();}}
+// 删除流程：找出根路径等于 rootPath 或位于其下的所有绑定项目。
+export async function matchingGitBindings(rootPath:string){
+ const root=rootPath.replace(/\/$/,''),bindings=await nativeGet<Record<string,string>>('bindings');
+ return Object.entries(bindings?.value??{}).filter(([,path])=>path===root||path.startsWith(root+'/')).map(([id])=>id);
+}
+export async function forgetGitBindings(projectIds:string[]){
+ const current=await nativeGet<Record<string,string>>('bindings');
+ if(!current)return;
+ await nativePut('bindings',Object.fromEntries(Object.entries(current.value).filter(([id])=>!projectIds.includes(id))),'default',{expectedRevision:current.revision});
+}

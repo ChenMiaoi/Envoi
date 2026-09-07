@@ -8,7 +8,7 @@
   },
   "scripts": {
     "setup": "npm --prefix app ci",
-    "dev": "npm --prefix app run dev -- --host 127.0.0.1",
+    "dev": "npm --prefix app run dev",
     "build": "npm --prefix app run build",
     "test": "npm --prefix app test",
     "test:ai": "npm --prefix app run test:ai",
@@ -16,6 +16,11 @@
     "test:demo": "npm --prefix app run test:demo",
     "lint": "npm --prefix app run lint",
     "demo:build": "npm --prefix app run demo:build",
-    "demo:snapshot": "npm --prefix app run demo:snapshot"
+    "demo:snapshot": "npm --prefix app run demo:snapshot",
+    "dev:desktop": "npm --prefix app run dev:desktop",
+    "build:desktop": "npm --prefix app run build:desktop",
+    "package:mac": "npm --prefix app run package:mac",
+    "test:desktop": "npm --prefix app run test:desktop",
+    "demo:git": "node app/scripts/init-demo-git.mjs"
   }
 }

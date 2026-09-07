@@ -1,10 +1,29 @@
 import {translate} from '@/i18n/runtime';
 import {nativeGet,nativePut,nativeMigrate,encodeNative,decodeNative} from "./localData";
 import {fileKind,readProject,type PaperProject} from './projectFiles';
+import {bindProject} from './agentClient';
 import {recentProjects} from './recentProjects';
 function database(){return new Promise<IDBDatabase>((resolve,reject)=>{const request=indexedDB.open('paperdesk-session',1);request.onupgradeneeded=()=>request.result.createObjectStore('current');request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error);});}
-let sessionWrites=Promise.resolve();const revisions=new Map<string,number>();
-export function saveSession(project:PaperProject){const write=sessionWrites.catch(()=>{}).then(()=>writeSession(project));sessionWrites=write;return write;}
+const revisions=new Map<string,number>();
+type PendingSession = {project: PaperProject; waiters: {resolve(): void; reject(error: unknown): void}[]};
+const sessionQueue: PendingSession[] = [];
+let draining = false;
+// Coalesce queued edits of the same project while preserving project-switch order.
+export function saveSession(project: PaperProject): Promise<void> {
+ const promise = new Promise<void>((resolve, reject) => {
+  const tail = sessionQueue.at(-1);
+  if (tail?.project.id === project.id) {tail.project = project; tail.waiters.push({resolve, reject});}
+  else sessionQueue.push({project, waiters: [{resolve, reject}]});
+ });
+ if (!draining) {
+  draining = true;
+  queueMicrotask(() => {void (async () => {
+   try {while (sessionQueue.length) {const entry = sessionQueue.shift()!;try {await writeSession(entry.project);entry.waiters.forEach(waiter => waiter.resolve());} catch (error) {entry.waiters.forEach(waiter => waiter.reject(error));}}}
+   finally {draining = false;}
+  })();});
+ }
+ return promise;
+}
 async function writeSession(project:PaperProject){
  let nativeError:unknown;
  if(typeof window!=='undefined'&&typeof fetch==='function'){
@@ -21,19 +40,19 @@ export function mergeDrafts(fresh:PaperProject,cached:PaperProject):PaperProject
 export async function restoreSession():Promise<{project?:PaperProject;recoverable?:PaperProject;warning?:string}> {
  const db=await database();let cached:PaperProject|undefined;try{cached=await new Promise((resolve,reject)=>{const req=db.transaction('current').objectStore('current').get('project');req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);});}finally{db.close();}
  let recoverable:PaperProject|undefined;
- if(typeof window!=='undefined'&&typeof fetch==='function'){try{const native=await nativeGet<unknown>('session','current');if(native){revisions.set('current',native.revision);const restored=decodeNative(native.value) as PaperProject;if(cached){const legacy=await encodeNative(cached);if(JSON.stringify(legacy)!==JSON.stringify(native.value)){await nativeMigrate('session',legacy,'current');if(cached.files.some(file=>file.text!==undefined&&file.text!==file.saved))recoverable=cached;}}if(!cached||cached.id!==restored.id)cached=restored;else cached={...restored,directory:cached.directory,files:restored.files.map(file=>({...file,handle:cached!.files.find(old=>old.id===file.id)?.handle}))};}else if(cached){const result=await nativePut('session',await encodeNative(cached),'current',{migrate:true});revisions.set('current',result.revision);}}catch{/* Retain browser recovery data when the local service is unavailable. */}}
+ if(typeof window!=='undefined'&&typeof fetch==='function'){try{const native=await nativeGet<unknown>('session','current');if(native){revisions.set('current',native.revision);const restored=decodeNative(native.value) as PaperProject;if(cached){const legacy=await encodeNative(cached);if(JSON.stringify(legacy)!==JSON.stringify(native.value)){await nativeMigrate('session',legacy,'current');if(cached.files.some(file=>file.text!==undefined&&file.text!==file.saved))recoverable=cached;}}if(!cached||cached.id!==restored.id)cached=restored;else cached={...restored,rootPath:cached.rootPath};}else if(cached){const result=await nativePut('session',await encodeNative(cached),'current',{migrate:true});revisions.set('current',result.revision);}}catch{/* Retain browser recovery data when the local service is unavailable. */}}
 
- if(!cached){const recent=(await recentProjects())[0];if(!recent)return {};cached={id:'restore',name:recent.name,directory:recent.directory,files:[],directories:[],rootId:''};}
- if(cached.id==='demo'&&!cached.directory){const archive=await database();try{await new Promise<void>((resolve,reject)=>{const tx=archive.transaction('current','readwrite');tx.objectStore('current').put(cached,'legacy-demo');tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error);});}finally{archive.close();}return {recoverable:cached,warning:translate('project.legacySessionWarning')};}
+ if(!cached){const recent=(await recentProjects())[0];if(!recent)return {};cached={id:'restore',name:recent.name,rootPath:recent.path,files:[],directories:[],rootId:''};}
+ if(cached.id==='demo'&&!cached.rootPath){const archive=await database();try{await new Promise<void>((resolve,reject)=>{const tx=archive.transaction('current','readwrite');tx.objectStore('current').put(cached,'legacy-demo');tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error);});}finally{archive.close();}return {recoverable:cached,warning:translate('project.legacySessionWarning')};}
  const result=await restoreProjectCache(cached);return {...result,...(recoverable?{recoverable,warning:translate('project.restoreConflict')}:{})};
 }
 export async function restoreProjectCache(cached:PaperProject):Promise<{project:PaperProject;warning?:string}> {
- cached={...cached,diagnostics:cached.diagnostics?.status==='running'?{...cached.diagnostics,status:'cancelled'}:cached.diagnostics,compileStatus:cached.compileStatus?.startsWith(translate('compile.compiling'))?translate('compile.interrupted'):cached.compileStatus,files:cached.files.map(file=>({...file,kind:fileKind(file.path),url:file.file&&['pdf','image'].includes(file.kind)?URL.createObjectURL(file.file):file.url}))};
- if(!cached.directory)return {project:cached};
+ cached={...cached,diagnostics:cached.diagnostics?.status==='running'?{...cached.diagnostics,status:'cancelled'}:cached.diagnostics,compileStatus:cached.compileStatus?.startsWith(translate('compile.compiling'))?translate('compile.interrupted'):cached.compileStatus,files:cached.files.map(file=>({...file,kind:fileKind(file.path),url:file.url?.startsWith('blob:')?undefined:file.url}))};
+ if(!cached.rootPath)return {project:cached};
  try {
-  if(await cached.directory.queryPermission({mode:'readwrite'})!=='granted')return {project:cached,warning:translate('project.permissionExpired',{name:cached.name})};
-  return {project:mergeDrafts(await readProject(cached.directory),cached)};
- }catch(error){return {project:cached,warning:translate('project.restoreFailed',{name:cached.name,message:(error as Error).message})};}
+  const binding=await bindProject(cached.rootPath);
+  return {project:mergeDrafts(await readProject(binding.project.path),cached)};
+ }catch(error){return {project:{...cached,rootPath:undefined},warning:translate('project.restoreFailed',{name:cached.name,message:(error as Error).message})};}
 }
 
 export async function restoreProjectSession(fresh:PaperProject):Promise<PaperProject>{

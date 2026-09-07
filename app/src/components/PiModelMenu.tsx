@@ -36,7 +36,7 @@ export function PiModelMenu() {
   const disabled = saving || busy || agent.busy || !agent.ready;
 
   async function save(patch: Partial<AiConfig>, next = '') {
-    if (disabled || !project.directory) return;
+    if (disabled || !project.rootPath) return;
     setSaving(true); setError('');
     try {
       const file = project.files.find(file => file.path === projectConfigPath) ?? project.files.find(file => file.path === legacyProjectConfigPath);

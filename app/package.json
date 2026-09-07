@@ -1,13 +1,17 @@
 {
   "name": "envoi-app",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.1.0",
   "type": "module",
+  "main": "dist/main/index.js",
   "scripts": {
     "predev": "node scripts/sync-pdfjs-assets.mjs",
-    "dev": "vite",
+    "dev": "electron-vite dev --config electron.vite.config.ts",
     "prebuild": "node scripts/sync-pdfjs-assets.mjs",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && tsc -p tsconfig.electron.json && electron-vite build --config electron.vite.config.ts",
+    "dev:desktop": "electron-vite dev --config electron.vite.config.ts",
+    "build:desktop": "tsc -b && tsc -p tsconfig.electron.json && electron-vite build --config electron.vite.config.ts",
+    "package:mac": "npm run build:desktop && electron-builder --mac --config electron-builder.yml",
     "lint": "eslint .",
     "preview": "vite preview",
     "test:references": "node scripts/test-references.mjs",
@@ -18,7 +22,12 @@
     "demo:snapshot": "node scripts/sync-demo-snapshot.mjs",
     "test:ai": "node scripts/test-chat-markdown.mjs && node scripts/test-model-discovery.mjs && node scripts/test-provider-validation.mjs && node scripts/test-agent-native.mjs && node scripts/test-data-migration.mjs",
     "i18n:traditional": "node scripts/i18n-traditional.mjs",
-    "i18n:inventory": "node scripts/i18n-inventory.mjs"
+    "i18n:inventory": "node scripts/i18n-inventory.mjs",
+    "predev:desktop": "node scripts/sync-pdfjs-assets.mjs",
+    "prebuild:desktop": "node scripts/sync-pdfjs-assets.mjs",
+    "test:desktop": "node --test scripts/test-workspace-trust.mjs scripts/test-desktop-backend.mjs && node scripts/test-desktop-smoke.mjs",
+    "dev:web": "vite",
+    "build:web": "tsc -b && vite build"
   },
   "dependencies": {
     "@codemirror/commands": "^6.11.0",
@@ -93,6 +102,9 @@
     "@types/wicg-file-system-access": "^2023.10.7",
     "@vitejs/plugin-react": "^5.1.1",
     "autoprefixer": "^10.4.23",
+    "electron": "^44.2.0",
+    "electron-builder": "^26.15.3",
+    "electron-vite": "^5.0.0",
     "eslint": "^9.39.1",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
@@ -100,6 +112,7 @@
     "globals": "^16.5.0",
     "kimi-plugin-inspect-react": "^1.0.3",
     "opencc-js": "^1.4.2",
+    "playwright": "^1.63.0",
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.19",
     "tailwindcss-animate": "^1.0.7",
@@ -107,5 +120,6 @@
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.46.4",
     "vite": "^7.2.4"
-  }
+  },
+  "description": "Envoi local academic writing workspace"
 }

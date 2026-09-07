@@ -1,0 +1,16 @@
+appId: com.envoi.app
+productName: Envoi
+asar: true
+directories:
+  output: release
+files:
+  - dist/**
+  - package.json
+mac:
+  category: public.app-category.productivity
+  target:
+    - dmg
+    - zip
+  identity: null
+dmg:
+  title: Envoi

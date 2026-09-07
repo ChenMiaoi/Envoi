@@ -45,9 +45,9 @@ test('PDF navigation requires unique actual bookmark, never estimates page numbe
  assert.equal(matchBookmark([...items,...items],'1 Introduction'),undefined);
 });
 
-test('expired project permission keeps cached draft without prompting or switching to demo',async()=>{
- const cached:PaperProject={id:'real',name:'paper',rootId:'main.tex',directories:[],files:[{id:'main.tex',path:'main.tex',kind:'latex',text:'draft',saved:'disk'}],directory:{queryPermission:async()=> 'denied',requestPermission:async()=>assert.fail('must not prompt')} as unknown as FileSystemDirectoryHandle};
- const result=await restoreProjectCache(cached);assert.equal(result.project.id,'real');assert.equal(result.project.files[0].text,'draft');assert.match(result.warning!,/权限已失效/);
+test('missing desktop directory keeps cached drafts without switching to demo',async()=>{
+ const cached:PaperProject={id:'real',name:'paper',rootId:'main.tex',directories:[],files:[{id:'main.tex',path:'main.tex',kind:'latex',text:'draft',saved:'disk'}],rootPath:'/missing-desktop-directory'};
+ const result=await restoreProjectCache(cached);assert.equal(result.project.id,'real');assert.equal(result.project.files[0].text,'draft');assert.match(result.warning!,/恢复/);
 });
 
 test('build metadata changes do not mark source stale, source edits do',()=>{

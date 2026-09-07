@@ -2,7 +2,8 @@ import {createProjectSaver} from "@/lib/projectSaver";
 import { useCallback, useMemo, useEffect, useRef, useState, type ReactNode } from "react";
 import {assertCanClose} from "@/lib/projectManagement";
 import {initialProject,emptyProject} from '@/lib/initialProject';
-import { dirtyFiles, type PaperProject } from '@/lib/projectFiles';
+import {envoi} from "@/lib/desktop";
+import { readProject, mergeDiskProject, dirtyFiles, type PaperProject } from '@/lib/projectFiles';
 import {restoreSession,saveSession} from '@/lib/projectSession';
 import { ProjectContext } from './context';
 import {useT} from "@/i18n/useT";
@@ -17,6 +18,31 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   useEffect(()=>{const listener=(event:Event)=>setMessage((event as CustomEvent<string>).detail);window.addEventListener('envoi:storage-warning',listener);return()=>window.removeEventListener('envoi:storage-warning',listener);},[]);
+  const activity = useRef({busy, saving});
+  useEffect(() => {activity.current = {busy, saving};}, [busy, saving]);
+  useEffect(() => {
+    const root = project.rootPath;
+    if (!root || !restored) return;
+    let disposed = false, running = false, pending = false;
+    let timer: ReturnType<typeof setTimeout>;
+    const refresh = async () => {
+      if (disposed || running) return;
+      if (activity.current.busy || activity.current.saving) {timer = setTimeout(() => void refresh(), 200); return;}
+      running = true; pending = false;
+      try {
+        const disk = await readProject(root);
+        if (!disposed) setProject(current => mergeDiskProject(current, disk));
+      } catch (error) {if (!disposed) setMessage((error as Error).message);}
+      finally {running = false; if (pending && !disposed) timer = setTimeout(() => void refresh(), 200);}
+    };
+    const off = envoi().onFilesChanged(change => {
+      if (change.root !== root) return;
+      if (change.error) {setMessage(change.error); return;}
+      pending = true; clearTimeout(timer); timer = setTimeout(() => void refresh(), 200);
+    });
+    void envoi().watchProject(root).then(() => {if (!disposed) void refresh();}).catch(error => {if (!disposed) setMessage(error.message);});
+    return () => {disposed = true; clearTimeout(timer); off(); void envoi().watchProject(null).catch(() => {});};
+  }, [project.rootPath, restored, setProject]);
   // createProjectSaver stores this getter; it reads the ref only when a save is requested.
   const saveAll=useMemo(()=>createProjectSaver({getProject:()=>latest.current,setProject,message:setMessage,saving:setSaving}),[setProject]);
   const closeProject=useCallback(async(discard=false)=>{const current=latest.current;assertCanClose(current,busy,saving,discard);setBusy(true);try{const empty=emptyProject();await saveSession(empty);if(latest.current!==current){await saveSession(latest.current);throw Error(t('project.errorCloseChanged'));}if(import.meta.hot)import.meta.hot.data.project=empty;setProject(empty);setMessage(t('project.closed'));}finally{setBusy(false);}},[busy,saving,setProject,t]);

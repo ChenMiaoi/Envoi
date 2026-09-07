@@ -1,7 +1,7 @@
 import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import {GitBranch,History,RefreshCw,Tag} from 'lucide-react';
 import {useProject} from '@/project/context';
-import {gitPath} from '@/lib/gitBinding';
+
 import {localGitLog,localGitShow,type GitCommit,type GitLog,type GitShow} from '@/lib/localGit';
 import {layoutGraph} from '@/lib/gitGraph';
 import {cn} from '@/lib/utils';
@@ -68,21 +68,20 @@ export function GitHistoryView(){
  const refresh=useCallback(async()=>{
   const id=project.id;setBusy(true);setLog(null);setSelected(null);setDetails({});
   try{
-   if(!project.directory){setMessage(t('history.noDirectory'));return;}
-   const bound=await gitPath(project.directory);if(identity.current!==id)return;if(!bound){setMessage(t('history.noBinding'));return;}
-   const result=await localGitLog(project.directory,bound);if(identity.current!==id)return;
+   if(!project.rootPath){setMessage(t('history.noDirectory'));return;}
+   const result=await localGitLog(project.rootPath);if(identity.current!==id)return;
    setLog(result);setMessage(result.state==='nested'?t('history.nested',{repo:result.enclosing ?? ''}):result.state==='not-initialized'?t('history.notInitialized'):result.commits.length?'':t('history.empty'));
   }catch(error){if(identity.current===id)setMessage((error as Error).message);}finally{if(identity.current===id)setBusy(false);}
- },[project.id,project.directory,t]);
+ },[project.id,project.rootPath,t]);
  useEffect(()=>{void refresh();},[refresh]);
  useEffect(()=>{const listener=()=>void refresh();window.addEventListener('envoi:connection-updated',listener);return()=>window.removeEventListener('envoi:connection-updated',listener);},[refresh]);
  const select=useCallback(async(hash:string)=>{
   setSelected(hash);if(details[hash])return;
-  const id=project.id,directory=project.directory;if(!directory)return;
+  const id=project.id,directory=project.rootPath;if(!directory)return;
   setDetailBusy(true);setDetailError('');
-  try{const bound=await gitPath(directory);if(!bound)throw Error(t('history.connectionLost'));const show=await localGitShow(directory,bound,hash);if(identity.current!==id)return;setDetails(current=>({...current,[hash]:show}));}
+  try{const show=await localGitShow(directory,hash);if(identity.current!==id)return;setDetails(current=>({...current,[hash]:show}));}
   catch(error){if(identity.current===id)setDetailError((error as Error).message);}finally{if(identity.current===id)setDetailBusy(false);}
- },[project.id,project.directory,details,t]);
+ },[project.id,project.rootPath,details]);
  return <div className="flex h-full flex-col bg-background">
   <header className="flex h-11 shrink-0 items-center justify-between border-b border-border bg-card px-4">
    <div className="flex items-center gap-2">

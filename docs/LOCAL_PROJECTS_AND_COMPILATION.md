@@ -1,5 +1,7 @@
 # Envoi local project demo
 
+This document describes the historical browser adapters. For the current Electron application, workspace trust, startup and packaging, see [Desktop](DESKTOP.md). Desktop operations do not use browser permissions or proof-file binding.
+
 The web UI is a desktop-app prototype. `app/src/lib/projectFiles.ts` is the filesystem adapter; `app/src/lib/recentProjects.ts` stores browser-granted root handles separately from recently opened child projects. A future desktop bridge can replace these adapters without replacing the project windows.
 
 ## Project workflow

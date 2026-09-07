@@ -1,8 +1,7 @@
 import {translate} from '@/i18n/runtime';
 import {nativeMigrate,nativePut,nativeGet,encodeNative} from "./localData";
-import {gitPath} from './gitBinding';
 import {projectConfigFile} from './managementDir';
-export interface RecentProject { id: string; name: string; projectId?: string; directory?: FileSystemDirectoryHandle; path?: string; updated: number }
+export interface RecentProject { id: string; name: string; projectId?: string; path?: string; updated: number }
 async function database() {
   return await new Promise<IDBDatabase>((resolve, reject) => {
     const request = indexedDB.open("paperdesk-projects", 2);
@@ -12,44 +11,30 @@ async function database() {
 }
 async function cachedRecentProjects(): Promise<RecentProject[]> {
   const db = await database();
-  try { return await new Promise((resolve, reject) => { const request = db.transaction("recent").objectStore("recent").getAll(); request.onsuccess = () => resolve((request.result as RecentProject[]).sort((a,b) => b.updated-a.updated)); request.onerror = () => reject(request.error); }); } finally { db.close(); }
+  try { return await new Promise((resolve, reject) => { const request = db.transaction("recent").objectStore("recent").getAll(); request.onsuccess = () => resolve((request.result as (RecentProject & { directory?: unknown })[]).map(value => { const entry={...value};delete entry.directory;return entry; }).sort((a,b) => b.updated-a.updated)); request.onerror = () => reject(request.error); }); } finally { db.close(); }
 }
-export async function rememberProject(directory: FileSystemDirectoryHandle) {
-  const previous = await recentProjects(); let existing: RecentProject | undefined;
-  for (const entry of previous) if (entry.directory && await directory.isSameEntry(entry.directory)) { existing = entry; break; }
-  let identity:string|undefined;try{identity=JSON.parse((await projectConfigFile(directory))?.text??'{}').projectId;}catch{/* Authorized roots need not be projects. */}
-  existing??=previous.find(entry=>identity&&entry.projectId===identity);
-  const id=existing?.id??identity??crypto.randomUUID(),path=await gitPath(directory);
+async function remember(store: 'recent' | 'roots', rootPath: string) {
+  const previous = await (store === 'recent' ? recentProjects() : authorizedRoots());
+  let identity:string|undefined;try{identity=JSON.parse((await projectConfigFile(rootPath))?.text??'{}').projectId;}catch{/* Authorized roots need not be projects. */}
+  const existing=previous.find(entry=>entry.path===rootPath)??previous.find(entry=>identity&&entry.projectId===identity);
+  const id=existing?.id??identity??crypto.randomUUID();
   const db = await database();
-  try { await new Promise<void>((resolve, reject) => { const transaction = db.transaction("recent", "readwrite"); transaction.objectStore("recent").put({ id, name: directory.name, projectId:identity, directory, path, updated: Date.now() }); transaction.oncomplete = () => resolve(); transaction.onerror = () => reject(transaction.error); }); } finally { db.close(); }
-await syncRegistry('recent',[],[id]);
+  try { await new Promise<void>((resolve, reject) => { const transaction = db.transaction(store, "readwrite"); transaction.objectStore(store).put({ id, name: rootPath.split("/").filter(Boolean).pop() ?? rootPath, projectId:identity, path: rootPath, updated: Date.now() }); transaction.oncomplete = () => resolve(); transaction.onerror = () => reject(transaction.error); }); } finally { db.close(); }
+  await syncRegistry(store,[],[id]);
 }
-
+export const rememberProject = (rootPath: string) => remember('recent', rootPath);
+export const rememberRoot = (rootPath: string) => remember('roots', rootPath);
 async function cachedAuthorizedRoots(): Promise<RecentProject[]> {
   const db = await database();
-  try { return await new Promise((resolve, reject) => { const request = db.transaction("roots").objectStore("roots").getAll(); request.onsuccess = () => resolve((request.result as RecentProject[]).sort((a,b) => b.updated-a.updated)); request.onerror = () => reject(request.error); }); } finally { db.close(); }
-}
-export async function rememberRoot(directory: FileSystemDirectoryHandle) {
-  const previous = await authorizedRoots(); let existing: RecentProject | undefined;
-  for (const entry of previous) if (entry.directory && await directory.isSameEntry(entry.directory)) { existing = entry; break; }
-  let identity:string|undefined;try{identity=JSON.parse((await projectConfigFile(directory))?.text??'{}').projectId;}catch{/* Authorized roots need not be projects. */}
-  existing??=previous.find(entry=>identity&&entry.projectId===identity);
-  const id=existing?.id??identity??crypto.randomUUID(),path=await gitPath(directory);
-  const db = await database();
-  try { await new Promise<void>((resolve, reject) => { const transaction = db.transaction("roots", "readwrite"); transaction.objectStore("roots").put({ id, name: directory.name, projectId:identity, directory, path, updated: Date.now() }); transaction.oncomplete = () => resolve(); transaction.onerror = () => reject(transaction.error); }); } finally { db.close(); }
-await syncRegistry('roots',[],[id]);
-}
-export async function ensurePermission(directory: FileSystemDirectoryHandle) {
-  if (await directory.queryPermission({ mode: "readwrite" }) === "granted") return true;
-  return await directory.requestPermission({ mode: "readwrite" }) === "granted";
+  try { return await new Promise((resolve, reject) => { const request = db.transaction("roots").objectStore("roots").getAll(); request.onsuccess = () => resolve((request.result as (RecentProject & { directory?: unknown })[]).map(value => { const entry={...value};delete entry.directory;return entry; }).sort((a,b) => b.updated-a.updated)); request.onerror = () => reject(request.error); }); } finally { db.close(); }
 }
 export async function forgetRecentProject(id:string){
  const db=await database();try{await new Promise<void>((resolve,reject)=>{const tx=db.transaction('recent','readwrite');tx.objectStore('recent').delete(id);tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error);});}finally{db.close();}
 await syncRegistry('recent',[id]);
 }
-export async function matchingProjectRecords(directory:FileSystemDirectoryHandle){
+export async function matchingProjectRecords(rootPath:string){
  const recent=await recentProjects(),roots=await authorizedRoots();const ids:{store:string;id:string}[]=[];
- for(const [store,entries] of [['recent',recent],['roots',roots]] as const)for(const entry of entries){try{if(entry.directory&&(await directory.isSameEntry(entry.directory)||await directory.resolve(entry.directory)!==null))ids.push({store,id:entry.id});}catch{/* Keep unrelated inaccessible handles. */}}
+ for(const [store,entries] of [['recent',recent],['roots',roots]] as const)for(const entry of entries)if(entry.path&&(entry.path===rootPath||entry.path.startsWith(rootPath+'/')))ids.push({store,id:entry.id});
  return ids;
 }
 export async function forgetDeletedRecords(ids:{store:string;id:string}[]){
@@ -60,7 +45,7 @@ await syncRegistry('recent',ids.filter(item=>item.store==='recent').map(item=>it
 async function records(store:'recent'|'roots'):Promise<RecentProject[]> {
  const cached=await (store==='recent'?cachedRecentProjects():cachedAuthorizedRoots());
  if(typeof window==='undefined')return cached;
- try{const native=await nativeMigrate(store,await encodeNative(cached));return (native.value as RecentProject[]).map(entry=>({...entry,directory:cached.find(item=>item.id===entry.id)?.directory})).sort((a,b)=>b.updated-a.updated);}catch(error){window.dispatchEvent(new CustomEvent('envoi:storage-warning',{detail:translate('project.recentDisconnected')+(error as Error).message}));return cached;}
+ try{const native=await nativeMigrate(store,await encodeNative(cached));return (native.value as RecentProject[]).sort((a,b)=>b.updated-a.updated);}catch(error){window.dispatchEvent(new CustomEvent('envoi:storage-warning',{detail:translate('project.recentDisconnected')+(error as Error).message}));return cached;}
 }
 export const recentProjects=()=>records('recent');
 export const authorizedRoots=()=>records('roots');

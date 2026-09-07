@@ -14,7 +14,9 @@ Reproduce figures with `python3 ../../app/scripts/generate-demo-figures.py` afte
 
 The numeric model uses F=4N²d, materialized bytes=8N²+8Nd, tiled bytes=0.5N²+8Nd, P=120e12 FLOP/s, W=1.2e12 bytes/s, compute efficiency=0.60, bandwidth efficiency=0.65, launch overhead=30 microseconds. Times use overhead + max(compute time, transfer time). These are illustrative assumptions, not device specifications.
 
-This example belongs to the repository-root Git project on branch `main`. Its former standalone Git metadata was backed up outside the repository during migration; no nested repository remains. No commit, configured project identity, remote, or push was created. The `.gitignore` excludes build outputs and TeX auxiliary files while allowing manuscript sources, input PNG/PDF figures, and CSV data to be tracked. A release PDF can be distributed separately if desired.
+For development, run `npm run demo:git` from the Envoi repository root. This creates a local nested `.git` in this folder with one clearly labelled baseline commit, so the desktop Git status and history panels show the demo independently. Re-running the command preserves existing history and edits. It does not configure a remote, push, or change your Git identity. The initial commit includes only example files already tracked by Envoi; build output and local untracked files remain outside the baseline.
+
+The example sources are still ordinary tracked files in the outer Envoi repository, not a submodule. The nested `.git` is local metadata and is not distributed when cloning Envoi, so run the command once on each development checkout. Later source edits are visible to both repositories and can be committed independently.
 
 Envoi's initial view is a bundled snapshot of this directory, explicitly labelled as a snapshot. To edit and save the real files, use Open Project and select this `demo` folder in the native authorization picker. Browser automation has not bypassed that picker.
 

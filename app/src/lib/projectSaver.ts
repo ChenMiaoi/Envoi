@@ -3,14 +3,13 @@ import {dirtyFiles,saveProject,type PaperProject} from './projectFiles';
 export function createProjectSaver({getProject,setProject,message,saving}:{getProject:()=>PaperProject;setProject:(update:(project:PaperProject)=>PaperProject)=>void;message:(text:string)=>void;saving:(value:boolean)=>void}){
  let running=false;
  return async()=>{
-  if(running)return;const snapshot=getProject();running=true;saving(true);message(translate('project.savingAll'));
+  if(running)return false;const snapshot=getProject();running=true;saving(true);message(translate('project.savingAll'));
   try{
-   if(!snapshot.directory)throw Error(translate('project.notConnected'));
-   if(await snapshot.directory.queryPermission({mode:'readwrite'})!=='granted')throw Error(translate('project.writePermissionUnavailable'));
-   for await(const entry of snapshot.directory.entries()){void entry;break;}
+   if(!snapshot.rootPath)throw Error(translate('project.notConnected'));
    await saveProject(snapshot,(id,saved)=>setProject(current=>current.id!==snapshot.id?current:{...current,files:current.files.map(file=>file.id===id?{...file,saved}:file)}));
    message(dirtyFiles(getProject()).length?translate('project.savedWithDirty'):translate('project.savedAll'));
-  }catch(error){message((error as Error).name==='NotFoundError'?translate('project.movedNotSaved'):translate('project.saveFailed',{message:(error as Error).message}));}
+   return dirtyFiles(getProject()).length===0;
+  }catch(error){message(translate('project.saveFailed',{message:(error as Error).message}));return false;}
   finally{running=false;saving(false);}
  };
 }

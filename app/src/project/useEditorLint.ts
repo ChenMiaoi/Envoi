@@ -1,6 +1,8 @@
 import {useSettings} from "@/settings/useSettings";
 import {translate} from '@/i18n/runtime';
+import {envoi,ipcError} from '@/lib/desktop';
 import {useEffect} from 'react';
+import type {Diagnostic} from '@/lib/diagnostics';
 import {useProject} from './context';
 export function useEditorLint(fileId:string|undefined,path:string|undefined,text:string){
  const {effective}=useSettings();const enabled=effective.lintEnabled;const rules=JSON.stringify(effective.disabledRules);
@@ -11,11 +13,11 @@ export function useEditorLint(fileId:string|undefined,path:string|undefined,text
   const timer=setTimeout(()=>void(async()=>{
    if(!enabled){if(active)setProject(current=>current.id===projectId?{...current,lint:{fileId,text,status:'disabled',items:[]}}:current);return;}
    setProject(current=>current.id===projectId?{...current,lint:{fileId,text,status:'checking',items:[]}}:current);
-   try{const runtimeResponse=await fetch('/api/envoi/compiler',{signal:controller.signal});if(!runtimeResponse.headers.get('content-type')?.includes('application/json'))throw Error(translate('lint.serviceNotConnected'));const runtime=await runtimeResponse.json();
-    const response=await fetch('/api/envoi/lint',{method:'POST',signal:controller.signal,headers:{'Content-Type':'application/json','X-Envoi-Token':runtime.token},body:JSON.stringify({path,text,disabledRules:JSON.parse(rules)})});const result=await response.json();if(!response.ok||!result.available)throw Error(result.error??translate('lint.unavailable'));
-    if(active)setProject(current=>current.id===projectId?{...current,lint:{fileId,text,status:'ready',items:result.items.map((item:object)=>({...item,source:'lint'}))}}:current);
+   try{await envoi().compilerRuntime().catch(()=>{throw Error(translate('lint.serviceNotConnected'));});
+    const result=await envoi().lint({rootPath:project.rootPath,path,text,disabledRules:JSON.parse(rules)}).catch(error=>{throw ipcError(error);});if(!result.available)throw Error(result.error??translate('lint.unavailable'));
+    if(active)setProject(current=>current.id===projectId?{...current,lint:{fileId,text,status:'ready',items:((result.items??[]) as Diagnostic[]).map(item=>({...item,source:'lint' as const}))}}:current);
    }catch(error){if(active&&!controller.signal.aborted)setProject(current=>current.id===projectId?{...current,lint:{fileId,text,status:'unavailable',items:[],message:(error as Error).message}}:current);}
   })(),700);
   return()=>{active=false;clearTimeout(timer);controller.abort();};
- },[fileId,path,text,projectId,setProject,enabled,rules]);
+ },[fileId,path,text,project.rootPath,projectId,setProject,enabled,rules]);
 }

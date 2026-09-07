@@ -1,7 +1,9 @@
+import {mountDirectory,installDesktopFixture} from './desktopFixture';
 import {saveProjectConfiguration} from '../src/settings/projectSettings';
 import {paperTemplates,templateFiles} from '../src/lib/paperTemplates';
 import assert from 'node:assert/strict';
-import { test } from 'node:test';
+import { test, beforeEach } from 'node:test';
+beforeEach(installDesktopFixture);
 import { persistBuild, persistDiagnostics, createPaper, createTextFile, dirtyFiles, projectTree, readProject, safePath, saveProject } from '../src/lib/projectFiles';
 class MemoryFile {
  kind = 'file' as const;
@@ -34,7 +36,7 @@ class MemoryDirectory {
   const result = new MemoryFile(name); this.children.set(name, result); return result;
  }
  async *entries() { yield* this.children.entries(); }
- asHandle() { return this as unknown as FileSystemDirectoryHandle; }
+ asHandle() { return mountDirectory(this); }
 }
 test('safe paths reject traversal, absolute paths and empty components',()=>{
  for(const path of ['../x.tex','/x.tex','chapters//x.tex','a/../b','a\\b','']) assert.throws(()=>safePath(path));
@@ -79,7 +81,7 @@ test('loading another project produces independent sources without mutating dirt
 
 test('Git opt-out creates no repository; PDF inputs remain visible',async()=>{
  const parent=new MemoryDirectory('root');const directory=await createPaper(parent.asHandle(),'no-git','acm-conf',false);
- await assert.rejects(directory.getDirectoryHandle('.git'));
+ assert(!(await readProject(directory)).directories.includes('.git'));
  const tree=projectTree([{id:'assets/plot.pdf',path:'assets/plot.pdf',kind:'pdf'},{id:'build/main.pdf',path:'build/main.pdf',kind:'pdf'}],['build','assets']);
  assert.equal(tree.length,1);assert.equal(tree[0].children![0].name,'plot.pdf');
 });
@@ -115,15 +117,15 @@ test('project settings write to isolated disk directories and reject external co
  function diskDirectory(path:string):FileSystemDirectoryHandle{return {kind:'directory',name:basename(path),async queryPermission(){return 'granted';},async getDirectoryHandle(name:string,options?:{create?:boolean}){const target=join(path,name);if(options?.create)await fs.mkdir(target,{recursive:true});try{await fs.access(target);}catch{throw new DOMException('Missing','NotFoundError');}return diskDirectory(target);},async getFileHandle(name:string,options?:{create?:boolean}){const target=join(path,name);try{await fs.access(target);}catch{if(!options?.create)throw new DOMException('Missing','NotFoundError');await fs.writeFile(target,'');}return diskFile(target);},async *entries(){for(const entry of await fs.readdir(path,{withFileTypes:true}))yield [entry.name,entry.isDirectory()?diskDirectory(join(path,entry.name)):diskFile(join(path,entry.name))];}} as unknown as FileSystemDirectoryHandle;}
  try{
   for(const name of ['a','b']){await fs.mkdir(join(temporary,name));await fs.writeFile(join(temporary,name,'main.tex'),'original source');await fs.writeFile(join(temporary,name,'other.tex'),'second source');await fs.writeFile(join(temporary,name,'paperdesk.json'),JSON.stringify({main:'main.tex',name,settings:{version:1,overrides:{}}}));}
-  const a=await readProject(diskDirectory(join(temporary,'a'))),beforeB=await fs.readFile(join(temporary,'b','paperdesk.json'),'utf8');
+  const a=await readProject(mountDirectory(diskDirectory(join(temporary,'a')))),beforeB=await fs.readFile(join(temporary,'b','paperdesk.json'),'utf8');
   const changed=await saveProjectConfiguration(a,{version:1,overrides:{engine:'xelatex',lintEnabled:false,disabledRules:[26]}},'other.tex');
-  const reopened=await readProject(diskDirectory(join(temporary,'a')));assert.equal(reopened.rootId,'other.tex');assert.deepEqual(reopened.settings?.overrides,{engine:'xelatex',lintEnabled:false,disabledRules:[26]});
+  const reopened=await readProject(mountDirectory(diskDirectory(join(temporary,'a'))));assert.equal(reopened.rootId,'other.tex');assert.deepEqual(reopened.settings?.overrides,{engine:'xelatex',lintEnabled:false,disabledRules:[26]});
   assert.equal(await fs.readFile(join(temporary,'b','paperdesk.json'),'utf8'),beforeB);assert.equal(await fs.readFile(join(temporary,'a','main.tex'),'utf8'),'original source');
-  await saveProjectConfiguration(changed,{version:1,overrides:{}});assert.deepEqual((await readProject(diskDirectory(join(temporary,'a')))).settings?.overrides,{});
+  await saveProjectConfiguration(changed,{version:1,overrides:{}});assert.deepEqual((await readProject(mountDirectory(diskDirectory(join(temporary,'a'))))).settings?.overrides,{});
   const external='{"main":"main.tex","name":"external change"}';await fs.writeFile(join(temporary,'a','.envoi','project.json'),external);
   await assert.rejects(saveProjectConfiguration(changed,{version:1,overrides:{engine:'pdflatex'}}),/外部修改/);assert.equal(await fs.readFile(join(temporary,'a','.envoi','project.json'),'utf8'),external);
-  await persistBuild(diskDirectory(join(temporary,'a')),new File(['%PDF-fixture'],'main.pdf'),'success log','{"version":1}');
-  await persistDiagnostics(diskDirectory(join(temporary,'a')),{items:[],signature:'snapshot',rootId:'other.tex',status:'failed',log:'failed log'});
+  await persistBuild(mountDirectory(diskDirectory(join(temporary,'a'))),new File(['%PDF-fixture'],'main.pdf'),'success log','{"version":1}');
+  await persistDiagnostics(mountDirectory(diskDirectory(join(temporary,'a'))),{items:[],signature:'snapshot',rootId:'other.tex',status:'failed',log:'failed log'});
   assert.equal(await fs.readFile(join(temporary,'a','build','main.pdf'),'utf8'),'%PDF-fixture');
   assert.equal(await fs.readFile(join(temporary,'a','build','compile.log'),'utf8'),'failed log');
   assert.equal(JSON.parse(await fs.readFile(join(temporary,'a','build','diagnostics.json'),'utf8')).status,'failed');
@@ -139,9 +141,9 @@ test('build output is scoped to the selected project and denied diagnostics are 
  await persistDiagnostics(a.asHandle(),{items:[],signature:'source',rootId:'main.tex',status:'failed',log:'later failed compile log'});
  const build=await a.getDirectoryHandle('build');assert.deepEqual([...build.children.keys()].sort(),['compile.log','diagnostics.json','main.pdf','preview.json']);
  assert.equal(await (await build.getFileHandle('compile.log') as MemoryFile).getFile().then(f=>f.text()),'later failed compile log');assert.equal(b.children.size,0);
- const denied={queryPermission:async()=> 'denied'} as unknown as FileSystemDirectoryHandle;
- await assert.rejects(persistBuild(denied,new File(['pdf'],'main.pdf'),'log'),/权限/);
- await assert.rejects(persistDiagnostics(denied,{items:[],signature:'',rootId:'main.tex',status:'failed',log:'failure'}),/未保存/);
+ const denied='/missing-root';
+ await assert.rejects(persistBuild(denied,new File(['pdf'],'main.pdf'),'log'),/目录不可用/);
+ await assert.rejects(persistDiagnostics(denied,{items:[],signature:'',rootId:'main.tex',status:'failed',log:'failure'}),/目录不可用/);
 });
 
 test('hidden project configuration wins, migration preserves legacy and refuses competing new files',async()=>{
@@ -174,4 +176,16 @@ test('immediate save uses latest buffer once, preserves edits during write and r
  project={...project,files:project.files.map(f=>({...f,text:'unblurred input'}))};const pending=save();await new Promise(resolve=>setTimeout(resolve,0));await save();assert.equal(writes,1);
  project={...project,files:project.files.map(f=>({...f,text:'typed during save'}))};finish();await pending;assert.equal(file.contents,'unblurred input');assert.equal(project.files[0].saved,'unblurred input');assert.equal(project.files[0].text,'typed during save');assert.match(status,/新修改仍未保存/);
  file.contents='external';await save();assert.equal(writes,1);assert.match(status,/外部修改/);assert.equal(project.files[0].text,'typed during save');
+});
+
+test('disk refresh keeps dirty and deleted drafts while updating clean files',async()=>{
+ const {mergeDiskProject}=await import('../src/lib/projectFiles');
+ const root=new MemoryDirectory('paper');root.children.set('main.tex',new MemoryFile('main.tex','old'));root.children.set('notes.md',new MemoryFile('notes.md','old note'));
+ const initial=await readProject(root.asHandle());
+ const current={...initial,files:initial.files.map(file=>file.path==='main.tex'?{...file,text:'unsaved draft'}:file)};
+ (root.children.get('main.tex') as MemoryFile).contents='external version';(root.children.get('notes.md') as MemoryFile).contents='new note';
+ const disk=await readProject(initial.rootPath!);const merged=mergeDiskProject(current,disk);
+ assert.equal(merged.files.find(file=>file.path==='main.tex')?.text,'unsaved draft');assert.equal(merged.files.find(file=>file.path==='main.tex')?.saved,'old');assert.equal(merged.files.find(file=>file.path==='notes.md')?.text,'new note');
+ assert.equal(mergeDiskProject(merged,disk),merged);
+ root.children.delete('main.tex');const deleted=mergeDiskProject(merged,await readProject(initial.rootPath!));assert.equal(deleted.files.find(file=>file.path==='main.tex')?.text,'unsaved draft');
 });

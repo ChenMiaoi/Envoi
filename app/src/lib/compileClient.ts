@@ -1,31 +1,28 @@
 import {translate} from '@/i18n/runtime';
+import {envoi,ipcError} from '@/lib/desktop';
 import type { PaperProject } from './projectFiles';
 export function projectSignature(project: PaperProject) {
- return JSON.stringify([project.rootId, project.files.filter(file=>!file.path.split('/').some(part=>part.startsWith('.')||['build','output'].includes(part))&&/\.(tex|bib|sty|cls|bst|png|jpe?g|pdf|eps|csv|txt|dat|otf|ttf)$/i.test(file.path)).sort((a,b)=>a.path.localeCompare(b.path)).map(file => [file.path, file.text ?? file.file?.lastModified ?? file.url ?? 0])]);
+ return JSON.stringify([project.rootId, project.files.filter(file=>!file.path.split('/').some(part=>part.startsWith('.')||['build','output'].includes(part))&&/\.(tex|bib|sty|cls|bst|png|jpe?g|pdf|eps|csv|txt|dat|otf|ttf)$/i.test(file.path)).sort((a,b)=>a.path.localeCompare(b.path)).map(file => [file.path, file.text ?? file.version ?? file.url ?? 0])]);
 }
-function encode(bytes: Uint8Array) {
- let binary = ''; for (let index=0;index<bytes.length;index+=32768) binary += String.fromCharCode(...bytes.subarray(index,index+32768));
- return btoa(binary);
+function decode(data: string) {
+ return Uint8Array.from(atob(data),(character)=>character.charCodeAt(0));
 }
-export async function compileProject(project: PaperProject, engine: string, signal: AbortSignal) {
- const runtimeResponse = await fetch('/api/envoi/compiler', { signal });
- if (!runtimeResponse.ok || !runtimeResponse.headers.get('content-type')?.includes('application/json')) throw new Error(translate('compile.serviceUnavailable'));
- const runtime = await runtimeResponse.json(); if (!runtime.available) throw new Error(runtime.error);
+const aborted = () => new DOMException(translate('compile.aborted'),'AbortError');
+export async function compileProject(project: PaperProject, engine: string, signal?: AbortSignal) {
+ const runtime = await envoi().compilerRuntime().catch(error => { throw ipcError(error); }) as {available?: boolean; error?: string};
+ if (!runtime.available) throw new Error(runtime.error ?? translate('compile.serviceUnavailable'));
  const main = project.files.find(file => file.id === project.rootId)?.path;
  if (!main) throw new Error(translate('compile.noMainFile'));
- const files = [];
- for (const file of project.files) {
-  if (/^(build|output)\//.test(file.path)) continue;
-  if (/^(build|output)\//.test(file.path)) continue;
-  if (/^(build|output)\//.test(file.path)) continue;
-  if (/^(build|output)\//.test(file.path)) continue;
-  if (!/\.(tex|bib|sty|cls|bst|png|jpe?g|pdf|eps|csv|txt|dat|otf|ttf)$/i.test(file.path)) continue;
-  if (signal.aborted) throw new DOMException(translate('compile.aborted'),'AbortError');
-  const bytes = file.text !== undefined ? new TextEncoder().encode(file.text) : file.file ? new Uint8Array(await file.file.arrayBuffer()) : file.url ? new Uint8Array(await (await fetch(file.url,{signal})).arrayBuffer()) : file.url ? new Uint8Array(await (await fetch(file.url,{signal})).arrayBuffer()) : file.url ? new Uint8Array(await (await fetch(file.url,{signal})).arrayBuffer()) : file.url ? new Uint8Array(await (await fetch(file.url,{signal})).arrayBuffer()) : null;
-  if (bytes) files.push({ path:file.path,base64:encode(bytes) });
+ const drafts = project.files.filter(file => file.text !== undefined && file.text !== file.saved).map(file => ({path: file.path, text: file.text!}));
+ if (signal?.aborted) throw aborted();
+ const cancel = () => { void envoi().cancelCompile(); };
+ signal?.addEventListener('abort', cancel, { once:true });
+ try {
+  const result = await envoi().compile({ rootPath: project.rootPath!, main, engine, drafts }).catch(error => { throw signal?.aborted ? aborted() : ipcError(error); });
+  if (signal?.aborted) throw aborted();
+  if (!result.ok || !result.pdf) return { ok:false as const, error:result.error ?? translate('compile.failed'), log:result.log ?? '' };
+  return { ok:true as const, file:new File([decode(result.pdf)], 'compiled.pdf', {type:'application/pdf'}), synctex:typeof result.synctex==='string'?decode(result.synctex):undefined, log:result.log };
+ } finally {
+  signal?.removeEventListener('abort', cancel);
  }
- const response = await fetch('/api/envoi/compile', { method:'POST',signal,headers:{'Content-Type':'application/json','X-Envoi-Token':runtime.token},body:JSON.stringify({main,engine,files}) });
- const result = await response.json();
- if (!response.ok || !result.ok) return { ok:false as const,error:result.error ?? translate('compile.failed'),log:result.log ?? '' };
- return { ok:true as const,file:new File([Uint8Array.from(atob(result.pdf),(character)=>character.charCodeAt(0))], 'compiled.pdf', {type:'application/pdf'}),synctex:typeof result.synctex==='string'?Uint8Array.from(atob(result.synctex),(character)=>character.charCodeAt(0)):undefined,log:result.log as string };
 }
