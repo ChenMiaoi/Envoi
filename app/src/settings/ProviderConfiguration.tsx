@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "react"
+import { notify, type NotificationKind } from "@/lib/notifications"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { ExternalLink, KeyRound, LogIn } from "lucide-react"
 import { agentRequest, type AgentStatus } from "@/lib/agentClient"
 import {
@@ -32,7 +33,6 @@ export function ProviderConfiguration({
   const [key, setKey] = useState(""),
     [mode, setMode] = useState(provider.oauth ? "login" : "key"),
     [busy, setBusy] = useState(false),
-    [message, setMessage] = useState(""),
     [job, setJob] = useState<OAuthJob | null>(null),
     [answer, setAnswer] = useState("")
   const active = useRef(true),
@@ -40,6 +40,12 @@ export function ProviderConfiguration({
     saved = useRef(onSaved)
   saved.current = onSaved
   const { t } = useT()
+  const setMessage = useCallback(
+    (message: string, kind: NotificationKind = "error") => {
+      notify(message, kind, `provider-${provider.id}`)
+    },
+    [provider.id],
+  )
   const help = providerHelp[provider.id]
   const keySupported = provider.apiKey !== false
   useEffect(() => {
@@ -74,7 +80,7 @@ export function ProviderConfiguration({
         })
     }, 1200)
     return () => clearInterval(timer)
-  }, [job, t])
+  }, [job, t, setMessage])
   async function saveKey() {
     setBusy(true)
     setMessage("")
@@ -85,7 +91,7 @@ export function ProviderConfiguration({
       })
       if (active.current) {
         setKey("")
-        setMessage(result.validation?.message ?? t("settings.ai.saved"))
+        setMessage(result.validation?.message ?? t("settings.ai.saved"), "success")
         saved.current()
       }
     } catch (error) {
@@ -119,7 +125,7 @@ export function ProviderConfiguration({
       const popup = window.open(url.href, "_blank")
       if (popup) {
         popup.opener = null
-        setMessage(t("settings.provider.completeLogin"))
+        setMessage(t("settings.provider.completeLogin"), "info")
       } else setMessage(t("settings.provider.popupBlocked"))
     } catch {
       setMessage(t("settings.provider.invalidAuthUrl"))
@@ -301,7 +307,7 @@ export function ProviderConfiguration({
             if (confirm(t("settings.provider.removeConfirm")))
               void agentRequest("credential", { provider: provider.id, remove: true })
                 .then(() => {
-                  setMessage(t("settings.provider.removed"))
+                  setMessage(t("settings.provider.removed"), "success")
                   saved.current()
                 })
                 .catch((error) => setMessage(error.message))
@@ -309,11 +315,6 @@ export function ProviderConfiguration({
         >
           {t("settings.provider.remove")}
         </button>
-      )}
-      {message && (
-        <p role="status" className="text-xs text-muted-foreground">
-          {message}
-        </p>
       )}
     </div>
   )

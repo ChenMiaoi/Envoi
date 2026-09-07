@@ -1,3 +1,4 @@
+import { Notification } from "@/components/Notification"
 import { useState } from "react"
 import { Link } from "react-router"
 import { usePreferences } from "./context"
@@ -103,9 +104,7 @@ export function ShortcutsView() {
             {t("settings.shortcuts.resetAll")}
           </button>
         </div>
-        <p role="status" className="mb-3 text-xs text-warning">
-          {error || message}
-        </p>
+        <Notification message={error || message} kind={error ? "error" : "success"} />
         <div className="rounded-xl border border-border bg-card px-5">
           {visible.map((item) => {
             const chord = commandChord(item.id, bindings)

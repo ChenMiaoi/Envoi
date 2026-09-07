@@ -397,6 +397,24 @@
 }
 
 /* ---------- Markdown 预览排版（内容层，随主题 token 变化） ---------- */
+/* Toasts use the same semantic palette as the active application theme. */
+[data-sonner-toast][data-type="success"] [data-icon] {
+  color: hsl(var(--success));
+}
+[data-sonner-toast][data-type="warning"] [data-icon] {
+  color: hsl(var(--warning));
+}
+[data-sonner-toast][data-type="error"] [data-icon] {
+  color: hsl(var(--danger));
+}
+[data-sonner-toast][data-type="info"] [data-icon] {
+  color: hsl(var(--primary));
+}
+[data-sonner-toast] [data-title] {
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
 .markdown-body {
   font-size: 14px;
   line-height: 1.85;

@@ -1,5 +1,7 @@
 import { SettingsRow as Row } from "@/settings/SettingsRow"
 import { AiSettingsView } from "@/settings/AiSettingsView"
+import { notify } from "@/lib/notifications"
+import { Notification } from "@/components/Notification"
 import { ShortcutsView } from "@/settings/ShortcutsView"
 import { useEffect, useState } from "react"
 import { NavLink, useLocation, Link } from "react-router"
@@ -126,7 +128,6 @@ function LocalTools() {
   const { t } = useT()
   const [tools, setTools] = useState<Tools | null>(null),
     [path, setPath] = useState(""),
-    [message, setMessage] = useState(t("settings.tools.probing")),
     [busy, setBusy] = useState(false)
   useEffect(() => {
     let active = true
@@ -136,11 +137,10 @@ function LocalTools() {
         if (active) {
           setTools(result)
           setPath(result.chktex.path)
-          setMessage(t("settings.tools.savedNote"))
         }
       })
       .catch((error) => {
-        if (active) setMessage(ipcError(error).message)
+        if (active) notify(ipcError(error).message, "error", "local-tools")
       })
     return () => {
       active = false
@@ -153,9 +153,9 @@ function LocalTools() {
       const result = (await envoi().configureTools({ chktexPath: value })) as unknown as Tools
       setTools(result)
       setPath(result.chktex.path)
-      setMessage(t("settings.tools.validatedSaved"))
+      notify(t("settings.tools.validatedSaved"), "success", "local-tools")
     } catch (error) {
-      setMessage(ipcError(error).message)
+      notify(ipcError(error).message, "error", "local-tools")
     } finally {
       setBusy(false)
     }
@@ -164,7 +164,7 @@ function LocalTools() {
     <div className="mt-6 rounded-xl border border-border bg-background/40 p-4">
       <h3 className="text-sm font-medium">{t("settings.tools.heading")}</h3>
       <p role="status" className="mt-2 text-xs text-muted-foreground">
-        {message}
+        {t(tools ? "settings.tools.savedNote" : "settings.tools.probing")}
       </p>
       {tools && (
         <>
@@ -336,11 +336,7 @@ export function SettingsView() {
         <div className="min-w-0 flex-1 overflow-auto p-7">
           <div className="mx-auto max-w-3xl">
             <h2 className="mb-3 text-base font-medium">{t(settingCategories[category])}</h2>
-            {error && (
-              <p role="alert" className="mb-4 text-xs text-warning">
-                {error}
-              </p>
-            )}
+            {error && <Notification message={error} kind="error" />}
             {category === "ai" ? (
               <AiSettingsView scope={scope} />
             ) : (

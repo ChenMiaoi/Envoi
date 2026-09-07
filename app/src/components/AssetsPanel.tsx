@@ -1,3 +1,4 @@
+import { Notification } from "@/components/Notification"
 import { useT } from "@/i18n/useT"
 import { isWritingPath } from "@/lib/projectFiles"
 import { useEffect, useMemo, useRef, useState } from "react"
@@ -109,9 +110,7 @@ export function AssetsPanel({
           {t("assets.statsIncomplete", { list: paper.missing.join("；") })}
         </p>
       )}
-      <p role="status" className="break-words text-primary">
-        {notice}
-      </p>
+      <Notification message={notice} kind={"info"} />
       {[true, false].map((used) => (
         <section key={String(used)} className="space-y-1.5">
           <h3 className="pt-2 text-muted-foreground">

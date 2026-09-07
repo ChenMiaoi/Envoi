@@ -1,3 +1,4 @@
+import { Notification } from "@/components/Notification"
 import { restoreProjectSession } from "@/lib/projectSession"
 import { bindProject } from "@/lib/agentClient"
 import { ProjectManagement } from "./ProjectManagement"
@@ -499,11 +500,7 @@ export function ProjectMenu() {
               )}
             </div>
           </div>
-          {message && (
-            <p role="status" className="border-t border-border px-5 py-3 text-xs text-warning">
-              {message}
-            </p>
-          )}
+
           <div className="flex justify-end gap-2 border-t border-border bg-background/30 px-5 py-4">
             <button
               disabled={busy}
@@ -573,18 +570,7 @@ export function ProjectMenu() {
           </div>
         </DialogContent>
       </Dialog>
-      {!mode && message && (
-        <div
-          role="alert"
-          data-testid="project-notification"
-          className="fixed bottom-9 right-4 z-50 flex max-w-lg gap-3 rounded border border-warning/40 bg-card p-3 text-xs text-warning shadow-xl"
-        >
-          <span>{message}</span>
-          <button aria-label={t("project.dismissAria")} onClick={() => setMessage("")}>
-            ×
-          </button>
-        </div>
-      )}
+      <Notification message={message} kind="warning" testId="project-notification" />
     </>
   )
 }

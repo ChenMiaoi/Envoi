@@ -1,4 +1,5 @@
 import { WelcomePage } from "@/project/WelcomePage"
+import { Toaster } from "@/components/ui/sonner"
 import { usePreferences } from "@/settings/context"
 import { envoi } from "@/lib/desktop"
 import { ProjectIdentity } from "@/project/ProjectIdentity"
@@ -86,6 +87,7 @@ export default function App() {
   return (
     <PreferencesProvider>
       <I18nProvider>
+        <Toaster />
         <ProjectProvider>
           <AgentProvider>
             <ProjectSession />

@@ -451,6 +451,7 @@ try {
       ?.value.includes("Saved demo edit"),
   )
   assert.deepEqual(dataErrors, [])
+  await reopened.getByTestId("project-notification").waitFor({ state: "hidden", timeout: 2000 })
   assert.equal(
     await reopened.getByTestId("project-notification").count(),
     0,

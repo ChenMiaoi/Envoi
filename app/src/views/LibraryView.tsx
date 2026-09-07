@@ -1,3 +1,4 @@
+import { Notification } from "@/components/Notification"
 import { useEffect, useRef, useState, useCallback } from "react"
 import { bibliographyNames } from "@/lib/bibliography"
 import { synthesizeBib, citationKeyFor, bibtexKey } from "@/lib/paperMetadata"
@@ -615,11 +616,7 @@ export function LibraryView() {
           }}
         />
       </header>
-      {error && (
-        <p role="alert" className="px-4 text-xs text-destructive">
-          {error}
-        </p>
-      )}
+      {error && <Notification message={error} kind={"error"} />}
       <div className="min-h-0 flex-1">
         <Group orientation="horizontal">
           <Panel defaultSize="20%" minSize="150px" maxSize="35%">

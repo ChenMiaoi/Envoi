@@ -1,3 +1,4 @@
+import { Notification } from "@/components/Notification"
 import { useT } from "@/i18n/useT"
 import { useMemo, useRef, useState } from "react"
 import { useProject } from "@/project/context"
@@ -142,9 +143,7 @@ export function ReferencesPanel({
         </p>
       )}
       {!result.error && !result.entries.length && <p>{t("refs.noEntries")}</p>}
-      <p role="status" className="break-words text-primary">
-        {notice}
-      </p>
+      <Notification message={notice} kind={"info"} />
       {[true, false].map((used) => {
         const entries = result.entries.filter(
           (entry) => citations.some((citation) => citation.key === entry.key) === used,

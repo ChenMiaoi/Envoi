@@ -1,3 +1,5 @@
+import { Notification } from "@/components/Notification"
+import type { NotificationKind } from "@/lib/notifications"
 import { SettingsRow as Row } from "./SettingsRow"
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover"
 import { useEffect, useState, useCallback } from "react"
@@ -22,6 +24,7 @@ export function AiSettingsView({ scope }: { scope: "global" | "project" }) {
     [providerQuery, setProviderQuery] = useState(""),
     [providerOpen, setProviderOpen] = useState(false)
   const { t } = useT()
+  const [messageKind, setMessageKind] = useState<NotificationKind>("error")
   const thinkingNames: Record<string, string> = {
     off: t("common.disabled"),
     minimal: t("settings.ai.thinkingMinimal"),
@@ -53,7 +56,10 @@ export function AiSettingsView({ scope }: { scope: "global" | "project" }) {
     )
   }, [search])
   useEffect(() => {
-    void refresh().catch((error) => setMessage(error.message))
+    void refresh().catch((error) => {
+      setMessageKind("error")
+      setMessage(error.message)
+    })
   }, [refresh])
   const action = async (run: () => Promise<unknown>, success: string) => {
     setWorking(true)
@@ -62,8 +68,10 @@ export function AiSettingsView({ scope }: { scope: "global" | "project" }) {
       await run()
       await refresh()
       setMessage(success)
+      setMessageKind("success")
       window.dispatchEvent(new Event("envoi:ai-configured"))
     } catch (error) {
+      setMessageKind("error")
       setMessage((error as Error).message)
     } finally {
       setWorking(false)
@@ -95,6 +103,7 @@ export function AiSettingsView({ scope }: { scope: "global" | "project" }) {
       return
     }
     if (!project.rootPath) {
+      setMessageKind("warning")
       setMessage(t("settings.ai.connectFirst"))
       return
     }
@@ -149,11 +158,7 @@ export function AiSettingsView({ scope }: { scope: "global" | "project" }) {
     )
   return (
     <div className="space-y-5">
-      {message && (
-        <p role="status" className="text-xs text-muted-foreground">
-          {message}
-        </p>
-      )}
+      {message && <Notification message={message} kind={messageKind} />}
       {!status && <p className="text-xs text-muted-foreground">{t("settings.ai.loading")}</p>}
       {global ? (
         <section className="rounded-xl border border-border bg-card px-5">
@@ -407,7 +412,10 @@ export function AiSettingsView({ scope }: { scope: "global" | "project" }) {
         provider={status?.providers.find((item) => item.id === configuring) ?? null}
         onClose={() => setConfiguring(null)}
         onSaved={() => {
-          void refresh().catch((error) => setMessage(error.message))
+          void refresh().catch((error) => {
+            setMessageKind("error")
+            setMessage(error.message)
+          })
           window.dispatchEvent(new Event("envoi:ai-configured"))
         }}
       />

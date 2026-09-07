@@ -1,3 +1,4 @@
+import { Notification } from "@/components/Notification"
 import { useCallback, useEffect, useState, type ReactNode } from "react"
 import {
   ArrowLeft,
@@ -146,16 +147,8 @@ export function WorkspacePanel({ history }: { history: (root: string) => ReactNo
           </button>
         </div>
       </header>
-      {error && (
-        <p role="alert" className="border-b border-border px-5 py-3 text-xs text-warning">
-          {error}
-        </p>
-      )}
-      {notice && (
-        <p role="status" className="border-b border-border px-5 py-3 text-xs text-success">
-          {notice}
-        </p>
-      )}
+      {error && <Notification message={error} kind={"error"} />}
+      {notice && <Notification message={notice} kind={"success"} />}
       <div className="flex min-h-0 flex-1 max-md:flex-col">
         <aside className="w-64 shrink-0 overflow-auto border-r border-border bg-card/30 p-3 max-md:max-h-44 max-md:w-full max-md:border-b max-md:border-r-0">
           <p className="mb-3 px-2 text-[11px] text-muted-foreground">
