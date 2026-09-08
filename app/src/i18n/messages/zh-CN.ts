@@ -3,6 +3,12 @@
  * 插值占位符使用 {name}；翻译文件必须与本文件键集合完全一致（编译期以 Record<MessageKey,string> 保证）。
  */
 export const zhCN = {
+  "font.search": "搜索字体…",
+  "font.monospace": "等宽字体",
+  "font.allOthers": "其他字体",
+  "font.loading": "正在读取系统字体…",
+  "font.failed": "无法读取系统字体，请重新打开重试。",
+  "font.empty": "没有匹配的字体",
   "trust.gitAfterTrust": "信任新项目后初始化 Git。",
   "trust.title": "项目安全模式",
   "trust.description":

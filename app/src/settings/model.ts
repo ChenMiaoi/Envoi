@@ -1,8 +1,9 @@
+import { normalizeFont } from "./fonts"
 import { migrateLegacyBindings, normalizeBindings } from "../navigation/shortcuts"
 import { isLocaleId, type LocaleId } from "@/i18n/locales"
 import type { MessageKey } from "@/i18n/messages/zh-CN"
 export type Engine = "pdflatex" | "xelatex"
-export type TextFont = "system" | "sans" | "serif"
+export type TextFont = string
 export interface Preferences {
   version: 1
   language: LocaleId
@@ -14,7 +15,7 @@ export interface Preferences {
   theme: ThemeId
   accent: "lemon" | "blue" | "green" | "rose"
   fontSize: number
-  fontFamily: "system" | "menlo" | "monaco"
+  fontFamily: string
   lineHeight: number
   tabSize: number
   disabledRules: number[]
@@ -108,13 +109,9 @@ export function normalizePreferences(raw: unknown): Preferences {
     bindings: normalizeBindings(
       Array.isArray(value.bindings) ? value.bindings : migrateLegacyBindings(legacy),
     ),
-    uiFontFamily:
-      value.uiFontFamily && value.uiFontFamily in textFonts ? value.uiFontFamily : "system",
+    uiFontFamily: normalizeFont(value.uiFontFamily, textFonts),
     uiFontSize: [12, 13, 14, 15, 16].includes(value.uiFontSize ?? 0) ? value.uiFontSize! : 13,
-    previewFontFamily:
-      value.previewFontFamily && value.previewFontFamily in textFonts
-        ? value.previewFontFamily
-        : "system",
+    previewFontFamily: normalizeFont(value.previewFontFamily, textFonts),
     previewFontSize: [12, 14, 16, 18, 20].includes(value.previewFontSize ?? 0)
       ? value.previewFontSize!
       : 14,
@@ -124,7 +121,7 @@ export function normalizePreferences(raw: unknown): Preferences {
       typeof value.fontSize === "number" && [11, 12.5, 14, 16, 18].includes(value.fontSize)
         ? value.fontSize
         : defaults.fontSize,
-    fontFamily: value.fontFamily && value.fontFamily in editorFonts ? value.fontFamily : "system",
+    fontFamily: normalizeFont(value.fontFamily, editorFonts),
     lineHeight: [1.5, 1.75, 2].includes(value.lineHeight ?? 0) ? value.lineHeight! : 1.75,
     tabSize: [2, 4, 8].includes(value.tabSize ?? 0) ? value.tabSize! : 4,
     disabledRules: normalizeRules(value.disabledRules),

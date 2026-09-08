@@ -1,3 +1,4 @@
+import { fontCss } from "@/settings/fonts"
 import { useLayoutEffect, useRef } from "react"
 import { createRoot, type Root } from "react-dom/client"
 import { EditorState, StateField, Compartment, type Range } from "@codemirror/state"
@@ -347,7 +348,7 @@ export function MarkdownEditor({
           {
             "&": {
               height: "100%",
-              fontFamily: textFonts[preferences.previewFontFamily].css,
+              fontFamily: fontCss(preferences.previewFontFamily, textFonts),
               fontSize: `${preferences.previewFontSize}px`,
               color: "hsl(var(--foreground))",
             },
@@ -360,7 +361,7 @@ export function MarkdownEditor({
               background: "hsl(var(--primary) / .2)",
             },
             ".cm-md-editing": {
-              fontFamily: editorFonts[preferences.fontFamily].css,
+              fontFamily: fontCss(preferences.fontFamily, editorFonts),
               fontSize: `${preferences.fontSize}px`,
               lineHeight: String(preferences.lineHeight),
             },
@@ -372,14 +373,14 @@ export function MarkdownEditor({
             ".cm-md-em": { fontStyle: "italic" },
             ".cm-md-strike": { textDecoration: "line-through" },
             ".cm-md-code": {
-              fontFamily: editorFonts[preferences.fontFamily].css,
+              fontFamily: fontCss(preferences.fontFamily, editorFonts),
               background: "var(--prose-code-bg)",
               color: "var(--prose-code)",
               borderRadius: "4px",
               padding: "0 .2em",
             },
             ".cm-line.cm-md-codeblock": {
-              fontFamily: editorFonts[preferences.fontFamily].css,
+              fontFamily: fontCss(preferences.fontFamily, editorFonts),
               fontSize: `${preferences.fontSize}px`,
               lineHeight: "1.65",
               background: "var(--prose-code-bg)",

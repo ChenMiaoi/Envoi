@@ -91,3 +91,24 @@ test("legacy editor typography remains independent of UI and reading preferences
   assert.equal(invalid.previewFontSize, 14)
   assert.equal(invalid.uiFontFamily, "system")
 })
+
+test("installed font preferences survive normalization and preserve CSS fallback", async () => {
+  const { fontCss, fontId } = await import("../src/settings/fonts")
+  const { textFonts, editorFonts } = await import("../src/settings/model")
+  const custom = fontId('Example "Font"')
+  const restored = normalizePreferences({
+    uiFontFamily: custom,
+    previewFontFamily: custom,
+    fontFamily: custom,
+  })
+  assert.equal(restored.uiFontFamily, custom)
+  assert.equal(restored.previewFontFamily, custom)
+  assert.equal(restored.fontFamily, custom)
+  assert.equal(
+    fontCss(custom, textFonts),
+    JSON.stringify('Example "Font"') + ", " + textFonts.system.css,
+  )
+  assert.equal(fontCss("monaco", editorFonts), editorFonts.monaco.css)
+  assert.equal(normalizePreferences({ fontFamily: "local:" }).fontFamily, "system")
+  assert.equal(normalizePreferences({ fontFamily: "local:a\nbody" }).fontFamily, "system")
+})

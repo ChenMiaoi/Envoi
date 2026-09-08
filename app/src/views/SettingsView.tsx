@@ -1,3 +1,4 @@
+import { FontPicker } from "@/settings/FontPicker"
 import { SettingsRow as Row } from "@/settings/SettingsRow"
 import { AiSettingsView } from "@/settings/AiSettingsView"
 import { UpdateSettings } from "@/settings/UpdateSettings"
@@ -16,8 +17,6 @@ import { locales, type LocaleId } from "@/i18n/locales"
 import {
   accents,
   themes,
-  editorFonts,
-  textFonts,
   projectConfiguration,
   settingCategories,
   type SettingsCategory,
@@ -38,18 +37,11 @@ function TextAppearance({ kind }: { kind: "ui" | "preview" }) {
   return (
     <>
       <Row label={fontLabel}>
-        <select
-          aria-label={fontLabel}
-          className={input}
+        <FontPicker
+          label={fontLabel}
           value={preferences[family]}
-          onChange={(e) => update({ [family]: e.target.value })}
-        >
-          {Object.entries(textFonts).map(([id, font]) => (
-            <option key={id} value={id}>
-              {t(font.labelKey)}
-            </option>
-          ))}
-        </select>
+          onChange={(value) => update({ [family]: value })}
+        />
       </Row>
       <Row label={sizeLabel} hint={ui ? undefined : t("settings.appearance.previewSizeHint")}>
         <select
@@ -444,20 +436,12 @@ export function SettingsView() {
                         {global ? (
                           <>
                             <Row label={t("settings.editor.font")}>
-                              <select
-                                aria-label={t("settings.editor.font")}
-                                className={input}
+                              <FontPicker
+                                editor
+                                label={t("settings.editor.font")}
                                 value={preferences.fontFamily}
-                                onChange={(e) =>
-                                  update({ fontFamily: e.target.value as keyof typeof editorFonts })
-                                }
-                              >
-                                {Object.entries(editorFonts).map(([id, font]) => (
-                                  <option key={id} value={id}>
-                                    {t(font.labelKey)}
-                                  </option>
-                                ))}
-                              </select>
+                                onChange={(value) => update({ fontFamily: value })}
+                              />
                             </Row>
                             <Row label={t("settings.editor.fontSize")}>
                               <select

@@ -1,6 +1,12 @@
 /** English messages. Must contain exactly the same keys as zh-CN. */
 import type { Messages } from "./zh-CN"
 const en: Messages = {
+  "font.search": "Search fonts…",
+  "font.monospace": "Monospace fonts",
+  "font.allOthers": "Other fonts",
+  "font.loading": "Loading system fonts…",
+  "font.failed": "Unable to read system fonts. Reopen to retry.",
+  "font.empty": "No matching fonts",
   "trust.gitAfterTrust": "Git will be initialized after you trust the new project.",
   "trust.title": "Project Security",
   "trust.description":

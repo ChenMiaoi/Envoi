@@ -1,3 +1,4 @@
+import { fontCss } from "@/settings/fonts"
 import { useProjectTrust } from "@/project/useProjectTrust"
 import { editorFonts } from "@/settings/model"
 import { useSettings } from "@/settings/useSettings"
@@ -202,7 +203,7 @@ export function WriterView({
                 {active ? (
                   <LatexEditor
                     fontSize={effective.fontSize}
-                    fontFamily={editorFonts[effective.fontFamily].css}
+                    fontFamily={fontCss(effective.fontFamily, editorFonts)}
                     lineHeight={effective.lineHeight}
                     tabSize={effective.tabSize}
                     highlight={

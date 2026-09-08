@@ -1,6 +1,12 @@
 /** 由 scripts/i18n-traditional.mjs 从 zh-CN.ts 自动生成（OpenCC）。术语覆盖请修改该脚本，勿手改本文件。 */
 import type { Messages } from "./zh-CN"
 const zhTW: Messages = {
+  "font.search": "搜尋字型…",
+  "font.monospace": "等寬字型",
+  "font.allOthers": "其他字型",
+  "font.loading": "正在讀取系統字型…",
+  "font.failed": "無法讀取系統字型，請重新開啟重試。",
+  "font.empty": "沒有符合的字型",
   "trust.gitAfterTrust": "信任新專案後初始化 Git。",
   "trust.title": "項目安全模式",
   "trust.description":

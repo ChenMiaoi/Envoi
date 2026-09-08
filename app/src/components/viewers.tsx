@@ -1,3 +1,4 @@
+import { fontCss } from "@/settings/fonts"
 import { MarkdownCodeBlock } from "./MarkdownCodeBlock"
 import { tokenizeLatex } from "@/lib/latexHighlight"
 import ReactMarkdown from "react-markdown"
@@ -33,7 +34,7 @@ export function MarkdownViewer({
       <div
         data-content-typography="preview"
         style={{
-          fontFamily: textFonts[preferences.previewFontFamily].css,
+          fontFamily: fontCss(preferences.previewFontFamily, textFonts),
           fontSize: preferences.previewFontSize,
         }}
         className="markdown-body mx-auto max-w-[720px] px-10 py-8"
@@ -111,7 +112,7 @@ export function HighlightedLatex({ source }: { source: string }) {
 export function LatexViewer({ source }: { source: string }) {
   const { preferences } = usePreferences()
   const style = {
-    fontFamily: editorFonts[preferences.fontFamily].css,
+    fontFamily: fontCss(preferences.fontFamily, editorFonts),
     fontSize: preferences.fontSize,
     lineHeight: preferences.lineHeight,
     tabSize: preferences.tabSize,
@@ -168,7 +169,7 @@ export function BibViewer({ source }: { source: string }) {
     <div
       data-content-typography="preview"
       style={{
-        fontFamily: textFonts[preferences.previewFontFamily].css,
+        fontFamily: fontCss(preferences.previewFontFamily, textFonts),
         fontSize: preferences.previewFontSize,
       }}
       className="bib-preview envoi-scrollbar h-full overflow-y-auto px-6 py-5"

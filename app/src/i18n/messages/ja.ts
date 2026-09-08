@@ -1,6 +1,12 @@
 /** 日本語メッセージ。zh-CN と完全に同じキーを持つこと。 */
 import type { Messages } from "./zh-CN"
 const ja: Messages = {
+  "font.search": "フォントを検索…",
+  "font.monospace": "等幅フォント",
+  "font.allOthers": "その他のフォント",
+  "font.loading": "システムフォントを読み込み中…",
+  "font.failed": "フォントを読み込めません。開き直して再試行してください。",
+  "font.empty": "一致するフォントがありません",
   "trust.gitAfterTrust": "新しいプロジェクトを信頼した後に Git を初期化します。",
   "trust.title": "プロジェクトのセキュリティ",
   "trust.description":

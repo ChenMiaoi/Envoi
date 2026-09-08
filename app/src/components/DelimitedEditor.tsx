@@ -1,3 +1,4 @@
+import { fontCss } from "@/settings/fonts"
 import { useLayoutEffect, useMemo, useRef } from "react"
 import { parseDelimited, editDelimitedCell } from "@/lib/delimited"
 import { usePreferences } from "@/settings/context"
@@ -84,7 +85,7 @@ export function DelimitedEditor({
         <textarea
           data-content-typography="editor"
           style={{
-            fontFamily: editorFonts[preferences.fontFamily].css,
+            fontFamily: fontCss(preferences.fontFamily, editorFonts),
             fontSize: preferences.fontSize,
             lineHeight: preferences.lineHeight,
             tabSize: preferences.tabSize,
@@ -102,7 +103,7 @@ export function DelimitedEditor({
       <textarea
         data-content-typography="editor"
         style={{
-          fontFamily: editorFonts[preferences.fontFamily].css,
+          fontFamily: fontCss(preferences.fontFamily, editorFonts),
           fontSize: preferences.fontSize,
           lineHeight: preferences.lineHeight,
           tabSize: preferences.tabSize,
@@ -120,7 +121,7 @@ export function DelimitedEditor({
       data-content-typography="preview"
       className="h-full min-w-0 overflow-hidden p-4"
       style={{
-        fontFamily: textFonts[preferences.previewFontFamily].css,
+        fontFamily: fontCss(preferences.previewFontFamily, textFonts),
         fontSize: preferences.previewFontSize,
       }}
     >

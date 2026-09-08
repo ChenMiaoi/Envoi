@@ -1,3 +1,4 @@
+import { fontCss } from "@/settings/fonts"
 import { nativeMigrate, nativePut, nativeGet } from "@/lib/localData"
 import { useEffect, useState, useRef, type ReactNode } from "react"
 import { PreferencesContext } from "./context"
@@ -54,7 +55,7 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
   }, [preferences.theme, preferences.accent])
   useEffect(() => {
     const style = document.documentElement.style
-    style.setProperty("--ui-font", textFonts[preferences.uiFontFamily].css)
+    style.setProperty("--ui-font", fontCss(preferences.uiFontFamily, textFonts))
     style.setProperty("--ui-font-size", `${preferences.uiFontSize}px`)
     style.setProperty("--ui-scale", String(preferences.uiFontSize / 13))
   }, [preferences.uiFontFamily, preferences.uiFontSize])

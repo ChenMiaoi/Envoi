@@ -1,3 +1,4 @@
+import { fontCss } from "@/settings/fonts"
 import { usePreferences } from "@/settings/context"
 import { editorFonts } from "@/settings/model"
 import { useEffect, useMemo, useState } from "react"
@@ -300,7 +301,7 @@ export function ReaderView({
                 data-content-typography="editor"
                 className="h-full w-full resize-none overflow-auto whitespace-pre-wrap break-words bg-transparent p-4 outline-none"
                 style={{
-                  fontFamily: editorFonts[preferences.fontFamily].css,
+                  fontFamily: fontCss(preferences.fontFamily, editorFonts),
                   fontSize: preferences.fontSize,
                   lineHeight: preferences.lineHeight,
                   tabSize: preferences.tabSize,
