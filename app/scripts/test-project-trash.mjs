@@ -1,6 +1,6 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { mkdtemp, mkdir, writeFile, rename, rm, readFile, access } from "node:fs/promises"
+import { mkdtemp, mkdir, writeFile, rename, rm, readFile, access, symlink } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { execFileSync } from "node:child_process"
@@ -11,6 +11,26 @@ const git = (cwd, ...args) =>
     ["-c", "user.name=Test Fixture", "-c", "user.email=fixture@example.invalid", ...args],
     { cwd, encoding: "utf8", windowsHide: true },
   )
+
+test("deletion protection resolves directory aliases and missing descendants", async () => {
+  const temp = await mkdtemp(path.join(tmpdir(), "envoi-trash-alias-"))
+  try {
+    const project = path.join(temp, "project")
+    const alias = path.join(temp, "alias")
+    await mkdir(project)
+    await symlink(project, alias, process.platform === "win32" ? "junction" : "dir")
+    await assert.rejects(inspectProjectDeletion(project, [alias]), /不能删除/)
+    await assert.rejects(
+      inspectProjectDeletion(project, [path.join(alias, "future", "data")]),
+      /不能删除/,
+    )
+    const sibling = path.join(temp, "sibling")
+    await mkdir(sibling)
+    assert.equal((await inspectProjectDeletion(sibling, [alias])).kind, "project")
+  } finally {
+    await rm(temp, { recursive: true, force: true })
+  }
+})
 test("trash supports Markdown/code projects, protects roots, never falls back to deletion", async () => {
   const temp = await mkdtemp(path.join(tmpdir(), "envoi-trash-test-"))
   try {

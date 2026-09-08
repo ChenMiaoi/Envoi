@@ -327,10 +327,21 @@ function deletionContains(parent, child) {
 export async function inspectProjectDeletion(directory, protectedDirectories = []) {
   if ((await lstat(directory)).isSymbolicLink()) throw Error("请打开目录的真实位置后再删除。")
   const root = await realpath(directory)
-  if (
-    root === path.parse(root).root ||
-    protectedDirectories.some((p) => deletionContains(root, path.resolve(p)))
-  )
+  async function canonicalProtected(directory) {
+    const absolute = path.resolve(directory)
+    try {
+      return await realpath(absolute)
+    } catch (error) {
+      // Protected directories may not have been created yet. Resolve their
+      // existing ancestors so Windows short paths and directory aliases agree.
+      if (error.code !== "ENOENT") throw error
+      const parent = path.dirname(absolute)
+      if (parent === absolute) throw error
+      return path.join(await canonicalProtected(parent), path.basename(absolute))
+    }
+  }
+  const protectedRoots = await Promise.all(protectedDirectories.map(canonicalProtected))
+  if (root === path.parse(root).root || protectedRoots.some((p) => deletionContains(root, p)))
     throw Error("不能删除系统、应用或应用数据所在目录。")
   const plan = {
     path: root,
