@@ -1,6 +1,10 @@
 /** 由 scripts/i18n-traditional.mjs 从 zh-CN.ts 自动生成（OpenCC）。术语覆盖请修改该脚本，勿手改本文件。 */
 import type { Messages } from "./zh-CN"
 const zhHK: Messages = {
+  "number.decrease": "減小{label}",
+  "number.increase": "增大{label}",
+  "number.reset": "恢復{label}預設值",
+  "settings.appearance.previewLineHeight": "預覽行高",
   "font.search": "搜尋字體…",
   "font.monospace": "等寬字體",
   "font.allOthers": "其他字體",

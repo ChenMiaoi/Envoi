@@ -1,6 +1,10 @@
 /** English messages. Must contain exactly the same keys as zh-CN. */
 import type { Messages } from "./zh-CN"
 const en: Messages = {
+  "number.decrease": "Decrease {label}",
+  "number.increase": "Increase {label}",
+  "number.reset": "Reset {label}",
+  "settings.appearance.previewLineHeight": "Preview line height",
   "font.search": "Search fonts…",
   "font.monospace": "Monospace fonts",
   "font.allOthers": "Other fonts",

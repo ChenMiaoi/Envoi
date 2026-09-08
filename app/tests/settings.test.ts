@@ -112,3 +112,28 @@ test("installed font preferences survive normalization and preserve CSS fallback
   assert.equal(normalizePreferences({ fontFamily: "local:" }).fontFamily, "system")
   assert.equal(normalizePreferences({ fontFamily: "local:a\nbody" }).fontFamily, "system")
 })
+
+test("custom typography values remain independent and reject invalid persisted ranges", () => {
+  const restored = normalizePreferences({
+    uiFontSize: 17,
+    previewFontSize: 23.5,
+    fontSize: 15.5,
+    lineHeight: 2.15,
+    previewLineHeight: 2.35,
+  })
+  assert.equal(restored.uiFontSize, 17)
+  assert.equal(restored.previewFontSize, 23.5)
+  assert.equal(restored.fontSize, 15.5)
+  assert.equal(restored.lineHeight, 2.15)
+  assert.equal(restored.previewLineHeight, 2.35)
+  const invalid = normalizePreferences({
+    uiFontSize: 99,
+    fontSize: NaN,
+    lineHeight: Infinity,
+    previewLineHeight: 0,
+  })
+  assert.equal(invalid.uiFontSize, 13)
+  assert.equal(invalid.fontSize, 12.5)
+  assert.equal(invalid.lineHeight, 1.75)
+  assert.equal(invalid.previewLineHeight, 1.85)
+})

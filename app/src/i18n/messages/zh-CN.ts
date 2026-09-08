@@ -3,6 +3,10 @@
  * 插值占位符使用 {name}；翻译文件必须与本文件键集合完全一致（编译期以 Record<MessageKey,string> 保证）。
  */
 export const zhCN = {
+  "number.decrease": "减小{label}",
+  "number.increase": "增大{label}",
+  "number.reset": "恢复{label}默认值",
+  "settings.appearance.previewLineHeight": "预览行高",
   "font.search": "搜索字体…",
   "font.monospace": "等宽字体",
   "font.allOthers": "其他字体",

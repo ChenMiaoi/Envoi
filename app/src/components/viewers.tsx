@@ -36,6 +36,7 @@ export function MarkdownViewer({
         style={{
           fontFamily: fontCss(preferences.previewFontFamily, textFonts),
           fontSize: preferences.previewFontSize,
+          lineHeight: preferences.previewLineHeight,
         }}
         className="markdown-body mx-auto max-w-[720px] px-10 py-8"
       >
@@ -171,6 +172,7 @@ export function BibViewer({ source }: { source: string }) {
       style={{
         fontFamily: fontCss(preferences.previewFontFamily, textFonts),
         fontSize: preferences.previewFontSize,
+        lineHeight: preferences.previewLineHeight,
       }}
       className="bib-preview envoi-scrollbar h-full overflow-y-auto px-6 py-5"
     >

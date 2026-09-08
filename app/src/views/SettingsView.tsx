@@ -1,3 +1,4 @@
+import { NumberSetting } from "@/settings/NumberSetting"
 import { FontPicker } from "@/settings/FontPicker"
 import { SettingsRow as Row } from "@/settings/SettingsRow"
 import { AiSettingsView } from "@/settings/AiSettingsView"
@@ -15,6 +16,7 @@ import { useT } from "@/i18n/useT"
 import { envoi, ipcError } from "@/lib/desktop"
 import { locales, type LocaleId } from "@/i18n/locales"
 import {
+  defaults,
   accents,
   themes,
   projectConfiguration,
@@ -44,19 +46,31 @@ function TextAppearance({ kind }: { kind: "ui" | "preview" }) {
         />
       </Row>
       <Row label={sizeLabel} hint={ui ? undefined : t("settings.appearance.previewSizeHint")}>
-        <select
-          aria-label={sizeLabel}
-          className={input}
+        <NumberSetting
+          label={sizeLabel}
           value={preferences[size]}
-          onChange={(e) => update({ [size]: Number(e.target.value) })}
-        >
-          {(ui ? [12, 13, 14, 15, 16] : [12, 14, 16, 18, 20]).map((n) => (
-            <option key={n} value={n}>
-              {n} px
-            </option>
-          ))}
-        </select>
+          onChange={(value) => update({ [size]: value })}
+          min={ui ? 10 : 8}
+          max={ui ? 24 : 40}
+          step={ui ? 1 : 0.5}
+          defaultValue={defaults[size]}
+          unit="px"
+        />
       </Row>
+      {!ui && (
+        <Row label={t("settings.appearance.previewLineHeight")}>
+          <NumberSetting
+            label={t("settings.appearance.previewLineHeight")}
+            value={preferences.previewLineHeight}
+            onChange={(value) => update({ previewLineHeight: value })}
+            min={1}
+            max={3}
+            step={0.1}
+            defaultValue={defaults.previewLineHeight}
+            unit="×"
+          />
+        </Row>
+      )}
     </>
   )
 }
@@ -444,30 +458,28 @@ export function SettingsView() {
                               />
                             </Row>
                             <Row label={t("settings.editor.fontSize")}>
-                              <select
-                                aria-label={t("settings.editor.fontSizeAria")}
-                                className={input}
+                              <NumberSetting
+                                label={t("settings.editor.fontSizeAria")}
                                 value={preferences.fontSize}
-                                onChange={(e) => update({ fontSize: Number(e.target.value) })}
-                              >
-                                {[11, 12.5, 14, 16, 18].map((n) => (
-                                  <option key={n} value={n}>
-                                    {n} px
-                                  </option>
-                                ))}
-                              </select>
+                                onChange={(value) => update({ fontSize: value })}
+                                min={8}
+                                max={40}
+                                step={0.5}
+                                defaultValue={defaults.fontSize}
+                                unit="px"
+                              />
                             </Row>
                             <Row label={t("settings.editor.lineHeight")}>
-                              <select
-                                aria-label={t("settings.editor.lineHeightAria")}
-                                className={input}
+                              <NumberSetting
+                                label={t("settings.editor.lineHeightAria")}
                                 value={preferences.lineHeight}
-                                onChange={(e) => update({ lineHeight: Number(e.target.value) })}
-                              >
-                                {[1.5, 1.75, 2].map((n) => (
-                                  <option key={n}>{n}</option>
-                                ))}
-                              </select>
+                                onChange={(value) => update({ lineHeight: value })}
+                                min={1}
+                                max={3}
+                                step={0.1}
+                                defaultValue={defaults.lineHeight}
+                                unit="×"
+                              />
                             </Row>
                             <Row label={t("settings.editor.tabWidth")}>
                               <select

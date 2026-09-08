@@ -11,6 +11,7 @@ export interface Preferences {
   uiFontFamily: TextFont
   uiFontSize: number
   previewFontFamily: TextFont
+  previewLineHeight: number
   previewFontSize: number
   theme: ThemeId
   accent: "lemon" | "blue" | "green" | "rose"
@@ -34,6 +35,7 @@ export const defaults: Preferences = {
   uiFontFamily: "system",
   uiFontSize: 13,
   previewFontFamily: "system",
+  previewLineHeight: 1.85,
   previewFontSize: 14,
   theme: "graphite",
   accent: "lemon",
@@ -100,6 +102,11 @@ export function normalizeRules(raw: unknown) {
       )
     : []
 }
+function range(value: unknown, min: number, max: number, fallback: number) {
+  return typeof value === "number" && Number.isFinite(value) && value >= min && value <= max
+    ? Math.round(value * 100) / 100
+    : fallback
+}
 export function normalizePreferences(raw: unknown): Preferences {
   const value = raw && typeof raw === "object" ? (raw as Partial<Preferences>) : {}
   const legacy = "shortcuts" in value ? value.shortcuts : undefined
@@ -110,19 +117,15 @@ export function normalizePreferences(raw: unknown): Preferences {
       Array.isArray(value.bindings) ? value.bindings : migrateLegacyBindings(legacy),
     ),
     uiFontFamily: normalizeFont(value.uiFontFamily, textFonts),
-    uiFontSize: [12, 13, 14, 15, 16].includes(value.uiFontSize ?? 0) ? value.uiFontSize! : 13,
+    uiFontSize: range(value.uiFontSize, 10, 24, defaults.uiFontSize),
     previewFontFamily: normalizeFont(value.previewFontFamily, textFonts),
-    previewFontSize: [12, 14, 16, 18, 20].includes(value.previewFontSize ?? 0)
-      ? value.previewFontSize!
-      : 14,
+    previewFontSize: range(value.previewFontSize, 8, 40, defaults.previewFontSize),
+    previewLineHeight: range(value.previewLineHeight, 1, 3, defaults.previewLineHeight),
     theme: value.theme && value.theme in themes ? value.theme : defaults.theme,
     accent: value.accent && value.accent in accents ? value.accent : defaults.accent,
-    fontSize:
-      typeof value.fontSize === "number" && [11, 12.5, 14, 16, 18].includes(value.fontSize)
-        ? value.fontSize
-        : defaults.fontSize,
+    fontSize: range(value.fontSize, 8, 40, defaults.fontSize),
     fontFamily: normalizeFont(value.fontFamily, editorFonts),
-    lineHeight: [1.5, 1.75, 2].includes(value.lineHeight ?? 0) ? value.lineHeight! : 1.75,
+    lineHeight: range(value.lineHeight, 1, 3, defaults.lineHeight),
     tabSize: [2, 4, 8].includes(value.tabSize ?? 0) ? value.tabSize! : 4,
     disabledRules: normalizeRules(value.disabledRules),
     engine: value.engine === "xelatex" ? "xelatex" : "pdflatex",

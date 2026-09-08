@@ -123,6 +123,7 @@ export function DelimitedEditor({
       style={{
         fontFamily: fontCss(preferences.previewFontFamily, textFonts),
         fontSize: preferences.previewFontSize,
+        lineHeight: preferences.previewLineHeight,
       }}
     >
       <div className="data-table-frame envoi-scrollbar">

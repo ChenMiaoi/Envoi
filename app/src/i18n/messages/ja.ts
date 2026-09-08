@@ -1,6 +1,10 @@
 /** 日本語メッセージ。zh-CN と完全に同じキーを持つこと。 */
 import type { Messages } from "./zh-CN"
 const ja: Messages = {
+  "number.decrease": "{label}を小さく",
+  "number.increase": "{label}を大きく",
+  "number.reset": "{label}をリセット",
+  "settings.appearance.previewLineHeight": "プレビューの行の高さ",
   "font.search": "フォントを検索…",
   "font.monospace": "等幅フォント",
   "font.allOthers": "その他のフォント",

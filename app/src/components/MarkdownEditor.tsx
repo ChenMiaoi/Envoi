@@ -352,7 +352,11 @@ export function MarkdownEditor({
               fontSize: `${preferences.previewFontSize}px`,
               color: "hsl(var(--foreground))",
             },
-            ".cm-scroller": { fontFamily: "inherit", lineHeight: "1.85", overflow: "auto" },
+            ".cm-scroller": {
+              fontFamily: "inherit",
+              lineHeight: String(preferences.previewLineHeight),
+              overflow: "auto",
+            },
             ".cm-content": { padding: "24px 32px", caretColor: "hsl(var(--primary))" },
             ".cm-line": { overflowWrap: "anywhere" },
             "&.cm-focused": { outline: "none" },
