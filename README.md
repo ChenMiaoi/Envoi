@@ -1,86 +1,88 @@
 <div align="center">
 
-<img src="app/public/favicon.svg" width="72" height="72" alt="Envoi 标志" />
+<img src="app/public/favicon.svg" width="72" alt="Envoi logo" />
 
 # Envoi
 
-**把想法写成论文，把实验留在身边。**
+**Turn ideas into papers. Keep experiments close.**
 
-一个连接阅读、写作与实验的本地科研工作区。
+A local research workspace connecting reading, writing, and experimentation.
 
 [![CI](https://github.com/ChenMiaoi/Envoi/actions/workflows/ci.yml/badge.svg)](https://github.com/ChenMiaoi/Envoi/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/ChenMiaoi/Envoi?color=d3c875)](https://github.com/ChenMiaoi/Envoi/releases/latest)
 ![Platforms](https://img.shields.io/badge/platforms-Windows%20%7C%20macOS-738c9f)
 
-[下载安装](https://github.com/ChenMiaoi/Envoi/releases/latest) · [功能一览](#研究不止发生在正文里) · [从源码运行](#从源码运行) · [参与开发](CONTRIBUTING.md)
+[简体中文](README.zh-CN.md)
+
+[Download](https://github.com/ChenMiaoi/Envoi/releases/latest) · [Features](#research-does-not-happen-only-in-the-manuscript) · [Run from source](#run-from-source) · [Contributing](CONTRIBUTING.md)
 
 </div>
 
-![Envoi 写作工作区：章节大纲、LaTeX 正文与 PDF 预览](docs/images/writing.jpg)
+![Envoi writing workspace with an outline, LaTeX editor, and PDF preview](docs/images/writing.jpg)
 
-<p align="center"><sub>同一个工作区里，组织论文、修改正文、查看编译结果。</sub></p>
+<p align="center"><sub>Organize papers, edit the manuscript, and inspect compilation results in one workspace.</sub></p>
 
-## 研究不止发生在正文里
+## Research does not happen only in the manuscript
 
-一篇论文背后，还有读过的文献、尝试过的方法、生成图表的数据，以及后来被放弃的实验。
+Behind a paper are the literature you read, methods you tried, data used to generate figures, and experiments you eventually abandoned.
 
-Envoi 希望把这些过程放回论文身边：**主工作区保留论文，独立工作区展开实验，保存的结果保留来源。** 阅读笔记、代码、数据和写作不必散落在互不相干的窗口与目录中。
+Envoi keeps that work close to the paper: **the main workspace holds the paper, separate workspaces hold experiments, and saved results keep their provenance.** Reading notes, code, data, and writing no longer have to live in unrelated windows and directories.
 
-| 阅读                                | 写作                           | 实验                               |
-| :---------------------------------- | :----------------------------- | :--------------------------------- |
-| PDF、文献与笔记放在项目中           | LaTeX 正文与 PDF 并排查看      | 用独立 Git 工作区尝试不同方案      |
-| Markdown 实时预览，CSV/TSV 直接编辑 | 自动大纲、参考文献、素材和诊断 | 查看提交历史、文件变化与已保存结果 |
-| 每篇文献保留自己的阅读位置和对话    | 本机编译，错误定位回正文       | 将结果带回主工作区，并保留来源信息 |
+| Reading                                                     | Writing                                                     | Experimenting                                          |
+| :---------------------------------------------------------- | :---------------------------------------------------------- | :----------------------------------------------------- |
+| Keep PDFs, papers, and notes in the project                 | View the LaTeX manuscript and PDF side by side              | Try different approaches in independent Git workspaces |
+| Preview Markdown and edit CSV/TSV directly                  | Automatic outlines, references, assets, and diagnostics     | Inspect history, file changes, and saved results       |
+| Preserve a reading position and conversation for each paper | Compile locally and jump from errors back to the manuscript | Bring results back while retaining their provenance    |
 
-## 写作时，保持上下文
+## Keep context while writing
 
-- **LaTeX 工作台**：章节大纲、参考文献与素材面板，配合 PDFLaTeX / XeLaTeX 编译及 PDF 预览。
-- **多格式阅读与编辑**：PDF、图片、Markdown、CSV / TSV 和源代码，沿用项目原本的目录结构。
-- **项目文献库**：导入 PDF / BibTeX，整理文献与笔记，保留笔记历史和阅读位置。
-- **可选 AI 助手**：在项目与文献上下文中讨论、阅读和协助修改。使用前配置自己的模型服务；调用外部模型时，相关上下文会发送给所选服务商。
+- **LaTeX workbench**: chapter outline, references, and assets alongside PDFLaTeX / XeLaTeX compilation and PDF preview.
+- **Multi-format reading and editing**: PDF, images, Markdown, CSV / TSV, and source code in the project's existing directory structure.
+- **Project literature library**: import PDFs / BibTeX, organize papers and notes, and preserve note history and reading positions.
+- **Optional AI assistant**: discuss, read, and revise within project and paper context. Configure your own model service first; context is sent to the selected provider when an external model is called.
 
-## 给实验一个独立的空间
+## Give experiments their own space
 
-新的想法不必覆盖当前论文。创建实验工作区，尝试修改，再把需要的结果带回来。
+New ideas do not have to overwrite the current paper. Create an experimental workspace, try changes, and bring back the results you need.
 
-![Envoi 版本与实验工作区](docs/images/experiments.jpg)
+![Envoi Git history and experiment workspaces](docs/images/experiments.jpg)
 
-文件树用颜色和标记呈现 Git 状态；版本与实验页面集中展示工作区、提交历史和保存的结果。论文的演进与实验的过程可以一起追踪。
+The file tree shows Git status with colors and badges; the version and experiment views bring together workspace state, commit history, and saved results. The evolution of a paper and the process of experimentation can be followed together.
 
-## 熟悉的文件，自己的节奏
+## Familiar files, your own pace
 
-Envoi 直接使用本地项目文件。基础阅读与手工编辑可以在限制模式下进行；信任项目后，才启用编译、Git 和 AI 工具等执行能力。
+Envoi works directly with local project files. Reading and manual editing are available in restricted mode; compilation, Git, and AI tools become available only after the project is trusted.
 
-字体、字号、行高、主题和快捷键都可以调整。需要排查问题时，可从设置页导出本地诊断日志。
+Fonts, font size, line height, theme, and shortcuts are configurable. When troubleshooting, export local diagnostic logs from Settings.
 
-> 截图来自 Envoi 的独立演示项目。示例论文与图表使用合成数据，用于展示工作流，不代表真实实验结果。
+> Screenshots come from Envoi's independent demo project. The example paper and figures use synthetic data for workflow demonstration and do not represent real experimental results.
 
-## 开始使用
+## Getting started
 
-从 [GitHub Releases](https://github.com/ChenMiaoi/Envoi/releases/latest) 下载适合系统的安装包。每个版本的发布页包含更新说明与文件校验值。
+Download the installer for your platform from [GitHub Releases](https://github.com/ChenMiaoi/Envoi/releases/latest). Each release includes notes and file checksums.
 
-| 平台    | 安装包           |
-| :------ | :--------------- |
-| Windows | `.exe` 安装程序  |
-| macOS   | `.dmg` 或 `.zip` |
+| Platform | Package          |
+| :------- | :--------------- |
+| Windows  | `.exe` installer |
+| macOS    | `.dmg` or `.zip` |
 
-打开应用后，可以选择自己的项目，或点击 **打开示例项目**，创建一份独立副本来体验写作与实验流程。
+After opening the app, choose your own project or click **Open Example Project** to create an independent copy and explore the writing and experimentation workflow.
 
-按需准备以下工具：
+Prepare the following tools as needed:
 
-| 你想做什么         | 需要准备什么                                                |
-| :----------------- | :---------------------------------------------------------- |
-| 阅读和编辑文件     | Envoi 即可                                                  |
-| 编译 LaTeX         | 本机 TeX 工具链，例如 TeX Live / MacTeX，包含项目需要的宏包 |
-| 查看版本与管理实验 | Git                                                         |
-| 实时 LaTeX 检查    | ChkTeX（可选）                                              |
-| 使用 AI 助手       | 在设置中配置受支持的模型服务                                |
+| You want to                             | You need                                                                     |
+| :-------------------------------------- | :--------------------------------------------------------------------------- |
+| Read and edit files                     | Envoi only                                                                   |
+| Compile LaTeX                           | A local TeX toolchain, such as TeX Live / MacTeX, with the required packages |
+| Inspect versions and manage experiments | Git                                                                          |
+| Run live LaTeX checks                   | ChkTeX (optional)                                                            |
+| Use the AI assistant                    | A supported model service configured in Settings                             |
 
-应用会检测本机工具；缺失时给出提示，不会自动安装。macOS 安装包目前未签名和公证。详细说明见 [桌面使用与信任模式](docs/DESKTOP.md)。
+The app detects local tools and reports missing ones; it does not install them automatically. The macOS package is currently unsigned and not notarized. See [Desktop use and trust mode](docs/DESKTOP.md) for details.
 
-## 从源码运行
+## Run from source
 
-需要 **Node.js 24+** 和 npm。
+Requires **Node.js 24+** and npm.
 
 ```sh
 git clone https://github.com/ChenMiaoi/Envoi.git
@@ -89,43 +91,43 @@ npm run setup
 npm run dev
 ```
 
-开发模式会打开 Electron 桌面窗口。无需先配置 AI；编译和 Git 功能按上面的工具要求启用。
+Development mode opens an Electron desktop window. AI configuration is optional; compilation and Git features require the tools described above.
 
 <details>
-<summary><strong>开发命令与目录结构</strong></summary>
+<summary><strong>Development commands and layout</strong></summary>
 
-| 命令                   | 用途                             |
-| :--------------------- | :------------------------------- |
-| `npm run build`        | 类型检查与构建                   |
-| `npm run lint`         | 静态检查                         |
-| `npm test`             | 核心逻辑测试                     |
-| `npm run test:desktop` | 桌面交互回归，先运行构建         |
-| `npm run test:local`   | 本机 TeX、Git、ChkTeX 等工具检查 |
-| `npm run test:ai`      | AI 集成与数据迁移检查            |
-| `npm run package:win`  | 构建 Windows 安装包              |
-| `npm run package:mac`  | 构建 macOS 安装包                |
+| Command                | Purpose                                            |
+| :--------------------- | :------------------------------------------------- |
+| `npm run build`        | Type checking and build                            |
+| `npm run lint`         | Static checks                                      |
+| `npm test`             | Core logic tests                                   |
+| `npm run test:desktop` | Desktop interaction regression tests after a build |
+| `npm run test:local`   | Local TeX, Git, ChkTeX, and related tool checks    |
+| `npm run test:ai`      | AI integration and data migration checks           |
+| `npm run package:win`  | Build the Windows installer                        |
+| `npm run package:mac`  | Build the macOS installer                          |
 
 ```text
 app/
-  src/                 界面与交互
-  electron/            桌面主进程与桥接
-  server/              本机工具与数据服务
-  scripts/             开发和验证工具
-  tests/               测试
-examples/demo/         示例论文、图表与合成数据
-docs/                  使用、架构与发布文档
+  src/                 interface and interaction
+  electron/            desktop main process and bridge
+  server/              local tools and data services
+  scripts/             development and validation utilities
+  tests/               tests
+examples/demo/         example paper, figures, and synthetic data
+docs/                  user, architecture, and release documentation
 ```
 
-依赖锁文件位于 `app/package-lock.json`。完整开发规范见 [CONTRIBUTING.md](CONTRIBUTING.md)。
+The dependency lockfile is `app/package-lock.json`. See [CONTRIBUTING.md](CONTRIBUTING.md) for the complete development guide.
 
 </details>
 
-## 文档与参与
+## Documentation and contributing
 
-[桌面使用](docs/DESKTOP.md) · [阅读与文件格式](docs/READER_AND_LIBRARY.md) · [项目文献库](docs/research-library.md) · [设置](docs/SETTINGS.md) · [发布流程](docs/RELEASE.md)
+[Desktop use](docs/DESKTOP.md) · [Reading and file formats](docs/READER_AND_LIBRARY.md) · [Project literature library](docs/research-library.md) · [Settings](docs/SETTINGS.md) · [Release process](docs/RELEASE.md)
 
-欢迎通过 [Issues](https://github.com/ChenMiaoi/Envoi/issues) 反馈问题或讨论想法。报告问题时，请附上应用版本、操作系统、复现步骤，以及不含私人内容的截图或日志。提交代码前请阅读 [贡献指南](CONTRIBUTING.md)。
+Use [Issues](https://github.com/ChenMiaoi/Envoi/issues) for feedback. Include the app version, operating system, reproduction steps, and screenshots or logs without private content when reporting a problem. Read the [contribution guide](CONTRIBUTING.md) before submitting code.
 
-## 许可证与致谢
+## License and acknowledgements
 
-Envoi 的原创代码以 [Apache License 2.0](LICENSE) 发布。第三方依赖、论文模板和其他随项目分发的材料遵循各自的许可证，详见 [THIRD_PARTY.md](THIRD_PARTY.md)。Envoi 名称与标志不随该许可证授予商标使用权。
+Envoi's original code is released under the [Apache License 2.0](LICENSE). Third-party dependencies, paper templates, and other distributed materials remain under their respective licenses; see [THIRD_PARTY.md](THIRD_PARTY.md). The Envoi name and logo are not licensed as trademarks by the software license.
