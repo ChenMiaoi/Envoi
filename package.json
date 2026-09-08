@@ -2,6 +2,7 @@
   "name": "envoi",
   "private": true,
   "version": "0.2.0",
+  "license": "Apache-2.0",
   "description": "Envoi local academic writing workspace",
   "engines": {
     "node": ">=24"

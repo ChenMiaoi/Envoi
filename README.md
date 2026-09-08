@@ -128,4 +128,4 @@ docs/                  使用、架构与发布文档
 
 ## 许可证与致谢
 
-目前尚未选择项目整体许可证，公开源码不等同于授予开源许可。第三方依赖及论文模板遵循各自的许可证，详见 [THIRD_PARTY.md](THIRD_PARTY.md)。
+Envoi 的原创代码以 [Apache License 2.0](LICENSE) 发布。第三方依赖、论文模板和其他随项目分发的材料遵循各自的许可证，详见 [THIRD_PARTY.md](THIRD_PARTY.md)。Envoi 名称与标志不随该许可证授予商标使用权。

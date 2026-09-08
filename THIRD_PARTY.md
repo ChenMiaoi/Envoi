@@ -1,6 +1,6 @@
 # Third-party notices
 
-This file records component provenance; it does not select a license for Envoi’s original code.
+This file records component provenance; Envoi’s original code is licensed under Apache-2.0 in the root `LICENSE` file.
 
 - JavaScript dependencies are declared in `app/package.json` and pinned by `app/package-lock.json`. Their individual package licenses remain applicable.
 - Local diagnostic logging uses electron-log (MIT); the package's license is retained with the installed dependency.
@@ -8,7 +8,7 @@ This file records component provenance; it does not select a license for Envoi�
 - The paper catalog uses installed, unmodified TeX classes. It does not redistribute or relicense those class files. The ACM example retains `examples/demo/TEMPLATE.md` with official source and license attribution. Catalog references and family-specific notices are documented in `docs/LOCAL_PROJECTS_AND_COMPILATION.md`.
 - The bundled example’s bibliography identifies real public research records. Its charts are synthetic illustrations, not figures reproduced from those papers.
 
-No top-level license has been granted for Envoi. Before publishing under an open-source license, the owner should select one and review the licenses of distributed dependencies/assets.
+The root Apache-2.0 license applies only to Envoi’s original code and does not relicense these components or assets. Review the relevant notices before redistributing a packaged build.
 
 ## Markdown continuous editor
 

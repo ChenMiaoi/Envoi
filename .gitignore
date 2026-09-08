@@ -1,5 +1,6 @@
 # Dependencies and regenerable application output
 node_modules/
+/package-lock.json
 /app/dist/
 /app/public/pdfjs/
 /app/dist-ssr/
