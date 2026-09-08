@@ -15,8 +15,24 @@ export function Notification({
   const id = useId()
   useEffect(() => {
     const notificationId = testId ?? id
-    if (message) notify(message, kind, notificationId, testId)
+    if (message) notify(message, kind, notificationId)
     else toast.dismiss(notificationId)
   }, [message, kind, id, testId])
-  return null
+  return testId && message ? (
+    <span
+      data-testid={testId}
+      role="status"
+      aria-live="polite"
+      style={{
+        position: "fixed",
+        width: 1,
+        height: 1,
+        overflow: "hidden",
+        clipPath: "inset(50%)",
+        whiteSpace: "nowrap",
+      }}
+    >
+      {message}
+    </span>
+  ) : null
 }

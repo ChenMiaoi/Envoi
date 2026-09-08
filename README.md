@@ -87,11 +87,10 @@ Requires **Node.js 24+** and npm.
 ```sh
 git clone https://github.com/ChenMiaoi/Envoi.git
 cd Envoi
-npm run setup
 npm run dev
 ```
 
-Development mode opens an Electron desktop window. AI configuration is optional; compilation and Git features require the tools described above.
+The first `dev` or `build` run installs the dependencies under `app/` automatically; existing dependencies are not reinstalled. Run `npm run setup` when you need to reinstall them manually. Development mode opens an Electron desktop window. AI configuration is optional; compilation and Git features require the tools described above.
 
 <details>
 <summary><strong>Development commands and layout</strong></summary>

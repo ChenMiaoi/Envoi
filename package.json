@@ -9,7 +9,9 @@
   },
   "scripts": {
     "setup": "npm --prefix app ci",
+    "predev": "node scripts/ensure-app-deps.mjs",
     "dev": "npm --prefix app run dev",
+    "prebuild": "node scripts/ensure-app-deps.mjs",
     "build": "npm --prefix app run build",
     "format": "npm --prefix app run format",
     "format:check": "npm --prefix app run format:check",

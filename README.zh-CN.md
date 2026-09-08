@@ -87,11 +87,10 @@ Envoi 直接使用本地项目文件。基础阅读与手工编辑可以在限�
 ```sh
 git clone https://github.com/ChenMiaoi/Envoi.git
 cd Envoi
-npm run setup
 npm run dev
 ```
 
-开发模式会打开 Electron 桌面窗口。无需先配置 AI；编译和 Git 功能按上面的工具要求启用。
+首次运行 `dev` 或 `build` 时会自动安装 `app/` 依赖；已有依赖时不会重复安装。需要手动重新安装依赖时，再运行 `npm run setup`。开发模式会打开 Electron 桌面窗口。无需先配置 AI；编译和 Git 功能按上面的工具要求启用。
 
 <details>
 <summary><strong>开发命令与目录结构</strong></summary>
