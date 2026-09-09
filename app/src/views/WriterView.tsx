@@ -64,7 +64,7 @@ export function WriterView({
     setActiveId(requestedFile.id)
   }
   const pendingLocation = useRef<SourceLocation | null>(null)
-  const editable = project.files.filter((file) => file.text !== undefined)
+  const editable = project.files.filter((file) => file.kind === "latex" && file.text !== undefined)
   const active = editable.find((file) => file.id === activeId) ?? sources[0]
   const source = active?.text ?? ""
   useEffect(() => {

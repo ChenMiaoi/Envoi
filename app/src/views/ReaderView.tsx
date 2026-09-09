@@ -72,6 +72,7 @@ export function ReaderView({
   const fileContents = Object.fromEntries(project.files.map((file) => [file.id, file.text]))
   const activeData = [...project.files, ...libraryFiles].find((file) => file.id === activeId)
   const kind = activeData ? fileKind(activeData.path) : undefined
+  const [dataEditing, setDataEditing] = useState<string | null>(null)
   const [showChat, setShowChat] = useState(true)
   const [showTree, setShowTree] = useState(true)
   const [mdMode, setMdMode] = useState<Record<string, "preview" | "source">>({})
@@ -210,6 +211,15 @@ export function ReaderView({
               )
             })}
             <div className="flex-1" />
+            {(kind === "csv" || kind === "tsv") && (
+              <button
+                disabled={busy}
+                className="shrink-0 px-3 text-xs"
+                onClick={() => setDataEditing(dataEditing === activeId ? null : activeId)}
+              >
+                {dataEditing === activeId ? "完成编辑" : "编辑数据"}
+              </button>
+            )}
             {kind === "markdown" && (
               <div className="flex items-center gap-1 px-2">
                 <>
@@ -297,7 +307,7 @@ export function ReaderView({
                 source={activeData.text}
                 delimiter={kind === "tsv" ? "\t" : ","}
                 onChange={(text) => edit(active.id, text)}
-                readOnly={busy}
+                readOnly={busy || dataEditing !== activeId}
               />
             ) : kind === "text" && activeData?.text !== undefined ? (
               <textarea

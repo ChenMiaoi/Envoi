@@ -86,9 +86,19 @@ try {
   await until(() => app.evaluate(() => globalThis.compiles.length === 3))
   await app.evaluate(() => globalThis.releaseCompile())
   await pause(500)
-  await page.getByRole("combobox", { name: "当前 LaTeX 文件" }).selectOption("notes.md")
-  await editor.fill("Saved note")
-  await editor.press(chord)
+  assert.equal(
+    await page
+      .getByRole("combobox", { name: "当前 LaTeX 文件" })
+      .locator('option[value="notes.md"]')
+      .count(),
+    0,
+  )
+  await page.evaluate(() => (location.hash = "/reader"))
+  await page.getByRole("button", { name: "notes.md", exact: true }).click()
+  await page.getByRole("button", { name: "源码编辑", exact: true }).click()
+  const noteEditor = page.getByRole("textbox", { name: "Markdown 连续实时编辑器", exact: true })
+  await noteEditor.fill("Saved note")
+  await noteEditor.press(chord)
   await until(async () => (await readFile(path.join(root, "notes.md"), "utf8")) === "Saved note")
   assert.equal(await app.evaluate(() => globalThis.compiles.length), 3)
   await page.evaluate(() => (location.hash = "/reader"))
