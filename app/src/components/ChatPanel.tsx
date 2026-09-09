@@ -39,7 +39,7 @@ export function ChatPanel({
   const [input, setInput] = useState("")
   const [attempted, setAttempted] = useState(false),
     [collapsed, setCollapsed] = useState(false),
-    [ratio, setRatio] = useState(0.2),
+    [ratio, setRatio] = useState(0.35),
     [paneHeight, setPaneHeight] = useState(500)
   const root = useRef<HTMLDivElement>(null),
     drag = useRef<{ y: number; height: number } | null>(null)
@@ -167,7 +167,10 @@ export function ChatPanel({
             {agent.record?.messages
               .filter(
                 (message) =>
-                  message.text || message.error || (agent.busy && message.role === "assistant"),
+                  message.text ||
+                  message.error ||
+                  message.tools?.length ||
+                  (agent.busy && message.role === "assistant"),
               )
               .map((message) => (
                 <div
@@ -190,6 +193,32 @@ export function ChatPanel({
                     ) : (
                       message.text
                     )}
+                    {!!message.tools?.length && (
+                      <div className="my-2 space-y-1 text-xs" aria-label={t("chat.toolActivity")}>
+                        {message.tools.map((tool, index) => (
+                          <details key={index} className="rounded border border-border px-2 py-1">
+                            <summary className="cursor-pointer break-words">
+                              {tool.isError
+                                ? t("chat.toolFailed")
+                                : tool.phase === "start"
+                                  ? t("chat.toolStarted")
+                                  : t("chat.toolFinished")}{" "}
+                              · {tool.name}
+                              {tool.time && (
+                                <time className="ml-2 text-muted-foreground">
+                                  {new Date(tool.time).toLocaleTimeString()}
+                                </time>
+                              )}
+                            </summary>
+                            {tool.detail && (
+                              <pre className="mt-1 max-h-48 overflow-auto whitespace-pre-wrap break-words font-editor">
+                                {tool.detail}
+                              </pre>
+                            )}
+                          </details>
+                        ))}
+                      </div>
+                    )}
                     {message.error ? (
                       message.error.length > 240 ? (
                         <details className="break-words text-xs text-muted-foreground">
@@ -204,7 +233,9 @@ export function ChatPanel({
                         </span>
                       )
                     ) : !message.text && agent.busy && message.role === "assistant" ? (
-                      <span className="text-muted-foreground">…</span>
+                      <span role="status" className="text-muted-foreground">
+                        {t("chat.awaitingResponse")}
+                      </span>
                     ) : null}
                   </div>
                 </div>

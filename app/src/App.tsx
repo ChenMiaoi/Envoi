@@ -368,7 +368,18 @@ function ProjectApp() {
           <div className="flex items-center gap-3">
             <span className="flex items-center gap-1.5">
               <span className="inline-block h-1.5 w-1.5 rounded-full bg-muted-foreground" />
-              {agent.status?.runtime ? t("app.statusbar.runtime") : t("app.statusbar.disconnected")}
+              {!agent.status?.runtime
+                ? t("app.statusbar.disconnected")
+                : agent.busy
+                  ? t("chat.awaitingResponse")
+                  : !agent.config?.model ||
+                      !agent.status.models.some(
+                        (model) =>
+                          model.available &&
+                          `${model.provider}/${model.id}` === agent.config?.model,
+                      )
+                    ? t("common.selectModel")
+                    : `${t("app.statusbar.runtime")} · ${agent.config.model}`}
             </span>
             <span className="font-editor">
               {effective.engine === "xelatex" ? "XeLaTeX" : "pdfLaTeX"}

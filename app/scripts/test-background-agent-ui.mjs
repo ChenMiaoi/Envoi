@@ -105,6 +105,7 @@ try {
   await page.waitForFunction(
     () => document.querySelector('[aria-label="LaTeX 正文编辑器"]').readOnly,
   )
+  await page.getByText("开始执行 · bash", { exact: true }).filter({ visible: true }).waitFor()
   await open(roots[1])
   await page.waitForFunction(
     () => document.querySelector('[aria-label="LaTeX 正文编辑器"]')?.readOnly === false,

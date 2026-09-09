@@ -40,11 +40,19 @@ export interface AgentStatus {
   settings: AiConfig
   storage: { dataDir: string; credentials: string; kind: string }
 }
+export interface AgentToolEvent {
+  name: string
+  phase: string
+  id?: string
+  time?: number
+  detail?: string
+  isError?: boolean
+}
 export interface AgentMessage {
   id: string
   role: "user" | "assistant"
   text: string
-  tools?: { name: string; phase: string; isError?: boolean }[]
+  tools?: AgentToolEvent[]
   error?: string
 }
 export interface AgentRecord {
@@ -110,9 +118,10 @@ export async function bindProject(rootPath: string, options: { copy?: boolean } 
   }
 }
 export type ChatEvent =
-  | { type: "delta" | "thinking"; text: string }
+  | { type: "delta"; text: string }
+  | { type: "thinking"; text: string }
   | { type: "session"; id: string }
-  | { type: "tool"; phase: string; name: string; isError?: boolean }
+  | ({ type: "tool" } & AgentToolEvent)
   | { type: "done" }
   | { type: "error"; message: string }
 export async function* agentChat(

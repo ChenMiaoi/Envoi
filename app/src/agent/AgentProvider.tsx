@@ -211,7 +211,7 @@ export function AgentProvider({ children }: { children: ReactNode }) {
             record: state.record ? { ...state.record, id: event.id } : null,
           }))
         }
-        if (event.type === "delta")
+        if (event.type === "delta" || event.type === "tool")
           patch(id, (state) => ({
             ...state,
             record: state.record
@@ -219,7 +219,9 @@ export function AgentProvider({ children }: { children: ReactNode }) {
                   ...state.record,
                   messages: state.record.messages.map((item, index) =>
                     index === state.record!.messages.length - 1
-                      ? { ...item, text: item.text + event.text }
+                      ? event.type === "delta"
+                        ? { ...item, text: item.text + event.text }
+                        : { ...item, tools: [...(item.tools ?? []), event] }
                       : item,
                   ),
                 }

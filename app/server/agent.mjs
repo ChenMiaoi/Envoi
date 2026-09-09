@@ -174,9 +174,28 @@ function textEvent(event) {
     if (d?.type === "thinking_delta") return { type: "thinking", text: d.delta }
   }
   if (event.type === "tool_execution_start")
-    return { type: "tool", phase: "start", name: event.toolName }
+    return {
+      type: "tool",
+      phase: "start",
+      name: event.toolName,
+      id: event.toolCallId,
+      time: Date.now(),
+      detail: JSON.stringify(event.args ?? {}).slice(0, 4000),
+    }
   if (event.type === "tool_execution_end")
-    return { type: "tool", phase: "end", name: event.toolName, isError: !!event.isError }
+    return {
+      type: "tool",
+      phase: "end",
+      name: event.toolName,
+      id: event.toolCallId,
+      time: Date.now(),
+      isError: !!event.isError,
+      detail: (event.result?.content ?? [])
+        .filter((item) => item.type === "text")
+        .map((item) => item.text)
+        .join("\n")
+        .slice(0, 8000),
+    }
   return null
 }
 export function createAgentCore({ trustedDesktop = false } = {}) {
