@@ -237,6 +237,35 @@ try {
     .locator('[data-pdf-page="1"]')
     .evaluate((el) => el.parentElement.parentElement.scrollTop)
   assert(scroll > 300)
+  const pageNumber = page.getByRole("spinbutton", { name: "论文页码" })
+  assert.equal(Number(await pageNumber.inputValue()), reading.page)
+  await pageNumber.fill("12")
+  await pageNumber.press("Enter")
+  await page.waitForFunction(() => {
+    const el = document.querySelector('[data-pdf-page="12"]')
+    return (
+      Math.abs(
+        el.getBoundingClientRect().top - el.parentElement.parentElement.getBoundingClientRect().top,
+      ) < 30
+    )
+  })
+  await page.waitForTimeout(400)
+  await page.getByRole("combobox", { name: "PDF 缩放" }).selectOption("1.5")
+  await page.waitForFunction(() => {
+    const el = document.querySelector('[data-pdf-page="12"]')
+    return el.parentElement.scrollWidth > el.parentElement.parentElement.clientWidth
+  })
+  await page.getByRole("button", { name: /^Paper B/ }).click()
+  await page.getByRole("button", { name: /^Paper A/ }).click()
+  await page.waitForFunction(() => {
+    const el = document.querySelector('[data-pdf-page="12"]')
+    return (
+      el &&
+      Math.abs(
+        el.getBoundingClientRect().top - el.parentElement.parentElement.getBoundingClientRect().top,
+      ) < 35
+    )
+  })
   const allocated = await page
     .locator("canvas")
     .evaluateAll((nodes) => nodes.filter((c) => c.width > 0).length)

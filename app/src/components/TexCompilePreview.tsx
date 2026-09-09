@@ -52,8 +52,7 @@ function scrollToPagePosition(container: HTMLElement | null, pageNumber: number,
       scroller.scrollTop +
       figure.getBoundingClientRect().top -
       scroller.getBoundingClientRect().top +
-      fraction * figure.clientHeight -
-      20,
+      fraction * figure.clientHeight,
     behavior: "smooth",
   })
 }
@@ -372,6 +371,10 @@ export function TexCompilePreview({
   const [logs, setLogs] = useState<string[]>([])
   const [logOpen, setLogOpen] = useState(false)
   const [width, setWidth] = useState(0)
+  const [zoom, setZoom] = useState(1)
+  const [pageInput, setPageInput] = useState(String(reading?.page ?? 1))
+  const editingPage = useRef(false)
+  const renderWidth = width * zoom
   const dpr = useDevicePixelRatio()
   const containerRef = useRef<HTMLDivElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
@@ -400,26 +403,29 @@ export function TexCompilePreview({
   useEffect(() => {
     const container = containerRef.current,
       scroller = container?.parentElement
-    if (!container || !scroller || !pages.length || !width) return
+    if (!container || !scroller || !pages.length || !renderWidth || !scroller.clientHeight) return
     if (!restoredReading.current) {
       const position = initialReading.current
       if (position) {
-        const figure = container.querySelector<HTMLElement>(`[data-pdf-page="${position.page}"]`)
-        if (figure)
-          scroller.scrollTo({
-            top:
-              scroller.scrollTop +
-              figure.getBoundingClientRect().top -
-              scroller.getBoundingClientRect().top +
-              position.fraction * figure.clientHeight,
-            behavior: "instant",
-          })
+        const figure = container.querySelector<HTMLElement>(
+          `[data-pdf-page="${Math.min(pages.length, Math.max(1, position.page))}"]`,
+        )
+        if (!figure?.clientHeight) return
+        scroller.scrollTo({
+          top:
+            scroller.scrollTop +
+            figure.getBoundingClientRect().top -
+            scroller.getBoundingClientRect().top +
+            position.fraction * figure.clientHeight,
+          behavior: "instant",
+        })
       }
       restoredReading.current = true
     }
     let timer: ReturnType<typeof setTimeout>
     let lastPosition: { page: number; fraction: number } | undefined
     const save = () => {
+      if (!restoredReading.current) return
       if (!scroller.clientHeight) {
         if (lastPosition) readingCallback.current?.(lastPosition)
         return
@@ -432,6 +438,8 @@ export function TexCompilePreview({
           page: Number(figure.dataset.pdfPage),
           fraction: Math.max(0, (top - figure.getBoundingClientRect().top) / figure.clientHeight),
         }
+        initialReading.current = lastPosition
+        if (!editingPage.current) setPageInput(String(lastPosition.page))
         readingCallback.current?.(lastPosition)
       }
     }
@@ -439,13 +447,14 @@ export function TexCompilePreview({
       clearTimeout(timer)
       timer = setTimeout(save, 250)
     }
+    save()
     scroller.addEventListener("scroll", scroll)
     return () => {
       clearTimeout(timer)
       save()
       scroller.removeEventListener("scroll", scroll)
     }
-  }, [pages, width])
+  }, [pages, renderWidth])
 
   const logId = useId()
   const pagesRef = useRef<PDFPageProxy[]>([])
@@ -519,13 +528,13 @@ export function TexCompilePreview({
   }, [syncPoint, syncDb, pages, width, pathOfInput, t])
 
   useEffect(() => {
-    const element = containerRef.current
+    const element = containerRef.current?.parentElement
     if (!element) return
     // Resize the layout immediately, but rasterize only when dragging settles.
     let timer: ReturnType<typeof setTimeout>
     const observer = new ResizeObserver(([entry]) => {
       clearTimeout(timer)
-      timer = setTimeout(() => setWidth(Math.round(entry.contentRect.width)), 150)
+      timer = setTimeout(() => setWidth(Math.max(0, Math.round(entry.contentRect.width))), 150)
     })
     observer.observe(element)
     return () => {
@@ -539,7 +548,8 @@ export function TexCompilePreview({
     let task: PDFDocumentLoadingTask | undefined
     let document: PDFDocumentProxy | undefined
     async function load() {
-      containerRef.current?.parentElement?.scrollTo({ top: 0 })
+      restoredReading.current = false
+      containerRef.current?.parentElement?.scrollTo({ top: 0, behavior: "instant" })
       setPages([])
       setError("")
       setStatus(t("compile.loadingPdf"))
@@ -686,29 +696,58 @@ export function TexCompilePreview({
             aria-label={t("compile.selectLocalPdf")}
             onChange={(event) => {
               const file = event.target.files?.[0]
-              if (file) setSource({ file, name: file.name })
+              if (file) {
+                initialReading.current = { page: 1, fraction: 0 }
+                setPageInput("1")
+                setSource({ file, name: file.name })
+              }
               event.target.value = ""
             }}
           />
         </div>
       )}
-      {onReadingChange && (
-        <div className="flex shrink-0 items-center gap-2 border-b px-3 py-1 text-xs text-muted-foreground">
-          <span>跳转到</span>
-          <input
-            aria-label="论文页码"
-            type="number"
-            min={1}
-            max={pages.length || 1}
-            defaultValue={reading?.page ?? 1}
-            className="w-16 rounded border bg-background px-2 py-1"
-            onChange={(event) => {
-              const page = Number(event.target.value)
-              if (page >= 1 && page <= pages.length)
-                scrollToPagePosition(containerRef.current, page, 0)
+      {!!pages.length && (
+        <div className="flex shrink-0 flex-wrap items-center gap-2 border-b px-3 py-1 text-xs text-muted-foreground">
+          <form
+            onSubmit={(event) => {
+              event.preventDefault()
+              const page = Math.min(pages.length, Math.max(1, Number(pageInput) || 1))
+              setPageInput(String(page))
+              editingPage.current = false
+              scrollToPagePosition(containerRef.current, page, 0)
             }}
-          />
-          <span>/ {pages.length} 页</span>
+            className="flex items-center gap-2"
+          >
+            <input
+              aria-label="论文页码"
+              type="number"
+              min={1}
+              max={pages.length}
+              value={pageInput}
+              onFocus={() => (editingPage.current = true)}
+              onBlur={() => (editingPage.current = false)}
+              onChange={(event) => setPageInput(event.target.value)}
+              className="w-16 rounded border bg-background px-2 py-1"
+            />
+            <span>/ {pages.length}</span>
+            <button type="submit" className="rounded border px-2 py-1">
+              跳转
+            </button>
+          </form>
+          <select
+            aria-label="PDF 缩放"
+            className="rounded border bg-background px-2 py-1"
+            value={zoom}
+            onChange={(event) => {
+              restoredReading.current = false
+              setZoom(Number(event.target.value))
+            }}
+          >
+            <option value={1}>适合宽度</option>
+            <option value={1.25}>125%</option>
+            <option value={1.5}>150%</option>
+            <option value={2}>200%</option>
+          </select>
         </div>
       )}
       {paperOnly && navigationNotice && (
@@ -716,8 +755,13 @@ export function TexCompilePreview({
           {navigationNotice}
         </p>
       )}
-      <div className="envoi-scrollbar min-h-0 flex-1 overflow-y-auto overflow-x-hidden p-3">
-        <div data-content-typography="pdf" ref={containerRef} className="flex w-full flex-col">
+      <div className="envoi-scrollbar min-h-0 flex-1 overflow-auto p-3">
+        <div
+          data-content-typography="pdf"
+          ref={containerRef}
+          className="flex min-w-full flex-col"
+          style={{ width: renderWidth || undefined }}
+        >
           {error && (
             <p role="alert" className="p-3 text-sm text-danger">
               {error}
@@ -738,7 +782,7 @@ export function TexCompilePreview({
               separator={index > 0}
               key={page.pageNumber}
               page={page}
-              width={width}
+              width={renderWidth}
               dpr={dpr}
               linkService={linkService}
               onError={onRenderError}
