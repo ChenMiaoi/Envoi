@@ -521,6 +521,7 @@ export function LibraryView() {
     [query, setQuery] = useState(""),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false)
+  const [exportNotice, setExportNotice] = useState("")
   const input = useRef<HTMLInputElement>(null),
     selectionClock = useRef(Date.now())
   const load = useCallback(async () => {
@@ -589,22 +590,24 @@ export function LibraryView() {
           从旧论文库导入
         </button>
         <button
-          onClick={() => {
-            void researchLibrary(root, { action: "export" })
-              .then((value) => {
-                const url = URL.createObjectURL(
-                  new Blob([JSON.stringify(value)], { type: "application/json" }),
-                )
-                const a = document.createElement("a")
-                a.href = url
-                a.download = "research-library.json"
-                a.click()
-                setTimeout(() => URL.revokeObjectURL(url), 1000)
+          disabled={busy}
+          title="导出当前研究的全部文献、PDF 附件、笔记与会话"
+          onClick={async () => {
+            setBusy(true)
+            setExportNotice("")
+            try {
+              const result = await researchLibrary<{ saved: boolean; path?: string }>(root, {
+                action: "export-file",
               })
-              .catch(notice)
+              if (result.saved) setExportNotice(`已导出当前研究的全部资料：${result.path}`)
+            } catch (error) {
+              notice(error)
+            } finally {
+              setBusy(false)
+            }
           }}
         >
-          导出资料
+          导出全部资料…
         </button>
         <input
           ref={input}
@@ -619,6 +622,7 @@ export function LibraryView() {
           }}
         />
       </header>
+      {exportNotice && <Notification message={exportNotice} kind="success" />}
       {error && <Notification message={error} kind={"error"} />}
       <div className="min-h-0 flex-1">
         <Group orientation="horizontal">

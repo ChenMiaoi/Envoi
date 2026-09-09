@@ -18,7 +18,7 @@ import {
 import { toolDirectories } from "../../server/tool-config.mjs"
 import { app, BrowserWindow, dialog, ipcMain, Menu, protocol, shell } from "electron"
 import { randomBytes } from "node:crypto"
-import { mkdir, readdir, readFile, stat, realpath, rename, rm } from "node:fs/promises"
+import { mkdir, readdir, readFile, writeFile, stat, realpath, rename, rm } from "node:fs/promises"
 import path from "node:path"
 
 import type { CompileInput } from "../../server/compiler.mjs"
@@ -304,9 +304,21 @@ function registerIpc(): void {
     if (!updateUrl) throw Error("Check for updates first")
     await shell.openExternal(updateUrl)
   })
-  handle("envoi:library", async (_event, root: string, input: Record<string, unknown>) => {
+  handle("envoi:library", async (event, root: string, input: Record<string, unknown>) => {
     root = await requireBoundRoot(root)
     await requireBoundRoot(await researchRoot(root))
+    if (input.action === "export-file") {
+      const owner = BrowserWindow.fromWebContents(event.sender)
+      if (!owner) throw Error("Window unavailable")
+      const result = await dialog.showSaveDialog(owner, {
+        defaultPath: `${path.basename(root)}-research-library.json`,
+        filters: [{ name: "研究资料（文献、PDF、笔记与会话）", extensions: ["json"] }],
+      })
+      if (result.canceled || !result.filePath) return { saved: false }
+      const archive = await libraryRequest(root, { action: "export" })
+      await writeFile(result.filePath, JSON.stringify(archive, null, 2), { mode: 0o600 })
+      return { saved: true, path: result.filePath }
+    }
     return libraryRequest(root, input)
   })
   handle(
