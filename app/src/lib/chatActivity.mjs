@@ -1,5 +1,6 @@
 // Keep the provider's public stream in order; never synthesize thinking text.
 export function appendChatEvent(message, event) {
+  if (event.type === "metrics") return { ...message, metrics: event.metrics }
   const time = event.time ?? Date.now()
   const parts = [...(message.parts ?? [])]
   if (event.type === "delta" || event.type === "thinking") {

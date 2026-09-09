@@ -199,6 +199,71 @@ try {
   console.log(
     "PASS chat grouping and scroll: collapsed rounds, burst following, manual pause and return to latest",
   )
+  await app.evaluate(() => {
+    const startedAt = Date.now() - 2000
+    globalThis.backgroundFixture.emit({
+      type: "metrics",
+      metrics: {
+        version: 1,
+        model: "Fixture",
+        provider: "local",
+        startedAt,
+        endedAt: startedAt + 2000,
+        status: "complete",
+        calls: [
+          {
+            startedAt,
+            firstTokenAt: startedAt + 500,
+            endedAt: startedAt + 1500,
+            status: "stop",
+            usage: { input: 100, output: 30, cacheRead: 20, cacheWrite: 0 },
+          },
+        ],
+        tools: [
+          {
+            id: "stats-tool",
+            name: "read",
+            startedAt: startedAt + 1500,
+            endedAt: startedAt + 2000,
+            status: "complete",
+          },
+        ],
+      },
+    })
+  })
+  await page.getByRole("button", { name: "会话统计", exact: true }).click()
+  const stats = page.getByRole("dialog", { name: "会话统计" })
+  await stats.getByText("16.7%", { exact: true }).waitFor()
+  await stats.getByText("30.0 tok/s", { exact: true }).waitFor()
+  await stats.getByRole("button", { name: "本轮", exact: true }).click()
+  await stats.getByText("已记录 1/1 轮；1/1 次模型调用有用量报告。", { exact: true }).waitFor()
+  await page.screenshot({ path: "/tmp/envoi-chat-statistics.png" })
+  // Inspect export content without writing into the user's Downloads folder.
+  await page.evaluate(() => {
+    const create = URL.createObjectURL,
+      click = HTMLAnchorElement.prototype.click
+    URL.createObjectURL = function (blob) {
+      window.statsExport = blob.text()
+      return create.call(this, blob)
+    }
+    HTMLAnchorElement.prototype.click = function () {
+      if (this.download !== "envoi-chat-statistics.json") click.call(this)
+    }
+    window.restoreStatsExport = () => {
+      URL.createObjectURL = create
+      HTMLAnchorElement.prototype.click = click
+    }
+  })
+  await stats.getByRole("button", { name: "导出统计 JSON", exact: true }).click()
+  const exported = await page.evaluate(async () => JSON.parse(await window.statsExport))
+  assert.equal(exported.scope, "turn")
+  assert.equal(exported.summary.input, 120)
+  assert(!JSON.stringify(exported).includes("research findings"))
+  await page.evaluate(() => window.restoreStatsExport())
+  await page.keyboard.press("Escape")
+  console.log(
+    "PASS session statistics: live event, scoped totals, cache, rate, and content-free export",
+  )
   await open(roots[1])
   await page.waitForFunction(
     () => document.querySelector('[aria-label="LaTeX 正文编辑器"]')?.readOnly === false,

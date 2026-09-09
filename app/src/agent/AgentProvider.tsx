@@ -212,7 +212,12 @@ export function AgentProvider({ children }: { children: ReactNode }) {
             record: state.record ? { ...state.record, id: event.id } : null,
           }))
         }
-        if (event.type === "delta" || event.type === "thinking" || event.type === "tool")
+        if (
+          event.type === "delta" ||
+          event.type === "thinking" ||
+          event.type === "tool" ||
+          event.type === "metrics"
+        )
           patch(id, (state) => ({
             ...state,
             record: state.record

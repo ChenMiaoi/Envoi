@@ -59,6 +59,16 @@ const transport = await serve(async (req, res) => {
           created: 1,
           model: "gpt-4o",
           choices: [{ index: 0, delta, finish_reason }],
+          ...(finish_reason === "stop"
+            ? {
+                usage: {
+                  prompt_tokens: 120,
+                  completion_tokens: 30,
+                  total_tokens: 150,
+                  prompt_tokens_details: { cached_tokens: 20 },
+                },
+              }
+            : {}),
         }) +
         "\n\n",
     )
@@ -275,13 +285,22 @@ try {
   const sessionId = list.activeId
   assert(sessionId)
   const record = (await post("agent/session", { projectId: id, sessionId })).body
-  assert.equal(record.status, "complete")
+  assert.equal(record.status, "complete", JSON.stringify(record.messages.map((m) => m.error)))
   assert.equal(record.messages[1].text, "Protocol verified")
   assert.deepEqual(
     record.messages[1].parts.map((p) => p.type),
     ["thinking", "text"],
   )
   assert.equal(record.messages[1].parts[0].text, "Check the supplied evidence.")
+  assert.equal(record.messages[1].metrics.model, "gpt-4o")
+  assert.equal(record.messages[1].metrics.status, "complete")
+  assert.equal(record.messages[1].metrics.calls.length, 1)
+  assert.equal(record.messages[1].metrics.calls[0].usage.output, 30)
+  assert.equal(record.messages[1].metrics.calls[0].usage.cacheRead, 20)
+  assert(
+    record.messages[1].metrics.calls[0].firstTokenAt >=
+      record.messages[1].metrics.calls[0].startedAt,
+  )
   assert(record.piFile)
   assert.equal((await post("agent/session", { projectId: copyId, sessionId })).response.status, 400)
   await post("agent/chat", { projectId: id, sessionId, message: "Second turn", dirty: false })
@@ -330,6 +349,8 @@ try {
   const paperRecord = (await libraryRequest(moved, { action: "get", paperId: paperA.id })).state
     .chat
   assert.equal(paperRecord.messages[0].text, "Discuss Paper A")
+  assert.equal(paperRecord.messages[1].metrics.calls[0].usage.output, 30)
+  assert.equal(paperRecord.messages[1].metrics.status, "complete")
   assert(paperRecord.piFile)
   assert.equal(
     (await libraryRequest(moved, { action: "get", paperId: paperB.id })).state.chat,

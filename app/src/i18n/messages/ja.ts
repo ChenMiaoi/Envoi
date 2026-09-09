@@ -1,6 +1,33 @@
 /** 日本語メッセージ。zh-CN と完全に同じキーを持つこと。 */
 import type { Messages } from "./zh-CN"
 const ja: Messages = {
+  "chat.statsRunning": "実行中",
+  "chat.statsComplete": "完了",
+  "chat.statsFailed": "失敗",
+  "chat.statsStopped": "停止",
+  "chat.statsTitle": "会話の統計",
+  "chat.statsUnavailable": "データなし",
+  "chat.statsTurns": "会話ターン",
+  "chat.statsCalls": "モデル呼び出し",
+  "chat.statsTools": "ツール呼び出し",
+  "chat.statsElapsed": "タスク経過時間",
+  "chat.statsModelTime": "モデル処理時間",
+  "chat.statsToolTime": "ツール累計時間",
+  "chat.statsTtft": "最初の出力までの平均",
+  "chat.statsSpeed": "平均生成速度",
+  "chat.statsInput": "入力トークン（キャッシュ含む）",
+  "chat.statsOutput": "出力トークン",
+  "chat.statsCache": "キャッシュ読み取り比率",
+  "chat.statsFailedTools": "失敗したツール呼び出し",
+  "chat.statsExport": "統計 JSON をエクスポート",
+  "chat.statsSession": "会話全体",
+  "chat.statsTurn": "最新ターン",
+  "chat.statsCoverage":
+    "{measured}/{total} ターンを記録。{usage}/{calls} 回に使用量報告があります。",
+  "chat.statsMethod": "集計方法",
+  "chat.statsMethodText":
+    "会話とともにローカル保存。ターン間の待機時間は除外します。モデル時間はリクエスト待ちを含み、ツール時間は並列実行も合算します。最初の出力は思考・本文・ツール引数を含みます。速度は出力トークン数（思考含む）を最初の出力から終了までの時間で割ります。入力はキャッシュ読み書きを含み、キャッシュ報告がない場合は 0% と推定しません。古い会話や未報告の使用量は推定しません。エクスポートに本文は含めません。",
+  "chat.statsByTurn": "ターン別（入力 / 出力）",
   "chat.activitySummary": "実行の詳細",
   "chat.stepCount": "{n} ステップ",
   "chat.failedSteps": "{n} 件失敗",

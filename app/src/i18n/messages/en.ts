@@ -1,6 +1,33 @@
 /** English messages. Must contain exactly the same keys as zh-CN. */
 import type { Messages } from "./zh-CN"
 const en: Messages = {
+  "chat.statsRunning": "Running",
+  "chat.statsComplete": "Completed",
+  "chat.statsFailed": "Failed",
+  "chat.statsStopped": "Stopped",
+  "chat.statsTitle": "Session statistics",
+  "chat.statsUnavailable": "Unavailable",
+  "chat.statsTurns": "Conversation turns",
+  "chat.statsCalls": "Model calls",
+  "chat.statsTools": "Tool calls",
+  "chat.statsElapsed": "Task elapsed time",
+  "chat.statsModelTime": "Model phase time",
+  "chat.statsToolTime": "Cumulative tool time",
+  "chat.statsTtft": "Average first output",
+  "chat.statsSpeed": "Average generation speed",
+  "chat.statsInput": "Input tokens (incl. cache)",
+  "chat.statsOutput": "Output tokens",
+  "chat.statsCache": "Cache-read share",
+  "chat.statsFailedTools": "Failed tool calls",
+  "chat.statsExport": "Export statistics JSON",
+  "chat.statsSession": "Whole session",
+  "chat.statsTurn": "Latest turn",
+  "chat.statsCoverage":
+    "Recorded {measured}/{total} turns; {usage}/{calls} model calls reported usage.",
+  "chat.statsMethod": "How these are measured",
+  "chat.statsMethodText":
+    "Saved locally with the conversation. Elapsed time excludes idle time between turns. Model time includes request waiting; tool times are summed and may overlap. First output includes thinking, text, or tool arguments. Speed divides reported output tokens (including reasoning) by the time from first output to completion. Input includes cache reads/writes; absent cache-read reports are not assumed to mean 0%. Older turns and missing usage are not estimated. Exports include only statistics, model identifiers and tool names, without conversation text.",
+  "chat.statsByTurn": "Per-turn detail (input / output)",
   "chat.activitySummary": "Execution details",
   "chat.stepCount": "{n} steps",
   "chat.failedSteps": "{n} failed",

@@ -1,3 +1,4 @@
+import { ChatStats } from "./ChatStats"
 import { useProject } from "@/project/context"
 import { TrustRequired } from "@/project/ProjectTrust"
 import { useProjectTrust } from "@/project/useProjectTrust"
@@ -360,6 +361,7 @@ export function ChatPanel({
             <div className="flex min-w-0 flex-1 items-center gap-0.5 [&_button]:h-7 [&_button]:focus-visible:outline-none [&_button]:focus-visible:ring-1 [&_button]:focus-visible:ring-ring">
               <PiModelMenu />
             </div>
+            <ChatStats key={agent.record?.id ?? "empty"} record={agent.record} busy={agent.busy} />
             {(!conversation || historySource) && (
               <ChatHistory key={historySource?.scope ?? agent.scope} source={historySource} />
             )}

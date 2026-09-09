@@ -51,7 +51,25 @@ export interface AgentToolEvent {
 export type ChatPart =
   | { type: "text" | "thinking"; text: string; time: number; updated: number }
   | (AgentToolEvent & { type: "tool"; time: number; updated: number; input?: string })
+export interface ChatMetrics {
+  version: 1
+  updatedAt?: number
+  model: string
+  provider: string
+  startedAt: number
+  endedAt?: number
+  status: string
+  calls: {
+    startedAt: number
+    endedAt?: number
+    firstTokenAt?: number
+    status: string
+    usage: { input: number; output: number; cacheRead: number; cacheWrite: number } | null
+  }[]
+  tools: { id: string; name: string; startedAt: number; endedAt?: number; status: string }[]
+}
 export interface AgentMessage {
+  metrics?: ChatMetrics
   parts?: ChatPart[]
   id: string
   role: "user" | "assistant"
@@ -122,6 +140,7 @@ export async function bindProject(rootPath: string, options: { copy?: boolean } 
   }
 }
 export type ChatEvent =
+  | { type: "metrics"; metrics: ChatMetrics }
   | { type: "delta"; text: string }
   | { type: "thinking"; text: string }
   | { type: "session"; id: string }
