@@ -123,6 +123,24 @@ export async function workspaceAiDefaults(root) {
   const repo = await repository(root)
   return (await registry(repo)).experiments?.[root]?.ai ?? {}
 }
+export async function commitWorkspace(root, input) {
+  const message = String(input?.message ?? "").trim()
+  if (!message || message.length > 500) throw Error("请输入 1–500 字的提交说明")
+  const repo = await repository(root)
+  return withDataLock(repo.file, async () => {
+    const options = []
+    for (const [key, fallback] of [
+      ["user.name", "Envoi"],
+      ["user.email", "envoi@localhost"],
+    ]) {
+      const value = await git(repo.root, ["config", "--get", key]).catch(() => "")
+      if (!value.trim()) options.push("-c", `${key}=${fallback}`)
+    }
+    await git(repo.root, ["add", "--all"])
+    await git(repo.root, [...options, "commit", "-m", message])
+    return { commit: (await git(repo.root, ["rev-parse", "HEAD"])).trim() }
+  })
+}
 export async function createWorkspace(root, input) {
   if (typeof input?.name !== "string" || !input.name.trim() || input.name.length > 80)
     throw Error("请输入 1–80 字的实验名称。")

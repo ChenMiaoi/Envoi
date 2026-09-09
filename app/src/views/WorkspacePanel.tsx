@@ -63,6 +63,7 @@ export function WorkspacePanel({
     [files, setFiles] = useState<string[]>([]),
     [choices, setChoices] = useState<string[]>([])
   const [revision, setRevision] = useState(0)
+  const [commitMessage, setCommitMessage] = useState("")
   const root = project.rootPath
   const refresh = useCallback(async () => {
     if (!root) return
@@ -251,19 +252,34 @@ export function WorkspacePanel({
                   </label>
                   <p className="mb-2 mt-5 text-xs">结果文件 · 已选 {files.length}</p>
                   <div className="max-h-48 overflow-auto rounded border border-border p-3">
-                    {choices.map((file) => (
-                      <label key={file} className="flex items-center gap-2 py-1 text-xs">
-                        <input
-                          type="checkbox"
-                          checked={files.includes(file)}
-                          onChange={(e) =>
-                            setFiles((old) =>
-                              e.target.checked ? [...old, file] : old.filter((p) => p !== file),
-                            )
-                          }
-                        />
-                        <span className="break-all">{file}</span>
-                      </label>
+                    {Object.entries(
+                      choices.reduce<Record<string, string[]>>((groups, file) => {
+                        const folder = file.includes("/")
+                          ? file.slice(0, file.lastIndexOf("/"))
+                          : "项目根目录"
+                        ;(groups[folder] ??= []).push(file)
+                        return groups
+                      }, {}),
+                    ).map(([folder, paths]) => (
+                      <details key={folder} open className="mb-2">
+                        <summary className="cursor-pointer text-xs text-muted-foreground">
+                          {folder} · {paths.length}
+                        </summary>
+                        {paths.map((file) => (
+                          <label key={file} className="ml-3 flex items-center gap-2 py-1 text-xs">
+                            <input
+                              type="checkbox"
+                              checked={files.includes(file)}
+                              onChange={(e) =>
+                                setFiles((old) =>
+                                  e.target.checked ? [...old, file] : old.filter((p) => p !== file),
+                                )
+                              }
+                            />
+                            <span className="break-all">{file}</span>
+                          </label>
+                        ))}
+                      </details>
                     ))}
                   </div>
                 </>
@@ -334,7 +350,14 @@ export function WorkspacePanel({
                               setChoices(
                                 listing.files
                                   .filter(
-                                    (f) => !f.path.startsWith(".") && !f.path.endsWith(".bundle"),
+                                    (f) =>
+                                      !f.path
+                                        .split("/")
+                                        .some(
+                                          (part) =>
+                                            part.startsWith(".") ||
+                                            ["__pycache__", "node_modules"].includes(part),
+                                        ) && !/\.(bundle|pyc|aux|synctex|blg|fls)$/i.test(f.path),
                                   )
                                   .map((f) => f.path),
                               )
@@ -392,6 +415,44 @@ export function WorkspacePanel({
               )}
               {tab === "changes" && (
                 <div className="flex-1 overflow-auto p-5">
+                  {!!changes.length && (
+                    <form
+                      className="mb-4 space-y-2 rounded border p-3"
+                      onSubmit={(event) => {
+                        event.preventDefault()
+                        if (taskBusy || !commitMessage.trim()) return
+                        void run(async () => {
+                          if (dirtyFiles(project).length)
+                            throw Error("请先保存当前工作区的修改，再提交基线。")
+                          await envoi().workspaces(selected, {
+                            action: "commit",
+                            message: commitMessage.trim(),
+                          })
+                          setCommitMessage("")
+                          setNotice("已提交当前列出的全部修改，可以基于此版本创建实验。")
+                          await refresh()
+                        })
+                      }}
+                    >
+                      <p className="text-xs text-muted-foreground">
+                        将下方全部文件变化保存为一个版本，作为可复现的实验基线。
+                      </p>
+                      <input
+                        aria-label="基线提交说明"
+                        value={commitMessage}
+                        onChange={(event) => setCommitMessage(event.target.value)}
+                        className="w-full rounded border bg-background px-2 py-1 text-sm"
+                        placeholder="例如：记录假设与实验计划"
+                      />
+                      <button
+                        className={button}
+                        disabled={locked || taskBusy || !commitMessage.trim()}
+                        type="submit"
+                      >
+                        提交列出的全部修改
+                      </button>
+                    </form>
+                  )}
                   {!changes.length ? (
                     <p className="text-sm text-muted-foreground">{t("git.clean")}</p>
                   ) : (
@@ -426,7 +487,7 @@ export function WorkspacePanel({
                         >
                           <h3 className="text-sm font-medium">{r.title}</h3>
                           <p className="mt-2 text-xs text-muted-foreground">
-                            {r.experiment} · {r.created.slice(0, 16).replace("T", " ")} ·{" "}
+                            {r.experiment} · {new Date(r.created).toLocaleString()} ·{" "}
                             {r.commit.slice(0, 8)}
                           </p>
                           <p className="mt-3 whitespace-pre-wrap text-xs leading-6">{r.summary}</p>

@@ -9,6 +9,7 @@ import {
   trashProjectDirectory,
   listWorkspaces,
   createWorkspace,
+  commitWorkspace,
   workspaceTarget,
   saveWorkspaceResult,
   listWorkspaceResults,
@@ -326,11 +327,12 @@ function registerIpc(): void {
     async (
       _event,
       root: string,
-      input: { action: string; source?: string; target?: string; name?: string },
+      input: { action: string; source?: string; target?: string; name?: string; message?: string },
     ) => {
       root = await requireBoundRoot(root)
       if (input.action === "list") return listWorkspaces(root)
       if (input.action === "create") return createWorkspace(root, input)
+      if (input.action === "commit") return commitWorkspace(root, input)
       if (input.action === "rename") return renameWorkspace(root, input)
       if (input.action === "target") return workspaceTarget(root, input.target)
       if (input.action === "results") {

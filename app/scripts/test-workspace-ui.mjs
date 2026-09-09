@@ -1,6 +1,5 @@
 import { seedFixtureTrust } from "./fixture-trust.mjs"
 import { _electron } from "playwright"
-import { execFileSync } from "node:child_process"
 import { createRequire } from "node:module"
 import { realpath, mkdtemp, mkdir, readFile, writeFile, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
@@ -115,18 +114,9 @@ try {
   await page.getByRole("button", { name: "文件变化", exact: true }).click()
   await writeFile(path.join(main, "refresh-note.md"), "Observed experiment result")
   await page.getByText("refresh-note.md", { exact: true }).waitFor()
-  execFileSync("git", ["-C", main, "add", "refresh-note.md"])
-  execFileSync("git", [
-    "-C",
-    main,
-    "-c",
-    "user.name=Envoi Test",
-    "-c",
-    "user.email=test@example.invalid",
-    "commit",
-    "-m",
-    "Fixture: result recorded",
-  ])
+  await page.getByRole("textbox", { name: "基线提交说明" }).fill("Fixture: result recorded")
+  await page.getByRole("button", { name: "提交列出的全部修改" }).click()
+  await page.getByText(/已提交当前列出的全部修改/).waitFor()
   await page.getByRole("button", { name: "提交历史", exact: true }).click()
   await page.getByText("Fixture: result recorded", { exact: true }).waitFor()
   await page.setViewportSize({ width: 760, height: 650 })
