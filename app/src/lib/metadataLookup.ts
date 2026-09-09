@@ -9,6 +9,7 @@ import {
   pickTitleHint,
   titleMatches,
   bibtexKey,
+  normalizeRegistryBib,
   type CrossrefWork,
 } from "./paperMetadata"
 import type { LibraryPaper } from "./paperLibrary"
@@ -36,7 +37,7 @@ async function lookupDoi(doi: string): Promise<Enrichment | null> {
       `https://api.crossref.org/works/${encodeURIComponent(doi)}/transform/application/x-bibtex`,
       { headers },
     )
-    if (response.ok) bib = (await response.text()).trim()
+    if (response.ok) bib = normalizeRegistryBib((await response.text()).trim())
   } catch {
     /* BibTeX transform is best-effort; fields alone still enrich. */
   }
@@ -54,7 +55,7 @@ async function lookupArxiv(id: string): Promise<Enrichment | null> {
     const response = await fetch(`https://api.datacite.org/dois/${encodeURIComponent(doi)}`, {
       headers: { ...headers, Accept: "application/x-bibtex" },
     })
-    if (response.ok) bib = (await response.text()).trim()
+    if (response.ok) bib = normalizeRegistryBib((await response.text()).trim())
   } catch {
     /* best-effort */
   }

@@ -71,12 +71,20 @@ assert.deepEqual(
   meta.dataciteToPaper({
     titles: [{ title: "T" }],
     creators: [{ name: "A B" }],
-    published: 2017,
+    publicationYear: 2017,
     publisher: "arXiv",
   }),
   { title: "T", author: "A B", year: "2017", venue: "arXiv" },
 )
 assert.equal(meta.dataciteToPaper({ titles: [] }), null)
+assert.equal(
+  meta.bibtexKey(
+    meta.normalizeRegistryBib(
+      "@article{https://doi.org/10.48550/arxiv.1706.03762, title={Attention}}",
+    ),
+  ),
+  "ref_10_48550_arxiv_1706_03762",
+)
 // Citation keys and BibTeX synthesis
 assert.equal(
   meta.citationKeyFor({

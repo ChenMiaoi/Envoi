@@ -69,6 +69,7 @@ export function dataciteToPaper(
         titles?: { title: string }[]
         creators?: { name?: string }[]
         publisher?: string
+        publicationYear?: number
         published?: number
       }
     | undefined,
@@ -81,12 +82,19 @@ export function dataciteToPaper(
       .map((c) => c.name?.trim() ?? "")
       .filter(Boolean)
       .join("; "),
-    year: String(data?.published ?? ""),
+    year: String(data?.publicationYear ?? data?.published ?? ""),
     venue: data?.publisher ?? "arXiv",
   }
 }
 export function bibtexKey(bib: string) {
   return /^\s*@\w+\{\s*([^\s,]+)/.exec(bib)?.[1]
+}
+export function normalizeRegistryBib(bib: string): string {
+  const key = bibtexKey(bib)
+  if (!key || /^[a-zA-Z][a-zA-Z0-9_-]*$/.test(key)) return bib
+  const normalized =
+    "ref_" + key.replace(/^https?:\/\/(?:dx\.)?doi\.org\//i, "").replace(/[^a-zA-Z0-9_-]/g, "_")
+  return bib.replace(/^(\s*@\w+\{\s*)[^\s,]+/, `$1${normalized}`)
 }
 export interface CrossrefWork {
   title?: string[]
