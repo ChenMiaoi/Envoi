@@ -1,7 +1,7 @@
 import { seedFixtureTrust } from "./fixture-trust.mjs"
 import { _electron } from "playwright"
 import { createRequire } from "node:module"
-import { mkdtemp, realpath, rm, readFile } from "node:fs/promises"
+import { mkdtemp, realpath, rm, readFile, writeFile } from "node:fs/promises"
 import path from "node:path"
 import { tmpdir } from "node:os"
 import assert from "node:assert/strict"
@@ -288,6 +288,49 @@ try {
   await page.getByRole("button", { name: /恢复版本 1/ }).click()
   await page.waitForTimeout(650)
   assert.equal(await notes.textContent(), "Note A")
+  await writeFile(path.join(root, "metrics.csv"), "method,score\nbaseline,0.5\n")
+  await writeFile(
+    path.join(root, "reader-import.pdf"),
+    Buffer.concat([Buffer.from(pdf(), "base64"), Buffer.from("\n% Reader import fixture\n")]),
+  )
+  await page.evaluate(() => (location.hash = "/reader"))
+  await page.getByRole("button", { name: "metrics.csv", exact: true }).click()
+  const cell = page.locator("table textarea").last()
+  assert.equal(await cell.getAttribute("readonly"), "")
+  await page.getByRole("button", { name: "编辑数据", exact: true }).click()
+  await cell.fill("0.75")
+  assert.equal(await cell.inputValue(), "0.75")
+  await page.getByRole("button", { name: "reader-import.pdf", exact: true }).click()
+  await page.getByRole("button", { name: "归档到论文库", exact: true }).click()
+  await page.getByTestId("project-notification").waitFor()
+  await page.waitForFunction(() => location.hash === "#/library")
+  await page.getByRole("button", { name: /^reader-import/ }).waitFor()
+  const imported = await page.evaluate(
+    (root) => window.envoi.library(root, { action: "list" }),
+    root,
+  )
+  assert.equal(imported.papers.length, 3)
+  await app.evaluate(
+    (_, base64) => {
+      globalThis.fetch = async () =>
+        new Response(Uint8Array.from(atob(base64), (c) => c.charCodeAt(0)))
+    },
+    Buffer.concat([Buffer.from(pdf(), "base64"), Buffer.from("\n% URL fixture\n")]).toString(
+      "base64",
+    ),
+  )
+  await page.route("https://api.crossref.org/**", (route) =>
+    route.fulfill({ json: { message: { items: [] } } }),
+  )
+  await page.getByRole("button", { name: "URL / DOI", exact: true }).click()
+  await page
+    .getByRole("textbox", { name: "PDF URL 或 DOI" })
+    .fill("https://papers.example/url-paper.pdf")
+  await page.getByRole("button", { name: "导入链接", exact: true }).click()
+  await page.getByRole("button", { name: /^url-paper/ }).waitFor()
+  const linked = await page.evaluate((root) => window.envoi.library(root, { action: "list" }), root)
+  assert.equal(linked.papers.length, 4)
+
   assert.deepEqual(errors, [])
   console.log(
     "PASS: project library IPC, three panes, independent notes, autosave on switching, reading position, restart and history restore",

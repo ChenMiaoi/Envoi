@@ -1,3 +1,4 @@
+import { downloadPaper } from "../../server/paper-download.mjs"
 import { restrictedPath } from "./restricted-path.mjs"
 import { diagnostics, operationContext } from "./diagnostics"
 import { randomUUID } from "node:crypto"
@@ -308,6 +309,7 @@ function registerIpc(): void {
   handle("envoi:library", async (event, root: string, input: Record<string, unknown>) => {
     root = await requireBoundRoot(root)
     await requireBoundRoot(await researchRoot(root))
+    if (input.action === "download-pdf") return downloadPaper(input.url)
     if (input.action === "export-file") {
       const owner = BrowserWindow.fromWebContents(event.sender)
       if (!owner) throw Error("Window unavailable")

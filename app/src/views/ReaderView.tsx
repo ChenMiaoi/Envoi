@@ -30,6 +30,11 @@ import { fileKind } from "@/lib/projectFiles"
 import { DelimitedEditor } from "@/components/DelimitedEditor"
 import { MarkdownEditor } from "@/components/MarkdownEditor"
 import { LatexViewer, BibViewer, ViewerBadge, MarkdownViewer } from "@/components/viewers"
+import { envoi } from "@/lib/desktop"
+import { researchLibrary } from "@/lib/researchLibrary"
+import { importLibraryFiles } from "@/lib/paperLibrary"
+import { encodeNative } from "@/lib/localData"
+import { useNavigate } from "react-router"
 import { extractPdfText } from "@/lib/metadataLookup"
 import { useT } from "@/i18n/useT"
 
@@ -63,7 +68,10 @@ export function ReaderView({
   onTex: (id: string) => void
 }) {
   const { preferences } = usePreferences()
-  const { project, edit, busy } = useProject()
+  const { project, edit, busy, setMessage } = useProject()
+  const navigate = useNavigate()
+  const [importing, setImporting] = useState(false)
+  const [dataEditing, setDataEditing] = useState<string | null>(null)
   const { t } = useT()
   const fileTree = useMemo(
     () => projectTree(project.files, project.directories),
@@ -72,7 +80,6 @@ export function ReaderView({
   const fileContents = Object.fromEntries(project.files.map((file) => [file.id, file.text]))
   const activeData = [...project.files, ...libraryFiles].find((file) => file.id === activeId)
   const kind = activeData ? fileKind(activeData.path) : undefined
-  const [dataEditing, setDataEditing] = useState<string | null>(null)
   const [showChat, setShowChat] = useState(true)
   const [showTree, setShowTree] = useState(true)
   const [mdMode, setMdMode] = useState<Record<string, "preview" | "source">>({})
@@ -211,6 +218,47 @@ export function ReaderView({
               )
             })}
             <div className="flex-1" />
+            {kind === "pdf" && activeData && project.files.some((file) => file.id === activeId) && (
+              <button
+                disabled={importing || busy}
+                className="shrink-0 px-3 text-xs disabled:opacity-40"
+                onClick={async () => {
+                  if (!project.rootPath) return
+                  setImporting(true)
+                  try {
+                    const data =
+                      activeData.file ??
+                      new File(
+                        [
+                          Uint8Array.from(
+                            atob(
+                              (await envoi().fsRead(project.rootPath, activeData.path)).base64 ??
+                                "",
+                            ),
+                            (c) => c.charCodeAt(0),
+                          ),
+                        ],
+                        activeData.path.split("/").pop() ?? "paper.pdf",
+                        { type: "application/pdf" },
+                      )
+                    const papers = await importLibraryFiles([data])
+                    await researchLibrary(project.rootPath, {
+                      action: "import",
+                      papers: await encodeNative(papers),
+                    })
+                    window.dispatchEvent(new Event("envoi:library-updated"))
+                    setMessage("PDF 已归档到当前研究的论文库。")
+                    void navigate("/library")
+                  } catch (error) {
+                    setMessage((error as Error).message)
+                  } finally {
+                    setImporting(false)
+                  }
+                }}
+              >
+                {importing ? "正在归档…" : "归档到论文库"}
+              </button>
+            )}
             {(kind === "csv" || kind === "tsv") && (
               <button
                 disabled={busy}

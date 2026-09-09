@@ -14,7 +14,7 @@ import {
 } from "@/lib/researchLibrary"
 import { paperLibrary, importLibraryFiles } from "@/lib/paperLibrary"
 import { encodeNative } from "@/lib/localData"
-import { enrichPaper, extractPdfText } from "@/lib/metadataLookup"
+import { enrichPaper, extractPdfText, lookupPaperIdentifier } from "@/lib/metadataLookup"
 import { TexCompilePreview } from "@/components/TexCompilePreview"
 import { MarkdownEditor } from "@/components/MarkdownEditor"
 import { ChatPanel } from "@/components/ChatPanel"
@@ -522,6 +522,8 @@ export function LibraryView() {
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false)
   const [exportNotice, setExportNotice] = useState("")
+  const [sourceOpen, setSourceOpen] = useState(false)
+  const [sourceUrl, setSourceUrl] = useState("")
   const input = useRef<HTMLInputElement>(null),
     selectionClock = useRef(Date.now())
   const load = useCallback(async () => {
@@ -531,7 +533,10 @@ export function LibraryView() {
     setSelected((current) => current || next.selected || next.papers[0]?.id || "")
   }, [root])
   useEffect(() => {
-    void load().catch((e) => setError((e as Error).message))
+    const refresh = () => void load().catch((e) => setError((e as Error).message))
+    refresh()
+    window.addEventListener("envoi:library-updated", refresh)
+    return () => window.removeEventListener("envoi:library-updated", refresh)
   }, [load])
   useEffect(() => {
     if (selected) setVisited((ids) => (ids.includes(selected) ? ids : [...ids, selected]))
@@ -563,8 +568,10 @@ export function LibraryView() {
       await researchLibrary(root, { action: "import", papers: await encodeNative(papers) })
       await load()
       setError("")
+      return true
     } catch (e) {
       setError((e as Error).message)
+      return false
     } finally {
       setBusy(false)
     }
@@ -583,6 +590,9 @@ export function LibraryView() {
         <span className="mr-auto text-muted-foreground">
           {index?.papers.length ?? 0} 篇 · 当前研究
         </span>
+        <button disabled={busy} onClick={() => setSourceOpen((value) => !value)}>
+          URL / DOI
+        </button>
         <button disabled={busy} onClick={() => input.current?.click()}>
           {t("library.addPaper")}
         </button>
@@ -622,6 +632,75 @@ export function LibraryView() {
           }}
         />
       </header>
+      {sourceOpen && (
+        <form
+          className="flex flex-wrap gap-2 border-b px-4 py-2 text-xs"
+          onSubmit={async (event) => {
+            event.preventDefault()
+            if (busy || !sourceUrl.trim()) return
+            setBusy(true)
+            setError("")
+            try {
+              const source = sourceUrl.trim()
+              if (/^(?:https?:\/\/(?:dx\.)?doi\.org\/)?10\.\d{4,9}\//i.test(source)) {
+                const found = await lookupPaperIdentifier(source)
+                if (!found) throw Error("未找到文献信息，请核对 DOI")
+                await researchLibrary(root, {
+                  action: "import",
+                  papers: [
+                    {
+                      id: crypto.randomUUID(),
+                      title: "",
+                      author: "",
+                      year: "",
+                      venue: "",
+                      tags: [],
+                      collection: "",
+                      status: "待读",
+                      notes: "",
+                      created: Date.now(),
+                      ...found.fields,
+                      bib: found.bib,
+                      citationKey: found.citationKey,
+                    },
+                  ],
+                })
+                await load()
+              } else {
+                const url = source.replace(/^(https:\/\/(?:www\.)?arxiv\.org)\/abs\//, "$1/pdf/")
+                const file = await researchLibrary<{ name: string; base64: string }>(root, {
+                  action: "download-pdf",
+                  url,
+                })
+                const imported = await importPapers(false, [
+                  new File(
+                    [Uint8Array.from(atob(file.base64), (c) => c.charCodeAt(0))],
+                    file.name,
+                    { type: "application/pdf" },
+                  ),
+                ])
+                if (imported === false) return
+              }
+              setSourceOpen(false)
+            } catch (e) {
+              setError((e as Error).message)
+            } finally {
+              setBusy(false)
+            }
+          }}
+        >
+          <input
+            aria-label="PDF URL 或 DOI"
+            placeholder="https://…/paper.pdf 或 10.…（DOI 只导入文献信息）"
+            className="min-w-64 flex-1 rounded border bg-background px-2 py-1"
+            value={sourceUrl}
+            onChange={(event) => setSourceUrl(event.target.value)}
+          />
+          <button disabled={busy || !sourceUrl.trim()} type="submit">
+            {busy ? "正在导入…" : "导入链接"}
+          </button>
+        </form>
+      )}
       {exportNotice && <Notification message={exportNotice} kind="success" />}
       {error && <Notification message={error} kind={"error"} />}
       <div className="min-h-0 flex-1">

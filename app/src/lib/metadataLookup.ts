@@ -164,3 +164,10 @@ export async function enrichPaper(hint: {
   }
   return null
 }
+
+export async function lookupPaperIdentifier(input: string): Promise<Enrichment | null> {
+  const { doi, arxiv } = extractIdentifiers(input)
+  if (arxiv) return lookupArxiv(arxiv)
+  if (doi) return lookupDoi(doi)
+  throw Error("请输入有效的 DOI 或 arXiv 标识")
+}
