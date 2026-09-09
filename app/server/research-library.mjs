@@ -1,3 +1,4 @@
+import { paperFiles } from "./paper-files.mjs"
 import { DatabaseSync } from "node:sqlite"
 import {
   mkdirSync,
@@ -59,11 +60,11 @@ export async function libraryRequest(root, input) {
   if (!identity)
     db.prepare("INSERT OR IGNORE INTO meta VALUES (?,?)").run("researchId", randomUUID())
   const version = db.prepare("SELECT value FROM meta WHERE key=?").get("schemaVersion")
-  if (version && version.value !== "1") {
+  if (version && !["1", "2"].includes(version.value)) {
     db.close()
     throw Error("论文库由更新版本创建，请升级应用")
   }
-  db.prepare("INSERT OR IGNORE INTO meta VALUES (?,?)").run("schemaVersion", "1")
+  db.prepare("INSERT OR REPLACE INTO meta VALUES (?,?)").run("schemaVersion", "2")
   const researchId = db.prepare("SELECT value FROM meta WHERE key=?").get("researchId").value
   const row = () => {
     const p = db.prepare("SELECT * FROM papers WHERE id=?").get(id(input.paperId))
@@ -93,15 +94,26 @@ export async function libraryRequest(root, input) {
   }
   try {
     db.exec("BEGIN IMMEDIATE")
+    const files = paperFiles({ root, db, attachments, notes, safeDirectory, safeFile, atomic })
+    const warnings = files.sync()
     let result
     if (input.action === "list")
       result = {
         root,
         researchId,
+        papersDirectory: path.join(root, "papers"),
+        warnings,
         papers: db
-          .prepare("SELECT * FROM papers")
+          .prepare(
+            "SELECT * FROM papers WHERE id NOT IN (SELECT paper FROM paper_files WHERE visible=0)",
+          )
           .all()
-          .map((p) => ({ ...JSON.parse(p.metadata), id: p.id, attachmentHash: p.attachment })),
+          .map((p) => ({
+            ...JSON.parse(p.metadata),
+            id: p.id,
+            attachmentHash: p.attachment,
+            attachmentPath: files.link(p.id)?.path,
+          })),
         selected: db.prepare("SELECT value FROM meta WHERE key='selected'").get()?.value,
       }
     else if (input.action === "import") {
@@ -111,10 +123,27 @@ export async function libraryRequest(root, input) {
       for (const paper of input.papers) {
         if (typeof paper.title !== "string" || paper.title.length > 2000)
           throw Error("无效文献标题")
-        const existing = db.prepare("SELECT metadata,attachment FROM papers").all()
+        const existing = db.prepare("SELECT * FROM papers").all()
+        const previousCitation =
+          paper.citationKey &&
+          existing.find((p) => JSON.parse(p.metadata).citationKey === paper.citationKey)
+        if (
+          previousCitation &&
+          !paper.attachment?.$blob &&
+          !previousCitation.attachment &&
+          files.link(previousCitation.id)?.visible === 0
+        ) {
+          db.prepare("DELETE FROM paper_files WHERE paper=?").run(previousCitation.id)
+          added++
+          continue
+        }
         if (
           paper.citationKey &&
-          existing.some((p) => JSON.parse(p.metadata).citationKey === paper.citationKey)
+          existing.some(
+            (p) =>
+              JSON.parse(p.metadata).citationKey === paper.citationKey &&
+              (!paper.attachment?.$blob || files.link(p.id)?.visible !== 0),
+          )
         )
           continue
         let attachment = null
@@ -123,7 +152,14 @@ export async function libraryRequest(root, input) {
           if (bytes.length > 100_000_000 || !bytes.subarray(0, 1024).includes(Buffer.from("%PDF-")))
             throw Error("无效 PDF")
           attachment = hash(bytes)
-          if (existing.some((p) => p.attachment === attachment)) continue
+          const duplicate = existing.find((p) => p.attachment === attachment)
+          if (duplicate) {
+            if (files.link(duplicate.id)?.visible === 0) {
+              files.publish(duplicate, bytes)
+              added++
+            }
+            continue
+          }
           atomic(path.join(attachments, attachment + ".pdf"), bytes)
         }
         const paperId = input.restore && paper.id ? id(paper.id) : randomUUID()
@@ -183,6 +219,11 @@ export async function libraryRequest(root, input) {
                 key,
                 JSON.stringify(paper.state[key]),
               )
+        if (attachment)
+          files.publish(
+            db.prepare("SELECT * FROM papers WHERE id=?").get(paperId),
+            Buffer.from(paper.attachment.$blob, "base64"),
+          )
         added++
       }
       result = { added }
@@ -202,6 +243,7 @@ export async function libraryRequest(root, input) {
         ...JSON.parse(p.metadata),
         id: p.id,
         attachmentHash: p.attachment,
+        attachmentPath: files.link(p.id)?.path,
         note: readNote(p),
         drafts: db
           .prepare("SELECT id,body AS text FROM drafts WHERE paper=? ORDER BY created DESC")
@@ -218,6 +260,7 @@ export async function libraryRequest(root, input) {
       const bytes = Buffer.from(String(input.base64 ?? ""), "base64")
       if (bytes.length > 100_000_000 || !bytes.subarray(0, 1024).includes(Buffer.from("%PDF-")))
         throw Error("无效 PDF")
+      files.remove(p)
       const attachment = hash(bytes)
       atomic(path.join(attachments, attachment + ".pdf"), bytes)
       const metadata = {
@@ -230,11 +273,11 @@ export async function libraryRequest(root, input) {
         p.id,
       )
       db.prepare("DELETE FROM state WHERE paper=? AND key=?").run(p.id, "reading")
+      files.publish({ ...p, attachment, metadata: JSON.stringify(metadata) }, bytes)
       result = { attachmentHash: attachment }
     } else if (input.action === "remove") {
       const p = row()
-      db.prepare("DELETE FROM papers WHERE id=?").run(p.id)
-      db.prepare("DELETE FROM state WHERE paper=?").run(p.id)
+      files.remove(p)
       result = { ok: true }
     } else if (input.action === "pdf") {
       const p = row()
@@ -350,7 +393,9 @@ export async function libraryRequest(root, input) {
         version: 1,
         researchId,
         papers: db
-          .prepare("SELECT * FROM papers")
+          .prepare(
+            "SELECT * FROM papers WHERE id NOT IN (SELECT paper FROM paper_files WHERE visible=0)",
+          )
           .all()
           .map((p) => ({
             ...JSON.parse(p.metadata),

@@ -1,7 +1,10 @@
 import { envoi } from "./desktop"
 import type { LibraryPaper } from "./paperLibrary"
 import type { AgentRecord } from "./agentClient"
-export type ResearchPaper = Omit<LibraryPaper, "attachment" | "notes"> & { attachmentHash?: string }
+export type ResearchPaper = Omit<LibraryPaper, "attachment" | "notes"> & {
+  attachmentHash?: string
+  attachmentPath?: string
+}
 export interface PaperDetail extends ResearchPaper {
   note: { text: string; revision: number }
   drafts?: { id: string; text: string }[]
@@ -9,6 +12,8 @@ export interface PaperDetail extends ResearchPaper {
 }
 export interface LibraryIndex {
   root: string
+  papersDirectory?: string
+  warnings?: string[]
   researchId: string
   papers: ResearchPaper[]
   selected?: string

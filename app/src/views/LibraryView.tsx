@@ -1,3 +1,5 @@
+import { useLocation } from "react-router"
+import { envoi } from "@/lib/desktop"
 import { useT } from "@/i18n/useT"
 import { Notification } from "@/components/Notification"
 import { useEffect, useRef, useState, useCallback } from "react"
@@ -117,15 +119,6 @@ function PaperWorkspace({
         revision.current = d.note.revision
         setText(d.note.text)
         setChat(d.state.chat)
-        if (d.attachmentHash) {
-          const attachment = await call<{ base64: string }>("pdf")
-          const f = new File(
-            [Uint8Array.from(atob(attachment.base64), (c) => c.charCodeAt(0))],
-            d.attachmentName ?? "paper.pdf",
-            { type: "application/pdf" },
-          )
-          if (live) setFile(f)
-        }
       } catch (e) {
         if (live) setError((e as Error).message)
       }
@@ -134,6 +127,35 @@ function PaperWorkspace({
       live = false
     }
   }, [call])
+  const hasDetail = !!detail
+  const loadedHash = useRef(paper.attachmentHash)
+  useEffect(() => {
+    if (!hasDetail || !paper.attachmentHash) return
+    let live = true
+    if (loadedHash.current !== paper.attachmentHash) {
+      readingPosition.current = undefined
+      setPdfText("")
+    }
+    loadedHash.current = paper.attachmentHash
+    setFile(undefined)
+    void call<{ base64: string }>("pdf")
+      .then((attachment) => {
+        if (live)
+          setFile(
+            new File(
+              [Uint8Array.from(atob(attachment.base64), (c) => c.charCodeAt(0))],
+              paper.attachmentName ?? "paper.pdf",
+              { type: "application/pdf" },
+            ),
+          )
+      })
+      .catch((e) => {
+        if (live) setError((e as Error).message)
+      })
+    return () => {
+      live = false
+    }
+  }, [call, hasDetail, paper.attachmentHash, paper.attachmentName])
   const flush = useCallback(() => {
     queue.current = queue.current.then(async () => {
       if (blocked.current || draft.current === saved.current) return
@@ -288,6 +310,22 @@ function PaperWorkspace({
               {paper.title}
             </span>
             <button onClick={cite}>引用到项目</button>
+            <button
+              disabled={busy}
+              title="PDF 移入 papers/.trash，保留阅读记录"
+              onClick={async () => {
+                try {
+                  await flush()
+                  if (blocked.current) return
+                  await call("remove")
+                  onChanged()
+                } catch (e) {
+                  notice(e)
+                }
+              }}
+            >
+              移出论文库
+            </button>
             <button disabled={busy} onClick={() => attachmentInput.current?.click()}>
               {file ? "替换 PDF" : "补充 PDF"}
             </button>
@@ -519,6 +557,7 @@ export function LibraryView() {
   const { t } = useT()
   const { project } = useProject()
   const root = project.rootPath
+  const location = useLocation()
   const [index, setIndex] = useState<LibraryIndex>(),
     [selected, setSelected] = useState(""),
     [visited, setVisited] = useState<string[]>([]),
@@ -534,14 +573,50 @@ export function LibraryView() {
     if (!root) return
     const next = await researchLibrary<LibraryIndex>(root, { action: "list" })
     setIndex(next)
-    setSelected((current) => current || next.selected || next.papers[0]?.id || "")
+    setSelected((current) =>
+      next.papers.some((p) => p.id === current)
+        ? current
+        : next.papers.some((p) => p.id === next.selected)
+          ? next.selected!
+          : next.papers[0]?.id || "",
+    )
   }, [root])
   useEffect(() => {
-    const refresh = () => void load().catch((e) => setError((e as Error).message))
-    refresh()
-    window.addEventListener("envoi:library-updated", refresh)
-    return () => window.removeEventListener("envoi:library-updated", refresh)
-  }, [load])
+    if (location.pathname !== "/library") return
+    let timer: ReturnType<typeof setTimeout>
+    let running = false
+    const refresh = async () => {
+      if (running) return
+      running = true
+      try {
+        await load()
+      } catch (e) {
+        setError((e as Error).message)
+      } finally {
+        running = false
+      }
+    }
+    const changed = () => {
+      clearTimeout(timer)
+      timer = setTimeout(() => void refresh(), 250)
+    }
+    void refresh()
+    const off = envoi().onFilesChanged((event) => {
+      if (event.paths.some((p) => p === "papers" || p.startsWith("papers/"))) changed()
+    })
+    const poll = setInterval(() => {
+      if (!document.hidden) void refresh()
+    }, 3000)
+    window.addEventListener("envoi:library-updated", changed)
+    window.addEventListener("focus", changed)
+    return () => {
+      off()
+      clearTimeout(timer)
+      clearInterval(poll)
+      window.removeEventListener("envoi:library-updated", changed)
+      window.removeEventListener("focus", changed)
+    }
+  }, [load, location.pathname])
   useEffect(() => {
     if (selected) setVisited((ids) => (ids.includes(selected) ? ids : [...ids, selected]))
   }, [selected])
@@ -592,7 +667,7 @@ export function LibraryView() {
       <header className="flex h-11 shrink-0 items-center gap-3 border-b px-4 text-xs">
         <strong>论文库</strong>
         <span className="mr-auto text-muted-foreground">
-          {index?.papers.length ?? 0} 篇 · 当前研究
+          {index?.papers.length ?? 0} 篇 · 与 papers/ 双向同步
         </span>
         <button disabled={busy} onClick={() => setSourceOpen((value) => !value)}>
           URL / DOI
@@ -636,6 +711,18 @@ export function LibraryView() {
           }}
         />
       </header>
+      <p
+        className="border-b px-4 py-2 text-xs text-muted-foreground"
+        title={index?.papersDirectory}
+      >
+        PDF 放入 papers/ 自动收录；移出后隐藏文献，重新放回可恢复笔记。
+        {index?.root !== root ? "当前关联主工作区的 papers/。" : ""}
+      </p>
+      {!!index?.warnings?.length && (
+        <p role="status" className="px-4 py-1 text-xs text-muted-foreground">
+          {index.warnings.join("；")}
+        </p>
+      )}
       {sourceOpen && (
         <form
           className="flex flex-wrap gap-2 border-b px-4 py-2 text-xs"
@@ -748,7 +835,7 @@ export function LibraryView() {
                       >
                         {p.title}
                         <span className="mt-1 block text-[10px] text-muted-foreground">
-                          {p.year} · {p.attachmentHash ? "PDF" : "无附件"}
+                          {p.year || "年份待核对"} · {p.attachmentPath ?? "无附件"}
                         </span>
                       </button>
                     ))}

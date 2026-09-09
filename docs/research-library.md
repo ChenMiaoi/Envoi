@@ -4,11 +4,21 @@ The library belongs to one research project (idea), not to a machine-wide accoun
 
 ## Layout and authority
 
-`.envoi/library/library.sqlite` holds schema version, stable research ID, literature metadata, groups, attachment hashes, selected paper, reading positions, per-paper chat records, note revisions and preserved conflict drafts. `.envoi/library/notes/<paperId>.md` is the editable note body. Attachments are immutable PDFs addressed by full SHA-256 under `attachments/`. Pi conversation files live under `conversations/<paperId>/<sessionId>/`.
+`.envoi/library/library.sqlite` holds schema version, stable research ID, literature metadata, groups, attachment hashes, selected paper, reading positions, per-paper chat records, note revisions and preserved conflict drafts. `.envoi/library/notes/<paperId>.md` is the editable note body. The visible `papers/` directory is the filesystem view of PDF membership. `paper_files` maps relative paths to stable paper IDs and tracks presence, size and modification time. Immutable PDFs addressed by full SHA-256 under `attachments/` are recovery snapshots, not a second independently editable library. Pi conversation files live under `conversations/<paperId>/<sessionId>/`.
 
 All renderer changes pass through the trusted Electron library IPC. The AI has a dedicated note tool bound to a paper ID, using the same persistence service and SQLite transaction checks. `BEGIN IMMEDIATE` and a busy timeout serialize writes across the desktop and AI backend processes. No renderer overwrites a whole global literature array. Markdown changes outside the application are detected by their content hash and recorded as a new revision before a write is accepted.
 
 A note write carries its expected revision. Stale content is retained as a conflict draft rather than overwriting the current note. The UI keeps the editor content and offers explicit merge/reload choices. Historical versions can be restored as a new edit. Markdown replacement is atomic; if a process exits between file replacement and the database commit, the next read detects and records the changed file.
+
+## Bidirectional papers mapping
+
+Every new research or manuscript project starts with `papers/README.md`. A library import publishes its PDF into this directory using a readable filename and a content-hash suffix; same-name files are not overwritten. Opening an existing library materializes its previous attachments here while preserving IDs, notes and conversations. The internal schema upgrades from 1 to 2, so older Envoi versions must not reopen this format.
+
+Putting a PDF into `papers/` or a non-hidden subfolder automatically creates a library entry. Filesystem events refresh the visible library, with a three-second foreground polling fallback for changes in the main workspace while an experiment is open. Bare PDF discovery initially uses the filename as the title and leaves unverified metadata empty. Renaming or moving unchanged PDFs preserves their IDs by content hash. Replacing a mapped PDF updates its attachment and resets its reading position, while retaining notes. Identical PDFs are not listed twice. Invalid PDFs and symbolic links are reported rather than imported.
+
+Removing a PDF hides its entry without erasing notes, history or conversations. Putting the same bytes back restores the entry and its reading records. “移出论文库” moves the PDF to `papers/.trash/<unique-directory>/`; moving it back restores it. Hidden directories are not indexed. Files absent from `papers/` are excluded from the active library export. The private recovery snapshots are retained, so deleting a visible PDF does not purge all historical bytes.
+
+Experiment libraries resolve to the main workspace's `papers/`; they do not index a checked-out experiment copy of that directory. To move or back up the entire research project, retain both `papers/` and `.envoi/library/`.
 
 ## Reading and AI
 
@@ -20,9 +30,9 @@ The AI receives the current note, selected text and an on-demand extract of the 
 
 PDF and BibTeX import reuse the existing metadata extraction. The old global library is imported only through an explicit action; its records are never removed. Duplicate citation keys and attachment hashes are skipped. The existing local demo collection has been migrated separately into its project library; this does not silently seed unrelated projects.
 
-Export produces a JSON archive with metadata, attachments, note bodies/history, reading state and conversation transcripts. Import preserves paper IDs into an empty destination, skipping existing papers. Runtime Pi files are not embedded; imported conversations continue from the retained transcript. To retain every runtime artifact, close the application and copy the complete `.envoi/library` directory with the project. The data directory is private project data, excluded from ordinary Git merging by the standard project ignore rules.
+Export produces a JSON archive with metadata, attachments, note bodies/history, reading state and conversation transcripts. Import preserves paper IDs into an empty destination, skipping existing papers. Runtime Pi files are not embedded; imported conversations continue from the retained transcript. To retain every runtime artifact, close the application and copy both `papers/` and the complete `.envoi/library/` directory with the project. The data directory is private project data, excluded from ordinary Git merging by the standard project ignore rules.
 
-Development requires Node.js 24+ for the built-in SQLite module; Electron supplies its own runtime. Tests: `node --test scripts/test-research-library.mjs`, `node scripts/test-research-library-ui.mjs`, and `node scripts/test-agent-native.mjs` from `app/`.
+Development requires Node.js 24+ for the built-in SQLite module; Electron supplies its own runtime. Tests: `node --test scripts/test-research-library.mjs scripts/test-paper-files.mjs`, `node scripts/test-research-library-ui.mjs`, and `node scripts/test-agent-native.mjs` from `app/`.
 
 Reading-position updates resolve the research root without scanning Git status in each worktree. Root lookups have a short cache invalidated by registry changes. Library and Git worktree administrative events do not refresh manuscript snapshots; external manuscript edits still do. Rasterization waits for resize events to settle. UI regressions verify note autosaves do not allocate new PDF bitmaps.
 

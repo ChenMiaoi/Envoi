@@ -28,6 +28,7 @@ try {
   const root = path.join(temp, "idea-lab")
   assert.match(await readFile(path.join(root, "notes/research-plan.md"), "utf8"), /问题与假设/)
   await assert.rejects(readFile(path.join(root, "main.tex")), { code: "ENOENT" })
+  assert.match(await readFile(path.join(root, "papers/README.md"), "utf8"), /论文目录/)
   await page.getByRole("button", { name: "新建笔记", exact: true }).click()
   await page.getByRole("button", { name: "创建文件", exact: true }).click()
   await page.getByRole("button", { name: "note-1.md", exact: true }).waitFor()

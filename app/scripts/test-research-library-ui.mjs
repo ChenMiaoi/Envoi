@@ -1,7 +1,7 @@
 import { seedFixtureTrust } from "./fixture-trust.mjs"
 import { _electron } from "playwright"
 import { createRequire } from "node:module"
-import { mkdtemp, realpath, rm, readFile, writeFile } from "node:fs/promises"
+import { mkdtemp, realpath, rm, readFile, writeFile, rename } from "node:fs/promises"
 import path from "node:path"
 import { tmpdir } from "node:os"
 import assert from "node:assert/strict"
@@ -330,6 +330,37 @@ try {
   await page.getByRole("button", { name: /^url-paper/ }).waitFor()
   const linked = await page.evaluate((root) => window.envoi.library(root, { action: "list" }), root)
   assert.equal(linked.papers.length, 4)
+  const directoryPdf = path.join(root, "papers", "Folder-added.pdf")
+  await writeFile(
+    directoryPdf,
+    Buffer.concat([Buffer.from(pdf(), "base64"), Buffer.from("\n% folder mapping fixture\n")]),
+  )
+  await page.getByRole("button", { name: /^Folder-added/ }).click()
+  await notes.fill("Folder-mapped reading note")
+  const mapped = (
+    await page.evaluate((root) => window.envoi.library(root, { action: "list" }), root)
+  ).papers.find((p) => p.title === "Folder-added")
+  await page.waitForFunction(
+    async ({ root, id }) =>
+      (await window.envoi.library(root, { action: "get", paperId: id })).note.text ===
+      "Folder-mapped reading note",
+    { root, id: mapped.id },
+  )
+  const movedPdf = path.join(root, "papers", "Folder-renamed.pdf")
+  await rename(directoryPdf, movedPdf)
+  await page.getByText(/papers\/Folder-renamed.pdf/).waitFor()
+  await rm(movedPdf)
+  await page.getByRole("button", { name: /^Folder-added/ }).waitFor({ state: "hidden" })
+  await writeFile(
+    movedPdf,
+    Buffer.concat([Buffer.from(pdf(), "base64"), Buffer.from("\n% folder mapping fixture\n")]),
+  )
+  await page.getByRole("button", { name: /^Folder-added/ }).click()
+  await notes.waitFor()
+  assert.equal(await notes.textContent(), "Folder-mapped reading note")
+  await page.getByRole("button", { name: "移出论文库", exact: true }).click()
+  await page.getByRole("button", { name: /^Folder-added/ }).waitFor({ state: "hidden" })
+  await assert.rejects(readFile(movedPdf), { code: "ENOENT" })
 
   assert.deepEqual(errors, [])
   console.log(

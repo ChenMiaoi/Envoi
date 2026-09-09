@@ -208,10 +208,12 @@ export function templateFiles(id: string, enableGit = true) {
         ) + "\n",
       "notes/research-plan.md":
         "# 研究计划\n\n## 问题与假设\n\n我们希望验证什么？什么结果会否定这个假设？\n\n## 相关工作\n\n在论文库导入文献，记录具体方法、证据与局限，并保留原文页码。\n\n## 可行性与差异\n\n哪些结论已有支持？哪些还需要实验？\n\n## 实验计划\n\n基线、变量、数据来源、指标和复现命令。真实实验在独立工作区进行。\n\n## 结果与决策\n\n在这里链接已归档的数据和实验记录，区分观察与推测。\n",
+      "papers/README.md": papersReadme,
       "references.bib": "% Add verified references from the paper library.\n",
       "data/README.md": "Store source data here. Label synthetic data explicitly.\n",
     } as Record<string, string>
   return {
+    "papers/README.md": papersReadme,
     "main.tex": template.main,
     ".gitignore": projectGitignore,
     ".envoi/project.json":
@@ -271,3 +273,6 @@ __pycache__/
 /.envoi/*
 !/.envoi/project.json
 `
+
+const papersReadme =
+  "# 项目论文目录\n\n将 PDF 放在此目录或子目录，Envoi 论文库会自动收录。在论文库导入的 PDF 也保存在这里。重命名或移动原 PDF 会保留笔记和会话；删除 PDF 会从论文库隐藏该文献，再放回相同 PDF 可恢复阅读记录。论文库内移除的 PDF 移至 papers/.trash，可手动移回恢复。\n\n实验工作区的论文库共享主工作区的 papers/。元数据、笔记、会话和恢复快照保存在 .envoi/library/，迁移完整项目时请一并保留。\n"
