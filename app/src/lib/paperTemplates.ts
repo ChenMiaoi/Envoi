@@ -43,6 +43,17 @@ const acm = (option: string) =>
   )
 export const paperTemplates: PaperTemplate[] = [
   {
+    id: "research",
+    name: "研究项目 · 从 idea 开始",
+    category: "通用",
+    family: "研究笔记",
+    version: "笔记、文献与实验",
+    source: "",
+    license: "",
+    main: "",
+    style: "research",
+  },
+  {
     id: "article",
     name: "通用 Article",
     category: "通用",
@@ -176,6 +187,30 @@ ${title}
 export function templateFiles(id: string, enableGit = true) {
   const template = paperTemplates.find((item) => item.id === id)
   if (!template) throw new Error(translate("template.unknown"))
+  if (id === "research")
+    return {
+      ".gitignore": projectGitignore,
+      ".envoi/project.json":
+        JSON.stringify(
+          {
+            projectId: crypto.randomUUID(),
+            main: "",
+            settings: { version: 1, overrides: {} },
+            buildDirectory: "build",
+            git: {
+              requested: enableGit,
+              branch: "main",
+              status: enableGit ? "pending-local-init" : "disabled",
+            },
+          },
+          null,
+          2,
+        ) + "\n",
+      "notes/research-plan.md":
+        "# 研究计划\n\n## 问题与假设\n\n我们希望验证什么？什么结果会否定这个假设？\n\n## 相关工作\n\n在论文库导入文献，记录具体方法、证据与局限，并保留原文页码。\n\n## 可行性与差异\n\n哪些结论已有支持？哪些还需要实验？\n\n## 实验计划\n\n基线、变量、数据来源、指标和复现命令。真实实验在独立工作区进行。\n\n## 结果与决策\n\n在这里链接已归档的数据和实验记录，区分观察与推测。\n",
+      "references.bib": "% Add verified references from the paper library.\n",
+      "data/README.md": "Store source data here. Label synthetic data explicitly.\n",
+    } as Record<string, string>
   return {
     "main.tex": template.main,
     ".gitignore": projectGitignore,

@@ -173,19 +173,22 @@ test("Git opt-out creates no repository; PDF inputs remain visible", async () =>
   assert.equal(tree[0].children![0].name, "plot.pdf")
 })
 
-test("all templates share the writing/build/Git skeleton and explicit opt-out metadata", () => {
+test("research and writing templates provide their own files and explicit Git opt-out", () => {
   for (const template of paperTemplates) {
     const files = templateFiles(template.id)
-    for (const key of [
-      "main.tex",
-      "chapters/introduction.tex",
-      "references.bib",
-      ".gitignore",
-      ".envoi/project.json",
-      "data/README.md",
-      "build/README.md",
-    ])
+    for (const key of template.id === "research"
+      ? ["notes/research-plan.md", "references.bib", ".gitignore", ".envoi/project.json"]
+      : [
+          "main.tex",
+          "chapters/introduction.tex",
+          "references.bib",
+          ".gitignore",
+          ".envoi/project.json",
+          "data/README.md",
+          "build/README.md",
+        ])
       assert(key in files)
+    if (template.id === "research") assert.equal(files["main.tex"], undefined)
     assert.equal(JSON.parse(files[".envoi/project.json"]).git.branch, "main")
     assert.equal(
       JSON.parse(templateFiles(template.id, false)[".envoi/project.json"]).git.requested,

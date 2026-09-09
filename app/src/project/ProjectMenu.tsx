@@ -54,7 +54,7 @@ export function ProjectMenu() {
   const [gitStatus, setGitStatus] = useState(t("project.gitProbing"))
   const [gitAvailable, setGitAvailable] = useState(false)
   const [enableGit, setEnableGit] = useState(preferences.defaultGit)
-  const [template, setTemplate] = useState("article")
+  const [template, setTemplate] = useState("research")
   const [query, setQuery] = useState("")
   const [category, setCategory] = useState("全部")
   const [roots, setRoots] = useState<RecentProject[]>([])
@@ -201,15 +201,26 @@ export function ProjectMenu() {
         await activate(await envoi().exampleDirectory())
       })
     }
+    const note = () => {
+      if (taskBusy || !project.rootPath) return
+      setMode("file")
+      setDiscard(false)
+      setMessage("")
+      let number = 1
+      while (project.files.some((file) => file.path === `notes/note-${number}.md`)) number++
+      setName(`notes/note-${number}.md`)
+    }
+    window.addEventListener("envoi:new-note", note)
     window.addEventListener("envoi:new-project", create)
     window.addEventListener("envoi:open-recent", recent)
     window.addEventListener("envoi:open-example", example)
     return () => {
+      window.removeEventListener("envoi:new-note", note)
       window.removeEventListener("envoi:new-project", create)
       window.removeEventListener("envoi:open-recent", recent)
       window.removeEventListener("envoi:open-example", example)
     }
-  }, [run, activate, preferences.defaultGit, setMessage])
+  }, [run, activate, preferences.defaultGit, setMessage, taskBusy, project.rootPath, project.files])
   const openDialog = (next: "new" | "open" | "file") => {
     setMode(next)
     if (next === "new") setEnableGit(preferences.defaultGit)
@@ -476,14 +487,16 @@ export function ProjectMenu() {
                       name: paperTemplates.find((item) => item.id === template)?.name ?? "",
                     })}
                   </p>
-                  <a
-                    className="text-[10px] text-primary"
-                    href={paperTemplates.find((item) => item.id === template)?.source}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    {t("project.templateSource")}
-                  </a>
+                  {template !== "research" && (
+                    <a
+                      className="text-[10px] text-primary"
+                      href={paperTemplates.find((item) => item.id === template)?.source}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      {t("project.templateSource")}
+                    </a>
+                  )}
                 </div>
               )}
               {mode === "new" && (

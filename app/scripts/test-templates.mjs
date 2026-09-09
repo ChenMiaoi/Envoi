@@ -17,6 +17,13 @@ const { paperTemplates, templateFiles } = await import(
   "../tmp/compile-check/templates.mjs?" + Date.now()
 )
 for (const template of paperTemplates) {
+  if (template.id === "research") {
+    const files = templateFiles(template.id)
+    if (!files["notes/research-plan.md"] || files["main.tex"])
+      throw Error("Invalid research scaffold")
+    console.log("PASS research scaffold")
+    continue
+  }
   const input = {
     engine: "pdflatex",
     main: "main.tex",

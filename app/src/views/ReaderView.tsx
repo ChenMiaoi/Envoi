@@ -147,6 +147,13 @@ export function ReaderView({
           <div className="flex h-full flex-col">
             <div className="flex h-9 shrink-0 items-center justify-between px-3 text-[11px] uppercase tracking-widest text-muted-foreground">
               <span>{t("reader.explorer")}</span>
+              <button
+                disabled={busy || !project.rootPath}
+                className="rounded px-2 py-1 normal-case tracking-normal hover:bg-secondary disabled:opacity-40"
+                onClick={() => window.dispatchEvent(new Event("envoi:new-note"))}
+              >
+                新建笔记
+              </button>
             </div>
             <div className="min-h-0 flex-1">
               <FileTree
