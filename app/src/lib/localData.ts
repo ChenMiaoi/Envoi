@@ -77,3 +77,41 @@ export async function nativeMigrate<T>(store: string, legacy: T, key = "default"
     )
   return result
 }
+
+// Browser caches remain writable after migration. They are no longer legacy imports.
+const migratedCaches = new Set<string>()
+const cacheMigrations = new Map<string, Promise<NativeValue<unknown>>>()
+export async function nativeMigrateCache<T>(
+  store: string,
+  legacy: T,
+  key = "default",
+): Promise<NativeValue<T>> {
+  const marker = `envoi:migrated-cache:${store}:${key}`
+  let migrated = migratedCaches.has(marker) || cacheMigrations.has(marker)
+  try {
+    migrated ||= globalThis.localStorage?.getItem(marker) === "1"
+  } catch {
+    /* Storage can be unavailable. */
+  }
+  if (migrated) {
+    await cacheMigrations.get(marker)
+    const current = await nativeGet<T>(store, key)
+    if (current) return current
+  }
+  const operation = nativeMigrate(store, legacy, key)
+  cacheMigrations.set(marker, operation)
+  try {
+    const result = await operation
+    migratedCaches.add(marker)
+    cacheMigrations.delete(marker)
+    try {
+      globalThis.localStorage?.setItem(marker, "1")
+    } catch {
+      /* Keep the in-memory marker. */
+    }
+    return result
+  } catch (error) {
+    cacheMigrations.delete(marker)
+    throw error
+  }
+}

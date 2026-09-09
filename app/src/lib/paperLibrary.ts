@@ -1,5 +1,5 @@
 import { translate } from "@/i18n/runtime"
-import { nativeGet, nativePut, nativeMigrate, encodeNative, decodeNative } from "./localData"
+import { nativeGet, nativePut, nativeMigrateCache, encodeNative, decodeNative } from "./localData"
 import { parseBibliography } from "./bibliography"
 export interface LibraryPaper {
   id: string
@@ -74,7 +74,7 @@ export function createLibraryStore(name = "paperdesk-library-v1") {
     async list(): Promise<LibraryPaper[]> {
       const legacy = await cache.list()
       try {
-        const native = await nativeMigrate("library", await encodeNative(legacy))
+        const native = await nativeMigrateCache("library", await encodeNative(legacy))
         return decodeNative(native.value) as LibraryPaper[]
       } catch (error) {
         window.dispatchEvent(

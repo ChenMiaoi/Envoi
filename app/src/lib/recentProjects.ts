@@ -1,7 +1,7 @@
 import { nativeBasename, nativePathWithin } from "@/lib/nativePath"
 import { envoi } from "./desktop"
 import { translate } from "@/i18n/runtime"
-import { nativeMigrate, nativePut, nativeGet, encodeNative } from "./localData"
+import { nativeMigrateCache, nativePut, nativeGet, encodeNative } from "./localData"
 import { projectConfigFile } from "./managementDir"
 export interface RecentProject {
   id: string
@@ -135,7 +135,7 @@ async function records(store: "recent" | "roots"): Promise<RecentProject[]> {
   const cached = await (store === "recent" ? cachedRecentProjects() : cachedAuthorizedRoots())
   if (typeof window === "undefined") return cached
   try {
-    const native = await nativeMigrate(store, await encodeNative(cached))
+    const native = await nativeMigrateCache(store, await encodeNative(cached))
     return (native.value as RecentProject[]).sort((a, b) => b.updated - a.updated)
   } catch (error) {
     window.dispatchEvent(

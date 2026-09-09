@@ -152,6 +152,17 @@ try {
   assert.equal((await library.list()).length, 1)
   await library.put([{ ...paper, title: "Edited" }])
   assert.equal((await library.list())[0].title, "Edited")
+  const warningCount = warnings.length
+  await native.nativePut(
+    "library",
+    await native.encodeNative([{ ...paper, title: "Native update" }]),
+  )
+  assert.equal((await library.list())[0].title, "Native update")
+  assert.equal(
+    warnings.length,
+    warningCount,
+    "ordinary cache differences must not trigger migration warnings",
+  )
   await library.remove(paper.id)
   assert.deepEqual(await library.list(), [])
   const project = {
