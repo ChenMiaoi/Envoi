@@ -16,7 +16,7 @@ import { randomUUID, createHash } from "node:crypto"
 import path from "node:path"
 import { createReadStream } from "node:fs"
 import { detectTool } from "./tool-config.mjs"
-import { dataDir, atomicJson, jsonFile, withDataLock } from "./local-data.mjs"
+import { dataDir, atomicJson, jsonFile, withDataLock, readProjectConfig } from "./local-data.mjs"
 const execute = promisify(execFile)
 async function hashFile(file) {
   const hash = createHash("sha256")
@@ -114,6 +114,15 @@ export async function listWorkspaces(root) {
   }
   return { main: state.main, initialized: !!(await jsonFile(repo.file, null)), workspaces }
 }
+export async function workspaceAiDefaults(root) {
+  const linked = await lstat(path.join(root, ".git")).then(
+    (info) => info.isFile(),
+    () => false,
+  )
+  if (!linked) return {}
+  const repo = await repository(root)
+  return (await registry(repo)).experiments?.[root]?.ai ?? {}
+}
 export async function createWorkspace(root, input) {
   if (typeof input?.name !== "string" || !input.name.trim() || input.name.length > 80)
     throw Error("请输入 1–80 字的实验名称。")
@@ -139,7 +148,10 @@ export async function createWorkspace(root, input) {
       await mkdir(parent, { recursive: true })
       const target = path.join(await realpath(parent), id)
       await git(repo.root, ["worktree", "add", "-b", branch, target, base])
+      // Model choices may have changed since the baseline commit.
+      const sourceConfig = (await readProjectConfig(repo.root)).config
       state.experiments[target] = {
+        ai: sourceConfig?.ai,
         name: input.name.trim(),
         purpose: String(input.purpose ?? "").slice(0, 2000),
         base,

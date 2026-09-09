@@ -1,3 +1,4 @@
+import { workspaceAiDefaults } from "./workspaces.mjs"
 import { libraryRequest, researchRoot, paperNoteTools } from "./research-library.mjs"
 import { researchTools } from "./workspace-agent.mjs"
 import {
@@ -58,7 +59,11 @@ async function effective(projectId) {
   if (projectId === "global") return global
   const root = await projectRoot(projectId),
     { config: project } = await readProjectConfig(root)
-  return { ...global, ...normalizeAi(project?.ai, true) }
+  return {
+    ...global,
+    ...normalizeAi(await workspaceAiDefaults(root), true),
+    ...normalizeAi(project?.ai, true),
+  }
 }
 function sessionDir(project) {
   return path.join(dataDir, project === "global" ? "global" : `projects/${safeId(project)}`, "chat")

@@ -17,6 +17,7 @@ process.env.ENVOI_DATA_DIR = path.join(temp, "data-alias")
 const { createExampleProject } = await import("../electron/main/example-project.mjs")
 const {
   createWorkspace,
+  workspaceAiDefaults,
   listWorkspaces,
   saveWorkspaceResult,
   listWorkspaceResults,
@@ -35,12 +36,17 @@ test("workspaces isolate identities and edits, preserve result provenance, and b
     const alias = path.join(temp, "project-alias")
     await symlink(root, alias, process.platform === "win32" ? "junction" : "dir")
     assert.equal((await registerProject(alias)).id, main.id)
+    const configFile = path.join(root, ".envoi/project.json")
+    const config = JSON.parse(await readText(configFile))
+    config.ai = { model: "fixture/inexpensive", thinking: "off" }
+    await writeFile(configFile, JSON.stringify(config))
     const created = await createWorkspace(root, {
       name: "敏感性分析",
       purpose: "使用现有演示数据验证保存流程",
     })
     assert.equal(created.path, await realpath(created.path))
     const original = await readText(path.join(created.path, ".envoi/project.json"))
+    assert.deepEqual(await workspaceAiDefaults(created.path), config.ai)
     const experiment = await registerProject(created.path, { copy: true })
     assert.equal(await projectRoot(experiment.id), created.path)
     assert.equal(await projectRoot(main.id), root)
