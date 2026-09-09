@@ -2,7 +2,7 @@ import { useProject } from "@/project/context"
 import { TrustRequired } from "@/project/ProjectTrust"
 import { useProjectTrust } from "@/project/useProjectTrust"
 import { ChatActivity } from "./ChatActivity"
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useLayoutEffect, useRef, useState } from "react"
 import { ArrowUp, Mic, Plus, Square, ChevronUp, ChevronDown } from "lucide-react"
 import type { AgentState } from "@/agent/context"
 import { useAgent } from "@/agent/context"
@@ -58,6 +58,51 @@ export function ChatPanel({
   }, [inputOnly])
   const scrollRef = useRef<HTMLDivElement>(null)
   const follow = useRef(true)
+  const contentRef = useRef<HTMLDivElement>(null)
+  const pointerScroll = useRef(false)
+  const [detached, setDetached] = useState(false)
+  const hasMessages = !!agent.record?.messages.length
+  function pauseFollow() {
+    follow.current = false
+    setDetached(true)
+  }
+  function jumpToLatest() {
+    follow.current = true
+    setDetached(false)
+    const el = scrollRef.current
+    if (el) el.scrollTop = el.scrollHeight
+  }
+  useLayoutEffect(() => {
+    jumpToLatest()
+  }, [agent.record?.id])
+  useLayoutEffect(() => {
+    if (follow.current) {
+      const el = scrollRef.current
+      if (el) el.scrollTop = el.scrollHeight
+    }
+  }, [agent.record, collapsed])
+  useEffect(() => {
+    const content = contentRef.current,
+      viewport = scrollRef.current
+    if (!content || !viewport) return
+    const observer = new ResizeObserver(() => {
+      if (follow.current) viewport.scrollTop = viewport.scrollHeight
+    })
+    observer.observe(content)
+    observer.observe(viewport)
+    return () => observer.disconnect()
+  }, [hasMessages, inputOnly])
+  useEffect(() => {
+    const release = () => {
+      pointerScroll.current = false
+    }
+    window.addEventListener("pointerup", release)
+    window.addEventListener("pointercancel", release)
+    return () => {
+      window.removeEventListener("pointerup", release)
+      window.removeEventListener("pointercancel", release)
+    }
+  }, [])
   const available =
     !agent.navigating &&
     (!conversation || !projectAgent.busy) &&
@@ -66,18 +111,11 @@ export function ChatPanel({
     !!agent.status?.models.some(
       (model) => model.available && `${model.provider}/${model.id}` === agent.config?.model,
     )
-  useEffect(() => {
-    if (follow.current) scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight })
-  }, [agent.record])
-
-  useEffect(() => {
-    follow.current = true
-  }, [agent.record?.id])
 
   function send() {
     const text = input.trim()
     if (!text || agent.busy || !available) return
-    follow.current = true
+    jumpToLatest()
     setAttempted(true)
     setInput("")
     void agent.send(
@@ -164,9 +202,31 @@ export function ChatPanel({
           )}
           <div
             ref={scrollRef}
+            data-chat-scroll
+            tabIndex={0}
+            onWheel={(event) => {
+              if (event.deltaY < 0) pauseFollow()
+            }}
+            onKeyDown={(event) => {
+              if (["ArrowUp", "PageUp", "Home"].includes(event.key)) pauseFollow()
+            }}
+            onTouchMove={() => pauseFollow()}
+            onPointerDown={() => {
+              pointerScroll.current = true
+            }}
+            onPointerUp={() => {
+              pointerScroll.current = false
+            }}
+            onPointerCancel={() => {
+              pointerScroll.current = false
+            }}
             onScroll={(event) => {
               const el = event.currentTarget
-              follow.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80
+              const bottom = el.scrollHeight - el.scrollTop - el.clientHeight <= 2
+              if (bottom) {
+                follow.current = true
+                setDetached(false)
+              } else if (pointerScroll.current) pauseFollow()
             }}
             className={cn(
               "flex h-full min-h-0 flex-col gap-3 overflow-y-auto px-3 py-3",
@@ -174,57 +234,70 @@ export function ChatPanel({
               inputOnly && collapsed && "hidden",
             )}
           >
-            {agent.record?.messages
-              .filter(
-                (message) =>
-                  message.text ||
-                  message.error ||
-                  message.tools?.length ||
-                  message.parts?.length ||
-                  (agent.busy && message.role === "assistant"),
-              )
-              .map((message) => (
-                <div
-                  key={message.id}
-                  className={cn(
-                    "flex min-w-0 shrink-0 flex-col gap-1",
-                    message.role === "user" ? "items-end" : "items-start",
-                  )}
-                >
+            <div ref={contentRef} className="flex min-w-0 shrink-0 flex-col gap-3">
+              {agent.record?.messages
+                .filter(
+                  (message) =>
+                    message.text ||
+                    message.error ||
+                    message.tools?.length ||
+                    message.parts?.length ||
+                    (agent.busy && message.role === "assistant"),
+                )
+                .map((message) => (
                   <div
+                    key={message.id}
                     className={cn(
-                      "min-w-0 max-w-[92%] whitespace-pre-wrap rounded-2xl px-3 py-2 text-sm leading-relaxed",
-                      message.role === "user"
-                        ? "border border-border/50 bg-muted/80 text-foreground"
-                        : "text-foreground",
+                      "flex min-w-0 shrink-0 flex-col gap-1",
+                      message.role === "user" ? "items-end" : "items-start",
                     )}
                   >
-                    {message.role === "assistant" ? (
-                      <ChatActivity
-                        message={message}
-                        active={agent.busy && message.id === agent.record?.messages.at(-1)?.id}
-                      />
-                    ) : (
-                      message.text
-                    )}
-                    {message.error ? (
-                      message.error.length > 240 ? (
-                        <details className="break-words text-xs text-muted-foreground">
-                          <summary className="cursor-pointer">
-                            {message.error.slice(0, 160)}…
-                          </summary>
-                          <pre className="mt-2 whitespace-pre-wrap font-sans">{message.error}</pre>
-                        </details>
+                    <div
+                      className={cn(
+                        "min-w-0 max-w-[92%] whitespace-pre-wrap rounded-2xl px-3 py-2 text-sm leading-relaxed",
+                        message.role === "user"
+                          ? "border border-border/50 bg-muted/80 text-foreground"
+                          : "text-foreground",
+                      )}
+                    >
+                      {message.role === "assistant" ? (
+                        <ChatActivity
+                          message={message}
+                          active={agent.busy && message.id === agent.record?.messages.at(-1)?.id}
+                        />
                       ) : (
-                        <span className="break-words text-xs text-muted-foreground">
-                          {message.error}
-                        </span>
-                      )
-                    ) : null}
+                        message.text
+                      )}
+                      {message.error ? (
+                        message.error.length > 240 ? (
+                          <details className="break-words text-xs text-muted-foreground">
+                            <summary className="cursor-pointer">
+                              {message.error.slice(0, 160)}…
+                            </summary>
+                            <pre className="mt-2 whitespace-pre-wrap font-sans">
+                              {message.error}
+                            </pre>
+                          </details>
+                        ) : (
+                          <span className="break-words text-xs text-muted-foreground">
+                            {message.error}
+                          </span>
+                        )
+                      ) : null}
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+            </div>
           </div>
+          {detached && !collapsed && (
+            <button
+              onClick={jumpToLatest}
+              className="absolute bottom-2 right-3 z-20 flex items-center gap-1 rounded-full border bg-background px-3 py-1.5 text-xs shadow-sm"
+            >
+              <ChevronDown className="h-3 w-3" />
+              {t("chat.jumpLatest")}
+            </button>
+          )}
         </div>
       )}
       {agent.error &&

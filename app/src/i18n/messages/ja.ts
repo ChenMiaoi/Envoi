@@ -1,6 +1,10 @@
 /** 日本語メッセージ。zh-CN と完全に同じキーを持つこと。 */
 import type { Messages } from "./zh-CN"
 const ja: Messages = {
+  "chat.activitySummary": "実行の詳細",
+  "chat.stepCount": "{n} ステップ",
+  "chat.failedSteps": "{n} 件失敗",
+  "chat.jumpLatest": "最新へ戻る",
   "chat.reasoning": "思考",
   "chat.stepInterrupted": "中断",
   "chat.runningTool": "{name} を実行中",

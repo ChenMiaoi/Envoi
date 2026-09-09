@@ -1,6 +1,10 @@
 /** 由 scripts/i18n-traditional.mjs 从 zh-CN.ts 自动生成（OpenCC）。术语覆盖请修改该脚本，勿手改本文件。 */
 import type { Messages } from "./zh-CN"
 const zhTW: Messages = {
+  "chat.activitySummary": "執行過程",
+  "chat.stepCount": "{n} 步",
+  "chat.failedSteps": "{n} 項失敗",
+  "chat.jumpLatest": "回到最新",
   "chat.reasoning": "思考",
   "chat.stepInterrupted": "已中斷",
   "chat.runningTool": "正在執行 {name}",

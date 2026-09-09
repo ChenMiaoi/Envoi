@@ -63,6 +63,7 @@ try {
         status: "running",
         messages: [],
       })
+      globalThis.backgroundFixture.emit = send
       send({ type: "session", id: "fixture-session" })
       send({ type: "thinking", text: "Check the experiment inputs." })
       send({ type: "delta", text: "I will run the experiment." })
@@ -135,22 +136,69 @@ try {
     () => document.querySelector('[aria-label="LaTeX 正文编辑器"]').readOnly,
   )
   const activity = page.locator('[aria-label="执行过程"]:visible')
-  await activity.locator("summary").filter({ hasText: "bash" }).waitFor()
-  assert.equal(await activity.locator("summary").count(), 2)
-  await activity.locator("summary").filter({ hasText: "思考" }).click()
+  const groups = activity.locator("[data-activity-group]")
+  await groups.last().locator(":scope > summary").waitFor()
+  assert.equal(await groups.count(), 2)
+  assert.equal(await groups.locator(":scope[open]").count(), 0)
+  await groups.first().locator(":scope > summary").click()
+  await activity.locator("[data-thinking-round] > summary").click()
   await activity.getByText("Check the experiment inputs.", { exact: true }).last().waitFor()
-  await activity.locator("summary").filter({ hasText: "bash" }).click()
+  await groups.last().locator(":scope > summary").click()
+  await groups.last().locator("details > summary").click()
   await app.evaluate(() => globalThis.backgroundFixture.progress())
   await activity.getByText("Epoch 1 complete", { exact: true }).waitFor()
-  assert.equal(await activity.locator("summary").filter({ hasText: "bash" }).count(), 1)
   await app.evaluate(() => globalThis.backgroundFixture.toolDone())
   await activity.getByText("Accuracy: 0.92", { exact: true }).waitFor()
-  assert.equal(await activity.locator("summary").filter({ hasText: "bash" }).count(), 1)
   await activity.getByText(/秒没有新进展/).waitFor({ timeout: 22000 })
-  await page.screenshot({ path: "/tmp/envoi-chat-activity.png" })
-  const ordered = await activity.innerText()
-  assert(ordered.indexOf("思考") < ordered.indexOf("I will run"))
-  assert(ordered.indexOf("I will run") < ordered.indexOf("bash"))
+  await groups.first().locator(":scope > summary").click()
+  await groups.last().locator(":scope > summary").click()
+  // A large synchronous stream burst must not disengage bottom following.
+  await app.evaluate(() => {
+    const emit = globalThis.backgroundFixture.emit
+    for (let i = 0; i < 30; i++) {
+      emit({ type: "thinking", text: "Inspect phase " + i })
+      emit({ type: "tool", id: "burst-" + i, name: "read", phase: "start", detail: "paper-" + i })
+      emit({ type: "tool", id: "burst-" + i, name: "read", phase: "end", detail: "Read complete" })
+    }
+  })
+  await activity.locator("[data-thinking-round]").nth(30).waitFor({ state: "attached" })
+  await page.screenshot({ path: "/tmp/envoi-grouped-activity.png" })
+  await app.evaluate(() =>
+    globalThis.backgroundFixture.emit({
+      type: "delta",
+      text: "\n\n" + "A paragraph of research findings.\n\n".repeat(50),
+    }),
+  )
+  assert.equal(await groups.locator(":scope[open]").count(), 0)
+  assert.equal(await activity.locator("summary:visible").count(), 2)
+  const scroll = page.locator("[data-chat-scroll]:visible")
+  await page.waitForFunction(() => {
+    const el = [...document.querySelectorAll("[data-chat-scroll]")].find((e) => e.clientHeight)
+    return (
+      el &&
+      el.scrollHeight > el.clientHeight * 3 &&
+      el.scrollHeight - el.clientHeight - el.scrollTop < 3
+    )
+  })
+  // Explicit upward wheel pauses following even while new text arrives.
+  await scroll.hover()
+  await page.mouse.wheel(0, -450)
+  await page.getByRole("button", { name: "回到最新", exact: true }).waitFor()
+  const before = await scroll.evaluate((el) => el.scrollTop)
+  await app.evaluate(() =>
+    globalThis.backgroundFixture.emit({ type: "delta", text: "\n\nMore evidence.\n\n".repeat(20) }),
+  )
+  await page.waitForFunction(() => document.body.innerText.includes("More evidence."))
+  assert(Math.abs((await scroll.evaluate((el) => el.scrollTop)) - before) < 5)
+  await page.getByRole("button", { name: "回到最新", exact: true }).click()
+  await page.waitForFunction(() => {
+    const el = [...document.querySelectorAll("[data-chat-scroll]")].find((e) => e.clientHeight)
+    return el.scrollHeight - el.clientHeight - el.scrollTop < 3
+  })
+  await page.getByRole("button", { name: "回到最新", exact: true }).waitFor({ state: "hidden" })
+  console.log(
+    "PASS chat grouping and scroll: collapsed rounds, burst following, manual pause and return to latest",
+  )
   await open(roots[1])
   await page.waitForFunction(
     () => document.querySelector('[aria-label="LaTeX 正文编辑器"]')?.readOnly === false,

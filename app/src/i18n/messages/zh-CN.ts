@@ -3,6 +3,10 @@
  * 插值占位符使用 {name}；翻译文件必须与本文件键集合完全一致（编译期以 Record<MessageKey,string> 保证）。
  */
 export const zhCN = {
+  "chat.activitySummary": "执行过程",
+  "chat.stepCount": "{n} 步",
+  "chat.failedSteps": "{n} 项失败",
+  "chat.jumpLatest": "回到最新",
   "number.decrease": "减小{label}",
   "number.increase": "增大{label}",
   "number.reset": "恢复{label}默认值",

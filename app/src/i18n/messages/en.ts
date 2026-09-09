@@ -1,6 +1,10 @@
 /** English messages. Must contain exactly the same keys as zh-CN. */
 import type { Messages } from "./zh-CN"
 const en: Messages = {
+  "chat.activitySummary": "Execution details",
+  "chat.stepCount": "{n} steps",
+  "chat.failedSteps": "{n} failed",
+  "chat.jumpLatest": "Back to latest",
   "number.decrease": "Decrease {label}",
   "number.increase": "Increase {label}",
   "number.reset": "Reset {label}",
