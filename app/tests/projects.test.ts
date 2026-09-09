@@ -188,6 +188,7 @@ test("research and writing templates provide their own files and explicit Git op
           "build/README.md",
         ])
       assert(key in files)
+    assert(!files["references.bib"].includes("@book"))
     if (template.id === "research") assert.equal(files["main.tex"], undefined)
     assert.equal(JSON.parse(files[".envoi/project.json"]).git.branch, "main")
     assert.equal(

@@ -234,10 +234,9 @@ export function templateFiles(id: string, enableGit = true) {
     "build/README.md":
       "Generated PDF and compilation logs live here. This directory is ignored by Git.\n",
     "chapters/introduction.tex": String.raw`\section{Introduction}
-Introduce your research question and context. Cite relevant work such as \cite{knuth1984}.
+Introduce your research question and context. Add verified related work to references.bib before citing it.
 `,
-    "references.bib":
-      "@book{knuth1984, author={Donald E. Knuth}, title={The TeXbook}, publisher={Addison-Wesley}, year={1984}}\n",
+    "references.bib": "% Add verified references from the paper library.\n",
     "TEMPLATE.md": `# ${template.name}\n\n官方样式：${template.style}\n来源：${template.source}\n样式许可：${template.license}\n\n本项目为 Envoi 编写的最小起稿骨架，调用原始官方样式，不修改或重新分发样式文件。需要本地 TeX 发行版提供相应类/字体/BibTeX样式。\n\n这是模板体系，不是某个会议年度的投稿保证。具体会议/期刊可能要求不同选项、匿名/版权信息、页数与格式。请按目标活动官方要求调整。ACM 骨架使用 nonacm 起稿选项，投稿前按官方要求替换。\n`,
   }
 }
