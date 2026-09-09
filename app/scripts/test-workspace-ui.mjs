@@ -1,7 +1,8 @@
 import { seedFixtureTrust } from "./fixture-trust.mjs"
 import { _electron } from "playwright"
+import { execFileSync } from "node:child_process"
 import { createRequire } from "node:module"
-import { realpath, mkdtemp, mkdir, readFile, rm } from "node:fs/promises"
+import { realpath, mkdtemp, mkdir, readFile, writeFile, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import assert from "node:assert/strict"
@@ -111,6 +112,23 @@ try {
   await page.evaluate(() => (location.hash = "/history"))
   await page.getByRole("button", { name: "已保存结果", exact: true }).click()
   await page.getByRole("heading", { name: "注意力模型基线 · 合成数据", exact: true }).waitFor()
+  await page.getByRole("button", { name: "文件变化", exact: true }).click()
+  await writeFile(path.join(main, "refresh-note.md"), "Observed experiment result")
+  await page.getByText("refresh-note.md", { exact: true }).waitFor()
+  execFileSync("git", ["-C", main, "add", "refresh-note.md"])
+  execFileSync("git", [
+    "-C",
+    main,
+    "-c",
+    "user.name=Envoi Test",
+    "-c",
+    "user.email=test@example.invalid",
+    "commit",
+    "-m",
+    "Fixture: result recorded",
+  ])
+  await page.getByRole("button", { name: "提交历史", exact: true }).click()
+  await page.getByText("Fixture: result recorded", { exact: true }).waitFor()
   await page.setViewportSize({ width: 760, height: 650 })
   assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth))
   await page.setViewportSize({ width: 1440, height: 900 })

@@ -173,9 +173,15 @@ function CommitDetail({ show, error, busy }: { show?: GitShow; error: string; bu
 }
 
 export function GitHistoryView() {
-  return <WorkspacePanel history={(root) => <CommitHistoryView key={root} directory={root} />} />
+  return (
+    <WorkspacePanel
+      history={(root, revision) => (
+        <CommitHistoryView key={root} directory={root} revision={revision} />
+      )}
+    />
+  )
 }
-function CommitHistoryView({ directory }: { directory: string }) {
+function CommitHistoryView({ directory, revision }: { directory: string; revision: number }) {
   const { project: currentProject } = useProject()
   const project = { ...currentProject, rootPath: directory }
   const { t } = useT()
@@ -186,22 +192,24 @@ function CommitHistoryView({ directory }: { directory: string }) {
   const [details, setDetails] = useState<Record<string, GitShow>>({})
   const [detailBusy, setDetailBusy] = useState(false),
     [detailError, setDetailError] = useState("")
+  const requests = useRef(0)
   const identity = useRef(project.id)
   identity.current = project.id
   const refresh = useCallback(async () => {
     const id = project.id
+    const request = ++requests.current
     setBusy(true)
-    setLog(null)
-    setSelected(null)
-    setDetails({})
     try {
       if (!project.rootPath) {
         setMessage(t("history.noDirectory"))
         return
       }
       const result = await localGitLog(project.rootPath)
-      if (identity.current !== id) return
+      if (identity.current !== id || requests.current !== request) return
       setLog(result)
+      setSelected((current) =>
+        result.commits.some((commit) => commit.hash === current) ? current : null,
+      )
       setMessage(
         result.state === "nested"
           ? t("history.nested", { repo: result.enclosing ?? "" })
@@ -212,14 +220,15 @@ function CommitHistoryView({ directory }: { directory: string }) {
               : t("history.empty"),
       )
     } catch (error) {
-      if (identity.current === id) setMessage((error as Error).message)
+      if (identity.current === id && requests.current === request)
+        setMessage((error as Error).message)
     } finally {
-      if (identity.current === id) setBusy(false)
+      if (identity.current === id && requests.current === request) setBusy(false)
     }
   }, [project.id, project.rootPath, t])
   useEffect(() => {
     void refresh()
-  }, [refresh])
+  }, [refresh, revision])
   useEffect(() => {
     const listener = () => void refresh()
     window.addEventListener("envoi:connection-updated", listener)

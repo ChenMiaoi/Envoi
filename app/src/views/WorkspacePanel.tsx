@@ -41,7 +41,11 @@ type Result = {
 }
 const button =
   "inline-flex items-center justify-center gap-2 rounded-md border border-border px-3 py-2 text-xs hover:bg-secondary disabled:opacity-40"
-export function WorkspacePanel({ history }: { history: (root: string) => ReactNode }) {
+export function WorkspacePanel({
+  history,
+}: {
+  history: (root: string, revision: number) => ReactNode
+}) {
   const { t } = useT()
   const { project, navigationBusy: projectBusy, agentWriting: taskBusy, saving } = useProject()
   const [overview, setOverview] = useState<Overview>(),
@@ -58,12 +62,14 @@ export function WorkspacePanel({ history }: { history: (root: string) => ReactNo
     [command, setCommand] = useState(""),
     [files, setFiles] = useState<string[]>([]),
     [choices, setChoices] = useState<string[]>([])
+  const [revision, setRevision] = useState(0)
   const root = project.rootPath
   const refresh = useCallback(async () => {
     if (!root) return
     try {
       const value = (await envoi().workspaces(root, { action: "list" })) as Overview
       setOverview(value)
+      setRevision((value) => value + 1)
       setSelected((old) => (value.workspaces.some((w) => w.path === old) ? old : root))
       setError("")
     } catch (e) {
@@ -72,10 +78,23 @@ export function WorkspacePanel({ history }: { history: (root: string) => ReactNo
   }, [root])
   useEffect(() => {
     void refresh()
-    const listener = () => void refresh()
+    let timer: ReturnType<typeof setTimeout>
+    const listener = () => {
+      clearTimeout(timer)
+      timer = setTimeout(() => void refresh(), 250)
+    }
+    const off = envoi().onFilesChanged((event) => {
+      if (event.root === root) listener()
+    })
     window.addEventListener("envoi:workspaces-updated", listener)
-    return () => window.removeEventListener("envoi:workspaces-updated", listener)
-  }, [refresh])
+    window.addEventListener("focus", listener)
+    return () => {
+      clearTimeout(timer)
+      off()
+      window.removeEventListener("envoi:workspaces-updated", listener)
+      window.removeEventListener("focus", listener)
+    }
+  }, [refresh, root])
   useEffect(() => {
     let live = true
     if (selected && tab === "changes")
@@ -90,7 +109,7 @@ export function WorkspacePanel({ history }: { history: (root: string) => ReactNo
     return () => {
       live = false
     }
-  }, [selected, tab])
+  }, [selected, tab, revision])
   const active = overview?.workspaces.find((w) => w.path === selected),
     locked = busy || projectBusy || saving
   async function run(task: () => Promise<void>) {
@@ -369,7 +388,7 @@ export function WorkspacePanel({ history }: { history: (root: string) => ReactNo
                 </div>
               )}
               {active && tab === "history" && (
-                <div className="min-h-0 flex-1">{history(selected)}</div>
+                <div className="min-h-0 flex-1">{history(selected, revision)}</div>
               )}
               {tab === "changes" && (
                 <div className="flex-1 overflow-auto p-5">
