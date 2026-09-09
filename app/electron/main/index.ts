@@ -708,6 +708,17 @@ function registerIpc(): void {
       (directory: string) => shell.trashItem(directory),
       deletionProtected,
     )
+    // A trashed root must not remain the permission context for runtime probes.
+    // Clear every window using it, not just the window that requested deletion.
+    for (const [owner, active] of activeRoots) {
+      if (active !== base) continue
+      activeRoots.delete(owner)
+      watchGenerations.set(owner, (watchGenerations.get(owner) ?? 0) + 1)
+      watchers.get(owner)?.()
+      watchers.delete(owner)
+      for (const request of compileRequests.get(owner) ?? []) request.cancelled = true
+    }
+    for (const [id, directory] of projectRoots) if (directory === base) projectRoots.delete(id)
     unbindRoot(base)
     return result
   })

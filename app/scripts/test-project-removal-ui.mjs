@@ -76,6 +76,23 @@ try {
   await page.evaluate(() => window.dispatchEvent(new Event("envoi:manage-projects")))
   await page.getByRole("button", { name: "移除并关闭", exact: true }).click()
   await page.getByTestId("welcome-page").waitFor()
+  // Exercise the native deletion path without using the real OS trash.
+  await open()
+  await app.evaluate(async ({ shell }) => {
+    const { rename } = process.getBuiltinModule("fs/promises")
+    shell.trashItem = (directory) => rename(directory, directory + "-trashed")
+  })
+  await page.evaluate(
+    async ({ root, other }) => {
+      await window.envoi.fsTrashProject(root, "paper")
+      const runtime = await window.envoi.gitRuntime()
+      if (!runtime.available) throw Error(runtime.error)
+      await window.envoi.trustDirectory(other)
+      await window.envoi.gitInit(other)
+    },
+    { root, other },
+  )
+  assert.match(await readFile(path.join(other, ".git/HEAD"), "utf8"), /refs\/heads\/main/)
   console.log(
     "PASS removal: other entry preserves active draft; cancel; save failure retains record; save-and-remove; clean removal",
   )
