@@ -62,7 +62,8 @@ const transport = await serve(async (req, res) => {
         }) +
         "\n\n",
     )
-  chunk({ role: "assistant", content: "Protocol verified" })
+  chunk({ role: "assistant", reasoning_content: "Check the supplied evidence." })
+  chunk({ content: "Protocol verified" })
   chunk({}, "stop")
   res.end("data: [DONE]\n\n")
 })
@@ -276,6 +277,11 @@ try {
   const record = (await post("agent/session", { projectId: id, sessionId })).body
   assert.equal(record.status, "complete")
   assert.equal(record.messages[1].text, "Protocol verified")
+  assert.deepEqual(
+    record.messages[1].parts.map((p) => p.type),
+    ["thinking", "text"],
+  )
+  assert.equal(record.messages[1].parts[0].text, "Check the supplied evidence.")
   assert(record.piFile)
   assert.equal((await post("agent/session", { projectId: copyId, sessionId })).response.status, 400)
   await post("agent/chat", { projectId: id, sessionId, message: "Second turn", dirty: false })

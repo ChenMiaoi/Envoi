@@ -48,7 +48,11 @@ export interface AgentToolEvent {
   detail?: string
   isError?: boolean
 }
+export type ChatPart =
+  | { type: "text" | "thinking"; text: string; time: number; updated: number }
+  | (AgentToolEvent & { type: "tool"; time: number; updated: number; input?: string })
 export interface AgentMessage {
+  parts?: ChatPart[]
   id: string
   role: "user" | "assistant"
   text: string

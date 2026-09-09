@@ -1,7 +1,7 @@
 import { useProject } from "@/project/context"
 import { TrustRequired } from "@/project/ProjectTrust"
 import { useProjectTrust } from "@/project/useProjectTrust"
-import { ChatMarkdown } from "./ChatMarkdown"
+import { ChatActivity } from "./ChatActivity"
 import { useEffect, useRef, useState } from "react"
 import { ArrowUp, Mic, Plus, Square, ChevronUp, ChevronDown } from "lucide-react"
 import type { AgentState } from "@/agent/context"
@@ -57,6 +57,7 @@ export function ChatPanel({
     return () => observer.disconnect()
   }, [inputOnly])
   const scrollRef = useRef<HTMLDivElement>(null)
+  const follow = useRef(true)
   const available =
     !agent.navigating &&
     (!conversation || !projectAgent.busy) &&
@@ -66,12 +67,17 @@ export function ChatPanel({
       (model) => model.available && `${model.provider}/${model.id}` === agent.config?.model,
     )
   useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight })
+    if (follow.current) scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight })
   }, [agent.record])
+
+  useEffect(() => {
+    follow.current = true
+  }, [agent.record?.id])
 
   function send() {
     const text = input.trim()
     if (!text || agent.busy || !available) return
+    follow.current = true
     setAttempted(true)
     setInput("")
     void agent.send(
@@ -158,6 +164,10 @@ export function ChatPanel({
           )}
           <div
             ref={scrollRef}
+            onScroll={(event) => {
+              const el = event.currentTarget
+              follow.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80
+            }}
             className={cn(
               "flex h-full min-h-0 flex-col gap-3 overflow-y-auto px-3 py-3",
               "pt-5",
@@ -170,6 +180,7 @@ export function ChatPanel({
                   message.text ||
                   message.error ||
                   message.tools?.length ||
+                  message.parts?.length ||
                   (agent.busy && message.role === "assistant"),
               )
               .map((message) => (
@@ -188,36 +199,13 @@ export function ChatPanel({
                         : "text-foreground",
                     )}
                   >
-                    {message.role === "assistant" && message.text ? (
-                      <ChatMarkdown text={message.text} />
+                    {message.role === "assistant" ? (
+                      <ChatActivity
+                        message={message}
+                        active={agent.busy && message.id === agent.record?.messages.at(-1)?.id}
+                      />
                     ) : (
                       message.text
-                    )}
-                    {!!message.tools?.length && (
-                      <div className="my-2 space-y-1 text-xs" aria-label={t("chat.toolActivity")}>
-                        {message.tools.map((tool, index) => (
-                          <details key={index} className="rounded border border-border px-2 py-1">
-                            <summary className="cursor-pointer break-words">
-                              {tool.isError
-                                ? t("chat.toolFailed")
-                                : tool.phase === "start"
-                                  ? t("chat.toolStarted")
-                                  : t("chat.toolFinished")}{" "}
-                              · {tool.name}
-                              {tool.time && (
-                                <time className="ml-2 text-muted-foreground">
-                                  {new Date(tool.time).toLocaleTimeString()}
-                                </time>
-                              )}
-                            </summary>
-                            {tool.detail && (
-                              <pre className="mt-1 max-h-48 overflow-auto whitespace-pre-wrap break-words font-editor">
-                                {tool.detail}
-                              </pre>
-                            )}
-                          </details>
-                        ))}
-                      </div>
                     )}
                     {message.error ? (
                       message.error.length > 240 ? (
@@ -232,10 +220,6 @@ export function ChatPanel({
                           {message.error}
                         </span>
                       )
-                    ) : !message.text && agent.busy && message.role === "assistant" ? (
-                      <span role="status" className="text-muted-foreground">
-                        {t("chat.awaitingResponse")}
-                      </span>
                     ) : null}
                   </div>
                 </div>

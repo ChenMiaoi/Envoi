@@ -1,3 +1,4 @@
+import { appendChatEvent } from "../src/lib/chatActivity.mjs"
 import { workspaceAiDefaults } from "./workspaces.mjs"
 import { libraryRequest, researchRoot, paperNoteTools } from "./research-library.mjs"
 import { researchTools } from "./workspace-agent.mjs"
@@ -186,6 +187,19 @@ function textEvent(event) {
       id: event.toolCallId,
       time: Date.now(),
       detail: JSON.stringify(event.args ?? {}).slice(0, 4000),
+    }
+  if (event.type === "tool_execution_update")
+    return {
+      type: "tool",
+      phase: "update",
+      name: event.toolName,
+      id: event.toolCallId,
+      time: Date.now(),
+      detail: (event.partialResult?.content ?? [])
+        .filter((item) => item.type === "text")
+        .map((item) => item.text)
+        .join("\n")
+        .slice(-8000),
     }
   if (event.type === "tool_execution_end")
     return {
@@ -864,8 +878,7 @@ export function createAgentCore({ trustedDesktop = false } = {}) {
         }
         const out = textEvent(event)
         if (!out) return
-        if (out.type === "delta") assistant.text += out.text
-        if (out.type === "tool") assistant.tools.push(out)
+        Object.assign(assistant, appendChatEvent(assistant, out))
         write(out)
       })
       stop = () => {

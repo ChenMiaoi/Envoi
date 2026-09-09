@@ -1,3 +1,4 @@
+import { appendChatEvent } from "@/lib/chatActivity.mjs"
 import { useProjectTrust } from "@/project/useProjectTrust"
 import { translate } from "@/i18n/runtime"
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
@@ -211,7 +212,7 @@ export function AgentProvider({ children }: { children: ReactNode }) {
             record: state.record ? { ...state.record, id: event.id } : null,
           }))
         }
-        if (event.type === "delta" || event.type === "tool")
+        if (event.type === "delta" || event.type === "thinking" || event.type === "tool")
           patch(id, (state) => ({
             ...state,
             record: state.record
@@ -219,9 +220,7 @@ export function AgentProvider({ children }: { children: ReactNode }) {
                   ...state.record,
                   messages: state.record.messages.map((item, index) =>
                     index === state.record!.messages.length - 1
-                      ? event.type === "delta"
-                        ? { ...item, text: item.text + event.text }
-                        : { ...item, tools: [...(item.tools ?? []), event] }
+                      ? appendChatEvent(item, event)
                       : item,
                   ),
                 }

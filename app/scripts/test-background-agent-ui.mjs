@@ -64,7 +64,36 @@ try {
         messages: [],
       })
       send({ type: "session", id: "fixture-session" })
-      send({ type: "tool", phase: "start", name: "bash", id: "call-1" })
+      send({ type: "thinking", text: "Check the experiment inputs." })
+      send({ type: "delta", text: "I will run the experiment." })
+      send({
+        type: "tool",
+        phase: "start",
+        name: "bash",
+        id: "call-1",
+        detail: "python experiment.py",
+        time: Date.now(),
+      })
+      globalThis.backgroundFixture.progress = () => {
+        send({
+          type: "tool",
+          phase: "update",
+          name: "bash",
+          id: "call-1",
+          detail: "Epoch 1 complete",
+          time: Date.now(),
+        })
+      }
+      globalThis.backgroundFixture.toolDone = () => {
+        send({
+          type: "tool",
+          phase: "end",
+          name: "bash",
+          id: "call-1",
+          detail: "Accuracy: 0.92",
+          time: Date.now(),
+        })
+      }
       globalThis.backgroundFixture.finish = () => {
         const record = records.get(body.projectId)
         record.status = "complete"
@@ -105,7 +134,23 @@ try {
   await page.waitForFunction(
     () => document.querySelector('[aria-label="LaTeX 正文编辑器"]').readOnly,
   )
-  await page.getByText("开始执行 · bash", { exact: true }).filter({ visible: true }).waitFor()
+  const activity = page.locator('[aria-label="执行过程"]:visible')
+  await activity.locator("summary").filter({ hasText: "bash" }).waitFor()
+  assert.equal(await activity.locator("summary").count(), 2)
+  await activity.locator("summary").filter({ hasText: "思考" }).click()
+  await activity.getByText("Check the experiment inputs.", { exact: true }).last().waitFor()
+  await activity.locator("summary").filter({ hasText: "bash" }).click()
+  await app.evaluate(() => globalThis.backgroundFixture.progress())
+  await activity.getByText("Epoch 1 complete", { exact: true }).waitFor()
+  assert.equal(await activity.locator("summary").filter({ hasText: "bash" }).count(), 1)
+  await app.evaluate(() => globalThis.backgroundFixture.toolDone())
+  await activity.getByText("Accuracy: 0.92", { exact: true }).waitFor()
+  assert.equal(await activity.locator("summary").filter({ hasText: "bash" }).count(), 1)
+  await activity.getByText(/秒没有新进展/).waitFor({ timeout: 22000 })
+  await page.screenshot({ path: "/tmp/envoi-chat-activity.png" })
+  const ordered = await activity.innerText()
+  assert(ordered.indexOf("思考") < ordered.indexOf("I will run"))
+  assert(ordered.indexOf("I will run") < ordered.indexOf("bash"))
   await open(roots[1])
   await page.waitForFunction(
     () => document.querySelector('[aria-label="LaTeX 正文编辑器"]')?.readOnly === false,

@@ -1,6 +1,10 @@
 /** 日本語メッセージ。zh-CN と完全に同じキーを持つこと。 */
 import type { Messages } from "./zh-CN"
 const ja: Messages = {
+  "chat.reasoning": "思考",
+  "chat.stepInterrupted": "中断",
+  "chat.runningTool": "{name} を実行中",
+  "chat.noRecentUpdate": "{seconds} 秒間、新しい進捗がありません。待機するか停止できます。",
   "number.decrease": "{label}を小さく",
   "number.increase": "{label}を大きく",
   "number.reset": "{label}をリセット",
