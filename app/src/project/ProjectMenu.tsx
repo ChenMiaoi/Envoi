@@ -39,7 +39,17 @@ import {
 export function ProjectMenu() {
   const { preferences } = usePreferences()
   const { t } = useT()
-  const { saveAll, saving, project, setProject, busy, setBusy, message, setMessage } = useProject()
+  const {
+    saveAll,
+    saving,
+    project,
+    setProject,
+    navigationBusy: busy,
+    busy: taskBusy,
+    setBusy,
+    message,
+    setMessage,
+  } = useProject()
   const trusted = useProjectTrust(project.rootPath)?.trusted
   const [gitStatus, setGitStatus] = useState(t("project.gitProbing"))
   const [gitAvailable, setGitAvailable] = useState(false)
@@ -233,16 +243,19 @@ export function ProjectMenu() {
             {t("project.openProjectFolder")}
           </DropdownMenuItem>
           <DropdownMenuItem
-            disabled={busy || !project.rootPath}
+            disabled={taskBusy || !project.rootPath}
             onSelect={() => openDialog("file")}
           >
             {t("project.newFile")}
           </DropdownMenuItem>
-          <DropdownMenuItem disabled={busy || saving || !changed} onSelect={() => void saveAll()}>
+          <DropdownMenuItem
+            disabled={taskBusy || saving || !changed}
+            onSelect={() => void saveAll()}
+          >
             {t("project.saveAll")}
           </DropdownMenuItem>
           <DropdownMenuItem
-            disabled={busy || saving || project.id === "empty"}
+            disabled={taskBusy || saving || project.id === "empty"}
             onSelect={() => window.dispatchEvent(new Event("envoi:close-project"))}
           >
             {t("project.closeCurrentEllipsis")}
@@ -518,6 +531,7 @@ export function ProjectMenu() {
             <button
               disabled={
                 busy ||
+                (mode === "file" && taskBusy) ||
                 (mode === "new" && enableGit && !gitAvailable) ||
                 (mode !== "file" && !location) ||
                 (mode !== "open" && !name.trim()) ||

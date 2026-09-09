@@ -11,6 +11,9 @@ export interface ProjectState {
   message: string
   setMessage: (message: string) => void
   busy: boolean
+  agentWriting: boolean
+  navigationBusy: boolean
+  setAgentBusy: (id: string, value: boolean) => void
   setBusy: (value: boolean) => void
 }
 export const ProjectContext = createContext<ProjectState | null>(null)

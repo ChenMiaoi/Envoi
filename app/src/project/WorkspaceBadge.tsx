@@ -32,7 +32,14 @@ type Workspace = {
 }
 export function WorkspaceBadge() {
   const { t } = useT()
-  const { project, setProject, busy, saving, setMessage } = useProject(),
+  const {
+      project,
+      setProject,
+      navigationBusy: busy,
+      busy: taskBusy,
+      saving,
+      setMessage,
+    } = useProject(),
     navigate = useNavigate()
   const [info, setInfo] = useState<{ root: string; workspaces: Workspace[] }>(),
     [mode, setMode] = useState<"create" | "rename" | null>(null),
@@ -126,7 +133,7 @@ export function WorkspaceBadge() {
           ))}
           <DropdownMenuSeparator />
           <DropdownMenuItem
-            disabled={locked}
+            disabled={locked || taskBusy}
             onSelect={() => {
               setName("")
               setPurpose("")
@@ -138,7 +145,7 @@ export function WorkspaceBadge() {
             新建工作区…
           </DropdownMenuItem>
           <DropdownMenuItem
-            disabled={locked}
+            disabled={locked || taskBusy}
             onSelect={() => {
               setName(current.name)
               setError("")
@@ -195,7 +202,7 @@ export function WorkspaceBadge() {
             </p>
           )}
           <button
-            disabled={locked || !name.trim()}
+            disabled={locked || taskBusy || !name.trim()}
             className="rounded bg-primary px-3 py-2 text-sm text-primary-foreground disabled:opacity-40"
             onClick={() =>
               void run(async () => {

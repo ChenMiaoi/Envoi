@@ -32,6 +32,14 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     return () => clearTimeout(timer)
   }, [message])
   const [busy, setBusy] = useState(false)
+  const [agentWrites, setAgentWrites] = useState<Record<string, boolean>>({})
+  const agentWriting = useRef(new Set<string>())
+  const setAgentBusy = useCallback((id: string, value: boolean) => {
+    if (value) agentWriting.current.add(id)
+    else agentWriting.current.delete(id)
+    setAgentWrites((current) => ({ ...current, [id]: value }))
+  }, [])
+  const projectBusy = busy || !!agentWrites[project.id]
   useEffect(() => {
     const listener = (event: Event) => setMessage((event as CustomEvent<string>).detail)
     window.addEventListener("envoi:storage-warning", listener)
@@ -103,6 +111,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     () =>
       createProjectSaver({
         getProject: () => latest.current,
+        canSave: () => !agentWriting.current.has(latest.current.id),
         setProject,
         message: setMessage,
         saving: setSaving,
@@ -112,7 +121,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   const closeProject = useCallback(
     async (discard = false) => {
       const current = latest.current
-      assertCanClose(current, busy || closing.current, saving, discard)
+      assertCanClose(current, projectBusy || closing.current, saving, discard)
       closing.current = true
       activity.current = { busy: true, saving }
       setBusy(true)
@@ -137,7 +146,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         setBusy(false)
       }
     },
-    [busy, saving],
+    [projectBusy, saving],
   )
   useEffect(() => {
     const save = (event: Event) => {
@@ -200,7 +209,10 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         setMessage,
         project,
         setProject,
-        busy,
+        busy: projectBusy,
+        agentWriting: Object.values(agentWrites).some(Boolean),
+        navigationBusy: busy,
+        setAgentBusy,
         setBusy,
         edit: (id, text) =>
           setProject((current) => ({

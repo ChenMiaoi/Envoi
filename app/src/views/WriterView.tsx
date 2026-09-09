@@ -202,6 +202,7 @@ export function WriterView({
               <div className="min-h-0 flex-1">
                 {active ? (
                   <LatexEditor
+                    readOnly={busy}
                     fontSize={effective.fontSize}
                     fontFamily={fontCss(effective.fontFamily, editorFonts)}
                     lineHeight={effective.lineHeight}

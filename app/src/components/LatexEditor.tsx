@@ -19,8 +19,10 @@ export function LatexEditor({
   lineHeight = 1.75,
   tabSize = 4,
   onDoubleClickLine,
+  readOnly = false,
 }: {
   ref?: Ref<LatexEditorHandle>
+  readOnly?: boolean
   value: string
   onChange: (v: string) => void
   fontSize?: number
@@ -197,6 +199,7 @@ export function LatexEditor({
           ref={textareaRef}
           aria-label={t("editor.latexBodyAria")}
           value={value}
+          readOnly={readOnly}
           wrap="soft"
           spellCheck={false}
           onChange={(e) => onChange(e.target.value)}

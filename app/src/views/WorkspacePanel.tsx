@@ -43,7 +43,7 @@ const button =
   "inline-flex items-center justify-center gap-2 rounded-md border border-border px-3 py-2 text-xs hover:bg-secondary disabled:opacity-40"
 export function WorkspacePanel({ history }: { history: (root: string) => ReactNode }) {
   const { t } = useT()
-  const { project, busy: projectBusy, saving } = useProject()
+  const { project, navigationBusy: projectBusy, agentWriting: taskBusy, saving } = useProject()
   const [overview, setOverview] = useState<Overview>(),
     [selected, setSelected] = useState(""),
     [tab, setTab] = useState<"history" | "results" | "changes">("history")
@@ -135,7 +135,7 @@ export function WorkspacePanel({ history }: { history: (root: string) => ReactNo
           </button>
           <button
             className={button}
-            disabled={locked || !overview}
+            disabled={locked || taskBusy || !overview}
             onClick={() => {
               setForm("create")
               setName("")
@@ -251,7 +251,7 @@ export function WorkspacePanel({ history }: { history: (root: string) => ReactNo
               )}
               <button
                 className={`${button} mt-5 bg-primary text-primary-foreground hover:bg-primary/90`}
-                disabled={locked || !name.trim() || (form === "save" && !files.length)}
+                disabled={locked || taskBusy || !name.trim() || (form === "save" && !files.length)}
                 onClick={() =>
                   void run(async () => {
                     if (!root) return
@@ -306,7 +306,7 @@ export function WorkspacePanel({ history }: { history: (root: string) => ReactNo
                       {!active.main && (
                         <button
                           className={button}
-                          disabled={locked || !active.available}
+                          disabled={locked || taskBusy || !active.available}
                           onClick={() =>
                             void run(async () => {
                               await openDirectory(selected)

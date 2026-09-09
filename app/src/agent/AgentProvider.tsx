@@ -21,6 +21,8 @@ interface ScopeState {
   error: string
   ready: boolean
   config: AiConfig | null
+  root?: string
+  name?: string
 }
 const blank: ScopeState = {
   record: null,
@@ -31,7 +33,7 @@ const blank: ScopeState = {
   config: null,
 }
 export function AgentProvider({ children }: { children: ReactNode }) {
-  const { project, setProject, setBusy, saveAll, busy: projectBusy } = useProject(),
+  const { project, setProject, setAgentBusy, saveAll, busy: projectBusy } = useProject(),
     [status, setStatus] = useState<AgentStatus | null>(null),
     [scopes, setScopes] = useState<Record<string, ScopeState>>({})
   const trusted = useProjectTrust(project.rootPath)?.trusted
@@ -101,9 +103,9 @@ export function AgentProvider({ children }: { children: ReactNode }) {
   }, [scope, project.rootPath, setProject, patch, trusted])
   useEffect(
     () => () => {
-      controllers.current.get(scope)?.abort()
+      for (const controller of controllers.current.values()) controller.abort()
     },
-    [scope],
+    [],
   )
   useEffect(() => {
     if (scope !== "empty") void refresh()
@@ -174,10 +176,12 @@ export function AgentProvider({ children }: { children: ReactNode }) {
       }
     }
     controllers.current.set(id, controller)
-    if (writes) setBusy(true)
+    if (writes) setAgentBusy(id, true)
     patch(id, (state) => ({
       ...state,
       busy: true,
+      root: project.rootPath,
+      name: project.name,
       error: "",
       record: {
         ...(state.record ?? {
@@ -230,7 +234,7 @@ export function AgentProvider({ children }: { children: ReactNode }) {
     } finally {
       navigation.current.add(id)
       controllers.current.delete(id)
-      if (writes) setBusy(false)
+      if (writes) setAgentBusy(id, false)
       if (sessionId) {
         try {
           const record = await agentRequest<AgentRecord>("session", { projectId: id, sessionId })
@@ -255,6 +259,7 @@ export function AgentProvider({ children }: { children: ReactNode }) {
       }
       navigation.current.delete(id)
       patch(id, { busy: false })
+      window.dispatchEvent(new Event("envoi:workspaces-updated"))
     }
   }
   const stop = () => {
@@ -294,6 +299,18 @@ export function AgentProvider({ children }: { children: ReactNode }) {
         remove,
       }}
     >
+      {Object.entries(scopes)
+        .filter(([id, state]) => id !== scope && state.busy)
+        .map(([id, state]) => (
+          <div
+            key={id}
+            role="status"
+            className="fixed bottom-8 right-3 z-50 flex max-w-lg gap-3 rounded border bg-card p-3 text-xs shadow-lg"
+          >
+            <span title={state.root}>后台任务：{state.name} · 仍在运行</span>
+            <button onClick={() => controllers.current.get(id)?.abort()}>停止任务</button>
+          </div>
+        ))}
       {children}
     </AgentContext.Provider>
   )

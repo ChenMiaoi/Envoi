@@ -5,7 +5,9 @@ export function createProjectSaver({
   setProject,
   message,
   saving,
+  canSave = () => true,
 }: {
+  canSave?: () => boolean
   getProject: () => PaperProject
   setProject: (update: (project: PaperProject) => PaperProject) => void
   message: (text: string) => void
@@ -13,7 +15,7 @@ export function createProjectSaver({
 }) {
   let running = false
   return async () => {
-    if (running) return false
+    if (running || !canSave()) return false
     const snapshot = getProject()
     running = true
     saving(true)
