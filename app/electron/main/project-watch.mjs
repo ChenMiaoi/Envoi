@@ -25,7 +25,8 @@ export function watchProjectDirectory(root, notify, { delay = 180, maxDelay = 10
       relative
         .split("/")
         .some((part) => part.startsWith(".envoi-write-") || part === "node_modules") ||
-      relative.startsWith(".git/objects/")
+      relative.startsWith(".git/objects/") ||
+      relative.startsWith(".git/worktrees/")
     )
       return
     if (paths.size < 256) paths.add(relative)
