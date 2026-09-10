@@ -105,7 +105,10 @@ try {
   assert.equal(await readFile(path.join(outside, "secret.txt"), "utf8"), "outside")
   await page.getByRole("button", { name: "限制模式", exact: true }).click()
   await page.getByRole("dialog").getByRole("button", { name: "信任项目", exact: true }).click()
-  await page.getByRole("dialog").waitFor({ state: "hidden" })
+  await page.waitForFunction(
+    async (root) => (await window.envoi.projectTrust(root)).trusted === true,
+    root,
+  )
   const trusted = await page.evaluate(async (root) => {
     await window.envoi.gitInit(root)
     return window.envoi.gitStatus(root)
