@@ -49,7 +49,7 @@ const ja: Messages = {
   "trust.gitAfterTrust": "新しいプロジェクトを信頼した後に Git を初期化します。",
   "trust.title": "プロジェクトのセキュリティ",
   "trust.description":
-    "制限モードでは閲覧・編集・保存ができます。信頼するとコンパイル、Git、AI ツールによるローカルコマンドの実行を許可します。",
+    "制限モードではファイルの読み書きのみ可能です。信頼するとコンパイル・Git・AI がローカルコマンドを実行できます。",
   "trust.trusted": "信頼済み",
   "trust.restricted": "制限モード",
   "trust.continueRestricted": "制限モードで続ける",
@@ -61,17 +61,14 @@ const ja: Messages = {
   "project.discardAndRemove": "変更を破棄して一覧から削除",
   "project.restartForTrash":
     "アプリが更新されました。変更を保存して完全に終了し、再起動してからプロジェクトを削除してください。",
-  "project.trashWorktreeHint":
-    "この作業ツリーのみを削除し、ブランチと保存済みの結果は保持します。ゴミ箱から復元した後は Git 作業ツリーの再接続が必要です。",
+  "project.trashWorktreeHint": "ワークスペースのみ削除し、ブランチと保存済みの結果は保持します。",
   "project.deletionChanged": "ディレクトリまたは作業ツリーが変更されました。再確認してください。",
-  "workspace.createHint": "現在のコミットから実験を作成します。未コミットの変更は含まれません。",
+  "workspace.createHint": "現在のコミットから作成します。未コミットの変更は含まれません。",
   "workspace.saveHint":
-    "選択したファイルとソースのアーカイブをメイン作業領域に保存します。先に実験コードをコミットしてください。",
+    "選択したファイルをメインワークスペースに保存します。先に実験コードをコミットしてください。",
   "workspace.created": "実験を作成しました。",
   "workspace.resultSaved": "結果をメイン作業領域に保存しました。",
-  "workspace.createOpenHint":
-    "現在のコミットから作業領域を作成します。未コミットの変更は含まれません。",
-  "workspace.renameHint": "表示名を変更します。",
+  "workspace.createOpenHint": "現在のコミットから作成します。未コミットの変更は含まれません。",
   "library.openProjectFirst": "先にプロジェクトを開いてください。",
   "library.startImport": "文献はまだありません。「文献を追加」からインポートしてください。",
   "library.addPaper": "文献を追加",
@@ -89,14 +86,12 @@ const ja: Messages = {
   "settings.logs.failed":
     "ログを開くかエクスポートできません。フォルダーの権限と空き容量を確認してください。",
   "settings.search.title": "オンライン論文検索",
-  "settings.search.hint":
-    "任意。個人の Semantic Scholar API キーを設定すると専用のレート制限が適用され、連絡先メールを設定すると OpenAlex／Crossref の polite pool に入れます。この端末にのみ保存されます。",
+  "settings.search.hint": "この端末にのみ保存されます。",
   "settings.search.keyAria": "Semantic Scholar API キー",
   "settings.search.keyPlaceholder": "Semantic Scholar API キー（任意）",
   "settings.search.emailAria": "連絡先メールアドレス",
   "settings.search.emailPlaceholder": "API polite pool 用の連絡先メール（任意）",
   "settings.search.saved": "検索設定を保存しました。",
-  "settings.update.hint": "インストーラーをダウンロードして更新します。",
   "settings.update.check": "更新を確認",
   "settings.update.busy": "お待ちください…",
   "settings.update.download": "更新をダウンロード",
@@ -148,7 +143,6 @@ const ja: Messages = {
   "app.notFound.title": "ページが見つかりません",
   "app.notFound.body": "ページが見つかりません。",
   "app.notFound.back": "執筆ページに戻る",
-  "app.statusbar.workspace": "ワークスペース",
   "app.statusbar.pageNavigation": "ページナビゲーション",
   "app.statusbar.runtime": "AI · 接続済み",
   "app.statusbar.disconnected": "AI · 未接続",
@@ -236,7 +230,6 @@ const ja: Messages = {
   "settings.editor.inheritNote": "フォント・サイズ・行間は個人設定を継承します。",
   "settings.editor.editGlobalAppearance": "グローバルのエディター外観を変更",
   "settings.editor.liveChktex": "リアルタイム ChkTeX チェック",
-  "settings.editor.liveChktexHint": "LaTeX の構文と組版の問題をチェックします。",
   "settings.editor.liveChktexInherited": "{inheritance} · 現在 {state}",
   "settings.editor.disabledRules": "無効化するルール番号",
 
@@ -266,7 +259,7 @@ const ja: Messages = {
   "settings.tools.validatedSaved": "ツール設定を保存しました。",
   "settings.tools.heading": "ローカルツール · 詳細",
 
-  "settings.tools.chktexHint": "空欄で自動検出するか、ChkTeX の実行ファイルを指定します。",
+  "settings.tools.chktexHint": "空欄で自動検出します。",
   "settings.tools.chktexPathAria": "ChkTeX 実行ファイルのパス",
 
   "settings.tools.texlabFound": "ローカルプログラムを検出",
@@ -282,7 +275,6 @@ const ja: Messages = {
   "ai.provider": "プロバイダー",
   "ai.loadingCatalog": "モデル一覧を取得中…",
   "ai.refreshCatalog": "モデルカタログを更新",
-  "ai.refreshCatalogHint": "利用可能なモデル一覧を更新",
   "ai.reopenToRefresh": "ツールによる変更を反映するにはプロジェクトを開き直してください：",
   "ai.requestFailed": "AI リクエストに失敗しました",
   "ai.saveDraftsFirst": "ファイル変更タスクを実行する前に、すべての下書きを保存してください。",
@@ -645,7 +637,7 @@ const ja: Messages = {
   "refs.noEntries": "この Bib には利用可能なエントリーがありません。",
   "refs.openBib": "外部 .bib をプレビュー",
   "refs.editProjectBib": "プロジェクトの文献を編集",
-  "refs.editHint": "変更は下書きに保持されます。プロジェクトを保存するとディスクに書き込まれます。",
+  "refs.editHint": "変更は下書きに保持され、プロジェクト保存時にディスクへ書き込まれます。",
   "refs.sourceEditor": "BibTeX ソースエディター",
   "refs.localPreviewOnly":
     "外部ファイルはプレビューのみで、プロジェクトやコンパイルには追加されません。",
@@ -654,8 +646,7 @@ const ja: Messages = {
   "refs.projectBib": "プロジェクト Bib",
   "refs.projectFilesLabel": "プロジェクトファイル：{files}",
   "refs.readFailed": "読み込みに失敗しました：{message}",
-  "refs.scopeHint":
-    "main.tex と到達可能な章を集計します。現在のファイルのカーソル/選択範囲に挿入します。",
+  "refs.scopeHint": "main.tex と到達可能な章を集計し、カーソル/選択範囲に挿入します。",
   "refs.selectLocalBib": "ローカル Bib ファイルを選択",
   "refs.statsIncomplete": "統計が不完全です。欠落章：{list}",
   "refs.uncited": "未引用",
@@ -715,7 +706,7 @@ const ja: Messages = {
   "compile.noLocation": "信頼できるソース位置なし · ログを表示",
   "compile.openProblemsAria": "コンパイル問題一覧を開く",
   "compile.problemsDesc":
-    "{label}。コンパイル結果はメイン論文を対象とし、ChkTeX は編集中のファイルのみをチェックします。",
+    "{label}。コンパイルは論文全体、ChkTeX は現在のファイルのみをチェックします。",
   "compile.problemsTitle": "論文のコンパイル問題",
   "compile.runCurrent": "現在の本文をコンパイル",
   "compile.showLog": "今回のログを表示",
@@ -735,7 +726,6 @@ const ja: Messages = {
   "git.diskOnly": "未保存の変更があります。保存すると Git 状態が更新されます。",
   "git.notConnected": "Git 未接続",
   "git.notInitialized": "Git 未初期化",
-  "git.notInitializedHint": "このプロジェクトは Git リポジトリとして初期化されていません。",
   "git.readonlyDesc": "{name}",
   "git.refreshAria": "Git ステータスを更新",
   "git.snapshotUnbound": "先にローカルプロジェクトを開いてください。",
@@ -764,7 +754,7 @@ const ja: Messages = {
   "project.confirmNameAria": "削除するプロジェクトディレクトリ名の確認",
   "project.connectAsCopy": "独立したコピーとして接続",
   "project.connectionDesc":
-    "ディレクトリはブラウザーで認可済みです。古いプロジェクトはローカルツール初回接続時に絶対パスの補足が必要です。その後 Git などのツールで共通利用されます。",
+    "古いプロジェクトはローカルツール接続時に一度だけ絶対パスが必要です。以後は自動で再利用されます。",
   "project.connectionPathAria": "プロジェクト接続の絶対パス",
   "project.connectionPathPlaceholder": "現在のプロジェクトディレクトリのローカル絶対パス",
   "project.connectionSaved": "プロジェクトの接続を保存しました。",
@@ -775,7 +765,7 @@ const ja: Messages = {
   "project.deleteCurrentDirectory": "現在のプロジェクトファイルを削除…",
   "project.deleteDirectory": "ファイルを削除…",
   "project.deleteForeverDesc":
-    "ディレクトリ全体をゴミ箱へ移動します。パスを確認してディレクトリ名を入力してください。",
+    "ディレクトリ全体をゴミ箱へ移します。確認のため名前を入力してください。",
   "project.deleteForeverHeading": "ゴミ箱へ移動：{name}",
   "project.deletedPermanently": "ディレクトリをゴミ箱へ移動しました{suffix}",
 
@@ -823,7 +813,7 @@ const ja: Messages = {
 
   "project.localPathPlaceholder": "選択した場所のローカル絶対パス",
   "project.manageDesc":
-    "現在の履歴を削除するとプロジェクトを閉じます。ファイルはゴミ箱へ移動します。",
+    "記録を削除するとプロジェクトを閉じます。ファイルの削除はゴミ箱へ移動します。",
   "project.manageMenu": "プロジェクトの管理 / 除去 / 削除…",
   "project.menuAria": "Envoi プロジェクトメニュー",
   "project.menuLabel": "プロジェクト / ファイル",
@@ -894,7 +884,6 @@ const ja: Messages = {
   "settings.ai.connectFirst": "先に現在のプロジェクトを接続してください。",
   "settings.ai.context": "ドキュメントコンテキスト",
   "settings.ai.contextAria": "AI ドキュメントコンテキスト",
-  "settings.ai.contextHint": "現在の文書を AI に送信します。",
   "settings.ai.fieldBaseUrl": "サービス URL",
   "settings.ai.fieldContextWindow": "コンテキストウィンドウ",
   "settings.ai.fieldMaxTokens": "最大出力",
@@ -907,8 +896,6 @@ const ja: Messages = {
   "settings.ai.manageGlobal": "グローバル接続を管理",
   "settings.ai.manageProvider": "プロバイダーを管理",
   "settings.ai.manualHeading": "詳細 · 互換モデルを手動設定",
-  "settings.ai.manualHint":
-    "サービスのドキュメントに従ってモデルのパラメーターを入力してください。",
   "settings.ai.modelAria": "AI デフォルトモデル",
 
   "settings.ai.modelInherited": "グローバルモデルを継承",
@@ -937,8 +924,7 @@ const ja: Messages = {
   "settings.ai.thinkingXhigh": "最高",
   "settings.ai.tools": "ファイルツール権限",
   "settings.ai.toolsAria": "AI ファイルツール権限",
-  "settings.ai.toolsHint":
-    "ツールは現在設定されているプロジェクト内の非表示でないファイルにのみアクセスします。",
+  "settings.ai.toolsHint": "現在のプロジェクト内の非表示ファイルにのみアクセスします。",
   "settings.compile.engineAria": "コンパイルエンジンを設定",
   "settings.compile.mainTexAria": "論文のメインファイルを設定",
   "settings.editor.fontSizeAria": "エディター文字サイズ",
@@ -1023,7 +1009,6 @@ const ja: Messages = {
   "welcome.new": "新規プロジェクト",
 
   "welcome.demo": "サンプルを開く",
-  "welcome.demoHint": "サンプルのコピーを作成します。",
   "welcome.recent": "最近のプロジェクト",
   "welcome.remove": "最近のプロジェクトを削除：{name}",
   "welcome.noRecent": "最近のプロジェクトはありません。",

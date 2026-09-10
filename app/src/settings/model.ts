@@ -57,21 +57,21 @@ export const themes: Record<
   graphite: {
     labelKey: "theme.graphite",
     mode: "dark",
-    swatch: { bg: "#23272e", panel: "#2d333c" },
+    swatch: { bg: "#282a2e", panel: "#313337" },
   },
-  classic: { labelKey: "theme.classic", mode: "dark", swatch: { bg: "#18181b", panel: "#252526" } },
+  classic: { labelKey: "theme.classic", mode: "dark", swatch: { bg: "#2a2a2d", panel: "#323236" } },
   midnight: {
     labelKey: "theme.midnight",
     mode: "dark",
-    swatch: { bg: "#1a1e28", panel: "#262c3a" },
+    swatch: { bg: "#262931", panel: "#2e323b" },
   },
-  forest: { labelKey: "theme.forest", mode: "dark", swatch: { bg: "#1e231f", panel: "#293029" } },
+  forest: { labelKey: "theme.forest", mode: "dark", swatch: { bg: "#292e2a", panel: "#313732" } },
   paper: { labelKey: "theme.paper", mode: "light", swatch: { bg: "#f7f5f1", panel: "#ece9e3" } },
   mist: { labelKey: "theme.mist", mode: "light", swatch: { bg: "#f2f4f7", panel: "#e6e9ee" } },
 }
 /** hsl 用于深色主题；浅色主题下改用 light 变体保证对比度。 */
 export const accents = {
-  lemon: { labelKey: "accent.lemon" as MessageKey, hsl: "57 62% 83%", light: "46 72.4% 28.4%" },
+  lemon: { labelKey: "accent.lemon" as MessageKey, hsl: "66 88% 64%", light: "66 72% 30%" },
   blue: { labelKey: "accent.blue" as MessageKey, hsl: "208 58% 71%", light: "215 56.3% 42.2%" },
   green: { labelKey: "accent.green" as MessageKey, hsl: "120 34% 72%", light: "127 33.3% 35.9%" },
   rose: { labelKey: "accent.rose" as MessageKey, hsl: "338 51% 75%", light: "335 48.7% 44.3%" },

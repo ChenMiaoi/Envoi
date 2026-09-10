@@ -61,7 +61,7 @@ export function WelcomePage() {
       event: "envoi:open-example",
       icon: BookOpen,
       title: "welcome.demo",
-      description: "welcome.demoHint",
+      description: undefined,
     },
   ] as const
   return (

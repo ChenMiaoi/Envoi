@@ -310,7 +310,7 @@ export function AiSettingsView({ scope }: { scope: "global" | "project" }) {
               ))}
             </select>
           </Row>
-          <Row label={t("settings.ai.context")} hint={t("settings.ai.contextHint")}>
+          <Row label={t("settings.ai.context")}>
             <select
               aria-label={t("settings.ai.contextAria")}
               disabled={disabled}
@@ -334,9 +334,6 @@ export function AiSettingsView({ scope }: { scope: "global" | "project" }) {
           <summary className="cursor-pointer text-sm font-medium">
             {t("settings.ai.manualHeading")}
           </summary>
-          <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-            {t("settings.ai.manualHint")}
-          </p>
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             {(["provider", "baseUrl", "model", "name", "contextWindow", "maxTokens"] as const).map(
               (key) => (

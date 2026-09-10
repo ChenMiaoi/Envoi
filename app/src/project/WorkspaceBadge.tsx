@@ -180,12 +180,12 @@ export function WorkspaceBadge() {
           if (!open && !working) setMode(null)
         }}
       >
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md" aria-describedby={undefined}>
           <DialogHeader>
             <DialogTitle>{mode === "create" ? "新建工作区" : "重命名工作区"}</DialogTitle>
-            <DialogDescription>
-              {mode === "create" ? t("workspace.createOpenHint") : t("workspace.renameHint")}
-            </DialogDescription>
+            {mode === "create" && (
+              <DialogDescription>{t("workspace.createOpenHint")}</DialogDescription>
+            )}
           </DialogHeader>
           <label className="text-xs">
             工作区名称

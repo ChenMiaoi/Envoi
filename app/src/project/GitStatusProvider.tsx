@@ -1,4 +1,3 @@
-import { translate } from "@/i18n/runtime"
 import { useEffect, useState, useCallback, useRef, type ReactNode } from "react"
 import { useProject } from "./context"
 import { useProjectTrust } from "./useProjectTrust"
@@ -27,7 +26,7 @@ export function GitStatusProvider({ children }: { children: ReactNode }) {
         setResult({
           root,
           status,
-          message: status.state === "not-initialized" ? translate("git.notInitializedHint") : "",
+          message: "",
         })
     } catch (error) {
       if (generation.current === current)

@@ -14,7 +14,7 @@ const items: { id: ViewId; icon: typeof BookOpenText }[] = [
 export function ActivityBar({ view }: { view?: ViewId }) {
   const { t } = useT()
   return (
-    <div className="flex h-full w-12 flex-col items-center border-r border-border bg-card py-2">
+    <div className="flex h-full w-12 flex-col items-center py-2">
       {items.slice(0, 4).map((it) => (
         <NavLink
           end
@@ -24,12 +24,12 @@ export function ActivityBar({ view }: { view?: ViewId }) {
           className={cn(
             "group relative mb-1.5 flex h-10 w-10 items-center justify-center rounded-lg transition-colors",
             view === it.id
-              ? "bg-accent text-primary"
+              ? "bg-accent/70 text-primary [filter:drop-shadow(0_0_5px_hsl(var(--primary)/0.45))]"
               : "text-muted-foreground hover:bg-secondary hover:text-foreground",
           )}
         >
           {view === it.id && (
-            <span className="absolute left-[-9px] top-1/2 h-5 w-[2.5px] -translate-y-1/2 rounded-full bg-primary" />
+            <span className="absolute left-[-9px] top-1/2 h-5 w-[2.5px] -translate-y-1/2 rounded-full bg-primary shadow-[0_0_8px_hsl(var(--primary)/0.9)]" />
           )}
           <it.icon className="h-[18px] w-[18px]" strokeWidth={1.8} />
         </NavLink>

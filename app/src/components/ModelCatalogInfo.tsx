@@ -24,7 +24,6 @@ export function ModelCatalogInfo({
           <button
             type="button"
             aria-label={t("ai.refreshCatalog")}
-            title={t("ai.refreshCatalogHint")}
             disabled={busy}
             className="shrink-0 rounded-md p-1.5 hover:bg-accent disabled:opacity-40"
             onClick={() => {

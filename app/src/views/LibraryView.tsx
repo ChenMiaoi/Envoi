@@ -394,11 +394,6 @@ function PaperWorkspace({
             ) : (
               <div className="flex h-full flex-col items-center justify-center gap-2 px-8 text-center text-sm text-muted-foreground">
                 <p>{paper.attachmentHash ? "正在加载 PDF…" : "这篇文献还没有 PDF 附件。"}</p>
-                {!paper.attachmentHash && (
-                  <p className="text-xs leading-6">
-                    在「网页浏览」中找到该文献后点击「获取 PDF 入库」，或点击上方「补充 PDF」。
-                  </p>
-                )}
               </div>
             )}
           </div>
@@ -711,9 +706,7 @@ export function LibraryView() {
             </button>
           ))}
         </nav>
-        <span className="mr-auto text-muted-foreground">
-          {index?.papers.length ?? 0} 篇 · 与 papers/ 双向同步
-        </span>
+        <span className="mr-auto text-muted-foreground">{index?.papers.length ?? 0} 篇</span>
         <button
           className="rounded-md px-2 py-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:opacity-50"
           disabled={busy}
@@ -769,13 +762,14 @@ export function LibraryView() {
           }}
         />
       </header>
-      <p
-        className="border-b px-4 py-2 text-xs text-muted-foreground"
-        title={index?.papersDirectory}
-      >
-        PDF 放入 papers/ 自动收录；移出后隐藏文献，重新放回可恢复笔记。
-        {index?.root !== root ? "当前关联主工作区的 papers/。" : ""}
-      </p>
+      {index?.root !== root && (
+        <p
+          className="border-b px-4 py-2 text-xs text-muted-foreground"
+          title={index?.papersDirectory}
+        >
+          当前关联主工作区的 papers/。
+        </p>
+      )}
       {!!index?.warnings?.length && (
         <p role="status" className="px-4 py-1 text-xs text-muted-foreground">
           {index.warnings.join("；")}
@@ -932,14 +926,12 @@ export function LibraryView() {
                 {!selected && (
                   <div className="flex h-full flex-col items-center justify-center gap-2 px-10 text-center text-sm text-muted-foreground">
                     {index?.papers.length ? (
-                      <p>从左侧选择一篇文献开始阅读与笔记。</p>
+                      <p>从左侧选择一篇文献。</p>
                     ) : (
                       <>
                         <p className="text-base text-foreground">论文库还是空的</p>
                         <p className="text-xs leading-6">
-                          在「在线搜索」检索 OpenAlex、Semantic Scholar、Crossref 与 arXiv；
-                          <br />
-                          在「网页浏览」中打开出版社页面直接保存；或导入本地 PDF / BibTeX。
+                          从「在线搜索」或「网页浏览」添加第一篇文献。
                         </p>
                       </>
                     )}

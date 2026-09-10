@@ -507,7 +507,7 @@ export function SettingsView() {
                           label={t("settings.editor.liveChktex")}
                           hint={
                             global
-                              ? t("settings.editor.liveChktexHint")
+                              ? undefined
                               : t("settings.editor.liveChktexInherited", {
                                   inheritance: inheritance("lintEnabled"),
                                   state: t(

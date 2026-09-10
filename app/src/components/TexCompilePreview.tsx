@@ -768,7 +768,7 @@ export function TexCompilePreview({
             </p>
           )}
           {!error && !pages.length && (
-            <p className="p-3 text-sm text-muted-foreground">
+            <p className="px-8 py-24 text-center text-sm text-muted-foreground">
               {source.name
                 ? t("compile.loadingPdf")
                 : paperOnly

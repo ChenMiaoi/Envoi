@@ -45,7 +45,7 @@ const en: Messages = {
   "trust.gitAfterTrust": "Git will be initialized after you trust the new project.",
   "trust.title": "Project Security",
   "trust.description":
-    "Restricted mode allows reading, editing and saving files. Trust allows compilation, Git and AI tools to run local commands.",
+    "Restricted mode can only read and edit files. Trusting allows compile, Git, and AI to run local commands.",
   "trust.trusted": "Trusted",
   "trust.restricted": "Restricted Mode",
   "trust.continueRestricted": "Continue in Restricted Mode",
@@ -58,17 +58,14 @@ const en: Messages = {
   "project.restartForTrash":
     "The app has been updated. Save your changes, quit completely and reopen it before deleting a project.",
   "project.trashWorktreeHint":
-    "Only this worktree is removed; its branch and saved results are kept. Restoring from trash requires reconnecting the Git worktree.",
+    "Only the workspace is removed; the branch and saved results are kept.",
   "project.deletionChanged": "The directory or worktree changed. Check it again.",
-  "workspace.createHint":
-    "Create an experiment from the current commit. Uncommitted changes are excluded.",
+  "workspace.createHint": "Created from the current commit; uncommitted changes are excluded.",
   "workspace.saveHint":
-    "Save selected files and a source archive to the main workspace. Commit the experiment code first.",
+    "Archive the selected files into the main workspace; commit the experiment code first.",
   "workspace.created": "Experiment created.",
   "workspace.resultSaved": "Results saved to the main workspace.",
-  "workspace.createOpenHint":
-    "Create a workspace from the current commit. Uncommitted changes are excluded.",
-  "workspace.renameHint": "Change the display name.",
+  "workspace.createOpenHint": "Created from the current commit; uncommitted changes are excluded.",
   "library.openProjectFirst": "Open a project first.",
   "library.startImport": "No papers yet. Choose Add paper to import.",
   "library.addPaper": "Add paper",
@@ -85,14 +82,12 @@ const en: Messages = {
   "settings.logs.exported": "Diagnostic logs exported.",
   "settings.logs.failed": "Unable to open or export logs. Check folder permissions and disk space.",
   "settings.search.title": "Online paper search",
-  "settings.search.hint":
-    "Optional. A personal Semantic Scholar API key gets a dedicated rate limit; a contact email enables the OpenAlex/Crossref polite pools. Stored locally only.",
+  "settings.search.hint": "Stored only on this device.",
   "settings.search.keyAria": "Semantic Scholar API key",
   "settings.search.keyPlaceholder": "Semantic Scholar API key (optional)",
   "settings.search.emailAria": "Contact email",
   "settings.search.emailPlaceholder": "Contact email for API polite pools (optional)",
   "settings.search.saved": "Paper search settings saved.",
-  "settings.update.hint": "Install the downloaded package to update.",
   "settings.update.check": "Check for updates",
   "settings.update.busy": "Please wait…",
   "settings.update.download": "Download update",
@@ -144,7 +139,6 @@ const en: Messages = {
   "app.notFound.title": "Page not found",
   "app.notFound.body": "This page could not be found.",
   "app.notFound.back": "Back to writing",
-  "app.statusbar.workspace": "Workspace",
   "app.statusbar.pageNavigation": "Page navigation",
   "app.statusbar.runtime": "AI · Connected",
   "app.statusbar.disconnected": "AI · not connected",
@@ -232,7 +226,6 @@ const en: Messages = {
   "settings.editor.inheritNote": "Font, size and line height inherit personal preferences.",
   "settings.editor.editGlobalAppearance": "Edit global editor appearance",
   "settings.editor.liveChktex": "Live ChkTeX checks",
-  "settings.editor.liveChktexHint": "Check LaTeX syntax and typesetting issues.",
   "settings.editor.liveChktexInherited": "{inheritance} · currently {state}",
   "settings.editor.disabledRules": "Disabled rule numbers",
 
@@ -262,8 +255,7 @@ const en: Messages = {
   "settings.tools.validatedSaved": "Tool settings saved.",
   "settings.tools.heading": "Local tools · advanced",
 
-  "settings.tools.chktexHint":
-    "Leave blank to detect automatically, or enter the ChkTeX executable path.",
+  "settings.tools.chktexHint": "Leave empty to auto-detect.",
   "settings.tools.chktexPathAria": "ChkTeX executable path",
 
   "settings.tools.texlabFound": "local program found",
@@ -279,7 +271,6 @@ const en: Messages = {
   "ai.provider": "Provider",
   "ai.loadingCatalog": "Fetching models…",
   "ai.refreshCatalog": "Refresh model catalog",
-  "ai.refreshCatalogHint": "Refresh the available model catalog",
   "ai.reopenToRefresh": "Reopen the project to refresh tool changes: ",
   "ai.requestFailed": "AI request failed",
   "ai.saveDraftsFirst": "Save all drafts before starting a file-modification task.",
@@ -629,7 +620,7 @@ const en: Messages = {
   "refs.noEntries": "This Bib has no usable entries.",
   "refs.openBib": "Preview external .bib",
   "refs.editProjectBib": "Edit project bibliography",
-  "refs.editHint": "Changes remain in the project draft. Save the project to write them to disk.",
+  "refs.editHint": "Changes stay in the draft until you save the project.",
   "refs.sourceEditor": "BibTeX source editor",
   "refs.localPreviewOnly":
     "External files are previewed only; they are not added to the project or compilation.",
@@ -638,8 +629,7 @@ const en: Messages = {
   "refs.projectBib": "Project Bib",
   "refs.projectFilesLabel": "Project files: {files}",
   "refs.readFailed": "Read failed: {message}",
-  "refs.scopeHint":
-    "Counts main.tex and reachable chapters; inserts at the cursor/selection in the current file.",
+  "refs.scopeHint": "Counts main.tex and reachable chapters; inserts at the cursor/selection.",
   "refs.selectLocalBib": "Choose local Bib file",
   "refs.statsIncomplete": "Incomplete statistics, missing chapters: {list}",
   "refs.uncited": "Not cited",
@@ -698,7 +688,7 @@ const en: Messages = {
   "compile.noLocation": "No reliable source location · view log",
   "compile.openProblemsAria": "Open compile problems list",
   "compile.problemsDesc":
-    "{label}. Compile results cover the main paper; ChkTeX only checks the file being edited.",
+    "{label}. Compilation covers the main paper; ChkTeX checks only the current file.",
   "compile.problemsTitle": "Paper compile problems",
   "compile.runCurrent": "Compile current document",
   "compile.showLog": "View this log",
@@ -718,7 +708,6 @@ const en: Messages = {
   "git.diskOnly": "Save your changes to update Git status.",
   "git.notConnected": "Git not connected",
   "git.notInitialized": "Git not initialized",
-  "git.notInitializedHint": "This project has not been initialized as a Git repository.",
   "git.readonlyDesc": "{name}",
   "git.refreshAria": "Refresh Git status",
   "git.snapshotUnbound": "Open a local project first.",
@@ -747,7 +736,7 @@ const en: Messages = {
   "project.confirmNameAria": "Confirm the project directory name for deletion",
   "project.connectAsCopy": "Connect as an Independent Copy",
   "project.connectionDesc":
-    "The directory is authorized in the browser. Older projects need the absolute path once when first connecting local tools; Git and other tools then reuse it.",
+    "Older projects need the absolute path once when connecting local tools; it is reused afterwards.",
   "project.connectionPathAria": "Absolute path for the project connection",
   "project.connectionPathPlaceholder": "Local absolute path of the current project directory",
   "project.connectionSaved": "Project connection saved.",
@@ -757,8 +746,7 @@ const en: Messages = {
   "project.currentName": "Current: {name}",
   "project.deleteCurrentDirectory": "Delete Current Project Files…",
   "project.deleteDirectory": "Delete Files…",
-  "project.deleteForeverDesc":
-    "Move the entire directory to the trash. Check the path and enter the directory name.",
+  "project.deleteForeverDesc": "The whole directory moves to the trash; type its name to confirm.",
   "project.deleteForeverHeading": "Move to Trash: {name}",
   "project.deletedPermanently": "Directory moved to trash{suffix}",
 
@@ -805,7 +793,7 @@ const en: Messages = {
 
   "project.localPathPlaceholder": "Local absolute path of the chosen location",
   "project.manageDesc":
-    "Removing the current entry closes the project. Deleted files go to the trash.",
+    "Removing an entry closes the project; deleting files moves them to the trash.",
   "project.manageMenu": "Manage / Remove / Delete Projects…",
   "project.menuAria": "Envoi project menu",
   "project.menuLabel": "Project / Files",
@@ -874,7 +862,6 @@ const en: Messages = {
   "settings.ai.connectFirst": "Connect the current project first.",
   "settings.ai.context": "Document context",
   "settings.ai.contextAria": "AI document context",
-  "settings.ai.contextHint": "Include the current document in AI requests.",
   "settings.ai.fieldBaseUrl": "Base URL",
   "settings.ai.fieldContextWindow": "Context window",
   "settings.ai.fieldMaxTokens": "Max output",
@@ -887,7 +874,6 @@ const en: Messages = {
   "settings.ai.manageGlobal": "Manage global connections",
   "settings.ai.manageProvider": "Manage providers",
   "settings.ai.manualHeading": "Advanced · manually configure a compatible model",
-  "settings.ai.manualHint": "Enter model parameters from your provider's documentation.",
   "settings.ai.modelAria": "AI default model",
 
   "settings.ai.modelInherited": "Inheriting global model",
@@ -917,8 +903,7 @@ const en: Messages = {
   "settings.ai.thinkingXhigh": "Highest",
   "settings.ai.tools": "File tool permission",
   "settings.ai.toolsAria": "AI file tool permission",
-  "settings.ai.toolsHint":
-    "Tools only access non-hidden files inside the currently configured project.",
+  "settings.ai.toolsHint": "Accesses only non-hidden files in the current project.",
   "settings.compile.engineAria": "Set compile engine",
   "settings.compile.mainTexAria": "Set main paper file",
   "settings.editor.fontSizeAria": "Editor font size",
@@ -1002,7 +987,6 @@ const en: Messages = {
   "welcome.new": "New project",
 
   "welcome.demo": "Open example project",
-  "welcome.demoHint": "Create a copy of the example project.",
   "welcome.recent": "Recent projects",
   "welcome.remove": "Remove recent project: {name}",
   "welcome.noRecent": "No recent projects",

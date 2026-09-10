@@ -228,7 +228,7 @@ function ProjectApp() {
   }
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-background text-foreground">
+    <div className="flex h-screen flex-col overflow-hidden text-foreground">
       {page.redirect && <Navigate to={page.redirect} replace />}
       {(mac || windows) && emptyWorkspace && (
         <div aria-hidden="true" className="window-drag fixed inset-x-0 top-0 z-40 h-10" />
@@ -238,7 +238,7 @@ function ProjectApp() {
         className={
           emptyWorkspace
             ? "hidden"
-            : `flex h-10 shrink-0 items-center border-b border-border bg-card ${mac ? "window-drag pl-[80px]" : windows ? "window-drag pr-[150px]" : ""}`
+            : `flex h-11 shrink-0 items-center ${mac ? "window-drag pl-[80px]" : windows ? "window-drag pr-[150px]" : ""}`
         }
       >
         <div className="flex min-w-0 max-w-[55%] items-center gap-2 pl-3.5">
@@ -251,7 +251,7 @@ function ProjectApp() {
         <div className="flex min-w-0 flex-1 justify-center px-3">
           <button
             onClick={() => setPaletteOpen(true)}
-            className="flex h-6.5 w-72 max-w-full items-center gap-2 rounded-lg border border-input bg-background px-2.5 text-[11.5px] text-muted-foreground transition-colors hover:border-primary/50"
+            className="flex h-6.5 w-72 max-w-full items-center gap-2 rounded-full border border-white/[0.08] bg-card/40 px-3 text-[11.5px] text-muted-foreground backdrop-blur-xl backdrop-saturate-150 transition-colors hover:border-primary/50"
             style={{ height: 26 }}
           >
             <Search className="h-3 w-3" />
@@ -264,9 +264,11 @@ function ProjectApp() {
       </div>
 
       {/* 主体 */}
-      <div className="flex min-h-0 flex-1">
+      <div className={`flex min-h-0 flex-1 ${emptyWorkspace ? "" : "gap-2.5 px-2.5"}`}>
         {!emptyWorkspace && <ActivityBar view={view} />}
-        <div className="min-w-0 flex-1">
+        <div
+          className={`min-w-0 flex-1 ${emptyWorkspace ? "" : "overflow-hidden rounded-xl border border-white/[0.07] bg-background/60 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05),0_24px_80px_-24px_rgba(0,0,0,0.55)] backdrop-blur-2xl backdrop-saturate-150"}`}
+        >
           <Suspense
             fallback={
               <div
@@ -345,11 +347,8 @@ function ProjectApp() {
 
       {/* 状态栏 */}
       {!emptyWorkspace && (
-        <div
-          className="flex h-6.5 shrink-0 items-center justify-between border-t border-border bg-card px-3 text-[11px] text-muted-foreground"
-          style={{ height: 26 }}
-        >
-          <div className="flex items-center gap-3">
+        <div className="flex shrink-0 justify-center pb-2.5 text-[11px] text-muted-foreground">
+          <div className="flex h-7 items-center gap-3 rounded-full border border-white/[0.08] bg-card/40 px-4 shadow-[0_8px_32px_-12px_rgba(0,0,0,0.5)] backdrop-blur-xl backdrop-saturate-150 tabular-nums">
             {project.id !== "empty" && <ProjectTrust />}
             {project.id !== "empty" && <GitStatusPanel />}
             {project.id !== "empty" && (
@@ -360,14 +359,12 @@ function ProjectApp() {
                 }}
               />
             )}
-            <span>
-              {t("app.statusbar.workspace")}：
-              {view ? t(`view.${view}`) : t("app.statusbar.pageNavigation")}
-            </span>
-          </div>
-          <div className="flex items-center gap-3">
+            <span>{view ? t(`view.${view}`) : t("app.statusbar.pageNavigation")}</span>
+            <span aria-hidden="true" className="h-3 w-px bg-border" />
             <span className="flex items-center gap-1.5">
-              <span className="inline-block h-1.5 w-1.5 rounded-full bg-muted-foreground" />
+              <span
+                className={`inline-block h-1.5 w-1.5 rounded-full ${agent.status?.runtime ? "bg-primary shadow-[0_0_6px_hsl(var(--primary)/0.9)]" : "bg-muted-foreground"}`}
+              />
               {!agent.status?.runtime
                 ? t("app.statusbar.disconnected")
                 : agent.busy
