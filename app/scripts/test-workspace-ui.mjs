@@ -114,7 +114,10 @@ try {
   await page.getByRole("heading", { name: "注意力模型基线 · 合成数据", exact: true }).waitFor()
   await page.getByRole("button", { name: "文件变化", exact: true }).click()
   await writeFile(path.join(main, "refresh-note.md"), "Observed experiment result")
-  await page.getByText("refresh-note.md", { exact: true }).waitFor()
+  await page
+    .getByTestId("research-workspaces")
+    .getByText("refresh-note.md", { exact: true })
+    .waitFor()
   await page.getByRole("textbox", { name: "基线提交说明" }).fill("Fixture: result recorded")
   await page.getByRole("button", { name: "提交列出的全部修改" }).click()
   await page.getByText(/已提交当前列出的全部修改/).waitFor()
