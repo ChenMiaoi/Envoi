@@ -164,11 +164,22 @@ export async function restoreSession(): Promise<{
         revisions.set("current", native.revision)
         const restored = decodeNative(native.value) as PaperProject
         if (cached) {
-          const legacy = await encodeNative(cached)
-          if (JSON.stringify(legacy) !== JSON.stringify(native.value)) {
-            await nativeMigrate("session", legacy, "current")
-            if (cached.files.some((file) => file.text !== undefined && file.text !== file.saved))
-              recoverable = cached
+          // Both stores are maintained caches now. Only recover user edits that
+          // are absent from the authoritative native snapshot, not UI metadata
+          // or an older workspace selection.
+          const cachedId = cached.id
+          const uniqueDraft = cached.files.some(
+            (file) =>
+              file.text !== undefined &&
+              file.text !== file.saved &&
+              (cachedId !== restored.id ||
+                !restored.files.some(
+                  (current) => current.id === file.id && current.text === file.text,
+                )),
+          )
+          if (uniqueDraft) {
+            await nativeMigrate("session", await encodeNative(cached), "current")
+            recoverable = cached
           }
         }
         if (!cached || cached.id !== restored.id) cached = restored

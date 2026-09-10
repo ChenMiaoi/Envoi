@@ -190,6 +190,22 @@ try {
   assert.equal((await native.nativeGet("session", "current")).value.compileLog, "keep log")
   await sessions.saveSession(project)
   assert(await native.nativeGet("session", "project-a"))
+  const sessionWarningCount = warnings.length
+  await seed(
+    "paperdesk-session",
+    1,
+    [["current", undefined]],
+    "current",
+    [{ ...project, name: "Stale workspace label", compileLog: "older log" }],
+    "project",
+  )
+  const reconciled = await sessions.restoreSession()
+  assert.equal(reconciled.recoverable, undefined)
+  assert.equal(
+    warnings.length,
+    sessionWarningCount,
+    "normal cache differences must not warn about migration",
+  )
   const latest = await native.nativeGet("session", "current")
   await native.nativePut("session", { ...latest.value, name: "Other window" }, "current", {
     expectedRevision: latest.revision,
