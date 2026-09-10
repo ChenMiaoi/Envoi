@@ -41,7 +41,7 @@ export function WorkspaceBadge() {
       setMessage,
     } = useProject(),
     navigate = useNavigate()
-  const [info, setInfo] = useState<{ root: string; workspaces: Workspace[] }>(),
+  const [info, setInfo] = useState<{ root: string; workspaces: Workspace[]; hasCommit: boolean }>(),
     [mode, setMode] = useState<"create" | "rename" | null>(null),
     [name, setName] = useState(""),
     [purpose, setPurpose] = useState(""),
@@ -56,11 +56,12 @@ export function WorkspaceBadge() {
       return
     }
     const value = (await envoi().workspaces(root, { action: "list" })) as {
+      hasCommit: boolean
       projectName: string
       initialized: boolean
       workspaces: Workspace[]
     }
-    setInfo({ root, workspaces: value.workspaces })
+    setInfo({ root, workspaces: value.workspaces, hasCommit: value.hasCommit })
     if (value.projectName)
       setProject((old) =>
         old.rootPath === root && old.name !== value.projectName
@@ -198,13 +199,27 @@ export function WorkspaceBadge() {
               />
             </label>
           )}
+          {mode === "create" && !info?.hasCommit && (
+            <p role="status" className="text-xs">
+              请先在版本与实验的“文件变化”中检查并提交起始版本。
+              <button
+                className="ml-2 underline"
+                onClick={() => {
+                  setMode(null)
+                  void navigate("/history")
+                }}
+              >
+                查看版本与实验
+              </button>
+            </p>
+          )}
           {error && (
             <p role="alert" className="text-xs text-warning">
               {error}
             </p>
           )}
           <button
-            disabled={locked || taskBusy || !name.trim()}
+            disabled={locked || taskBusy || !name.trim() || (mode === "create" && !info?.hasCommit)}
             className="rounded bg-primary px-3 py-2 text-sm text-primary-foreground disabled:opacity-40"
             onClick={() =>
               void run(async () => {

@@ -17,6 +17,7 @@ process.env.ENVOI_DATA_DIR = path.join(temp, "data-alias")
 const { createExampleProject } = await import("../electron/main/example-project.mjs")
 const {
   createWorkspace,
+  commitWorkspace,
   workspaceAiDefaults,
   listWorkspaces,
   saveWorkspaceResult,
@@ -29,6 +30,17 @@ const {
 const { registerProject, projectRoot } = await import("../server/local-data.mjs")
 test("workspaces isolate identities and edits, preserve result provenance, and bind AI tool selection", async () => {
   try {
+    const empty = path.join(temp, "fresh-research")
+    await mkdir(empty)
+    execFileSync("git", ["init"], { cwd: empty })
+    await writeFile(path.join(empty, "plan.md"), "Research hypothesis")
+    assert.equal((await listWorkspaces(empty)).hasCommit, false)
+    await assert.rejects(createWorkspace(empty, { name: "First experiment" }), /提交起始版本/)
+    await assert.rejects(readFile(path.join(empty, ".git/envoi-workspaces.json")))
+    await commitWorkspace(empty, { message: "Record reviewed plan" })
+    assert.equal((await listWorkspaces(empty)).hasCommit, true)
+    const first = await createWorkspace(empty, { name: "First experiment" })
+    assert.equal(await readText(path.join(first.path, "plan.md")), "Research hypothesis")
     const root = await createExampleProject({
       source: path.resolve("../examples/demo"),
       dataDirectory: temp,

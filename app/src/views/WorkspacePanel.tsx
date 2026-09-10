@@ -27,7 +27,7 @@ type Workspace = {
   purpose: string
   base?: string
 }
-type Overview = { main: string; initialized: boolean; workspaces: Workspace[] }
+type Overview = { main: string; initialized: boolean; hasCommit: boolean; workspaces: Workspace[] }
 type Result = {
   id: string
   title: string
@@ -219,6 +219,21 @@ export function WorkspacePanel({
               <p className="mt-2 text-xs leading-6 text-muted-foreground">
                 {form === "create" ? t("workspace.createHint") : t("workspace.saveHint")}
               </p>
+              {form === "create" && !overview?.hasCommit && (
+                <div role="status" className="mt-4 space-y-2 text-xs">
+                  <p>请先检查文件变化并提交起始版本，实验将从该版本创建。</p>
+                  <button
+                    className={button}
+                    onClick={() => {
+                      setSelected(root ?? "")
+                      setForm(null)
+                      setTab("changes")
+                    }}
+                  >
+                    检查并提交起始版本
+                  </button>
+                </div>
+              )}
               <label className="mt-5 block text-xs">
                 {form === "create" ? "实验名称" : "结果名称"}
                 <input
@@ -286,7 +301,13 @@ export function WorkspacePanel({
               )}
               <button
                 className={`${button} mt-5 bg-primary text-primary-foreground hover:bg-primary/90`}
-                disabled={locked || taskBusy || !name.trim() || (form === "save" && !files.length)}
+                disabled={
+                  locked ||
+                  taskBusy ||
+                  !name.trim() ||
+                  (form === "create" && !overview?.hasCommit) ||
+                  (form === "save" && !files.length)
+                }
                 onClick={() =>
                   void run(async () => {
                     if (!root) return

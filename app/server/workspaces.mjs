@@ -115,6 +115,7 @@ export async function listWorkspaces(root) {
   return {
     main: state.main,
     projectName: path.basename(state.main),
+    hasCommit: !!(await git(repo.root, ["rev-parse", "--verify", "HEAD^{commit}"]).catch(() => "")),
     initialized: !!(await jsonFile(repo.file, null)),
     workspaces,
   }
@@ -159,10 +160,13 @@ export async function createWorkspace(root, input) {
       throw error
     }
     try {
+      const base = (
+        await git(repo.root, ["rev-parse", "--verify", "HEAD^{commit}"]).catch(() => "")
+      ).trim()
+      if (!base) throw Error("请先在文件变化中检查并提交起始版本，再创建实验。")
       const state = await registry(repo, true),
         id = randomUUID(),
         branch = "experiment/" + id.slice(0, 8)
-      const base = (await git(repo.root, ["rev-parse", "HEAD"])).trim()
       const parent = path.join(
         dataDir,
         "worktrees",
