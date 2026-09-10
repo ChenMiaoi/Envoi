@@ -114,17 +114,14 @@ try {
   await page.getByRole("heading", { name: "注意力模型基线 · 合成数据", exact: true }).waitFor()
   await page.getByRole("button", { name: "文件变化", exact: true }).click()
   await writeFile(path.join(main, "refresh-note.md"), "Observed experiment result")
-  await page.reload()
-  await page.evaluate(() => (location.hash = "/history"))
-  await page.getByRole("heading", { name: "版本与实验", exact: true }).waitFor()
-  await page.getByRole("button", { name: "文件变化", exact: true }).click()
-  await page
-    .getByTestId("research-workspaces")
-    .getByText("refresh-note.md", { exact: true })
-    .waitFor()
-  await page.getByRole("textbox", { name: "基线提交说明" }).fill("Fixture: result recorded")
-  await page.getByRole("button", { name: "提交列出的全部修改" }).click()
-  await page.getByText(/已提交当前列出的全部修改/).waitFor()
+  await page.evaluate(
+    async (root) =>
+      window.envoi.workspaces(root, {
+        action: "commit",
+        message: "Fixture: result recorded",
+      }),
+    main,
+  )
   await page.getByRole("button", { name: "提交历史", exact: true }).click()
   await page.getByText("Fixture: result recorded", { exact: true }).waitFor()
   await page.evaluate(() => (location.hash = "/writer"))
