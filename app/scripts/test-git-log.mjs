@@ -23,6 +23,10 @@ assert.equal(
   parseLog("\x1eaaa\x1f\x1f\x1fA\x1f2026-01-01T00:00:00+00:00\x1finit\n")[0].subject,
   "init",
 )
+assert.equal(
+  parseLog("\x1eaaa\x1f\x1f\x1fA\x1f2026-01-01T00:00:00+00:00\x1finit\r\n")[0].subject,
+  "init",
+)
 const root = await mkdtemp(path.join(tmpdir(), "envoi-git-log-")),
   proof = "c".repeat(64),
   input = { directory: root, proof }

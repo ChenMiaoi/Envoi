@@ -190,7 +190,7 @@ export function parseLog(output) {
     .slice(1)
     .map((record) => {
       const [hash, parents, decorations, author, date, subject] = record
-        .replace(/\n$/, "")
+        .replace(/\r?\n$/, "")
         .split("\x1f")
       return {
         hash,
