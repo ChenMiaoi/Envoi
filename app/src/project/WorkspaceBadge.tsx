@@ -41,7 +41,12 @@ export function WorkspaceBadge() {
       setMessage,
     } = useProject(),
     navigate = useNavigate()
-  const [info, setInfo] = useState<{ root: string; workspaces: Workspace[]; hasCommit: boolean }>(),
+  const [info, setInfo] = useState<{
+      root: string
+      workspaces: Workspace[]
+      hasCommit: boolean
+      experimentDirectory: string
+    }>(),
     [mode, setMode] = useState<"create" | "rename" | null>(null),
     [name, setName] = useState(""),
     [purpose, setPurpose] = useState(""),
@@ -56,12 +61,18 @@ export function WorkspaceBadge() {
       return
     }
     const value = (await envoi().workspaces(root, { action: "list" })) as {
+      experimentDirectory: string
       hasCommit: boolean
       projectName: string
       initialized: boolean
       workspaces: Workspace[]
     }
-    setInfo({ root, workspaces: value.workspaces, hasCommit: value.hasCommit })
+    setInfo({
+      root,
+      workspaces: value.workspaces,
+      hasCommit: value.hasCommit,
+      experimentDirectory: value.experimentDirectory,
+    })
     if (value.projectName)
       setProject((old) =>
         old.rootPath === root && old.name !== value.projectName
@@ -198,6 +209,11 @@ export function WorkspaceBadge() {
                 className="mt-2 w-full rounded border border-input bg-background p-2"
               />
             </label>
+          )}
+          {mode === "create" && info?.experimentDirectory && (
+            <p className="break-all text-xs text-muted-foreground">
+              实验文件将存放在独立目录：{info.experimentDirectory}。结果可归档回主工作区。
+            </p>
           )}
           {mode === "create" && !info?.hasCommit && (
             <p role="status" className="text-xs">

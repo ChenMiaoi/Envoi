@@ -58,6 +58,10 @@ test("workspaces isolate identities and edits, preserve result provenance, and b
       purpose: "使用现有演示数据验证保存流程",
     })
     assert.equal(created.path, await realpath(created.path))
+    assert.equal(
+      path.dirname(created.path),
+      await realpath((await listWorkspaces(root)).experimentDirectory),
+    )
     const original = await readText(path.join(created.path, ".envoi/project.json"))
     assert.deepEqual(await workspaceAiDefaults(created.path), config.ai)
     const experiment = await registerProject(created.path, { copy: true })

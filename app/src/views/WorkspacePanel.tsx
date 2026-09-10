@@ -27,7 +27,13 @@ type Workspace = {
   purpose: string
   base?: string
 }
-type Overview = { main: string; initialized: boolean; hasCommit: boolean; workspaces: Workspace[] }
+type Overview = {
+  experimentDirectory: string
+  main: string
+  initialized: boolean
+  hasCommit: boolean
+  workspaces: Workspace[]
+}
 type Result = {
   id: string
   title: string
@@ -219,6 +225,11 @@ export function WorkspacePanel({
               <p className="mt-2 text-xs leading-6 text-muted-foreground">
                 {form === "create" ? t("workspace.createHint") : t("workspace.saveHint")}
               </p>
+              {form === "create" && overview?.experimentDirectory && (
+                <p className="mt-2 break-all text-xs text-muted-foreground">
+                  实验文件将存放在独立目录：{overview.experimentDirectory}。结果可归档回主工作区。
+                </p>
+              )}
               {form === "create" && !overview?.hasCommit && (
                 <div role="status" className="mt-4 space-y-2 text-xs">
                   <p>请先检查文件变化并提交起始版本，实验将从该版本创建。</p>

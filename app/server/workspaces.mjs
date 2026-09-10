@@ -81,6 +81,13 @@ async function registry(repo, initialize = false) {
   if (initialize) await atomicJson(repo.file, value)
   return value
 }
+function experimentDirectory(repo) {
+  return path.join(
+    dataDir,
+    "worktrees",
+    createHash("sha256").update(repo.common).digest("hex").slice(0, 16),
+  )
+}
 export async function listWorkspaces(root) {
   const repo = await repository(root),
     state = await registry(repo),
@@ -115,6 +122,7 @@ export async function listWorkspaces(root) {
   return {
     main: state.main,
     projectName: path.basename(state.main),
+    experimentDirectory: experimentDirectory(repo),
     hasCommit: !!(await git(repo.root, ["rev-parse", "--verify", "HEAD^{commit}"]).catch(() => "")),
     initialized: !!(await jsonFile(repo.file, null)),
     workspaces,
@@ -167,11 +175,7 @@ export async function createWorkspace(root, input) {
       const state = await registry(repo, true),
         id = randomUUID(),
         branch = "experiment/" + id.slice(0, 8)
-      const parent = path.join(
-        dataDir,
-        "worktrees",
-        createHash("sha256").update(repo.common).digest("hex").slice(0, 16),
-      )
+      const parent = experimentDirectory(repo)
       await mkdir(parent, { recursive: true })
       const target = path.join(await realpath(parent), id)
       await git(repo.root, ["worktree", "add", "-b", branch, target, base])
