@@ -10,7 +10,7 @@ import {
   parseSyncTex,
   type SyncTexDB,
 } from "@/lib/syncTex"
-import { ChevronDown, FileUp } from "lucide-react"
+import { ChevronDown, CornerDownLeft, FileUp } from "lucide-react"
 import {
   AnnotationLayer,
   getDocument,
@@ -707,7 +707,7 @@ export function TexCompilePreview({
         </div>
       )}
       {!!pages.length && (
-        <div className="flex shrink-0 flex-wrap items-center gap-2 border-b px-3 py-1 text-xs text-muted-foreground">
+        <div className="flex h-8 shrink-0 flex-wrap items-center gap-2 border-b border-border/60 px-3 text-xs text-muted-foreground">
           <form
             onSubmit={(event) => {
               event.preventDefault()
@@ -716,7 +716,7 @@ export function TexCompilePreview({
               editingPage.current = false
               scrollToPagePosition(containerRef.current, page, 0)
             }}
-            className="flex items-center gap-2"
+            className="flex items-center gap-1.5"
           >
             <input
               aria-label="论文页码"
@@ -727,27 +727,34 @@ export function TexCompilePreview({
               onFocus={() => (editingPage.current = true)}
               onBlur={() => (editingPage.current = false)}
               onChange={(event) => setPageInput(event.target.value)}
-              className="w-16 rounded border bg-background px-2 py-1"
+              className="h-6.5 w-14 rounded-md border border-input/60 bg-background/40 px-2 py-0.5 text-center tabular-nums transition-colors [appearance:textfield] focus:border-primary/60 focus:outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
             />
-            <span>/ {pages.length}</span>
-            <button type="submit" className="rounded border px-2 py-1">
-              跳转
+            <span className="tabular-nums">/ {pages.length}</span>
+            <button
+              type="submit"
+              title="跳转"
+              className="flex h-6.5 w-6.5 items-center justify-center rounded-md transition-colors hover:bg-white/[0.06] hover:text-foreground"
+            >
+              <CornerDownLeft className="h-3 w-3" />
             </button>
           </form>
-          <select
-            aria-label="PDF 缩放"
-            className="rounded border bg-background px-2 py-1"
-            value={zoom}
-            onChange={(event) => {
-              restoredReading.current = false
-              setZoom(Number(event.target.value))
-            }}
-          >
-            <option value={1}>适合宽度</option>
-            <option value={1.25}>125%</option>
-            <option value={1.5}>150%</option>
-            <option value={2}>200%</option>
-          </select>
+          <div className="relative ml-auto">
+            <select
+              aria-label="PDF 缩放"
+              className="h-6.5 appearance-none rounded-md border border-input/60 bg-background/40 pl-2 pr-6 transition-colors hover:border-primary/40 focus:border-primary/60 focus:outline-none"
+              value={zoom}
+              onChange={(event) => {
+                restoredReading.current = false
+                setZoom(Number(event.target.value))
+              }}
+            >
+              <option value={1}>适合宽度</option>
+              <option value={1.25}>125%</option>
+              <option value={1.5}>150%</option>
+              <option value={2}>200%</option>
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-1.5 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground" />
+          </div>
         </div>
       )}
       {paperOnly && navigationNotice && (

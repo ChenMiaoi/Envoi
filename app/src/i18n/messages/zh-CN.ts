@@ -663,6 +663,8 @@ export const zhCN = {
   "compile.successCacheOnly": "编译成功 · 仅浏览器缓存，未写入论文目录",
   "compile.successPartial": "编译成功 · 产物未完整保存：{error}",
   "compile.successSaved": "编译成功 · 已保存当前项目 build/main.pdf",
+  "compile.staleNotice": "正文已有更新,显示上次成功编译结果。",
+  "compile.queuedSave": "已排队:保存并编译",
   "compile.waitingFirst": "等待首次编译",
   "git.clean": "没有未提交修改。",
   "git.completeConnection": "在项目菜单完善本地连接…",

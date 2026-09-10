@@ -699,6 +699,8 @@ const en: Messages = {
     "Compile succeeded · browser cache only, not written to the paper directory",
   "compile.successPartial": "Compile succeeded · artifacts not fully saved: {error}",
   "compile.successSaved": "Compile succeeded · saved build/main.pdf in the current project",
+  "compile.staleNotice": "The source changed since the last successful compile; showing the previous result.",
+  "compile.queuedSave": "Queued: save and compile",
   "compile.waitingFirst": "Waiting for first compile",
   "git.clean": "No uncommitted changes.",
   "git.completeConnection": "Complete the local connection in the project menu…",

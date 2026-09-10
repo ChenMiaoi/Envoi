@@ -717,6 +717,8 @@ const ja: Messages = {
     "コンパイル成功 · ブラウザキャッシュのみ、論文ディレクトリには未書き込み",
   "compile.successPartial": "コンパイル成功 · 成果物を完全に保存できませんでした：{error}",
   "compile.successSaved": "コンパイル成功 · 現在のプロジェクトに build/main.pdf を保存しました",
+  "compile.staleNotice": "本文が更新されています。前回成功したコンパイル結果を表示しています。",
+  "compile.queuedSave": "キュー済み:保存してコンパイル",
   "compile.waitingFirst": "初回コンパイル待ち",
   "git.clean": "未コミットの変更はありません。",
   "git.completeConnection": "プロジェクトメニューでローカル接続を完了…",

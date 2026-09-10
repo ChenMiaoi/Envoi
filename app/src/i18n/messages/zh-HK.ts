@@ -648,6 +648,8 @@ const zhHK: Messages = {
   "compile.successCacheOnly": "編譯成功 · 僅瀏覽器緩存，未寫入論文目錄",
   "compile.successPartial": "編譯成功 · 產物未完整保存：{error}",
   "compile.successSaved": "編譯成功 · 已保存當前項目 build/main.pdf",
+  "compile.staleNotice": "正文已有更新,顯示上次成功編譯結果。",
+  "compile.queuedSave": "已排隊:儲存並編譯",
   "compile.waitingFirst": "等待首次編譯",
   "git.clean": "沒有未提交修改。",
   "git.completeConnection": "在項目菜單完善本地連接…",

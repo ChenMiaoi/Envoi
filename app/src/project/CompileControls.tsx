@@ -8,6 +8,7 @@ import { compileProject, projectSignature } from "@/lib/compileClient"
 import { previewManifest } from "@/lib/pdfSync"
 import { persistBuild, persistDiagnostics } from "@/lib/projectFiles"
 import { useProject } from "./context"
+import { ChevronDown } from "lucide-react"
 export function CompileControls({ hasPdf = false }: { hasPdf?: boolean }) {
   const { t } = useT()
   const { project, getProject, setProject, busy, setBusy, saveAll, saving } = useProject()
@@ -162,55 +163,62 @@ export function CompileControls({ hasPdf = false }: { hasPdf?: boolean }) {
     }
   }, [queuedSave, running, busy, saving, run])
   return (
-    <div className="shrink-0 border-b border-border bg-card text-[11px]">
-      <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-1.5">
+    <div className="shrink-0 border-b border-border/60 text-[11px]">
+      <div className="flex h-8 flex-wrap items-center justify-between gap-2 px-3">
         <button
-          className="text-muted-foreground hover:text-foreground"
+          className="-mx-1 flex min-w-0 items-center gap-1 rounded px-1 text-muted-foreground transition-colors hover:bg-white/[0.05] hover:text-foreground"
           aria-expanded={open}
           onClick={() => setOpen(!open)}
         >
-          {project.compileStatus ?? (hasPdf ? t("compile.hasPdfLog") : t("compile.waitingFirst"))}{" "}
-          {open ? "▴" : "▾"}
+          <span className="truncate">
+            {project.compileStatus ?? (hasPdf ? t("compile.hasPdfLog") : t("compile.waitingFirst"))}
+          </span>
+          <ChevronDown
+            className={`h-3 w-3 shrink-0 transition-transform ${open ? "rotate-180" : ""}`}
+          />
         </button>
-        <div className="flex gap-2">
-          <select
-            aria-label={t("compile.engineAria")}
-            className="bg-card"
-            value={engine}
-            disabled={running || !project.rootId}
-            onChange={(event) => {
-              const engine = event.target.value as "pdflatex" | "xelatex"
-              if (project.rootPath) void save({ ...configuration.overrides, engine })
-              else
-                setProject((current) => ({
-                  ...current,
-                  engine,
-                  settings: { version: 1, overrides: { ...configuration.overrides, engine } },
-                }))
-            }}
-          >
-            <option value="pdflatex">pdfLaTeX</option>
-            <option value="xelatex">XeLaTeX</option>
-          </select>
+        <div className="flex items-center gap-2">
           {queuedSave && (
-            <span role="status" className="self-center text-muted-foreground">
-              已排队：保存并编译
+            <span role="status" className="text-muted-foreground">
+              {t("compile.queuedSave")}
             </span>
           )}
+          <div className="relative">
+            <select
+              aria-label={t("compile.engineAria")}
+              className="h-6.5 appearance-none rounded-md border border-input/60 bg-background/40 pl-2 pr-6 transition-colors hover:border-primary/40 focus:border-primary/60 focus:outline-none disabled:opacity-40"
+              value={engine}
+              disabled={running || !project.rootId}
+              onChange={(event) => {
+                const engine = event.target.value as "pdflatex" | "xelatex"
+                if (project.rootPath) void save({ ...configuration.overrides, engine })
+                else
+                  setProject((current) => ({
+                    ...current,
+                    engine,
+                    settings: { version: 1, overrides: { ...configuration.overrides, engine } },
+                  }))
+              }}
+            >
+              <option value="pdflatex">pdfLaTeX</option>
+              <option value="xelatex">XeLaTeX</option>
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-1.5 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground" />
+          </div>
           {running ? (
             <button
               onClick={() => {
                 setQueuedSave(false)
                 request.current?.abort()
               }}
-              className="rounded border border-border px-2 py-1"
+              className="rounded-md border border-input/60 px-2 py-1 transition-colors hover:bg-white/[0.05]"
             >
               {t("compile.cancel")}
             </button>
           ) : (
             <button
               disabled={busy || saving || !project.rootId}
-              className="rounded bg-primary px-2 py-1 text-primary-foreground disabled:opacity-40"
+              className="rounded-md bg-primary px-2.5 py-1 text-primary-foreground shadow-[0_0_12px_-2px_hsl(var(--primary)/0.5)] transition hover:brightness-105 disabled:opacity-40"
               onClick={() => void run()}
             >
               {t("compile.runCurrent")}

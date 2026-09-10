@@ -5,6 +5,8 @@ import { projectSignature } from "@/lib/compileClient"
 import { paperPdf } from "@/lib/paperPdf"
 import { TexCompilePreview } from "@/components/TexCompilePreview"
 import { useProject } from "./context"
+import { useT } from "@/i18n/useT"
+import { TriangleAlert } from "lucide-react"
 export function ProjectPdfPreview({
   target,
   syncPoint,
@@ -14,6 +16,7 @@ export function ProjectPdfPreview({
   syncPoint?: { path: string; line: number; id: number }
   onLocateSource?: (path: string, line: number) => void
 }) {
+  const { t } = useT()
   const { project } = useProject()
   const active = useMemo(() => paperPdf(project), [project])
   const [verification, setVerification] = useState<{ project: typeof project; ok: boolean } | null>(
@@ -54,8 +57,9 @@ export function ProjectPdfPreview({
       {active?.id === "compiled" &&
         project.compiled &&
         project.compiled.signature !== projectSignature(project) && (
-          <p className="shrink-0 bg-card px-3 py-1 text-[10px] text-warning">
-            正文已有更新，显示上次成功编译结果。
+          <p className="flex shrink-0 items-center gap-1.5 border-b border-warning/15 bg-warning/[0.07] px-3 py-1 text-[11px] text-warning">
+            <TriangleAlert className="h-3 w-3 shrink-0" />
+            {t("compile.staleNotice")}
           </p>
         )}
       <div className="min-h-0 flex-1">
