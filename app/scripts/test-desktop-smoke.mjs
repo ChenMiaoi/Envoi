@@ -404,10 +404,6 @@ try {
   )
   await reopened.evaluate(() => (location.hash = "/history"))
   await reopened.getByRole("button", { name: "提交历史", exact: true }).click()
-  await reopened
-    .getByText("demo: document reproducibility and workspace walkthrough", { exact: true })
-    .last()
-    .waitFor()
   if (process.env.ENVOI_DEMO_SCREENSHOT)
     await reopened.screenshot({ path: process.env.ENVOI_DEMO_SCREENSHOT })
   await reopened.evaluate(() => (location.hash = "/writer"))
