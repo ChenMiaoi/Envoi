@@ -403,6 +403,7 @@ try {
     0,
   )
   await reopened.evaluate(() => (location.hash = "/history"))
+  await reopened.getByRole("button", { name: "提交历史", exact: true }).click()
   await reopened
     .getByText("demo: document reproducibility and workspace walkthrough", { exact: true })
     .last()
