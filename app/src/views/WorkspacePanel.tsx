@@ -85,7 +85,7 @@ export function WorkspacePanel({
       timer = setTimeout(() => void refresh(), 250)
     }
     const off = envoi().onFilesChanged((event) => {
-      if (event.root === root) listener()
+      if (event.root === root || event.root === selected) listener()
     })
     window.addEventListener("envoi:workspaces-updated", listener)
     window.addEventListener("focus", listener)
@@ -95,7 +95,7 @@ export function WorkspacePanel({
       window.removeEventListener("envoi:workspaces-updated", listener)
       window.removeEventListener("focus", listener)
     }
-  }, [refresh, root])
+  }, [refresh, root, selected])
   useEffect(() => {
     let live = true
     if (selected && tab === "changes")

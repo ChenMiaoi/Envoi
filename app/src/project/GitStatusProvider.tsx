@@ -59,11 +59,13 @@ export function GitStatusProvider({ children }: { children: ReactNode }) {
       if (event.root === root) changed()
     })
     window.addEventListener("envoi:connection-updated", changed)
+    window.addEventListener("envoi:workspaces-updated", changed)
     window.addEventListener("focus", changed)
     return () => {
       off()
       clearTimeout(timer)
       window.removeEventListener("envoi:connection-updated", changed)
+      window.removeEventListener("envoi:workspaces-updated", changed)
       window.removeEventListener("focus", changed)
     }
   }, [root, trusted, refresh])

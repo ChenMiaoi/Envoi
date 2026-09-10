@@ -2,6 +2,7 @@ import { test } from "node:test"
 import assert from "node:assert/strict"
 import {
   mkdtemp,
+  mkdir,
   writeFile,
   readFile,
   readdir,
@@ -103,6 +104,33 @@ test("filesystem watcher reports external edits and closes", () =>
       const event = await change
       assert.equal(event.root, root)
       assert.ok(event.paths.includes("a.txt") || event.paths.includes(""))
+    } finally {
+      close()
+    }
+  }))
+
+test("filesystem watcher includes linked-worktree Git metadata changes", () =>
+  fixture(async (root) => {
+    const directory = path.join(root, ".git", "worktrees", "experiment")
+    await mkdir(directory, { recursive: true })
+    let close
+    const changed = new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => reject(Error("worktree Git change not reported")), 3000)
+      close = watchProjectDirectory(
+        root,
+        (event) => {
+          if (event.paths.some((name) => name.startsWith(".git/worktrees/"))) {
+            clearTimeout(timeout)
+            resolve(event)
+          }
+        },
+        { delay: 20, maxDelay: 100 },
+      )
+    })
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 350))
+      await writeFile(path.join(directory, "HEAD"), "ref: refs/heads/experiment/test\n")
+      await changed
     } finally {
       close()
     }
