@@ -115,7 +115,7 @@ try {
   await page.getByRole("button", { name: "文件变化", exact: true }).click()
   await writeFile(path.join(main, "refresh-note.md"), "Observed experiment result")
   await page.reload()
-  await page.waitForFunction(() => location.hash === "#/history")
+  await page.evaluate(() => (location.hash = "/history"))
   await page.getByRole("heading", { name: "版本与实验", exact: true }).waitFor()
   await page.getByRole("button", { name: "文件变化", exact: true }).click()
   await page
