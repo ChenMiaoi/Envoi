@@ -214,6 +214,7 @@ export const DEFAULT_BINDS = [
   "mod+shift+2 = view writer",
   "mod+shift+3 = view library",
   "mod+shift+4 = view settings",
+  "mod+shift+5 = view history",
   "mod+alt+o = project open",
   "mod+alt+g = git",
   "mod+alt+enter = compile",

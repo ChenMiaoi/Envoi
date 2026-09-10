@@ -363,6 +363,13 @@
       hsl(var(--shell));
     background-attachment: fixed;
   }
+  /* 视图入场:keep-alive 区块从 display:none 恢复时动画自动重放。 */
+  @keyframes view-in {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+  }
   /* Share themed scrollbars across every panel, including nested editor scrollers. */
   ::-webkit-scrollbar {
     width: 10px;

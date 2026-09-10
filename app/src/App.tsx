@@ -283,7 +283,7 @@ function ProjectApp() {
             {!emptyWorkspace && visited.has("reader") && (
               <section
                 hidden={view !== "reader"}
-                className="h-full"
+                className="h-full motion-safe:animate-[view-in_160ms_ease-out]"
                 aria-label={t("app.aria.reader")}
               >
                 <ReaderView
@@ -299,7 +299,7 @@ function ProjectApp() {
             {project.id !== "empty" && visited.has("writer") && (
               <section
                 hidden={view !== "writer"}
-                className="h-full"
+                className="h-full motion-safe:animate-[view-in_160ms_ease-out]"
                 aria-label={t("app.aria.writer")}
               >
                 <WriterView requestedFile={writerFile} problemTarget={problemTarget} />
@@ -308,7 +308,7 @@ function ProjectApp() {
             {visited.has("library") && (
               <section
                 hidden={view !== "library"}
-                className="h-full"
+                className="h-full motion-safe:animate-[view-in_160ms_ease-out]"
                 aria-label={t("app.aria.library")}
               >
                 {project.rootPath && !trust?.trusted ? <TrustRequired /> : <LibraryView />}
@@ -317,7 +317,7 @@ function ProjectApp() {
             {project.id !== "empty" && visited.has("history") && (
               <section
                 hidden={view !== "history"}
-                className="h-full"
+                className="h-full motion-safe:animate-[view-in_160ms_ease-out]"
                 aria-label={t("app.aria.history")}
               >
                 {trust?.trusted ? <GitHistoryView /> : <TrustRequired />}
@@ -326,7 +326,7 @@ function ProjectApp() {
             {visited.has("settings") && (
               <section
                 hidden={view !== "settings"}
-                className="h-full"
+                className="h-full motion-safe:animate-[view-in_160ms_ease-out]"
                 aria-label={t("app.aria.settings")}
               >
                 <SettingsView />
@@ -359,9 +359,19 @@ function ProjectApp() {
                 }}
               />
             )}
-            <span>{view ? t(`view.${view}`) : t("app.statusbar.pageNavigation")}</span>
+            <button
+              onClick={() => setPaletteOpen(true)}
+              title={t("command.palette")}
+              className="-mx-1 rounded px-1 transition-colors hover:bg-white/[0.06] hover:text-foreground"
+            >
+              {view ? t(`view.${view}`) : t("app.statusbar.pageNavigation")}
+            </button>
             <span aria-hidden="true" className="h-3 w-px bg-border" />
-            <span className="flex items-center gap-1.5">
+            <button
+              onClick={() => void navigate("/settings/global/ai")}
+              title={t("settings.category.ai")}
+              className="-mx-1 flex items-center gap-1.5 rounded px-1 transition-colors hover:bg-white/[0.06] hover:text-foreground"
+            >
               <span
                 className={`inline-block h-1.5 w-1.5 rounded-full ${agent.status?.runtime ? "bg-primary shadow-[0_0_6px_hsl(var(--primary)/0.9)]" : "bg-muted-foreground"}`}
               />
@@ -377,11 +387,19 @@ function ProjectApp() {
                       )
                     ? t("common.selectModel")
                     : `${t("app.statusbar.runtime")} · ${agent.config.model}`}
-            </span>
-            <span className="font-editor">
-              {effective.engine === "xelatex" ? "XeLaTeX" : "pdfLaTeX"}
-            </span>
-            <span className="font-editor">UTF-8</span>
+            </button>
+            <button
+              onClick={() =>
+                void navigate(
+                  project.id !== "empty" ? "/settings/project/compile" : "/settings/global/compile",
+                )
+              }
+              title={t("settings.category.compile")}
+              className="-mx-1 flex items-center gap-2 rounded px-1 font-editor transition-colors hover:bg-white/[0.06] hover:text-foreground"
+            >
+              <span>{effective.engine === "xelatex" ? "XeLaTeX" : "pdfLaTeX"}</span>
+              <span>UTF-8</span>
+            </button>
           </div>
         </div>
       )}

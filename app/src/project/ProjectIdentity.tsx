@@ -40,7 +40,7 @@ export function ProjectIdentity() {
           onClick={() =>
             window.dispatchEvent(new Event(empty ? "envoi:open-project" : "envoi:manage-projects"))
           }
-          className="flex min-w-0 items-center gap-1.5 rounded-md px-2 py-1 text-[13px] font-medium text-foreground hover:bg-secondary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          className="flex min-w-0 max-w-72 items-center gap-1.5 rounded-md px-2 py-1 text-[13px] font-medium text-foreground hover:bg-secondary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
         >
           <FolderOpen className="h-4 w-4 shrink-0 text-muted-foreground" />
           <span className="truncate">{name}</span>

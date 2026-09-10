@@ -23,6 +23,8 @@ import { PaperSearchPanel } from "@/components/PaperSearchPanel"
 import { PaperBrowsePanel } from "@/components/PaperBrowsePanel"
 import { MarkdownEditor } from "@/components/MarkdownEditor"
 import { ChatPanel } from "@/components/ChatPanel"
+import { useSettings } from "@/settings/useSettings"
+import { matchBinding, resolveBindings } from "@/navigation/shortcuts"
 import {
   ResizablePanelGroup as Group,
   ResizablePanel as Panel,
@@ -633,6 +635,38 @@ export function LibraryView() {
   useEffect(() => {
     if (selected) setVisited((ids) => (ids.includes(selected) ? ids : [...ids, selected]))
   }, [selected])
+  const { effective } = useSettings()
+  const selectPaper = useCallback(
+    (id: string) => {
+      if (!root || !id) return
+      setSelected(id)
+      void researchLibrary(root, {
+        action: "select",
+        paperId: id,
+        selectedAt: (selectionClock.current = Math.max(Date.now(), selectionClock.current + 1)),
+      }).catch(notice)
+    },
+    [root],
+  )
+  // 复用可配置的标签切换键(默认 Mod+Alt+←/→)在论文间循环,仅论文库视图激活时响应。
+  useEffect(() => {
+    if (location.pathname !== "/library") return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.isComposing) return
+      const command = matchBinding(e, resolveBindings(effective.bindings))
+      if (!command || (command.id !== "tab-prev" && command.id !== "tab-next")) return
+      const papers = index?.papers
+      if (!papers?.length) return
+      e.preventDefault()
+      e.stopPropagation()
+      const current = papers.findIndex((p) => p.id === selected),
+        step = command.id === "tab-next" ? 1 : -1,
+        next = papers[(current + step + papers.length) % papers.length]
+      selectPaper(next.id)
+    }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [index, selected, effective.bindings, location.pathname, selectPaper])
   const importPapers = async (legacy = false, files: File[] = []) => {
     if (!root) return
     setBusy(true)
@@ -881,17 +915,7 @@ export function LibraryView() {
                           <button
                             key={p.id}
                             className={`mb-1 w-full rounded p-2 text-left text-xs leading-5 ${selected === p.id ? "bg-accent text-primary" : "hover:bg-secondary"}`}
-                            onClick={() => {
-                              setSelected(p.id)
-                              void researchLibrary(root, {
-                                action: "select",
-                                paperId: p.id,
-                                selectedAt: (selectionClock.current = Math.max(
-                                  Date.now(),
-                                  selectionClock.current + 1,
-                                )),
-                              }).catch(notice)
-                            }}
+                            onClick={() => selectPaper(p.id)}
                           >
                             {p.title}
                             <span className="mt-1 block text-[10px] text-muted-foreground">
