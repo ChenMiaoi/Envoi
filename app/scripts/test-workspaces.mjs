@@ -24,6 +24,7 @@ const {
   workspaceTarget,
   renameWorkspace,
   workspaceName,
+  workspaceProjectName,
 } = await import("../server/workspaces.mjs")
 const { registerProject, projectRoot } = await import("../server/local-data.mjs")
 test("workspaces isolate identities and edits, preserve result provenance, and bind AI tool selection", async () => {
@@ -56,6 +57,9 @@ test("workspaces isolate identities and edits, preserve result provenance, and b
     assert.equal((await listWorkspaces(created.path)).main, root)
     await renameWorkspace(root, { target: created.path, name: "带宽扫描" })
     assert.equal(await workspaceName(created.path), "带宽扫描")
+    assert.equal(await workspaceProjectName(created.path), path.basename(root))
+    assert.equal(await workspaceProjectName(root), path.basename(root))
+    assert.equal((await listWorkspaces(created.path)).projectName, path.basename(root))
     assert.equal(
       (await listWorkspaces(created.path)).workspaces.find((w) => w.current).name,
       "带宽扫描",

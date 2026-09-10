@@ -112,7 +112,12 @@ export async function listWorkspaces(root) {
       base: info?.base,
     })
   }
-  return { main: state.main, initialized: !!(await jsonFile(repo.file, null)), workspaces }
+  return {
+    main: state.main,
+    projectName: path.basename(state.main),
+    initialized: !!(await jsonFile(repo.file, null)),
+    workspaces,
+  }
 }
 export async function workspaceAiDefaults(root) {
   const linked = await lstat(path.join(root, ".git")).then(
@@ -199,6 +204,12 @@ export async function workspaceName(root) {
   return repo.root === state.main
     ? (state.mainName ?? "主工作区")
     : state.experiments[repo.root]?.name
+}
+// Project identity is shared; workspace labels are independently renameable.
+export async function workspaceProjectName(root) {
+  const repo = await repository(root)
+  const state = await registry(repo)
+  return path.basename(state.main)
 }
 export async function renameWorkspace(root, input) {
   if (typeof input?.name !== "string" || !input.name.trim() || input.name.length > 80)

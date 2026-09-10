@@ -15,7 +15,7 @@ import {
   saveWorkspaceResult,
   listWorkspaceResults,
   renameWorkspace,
-  workspaceName,
+  workspaceProjectName,
 } from "../../server/workspaces.mjs"
 import { toolDirectories } from "../../server/tool-config.mjs"
 import { app, BrowserWindow, dialog, ipcMain, Menu, protocol, shell } from "electron"
@@ -646,7 +646,7 @@ function registerIpc(): void {
       files,
       directories,
       name: (await workspaceTrust.isTrusted(base))
-        ? await workspaceName(base).catch(() => undefined)
+        ? await workspaceProjectName(base).catch(() => undefined)
         : undefined,
       projectId: [...projectRoots].find(([, directory]) => directory === base)?.[0],
     }

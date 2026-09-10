@@ -56,14 +56,16 @@ export function WorkspaceBadge() {
       return
     }
     const value = (await envoi().workspaces(root, { action: "list" })) as {
+      projectName: string
       initialized: boolean
       workspaces: Workspace[]
     }
     setInfo({ root, workspaces: value.workspaces })
-    const current = value.workspaces.find((w) => w.current)
-    if (current && value.initialized)
+    if (value.projectName)
       setProject((old) =>
-        old.rootPath === root && old.name !== current.name ? { ...old, name: current.name } : old,
+        old.rootPath === root && old.name !== value.projectName
+          ? { ...old, name: value.projectName }
+          : old,
       )
   }, [root, setProject, trusted])
   useEffect(() => {

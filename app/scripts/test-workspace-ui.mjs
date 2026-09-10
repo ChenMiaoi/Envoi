@@ -104,7 +104,7 @@ try {
   await page.getByRole("button", { name: "保存名称", exact: true }).click()
   await page.getByRole("button", { name: "切换工作区：带宽扫描实验", exact: true }).waitFor()
   await page.evaluate(() => (location.hash = "/reader"))
-  await page.getByRole("button", { name: "带宽扫描实验", exact: true }).waitFor()
+  assert.equal(await page.locator('[aria-label^="项目："]').innerText(), path.basename(main))
   await page.getByRole("button", { name: "切换工作区：带宽扫描实验", exact: true }).click()
   await page.getByRole("menuitem", { name: /主工作区.*main/ }).click()
   await page.getByRole("button", { name: "切换工作区：主工作区", exact: true }).waitFor()
