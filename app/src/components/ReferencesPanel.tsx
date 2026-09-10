@@ -1,3 +1,10 @@
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog"
 import { Notification } from "@/components/Notification"
 import { useT } from "@/i18n/useT"
 import { useMemo, useRef, useState } from "react"
@@ -16,7 +23,20 @@ export function ReferencesPanel({
   onLocate: (location: SourceLocation) => void
 }) {
   const { t } = useT()
-  const { project } = useProject()
+  const { project, edit, busy } = useProject()
+  const [editing, setEditing] = useState<string | null>(null)
+  const bibliographyFiles = project.files.filter(
+    (file) => file.kind === "bib" && file.text !== undefined,
+  )
+  const edited = bibliographyFiles.find((file) => file.id === editing)
+  let editError = ""
+  if (edited) {
+    try {
+      parseBibliography(edited.text ?? "")
+    } catch (error) {
+      editError = (error as Error).message
+    }
+  }
   const [local, setLocal] = useState<{ name: string; text: string } | null>(null)
   const [readError, setReadError] = useState("")
   const [detail, setDetail] = useState<string | null>(null)
@@ -86,7 +106,53 @@ export function ReferencesPanel({
   }
   return (
     <div className="space-y-2 text-[11px]">
+      <Dialog
+        open={!!edited}
+        onOpenChange={(open) => {
+          if (!open) setEditing(null)
+        }}
+      >
+        <DialogContent className="sm:max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>{t("refs.editProjectBib")}</DialogTitle>
+            <DialogDescription>{t("refs.editHint")}</DialogDescription>
+          </DialogHeader>
+          <select
+            aria-label={t("refs.projectBib")}
+            value={editing ?? ""}
+            onChange={(event) => setEditing(event.target.value)}
+          >
+            {bibliographyFiles.map((file) => (
+              <option key={file.id} value={file.id}>
+                {file.path}
+              </option>
+            ))}
+          </select>
+          <textarea
+            aria-label={t("refs.sourceEditor")}
+            readOnly={busy}
+            value={edited?.text ?? ""}
+            onChange={(event) => {
+              if (edited) edit(edited.id, event.target.value)
+            }}
+            className="h-80 w-full resize-y rounded border bg-background p-3 font-mono text-xs"
+          />
+          {editError && (
+            <p role="alert" className="text-xs text-danger">
+              {editError}
+            </p>
+          )}
+        </DialogContent>
+      </Dialog>
       <div className="flex flex-wrap gap-2">
+        {!!bibliographyFiles.length && (
+          <button
+            className="rounded border border-border px-2 py-1 hover:bg-secondary"
+            onClick={() => setEditing(bibliographyFiles[0].id)}
+          >
+            {t("refs.editProjectBib")}
+          </button>
+        )}
         <button
           className="rounded border border-border px-2 py-1 hover:bg-secondary"
           onClick={() => fileRef.current?.click()}
@@ -132,6 +198,11 @@ export function ReferencesPanel({
       </div>
       <p className="break-words text-muted-foreground">{result.label}</p>
       <p className="text-muted-foreground">{t("refs.scopeHint")}</p>
+      {local && (
+        <p role="status" className="text-warning">
+          {t("refs.localPreviewOnly")}
+        </p>
+      )}
       {!!paper.missing.length && (
         <p role="alert" className="text-warning">
           {t("refs.statsIncomplete", { list: paper.missing.join("；") })}
@@ -167,7 +238,7 @@ export function ReferencesPanel({
                   >
                     <div className="text-[11.5px] text-foreground">{entry.title}</div>
                     <div className="mt-1 break-words text-muted-foreground">
-                      {entry.author} {entry.year}
+                      {entry.author} {entry.year || t("refs.missingYear")}
                     </div>
                     <div className="mt-1 break-all font-editor text-primary">{entry.key}</div>
                   </button>

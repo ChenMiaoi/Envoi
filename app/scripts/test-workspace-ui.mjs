@@ -26,6 +26,7 @@ try {
   })
   const page = await app.firstWindow(),
     errors = []
+  page.setDefaultTimeout(15000)
   page.on("pageerror", (e) => errors.push(e.message))
   await page.getByTestId("welcome-page").waitFor()
   await page.getByRole("button", { name: /打开示例项目/ }).click()
@@ -119,6 +120,30 @@ try {
   await page.getByText(/已提交当前列出的全部修改/).waitFor()
   await page.getByRole("button", { name: "提交历史", exact: true }).click()
   await page.getByText("Fixture: result recorded", { exact: true }).waitFor()
+  await page.evaluate(() => (location.hash = "/writer"))
+  await page.getByRole("button", { name: "参考文献", exact: true }).click()
+  await page.getByRole("button", { name: "预览外部 .bib", exact: true }).waitFor()
+  await page.getByRole("button", { name: "编辑项目书目", exact: true }).click()
+  const bibEditor = page.getByRole("textbox", { name: "BibTeX 源码编辑器", exact: true })
+  const originalBib = await bibEditor.inputValue()
+  await bibEditor.fill(
+    originalBib + "\n@misc{workflowcheck, title={Workflow Check}, author={Test Author}}\n",
+  )
+  await page.keyboard.press("Escape")
+  await page.getByText("年份缺失，请核对来源", { exact: false }).waitFor()
+  await page.getByRole("button", { name: "编辑项目书目", exact: true }).click()
+  await bibEditor.fill(
+    originalBib +
+      "\n@misc{workflowcheck, title={Workflow Check}, author={Test Author}, year={2026}}\n",
+  )
+  await page.keyboard.press("Escape")
+  await page.keyboard.press(process.platform === "darwin" ? "Meta+s" : "Control+s")
+  await page.waitForFunction(
+    async (root) =>
+      (await window.envoi.fsRead(root, "references.bib")).text.includes("workflowcheck"),
+    main,
+  )
+  assert.match(await readFile(path.join(main, "references.bib"), "utf8"), /year=\{2026\}/)
   await page.setViewportSize({ width: 760, height: 650 })
   assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth))
   await page.setViewportSize({ width: 1440, height: 900 })
@@ -143,6 +168,9 @@ try {
     await new Promise((resolve) => app.on("close", resolve))
   }
 } finally {
-  if (app) await app.close().catch(() => {})
+  if (app) {
+    await app.evaluate(({ app }) => app.exit(0)).catch(() => {})
+    await app.close().catch(() => {})
+  }
   if (!keep) await rm(temp, { recursive: true, force: true, maxRetries: 3 })
 }
