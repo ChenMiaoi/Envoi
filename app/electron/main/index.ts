@@ -726,12 +726,22 @@ function registerIpc(): void {
       watchers.get(owner)?.()
       watchers.delete(owner)
     }
-    const result = await trashProjectDirectory(
-      root,
-      typedName,
-      (directory: string) => shell.trashItem(directory),
-      deletionProtected,
-    )
+    const trash = async (directory: string) => {
+      for (let attempt = 0; ; attempt += 1) {
+        try {
+          return await shell.trashItem(directory)
+        } catch (error) {
+          if (
+            process.platform !== "win32" ||
+            (error as NodeJS.ErrnoException).code !== "EBUSY" ||
+            attempt >= 4
+          )
+            throw error
+          await new Promise((resolve) => setTimeout(resolve, 100))
+        }
+      }
+    }
+    const result = await trashProjectDirectory(root, typedName, trash, deletionProtected)
     // A trashed root must not remain the permission context for runtime probes.
     // Clear every window using it, not just the window that requested deletion.
     for (const [owner, active] of activeRoots) {
