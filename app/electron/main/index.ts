@@ -718,6 +718,14 @@ function registerIpc(): void {
     if (plan.blocked) throw Error(plan.blocked)
     if (typedName !== plan.name) throw Error("请输入完整目录名确认。")
     await Promise.all(backends.map((backend) => backend.cancel(undefined, base)))
+    // Windows cannot rename a watched directory while ReadDirectoryChangesW
+    // still owns a handle to it. Close matching watchers before moving the
+    // project to the trash; the state cleanup below removes their ownership.
+    for (const [owner, active] of activeRoots) {
+      if (active !== base) continue
+      watchers.get(owner)?.()
+      watchers.delete(owner)
+    }
     const result = await trashProjectDirectory(
       root,
       typedName,
