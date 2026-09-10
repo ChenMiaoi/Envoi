@@ -405,7 +405,7 @@ try {
   await reopened.evaluate(() => (location.hash = "/history"))
   await reopened
     .getByText("demo: document reproducibility and workspace walkthrough", { exact: true })
-    .first()
+    .last()
     .waitFor()
   if (process.env.ENVOI_DEMO_SCREENSHOT)
     await reopened.screenshot({ path: process.env.ENVOI_DEMO_SCREENSHOT })
