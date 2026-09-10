@@ -114,7 +114,9 @@ try {
   await page.getByRole("heading", { name: "注意力模型基线 · 合成数据", exact: true }).waitFor()
   await page.getByRole("button", { name: "文件变化", exact: true }).click()
   await writeFile(path.join(main, "refresh-note.md"), "Observed experiment result")
-  await page.getByRole("button", { name: "已保存结果", exact: true }).click()
+  await page.reload()
+  await page.waitForFunction(() => location.hash === "#/history")
+  await page.getByRole("heading", { name: "版本与实验", exact: true }).waitFor()
   await page.getByRole("button", { name: "文件变化", exact: true }).click()
   await page
     .getByTestId("research-workspaces")
