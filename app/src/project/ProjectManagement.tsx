@@ -301,14 +301,14 @@ export function ProjectManagement() {
                     </span>
                     <button
                       disabled={busy || saving}
-                      className="text-xs text-primary"
+                      className="shrink-0 text-xs text-primary"
                       onClick={() => void remove(entry)}
                     >
                       {isCurrent(entry) ? t("project.removeAndClose") : t("project.removeRecord")}
                     </button>
                     <button
                       disabled={busy || saving}
-                      className="text-xs text-danger"
+                      className="shrink-0 text-xs text-danger"
                       onClick={() =>
                         entry.path ? choose(entry.path) : status(t("project.reopenToVerify"))
                       }

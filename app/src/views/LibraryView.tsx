@@ -309,10 +309,17 @@ function PaperWorkspace({
             }
           }}
         >
-          <div className="flex h-10 shrink-0 items-center gap-3 border-b px-3 text-xs">
-            <span className="min-w-0 flex-1 truncate" title={paper.title}>
-              {paper.title}
-            </span>
+          <div className="flex h-12 shrink-0 items-center gap-3 border-b px-3 text-xs">
+            <div className="min-w-0 flex-1">
+              <div className="truncate font-medium leading-4" title={paper.title}>
+                {paper.title}
+              </div>
+              <div className="mt-1 truncate text-[11px] leading-3.5 text-muted-foreground">
+                {[paper.author, paper.venue, paper.year, paper.citationKey]
+                  .filter(Boolean)
+                  .join(" · ") || "元数据待补全"}
+              </div>
+            </div>
             <button onClick={cite}>引用到项目</button>
             <button
               disabled={busy}
@@ -385,8 +392,13 @@ function PaperWorkspace({
                 }}
               />
             ) : (
-              <div className="p-8 text-sm text-muted-foreground">
-                {paper.attachmentHash ? "正在加载 PDF…" : "这篇文献还没有 PDF 附件。"}
+              <div className="flex h-full flex-col items-center justify-center gap-2 px-8 text-center text-sm text-muted-foreground">
+                <p>{paper.attachmentHash ? "正在加载 PDF…" : "这篇文献还没有 PDF 附件。"}</p>
+                {!paper.attachmentHash && (
+                  <p className="text-xs leading-6">
+                    在「网页浏览」中找到该文献后点击「获取 PDF 入库」，或点击上方「补充 PDF」。
+                  </p>
+                )}
               </div>
             )}
           </div>
@@ -917,6 +929,22 @@ export function LibraryView() {
                     </section>
                   ) : null
                 })}
+                {!selected && (
+                  <div className="flex h-full flex-col items-center justify-center gap-2 px-10 text-center text-sm text-muted-foreground">
+                    {index?.papers.length ? (
+                      <p>从左侧选择一篇文献开始阅读与笔记。</p>
+                    ) : (
+                      <>
+                        <p className="text-base text-foreground">论文库还是空的</p>
+                        <p className="text-xs leading-6">
+                          在「在线搜索」检索 OpenAlex、Semantic Scholar、Crossref 与 arXiv；
+                          <br />
+                          在「网页浏览」中打开出版社页面直接保存；或导入本地 PDF / BibTeX。
+                        </p>
+                      </>
+                    )}
+                  </div>
+                )}
               </Panel>
             </Group>
           )}
