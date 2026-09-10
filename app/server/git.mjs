@@ -198,7 +198,7 @@ export function parseLog(output) {
         ...parseRefs(decorations),
         author,
         date,
-        subject,
+        subject: subject.trimEnd(),
       }
     })
 }
