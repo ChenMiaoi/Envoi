@@ -137,7 +137,10 @@ function CommitDetail({ show, error, busy }: { show?: GitShow; error: string; bu
       <h2 className="mt-1 text-sm font-medium">{show.commit.subject}</h2>
       {rest && <p className="mt-2 whitespace-pre-wrap text-muted-foreground">{rest}</p>}
       <p className="mt-2 text-muted-foreground">
-        {show.commit.author} · {show.commit.date.replace("T", " ").slice(0, 16)}
+        {show.commit.author} ·{" "}
+        <time dateTime={show.commit.date} title={show.commit.date}>
+          {new Date(show.commit.date).toLocaleString(undefined, { timeZoneName: "short" })}
+        </time>
       </p>
       {show.commit.parents.length > 1 && (
         <p className="mt-2 text-muted-foreground">{t("history.mergeNote")}</p>

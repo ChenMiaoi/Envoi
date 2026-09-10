@@ -519,8 +519,13 @@ export function WorkspacePanel({
                         >
                           <h3 className="text-sm font-medium">{r.title}</h3>
                           <p className="mt-2 text-xs text-muted-foreground">
-                            {r.experiment} · {new Date(r.created).toLocaleString()} ·{" "}
-                            {r.commit.slice(0, 8)}
+                            {r.experiment} ·{" "}
+                            <time dateTime={r.created} title={r.created}>
+                              {new Date(r.created).toLocaleString(undefined, {
+                                timeZoneName: "short",
+                              })}
+                            </time>{" "}
+                            · {r.commit.slice(0, 8)}
                           </p>
                           <p className="mt-3 whitespace-pre-wrap text-xs leading-6">{r.summary}</p>
                           {r.command && (
