@@ -129,6 +129,11 @@ try {
   page = await launch()
   await page.getByRole("button", { name: "限制模式", exact: true }).waitFor()
   assert.equal(await page.getByRole("dialog").count(), 0)
+  await page.getByRole("textbox", { name: "LaTeX 正文编辑器", exact: true }).waitFor()
+  await page.waitForFunction(
+    async (root) => (await window.envoi.fsRead(root, "main.tex")).text === "Manual edit",
+    root,
+  )
   assert.equal(
     (await page.evaluate((root) => window.envoi.fsRead(root, "main.tex"), root)).text,
     "Manual edit",
