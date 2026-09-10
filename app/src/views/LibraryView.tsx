@@ -19,6 +19,8 @@ import { paperLibrary, importLibraryFiles } from "@/lib/paperLibrary"
 import { encodeNative } from "@/lib/localData"
 import { enrichPaper, extractPdfText, lookupPaperIdentifier } from "@/lib/metadataLookup"
 import { TexCompilePreview } from "@/components/TexCompilePreview"
+import { PaperSearchPanel } from "@/components/PaperSearchPanel"
+import { PaperBrowsePanel } from "@/components/PaperBrowsePanel"
 import { MarkdownEditor } from "@/components/MarkdownEditor"
 import { ChatPanel } from "@/components/ChatPanel"
 import {
@@ -568,6 +570,8 @@ export function LibraryView() {
     [busy, setBusy] = useState(false)
   const [exportNotice, setExportNotice] = useState("")
   const [sourceOpen, setSourceOpen] = useState(false)
+  const [mode, setMode] = useState<"library" | "search" | "browse">("library")
+  const [browseVisited, setBrowseVisited] = useState(false)
   const [sourceUrl, setSourceUrl] = useState("")
   const input = useRef<HTMLInputElement>(null),
     selectionClock = useRef(Date.now())
@@ -666,21 +670,61 @@ export function LibraryView() {
   const groups = [...new Set(index?.papers.map((p) => p.collection || "未分类") ?? [])]
   return (
     <div className="flex h-full flex-col" data-testid="research-library">
-      <header className="flex h-11 shrink-0 items-center gap-3 border-b px-4 text-xs">
-        <strong>论文库</strong>
+      <header className="flex h-12 shrink-0 items-center gap-3 border-b border-border/70 bg-card/30 px-4 text-xs">
+        <nav
+          aria-label="论文库视图"
+          className="flex rounded-lg border border-border/70 bg-secondary/50 p-0.5"
+        >
+          {(
+            [
+              ["library", "论文库"],
+              ["search", "在线搜索"],
+              ["browse", "网页浏览"],
+            ] as const
+          ).map(([id, label]) => (
+            <button
+              key={id}
+              data-testid={`library-mode-${id}`}
+              className={`rounded-md px-3 py-1.5 transition-colors ${
+                mode === id
+                  ? "bg-background font-medium text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+              onClick={() => {
+                setMode(id)
+                if (id === "browse") setBrowseVisited(true)
+              }}
+            >
+              {label}
+            </button>
+          ))}
+        </nav>
         <span className="mr-auto text-muted-foreground">
           {index?.papers.length ?? 0} 篇 · 与 papers/ 双向同步
         </span>
-        <button disabled={busy} onClick={() => setSourceOpen((value) => !value)}>
+        <button
+          className="rounded-md px-2 py-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:opacity-50"
+          disabled={busy}
+          onClick={() => setSourceOpen((value) => !value)}
+        >
           URL / DOI
         </button>
-        <button disabled={busy} onClick={() => input.current?.click()}>
+        <button
+          className="rounded-md px-2 py-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:opacity-50"
+          disabled={busy}
+          onClick={() => input.current?.click()}
+        >
           {t("library.addPaper")}
         </button>
-        <button disabled={busy} onClick={() => void importPapers(true)}>
+        <button
+          className="rounded-md px-2 py-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:opacity-50"
+          disabled={busy}
+          onClick={() => void importPapers(true)}
+        >
           从旧论文库导入
         </button>
         <button
+          className="rounded-md px-2 py-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:opacity-50"
           disabled={busy}
           title="导出当前研究的全部文献、PDF 附件、笔记与会话"
           onClick={async () => {
@@ -797,76 +841,91 @@ export function LibraryView() {
       {exportNotice && <Notification message={exportNotice} kind="success" />}
       {error && <Notification message={error} kind={"error"} />}
       <div className="min-h-0 flex-1">
-        <Group orientation="horizontal">
-          <Panel defaultSize="20%" minSize="150px" maxSize="35%">
-            <nav className="h-full overflow-auto bg-card/40 p-3">
-              <input
-                aria-label="搜索研究论文"
-                className={field + " mb-3 w-full"}
-                placeholder="搜索标题、作者、标签…"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-              />
-              {groups.map((group) => (
-                <details open key={group} className="mb-3">
-                  <summary className="cursor-pointer py-2 text-xs font-medium">{group}</summary>
-                  {index?.papers
-                    .filter(
-                      (p) =>
-                        (p.collection || "未分类") === group &&
-                        [p.title, p.author, ...p.tags]
-                          .join(" ")
-                          .toLowerCase()
-                          .includes(query.toLowerCase()),
-                    )
-                    .map((p) => (
-                      <button
-                        key={p.id}
-                        className={`mb-1 w-full rounded p-2 text-left text-xs leading-5 ${selected === p.id ? "bg-accent text-primary" : "hover:bg-secondary"}`}
-                        onClick={() => {
-                          setSelected(p.id)
-                          void researchLibrary(root, {
-                            action: "select",
-                            paperId: p.id,
-                            selectedAt: (selectionClock.current = Math.max(
-                              Date.now(),
-                              selectionClock.current + 1,
-                            )),
-                          }).catch(notice)
-                        }}
-                      >
-                        {p.title}
-                        <span className="mt-1 block text-[10px] text-muted-foreground">
-                          {p.year || "年份待核对"} · {p.attachmentPath ?? "无附件"}
-                        </span>
-                      </button>
-                    ))}
-                </details>
-              ))}
-              {!index?.papers.length && (
-                <p className="py-6 text-xs leading-6 text-muted-foreground">
-                  {t("library.startImport")}
-                </p>
-              )}
-            </nav>
-          </Panel>
-          <Handle />
-          <Panel minSize="50%">
-            {visited.map((id) => {
-              const paper = index?.papers.find((p) => p.id === id)
-              return paper ? (
-                <section key={id} hidden={selected !== id} className="h-full">
-                  <PaperWorkspace
-                    root={root}
-                    paper={paper}
-                    active={selected === id}
-                    onChanged={() => void load()}
+        <div className="h-full" hidden={mode === "browse"}>
+          {mode === "search" ? (
+            <PaperSearchPanel
+              root={root}
+              papers={index?.papers ?? []}
+              onImported={() => void load()}
+            />
+          ) : (
+            <Group orientation="horizontal">
+              <Panel defaultSize="20%" minSize="150px" maxSize="35%">
+                <nav className="h-full overflow-auto bg-card/40 p-3">
+                  <input
+                    aria-label="搜索研究论文"
+                    className={field + " mb-3 w-full"}
+                    placeholder="搜索标题、作者、标签…"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
                   />
-                </section>
-              ) : null
-            })}
-          </Panel>
-        </Group>
+                  {groups.map((group) => (
+                    <details open key={group} className="mb-3">
+                      <summary className="cursor-pointer py-2 text-xs font-medium">{group}</summary>
+                      {index?.papers
+                        .filter(
+                          (p) =>
+                            (p.collection || "未分类") === group &&
+                            [p.title, p.author, ...p.tags]
+                              .join(" ")
+                              .toLowerCase()
+                              .includes(query.toLowerCase()),
+                        )
+                        .map((p) => (
+                          <button
+                            key={p.id}
+                            className={`mb-1 w-full rounded p-2 text-left text-xs leading-5 ${selected === p.id ? "bg-accent text-primary" : "hover:bg-secondary"}`}
+                            onClick={() => {
+                              setSelected(p.id)
+                              void researchLibrary(root, {
+                                action: "select",
+                                paperId: p.id,
+                                selectedAt: (selectionClock.current = Math.max(
+                                  Date.now(),
+                                  selectionClock.current + 1,
+                                )),
+                              }).catch(notice)
+                            }}
+                          >
+                            {p.title}
+                            <span className="mt-1 block text-[10px] text-muted-foreground">
+                              {p.year || "年份待核对"} · {p.attachmentPath ?? "无附件"}
+                            </span>
+                          </button>
+                        ))}
+                    </details>
+                  ))}
+                  {!index?.papers.length && (
+                    <p className="py-6 text-xs leading-6 text-muted-foreground">
+                      {t("library.startImport")}
+                    </p>
+                  )}
+                </nav>
+              </Panel>
+              <Handle />
+              <Panel minSize="50%">
+                {visited.map((id) => {
+                  const paper = index?.papers.find((p) => p.id === id)
+                  return paper ? (
+                    <section key={id} hidden={selected !== id} className="h-full">
+                      <PaperWorkspace
+                        root={root}
+                        paper={paper}
+                        active={selected === id}
+                        onChanged={() => void load()}
+                      />
+                    </section>
+                  ) : null
+                })}
+              </Panel>
+            </Group>
+          )}
+        </div>
+        {browseVisited && (
+          <div className="h-full" hidden={mode !== "browse"}>
+            <PaperBrowsePanel root={root} papers={index?.papers ?? []} />
+          </div>
+        )}
       </div>
     </div>
   )

@@ -88,6 +88,14 @@ const ja: Messages = {
   "settings.logs.exported": "診断ログをエクスポートしました。",
   "settings.logs.failed":
     "ログを開くかエクスポートできません。フォルダーの権限と空き容量を確認してください。",
+  "settings.search.title": "オンライン論文検索",
+  "settings.search.hint":
+    "任意。個人の Semantic Scholar API キーを設定すると専用のレート制限が適用され、連絡先メールを設定すると OpenAlex／Crossref の polite pool に入れます。この端末にのみ保存されます。",
+  "settings.search.keyAria": "Semantic Scholar API キー",
+  "settings.search.keyPlaceholder": "Semantic Scholar API キー（任意）",
+  "settings.search.emailAria": "連絡先メールアドレス",
+  "settings.search.emailPlaceholder": "API polite pool 用の連絡先メール（任意）",
+  "settings.search.saved": "検索設定を保存しました。",
   "settings.update.hint": "インストーラーをダウンロードして更新します。",
   "settings.update.check": "更新を確認",
   "settings.update.busy": "お待ちください…",

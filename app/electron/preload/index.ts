@@ -42,6 +42,14 @@ const bridge: EnvoiBridge = {
 
   tools: () => invoke("envoi:tools"),
   configureTools: (input) => invoke("envoi:configure-tools", input),
+  paperSearchConfig: () => invoke("envoi:paper-search-config"),
+  configurePaperSearch: (input) => invoke("envoi:configure-paper-search", input),
+  bindPaperBrowse: (root) => invoke("envoi:paper-browse", root),
+  onBrowseImported: (cb) => {
+    const listener = (_event: unknown, payload: { title?: string; error?: string }) => cb(payload)
+    ipcRenderer.on("envoi:browse-imported", listener)
+    return () => ipcRenderer.removeListener("envoi:browse-imported", listener)
+  },
 
   gitRuntime: () => invoke("envoi:git-runtime"),
   gitInit: (directory) => invoke("envoi:git-init", directory),

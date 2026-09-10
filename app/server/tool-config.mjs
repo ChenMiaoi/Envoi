@@ -162,3 +162,37 @@ export async function configureTools(input) {
   })
   return toolInfo()
 }
+const paperSearchPath = path.join(homedir(), ".config/envoi/paper-search.json")
+// 在线论文检索的用户级配置：个人 API Key 与联系邮箱（polite pool）。
+// 独立文件存放，避免 configureTools 重写 tools.json 时丢失。
+export function paperSearchConfig(file = paperSearchPath) {
+  try {
+    const value = JSON.parse(readFileSync(file, "utf8"))
+    return {
+      semanticScholarKey:
+        typeof value.semanticScholarKey === "string" ? value.semanticScholarKey : "",
+      contactEmail: typeof value.contactEmail === "string" ? value.contactEmail : "",
+    }
+  } catch {
+    return { semanticScholarKey: "", contactEmail: "" }
+  }
+}
+export async function configurePaperSearch(input, file = paperSearchPath) {
+  if (
+    !input ||
+    Object.keys(input).some((key) => !["semanticScholarKey", "contactEmail"].includes(key))
+  )
+    throw Error("Unsupported paper search configuration")
+  const key = String(input.semanticScholarKey ?? "").trim(),
+    email = String(input.contactEmail ?? "").trim()
+  if (key && !/^[\w-]{1,200}$/.test(key)) throw Error("Semantic Scholar API Key 格式无效")
+  if (email && !/^[^\s@]{1,100}@[^\s@]{1,100}\.[^\s@]{1,100}$/.test(email))
+    throw Error("联系邮箱格式无效")
+  await mkdir(path.dirname(file), { recursive: true })
+  await writeFile(
+    file,
+    JSON.stringify({ semanticScholarKey: key, contactEmail: email }, null, 2) + "\n",
+    { mode: 0o600 },
+  )
+  return paperSearchConfig(file)
+}

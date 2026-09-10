@@ -4,6 +4,7 @@ import { SettingsRow as Row } from "@/settings/SettingsRow"
 import { AiSettingsView } from "@/settings/AiSettingsView"
 import { UpdateSettings } from "@/settings/UpdateSettings"
 import { DiagnosticsSettings } from "@/settings/DiagnosticsSettings"
+import { PaperSearchSettings } from "@/settings/PaperSearchSettings"
 import { notify } from "@/lib/notifications"
 import { Notification } from "@/components/Notification"
 import { ShortcutsView } from "@/settings/ShortcutsView"
@@ -698,6 +699,7 @@ export function SettingsView() {
                 {global && category === "compile" && <LocalTools />}
                 {global && category === "general" && <UpdateSettings />}
                 {global && category === "general" && <DiagnosticsSettings />}
+                {global && category === "references" && <PaperSearchSettings />}
               </>
             )}
           </div>

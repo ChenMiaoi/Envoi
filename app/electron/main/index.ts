@@ -1,4 +1,5 @@
 import { downloadPaper } from "../../server/paper-download.mjs"
+import { searchPapers } from "../../server/paper-search.mjs"
 import { restrictedPath } from "./restricted-path.mjs"
 import { diagnostics, operationContext } from "./diagnostics"
 import { randomUUID } from "node:crypto"
@@ -17,8 +18,12 @@ import {
   renameWorkspace,
   workspaceProjectName,
 } from "../../server/workspaces.mjs"
-import { toolDirectories } from "../../server/tool-config.mjs"
-import { app, BrowserWindow, dialog, ipcMain, Menu, protocol, shell } from "electron"
+import {
+  toolDirectories,
+  paperSearchConfig,
+  configurePaperSearch,
+} from "../../server/tool-config.mjs"
+import { app, BrowserWindow, dialog, ipcMain, Menu, protocol, session, shell } from "electron"
 import { randomBytes } from "node:crypto"
 import { mkdir, readdir, readFile, writeFile, stat, realpath, rename, rm } from "node:fs/promises"
 import path from "node:path"
@@ -310,6 +315,7 @@ function registerIpc(): void {
     root = await requireBoundRoot(root)
     await requireBoundRoot(await researchRoot(root))
     if (input.action === "download-pdf") return downloadPaper(input.url)
+    if (input.action === "paper-search") return searchPapers(input)
     if (input.action === "export-file") {
       const owner = BrowserWindow.fromWebContents(event.sender)
       if (!owner) throw Error("Window unavailable")
@@ -323,6 +329,13 @@ function registerIpc(): void {
       return { saved: true, path: result.filePath }
     }
     return libraryRequest(root, input)
+  })
+  handle("envoi:paper-browse", async (event, root: string) => {
+    root = await requireBoundRoot(root)
+    await requireBoundRoot(await researchRoot(root))
+    browseRoots.set(event.sender.id, root)
+    event.sender.once("destroyed", () => browseRoots.delete(event.sender.id))
+    return { ok: true }
   })
   handle(
     "envoi:workspaces",
@@ -485,6 +498,8 @@ function registerIpc(): void {
     await requireToolContext(event)
     return toolsBackend.call("tools")
   })
+  handle("envoi:paper-search-config", () => paperSearchConfig())
+  handle("envoi:configure-paper-search", (_event, input: unknown) => configurePaperSearch(input))
   handle("envoi:configure-tools", async (event, input: { chktexPath: string | null }) => {
     await requireToolContext(event)
     return toolsBackend.call("configureTools", [input])
@@ -763,6 +778,70 @@ function registerIpc(): void {
   })
 }
 
+// ── 内置论文浏览：独立持久会话（persist:paperbrowse），PDF 下载直接入库 ──
+const browseRoots = new Map<number, string>()
+function setupPaperBrowse(): void {
+  const browse = session.fromPartition("persist:paperbrowse")
+  const owner = () => BrowserWindow.getAllWindows()[0]
+  const notify = (payload: { title?: string; error?: string }) =>
+    owner()?.webContents.send("envoi:browse-imported", payload)
+  const pdfName = (name: string) =>
+    name
+      .replace(/\.pdf$/i, "")
+      .replace(/[_-]+/g, " ")
+      .trim() || "网页下载论文"
+  // Electron 内置 PDF 查看器会渲染导航到的 PDF（不触发 will-download）；
+  // 在导航层拦截 .pdf 链接直接入库，其余强制下载走 will-download。
+  const pdfUrl = (url: string) => /^https:\/\/[^\s]+\.pdf([?#].*)?$/i.test(url)
+  app.on("web-contents-created", (_event, contents) => {
+    if (contents.session !== browse) return
+    contents.setWindowOpenHandler(({ url }) => {
+      if (/^https?:\/\//i.test(url)) void shell.openExternal(url)
+      return { action: "deny" }
+    })
+    contents.on("will-navigate", (event, url) => {
+      if (!pdfUrl(url) || !browseRoots.get(owner()?.webContents.id ?? -1)) return
+      event.preventDefault()
+      void downloadPaper(url)
+        .then(async (file) => {
+          await libraryRequest(browseRoots.get(owner()!.webContents.id)!, {
+            action: "import",
+            papers: [{ title: pdfName(file.name), attachment: { $blob: file.base64 } }],
+          })
+          notify({ title: file.name })
+        })
+        .catch((error: Error) => notify({ error: error.message }))
+    })
+  })
+  browse.on("will-download", (_event, item) => {
+    const name = item.getFilename() || "paper.pdf"
+    if (item.getMimeType() !== "application/pdf" && !/\.pdf$/i.test(name)) return
+    const window = owner()
+    const root = window ? browseRoots.get(window.webContents.id) : undefined
+    if (!window || !root) return // 未绑定论文库时走系统默认保存
+    const savePath = path.join(app.getPath("temp"), `envoi-browse-${randomUUID()}.pdf`)
+    item.setSavePath(savePath)
+    item.once("done", (_done, state) => {
+      void (async () => {
+        try {
+          if (state !== "completed") return
+          const bytes = await readFile(savePath)
+          if (!bytes.subarray(0, 1024).includes(Buffer.from("%PDF-")))
+            throw Error("下载内容不是 PDF")
+          await libraryRequest(root, {
+            action: "import",
+            papers: [{ title: pdfName(name), attachment: { $blob: bytes.toString("base64") } }],
+          })
+          notify({ title: name })
+        } catch (error) {
+          notify({ error: (error as Error).message })
+        } finally {
+          await rm(savePath, { force: true }).catch(() => {})
+        }
+      })()
+    })
+  })
+}
 // ── 窗口 ──
 
 function createWindow(): void {
@@ -784,6 +863,7 @@ function createWindow(): void {
       contextIsolation: true,
       sandbox: true,
       nodeIntegration: false,
+      webviewTag: true,
     },
   })
   window.webContents.on("render-process-gone", (_event, details) =>
@@ -824,10 +904,10 @@ function createWindow(): void {
   if (process.env.ELECTRON_RENDERER_URL) void window.loadURL(process.env.ELECTRON_RENDERER_URL)
   else void window.loadFile(path.join(import.meta.dirname, "../renderer/index.html"))
 }
-
 void app.whenReady().then(() => {
   if (process.platform !== "darwin") Menu.setApplicationMenu(null)
   protocol.handle("envoi", handleAsset)
+  setupPaperBrowse()
   registerIpc()
   diagnostics.write("info", "main", "app.started")
   createWindow()
