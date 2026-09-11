@@ -45,7 +45,9 @@ function restore(text, tokens) {
 }
 
 function render(name, pairs) {
-  const lines = pairs.map(([key, value]) => ` '${key}':'${value.replace(/'/g, "\\'")}'`)
+  const lines = pairs.map(
+    ([key, value]) => ` '${key}':'${value.replace(/\\/g, "\\\\").replace(/'/g, "\\'")}'`,
+  )
   return `/** 由 scripts/i18n-traditional.mjs 从 zh-CN.ts 自动生成（OpenCC）。术语覆盖请修改该脚本，勿手改本文件。 */\nimport type {Messages} from './zh-CN';\nconst ${name}: Messages = {\n${lines.join(",\n")},\n};\nexport default ${name};\n`
 }
 

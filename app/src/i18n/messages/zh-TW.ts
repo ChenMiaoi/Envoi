@@ -548,7 +548,7 @@ const zhTW: Messages = {
   "tree.deleteConfirm": "將刪除檔案 {name}，此操作不可撤銷。",
   "tree.deleteFolderConfirm": "將刪除目錄 {name} 及其中全部內容，此操作不可撤銷。",
   "tree.namePlaceholder": "輸入名稱",
-  "tree.invalidName": "名稱不能為空，且不能包含 / 或 \。",
+  "tree.invalidName": "名稱不能為空，且不能包含 / 或 \\。",
   "tab.close": "關閉",
   "tab.closeOthers": "關閉其他標籤",
   "tab.closeAll": "關閉所有標籤",
