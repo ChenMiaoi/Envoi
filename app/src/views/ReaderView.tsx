@@ -8,6 +8,20 @@ import {
   ResizableHandle as PanelResizeHandle,
 } from "@/components/ui/resizable"
 import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu"
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import {
   X,
   BookMarked,
   FileText,
@@ -18,15 +32,15 @@ import {
   MessageSquareText,
   Eye,
   Code2,
+  Pin,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { type FileNode } from "@/data/workspace"
 import { useProject } from "@/project/context"
-import { projectTree } from "@/lib/projectFiles"
+import { createTextFile, fileKind, projectTree } from "@/lib/projectFiles"
 import { TexCompilePreview } from "@/components/TexCompilePreview"
-import { FileTree } from "@/components/FileTree"
+import { FileTree, type TreeMenuAction } from "@/components/FileTree"
 import { ChatPanel } from "@/components/ChatPanel"
-import { fileKind } from "@/lib/projectFiles"
 import { DelimitedEditor } from "@/components/DelimitedEditor"
 import { MarkdownEditor } from "@/components/MarkdownEditor"
 import { LatexViewer, BibViewer, ViewerBadge, MarkdownViewer } from "@/components/viewers"
@@ -110,10 +124,92 @@ export function ReaderView({
     onActive(n.id)
   }
 
+  const [pinned, setPinned] = useState<string[]>([])
+  const [treeAction, setTreeAction] = useState<{ action: TreeMenuAction; node: FileNode } | null>(
+    null,
+  )
   const close = (id: string) => {
+    setPinned((list) => list.filter((item) => item !== id))
     const rest = openFiles.filter((f) => f.id !== id)
     onOpenFiles(rest)
     if (activeId === id && rest.length) onActive(rest[rest.length - 1].id)
+  }
+
+  const [actionName, setActionName] = useState("")
+  const togglePin = (id: string) => {
+    const target = openFiles.find((f) => f.id === id)
+    if (!target) return
+    const pinning = !pinned.includes(id),
+      nextPinned = pinning ? [...pinned, id] : pinned.filter((item) => item !== id),
+      rest = openFiles.filter((f) => f.id !== id)
+    onOpenFiles([
+      ...rest.filter((f) => nextPinned.includes(f.id)),
+      target,
+      ...rest.filter((f) => !nextPinned.includes(f.id)),
+    ])
+    setPinned(nextPinned)
+  }
+  const closeOthers = (keepId: string) => {
+    onOpenFiles(openFiles.filter((f) => f.id === keepId || pinned.includes(f.id)))
+    onActive(keepId)
+  }
+  const closeAll = () => {
+    const rest = openFiles.filter((f) => pinned.includes(f.id))
+    onOpenFiles(rest)
+    if (activeId && !rest.some((f) => f.id === activeId) && rest.length)
+      onActive(rest[rest.length - 1].id)
+  }
+
+  const treePath = (node: FileNode) => (node.id === "project-root" ? "" : node.id)
+  const onTreeMenu = (action: TreeMenuAction, node: FileNode) => {
+    setActionName(action === "rename" ? node.name : "")
+    setTreeAction({ action, node })
+  }
+  const runTreeAction = async () => {
+    if (!treeAction || !project.rootPath) return
+    const { action, node } = treeAction,
+      path = treePath(node),
+      rootPath = project.rootPath
+    try {
+      if (action === "delete") {
+        await envoi().fsRemove(rootPath, path)
+        const rest = openFiles.filter((f) => f.id !== path && !f.id.startsWith(path + "/"))
+        onOpenFiles(rest)
+        if (activeId && (activeId === path || activeId.startsWith(path + "/")) && rest.length)
+          onActive(rest[rest.length - 1].id)
+      } else {
+        const name = actionName.trim()
+        if (!name || /[/\\]/.test(name) || name === "." || name === "..") {
+          setMessage(t("tree.invalidName"))
+          return
+        }
+        const dir =
+            action === "rename" ? path.split("/").slice(0, -1).join("/") : node.kind === "folder" ? path : path.split("/").slice(0, -1).join("/"),
+          target = dir ? `${dir}/${name}` : name
+        if (action === "new-file") {
+          await createTextFile(rootPath, target, "")
+          openNode({ id: target, name, kind: fileKind(target) })
+        } else if (action === "new-folder") {
+          await envoi().fsMkdir(rootPath, target)
+        } else {
+          await envoi().fsRename(rootPath, path, target)
+          onOpenFiles(
+            openFiles.map((f) =>
+              f.id === path
+                ? { ...f, id: target, name }
+                : f.id.startsWith(path + "/")
+                  ? { ...f, id: target + f.id.slice(path.length) }
+                  : f,
+            ),
+          )
+          if (activeId === path) onActive(target)
+          else if (activeId?.startsWith(path + "/")) onActive(target + activeId.slice(path.length))
+        }
+      }
+      setTreeAction(null)
+    } catch (error) {
+      setMessage((error as Error).message)
+    }
   }
 
   useEffect(() => {
@@ -148,7 +244,8 @@ export function ReaderView({
   }, [openFiles, activeId, onOpenFiles, onActive])
 
   return (
-    <PanelGroup orientation="horizontal" className="h-full">
+    <>
+      <PanelGroup orientation="horizontal" className="h-full">
       {/* 左：目录树 */}
       {showTree && (
         <Panel defaultSize="18%" minSize="14%" maxSize="30%" className="bg-card">
@@ -169,6 +266,7 @@ export function ReaderView({
                 nodes={fileTree}
                 activeId={activeId}
                 onOpen={openNode}
+                onMenu={project.rootPath ? onTreeMenu : undefined}
               />
             </div>
           </div>
@@ -188,37 +286,68 @@ export function ReaderView({
                 const Icon = tabIcon[f.kind] ?? FileText
                 const isActive = f.id === activeId
                 return (
-                  <div
-                    key={f.id}
-                    onClick={() => (f.kind === "latex" ? onTex(f.id) : onActive(f.id))}
-                    ref={(el) => {
-                      if (isActive) el?.scrollIntoView({ block: "nearest", inline: "nearest" })
-                    }}
-                    className={cn(
-                      "group flex cursor-pointer select-none items-center gap-1.5 border-r border-border px-3 text-[12px]",
-                      isActive
-                        ? "bg-background text-foreground shadow-[inset_0_2px_0_0_hsl(var(--primary))]"
-                        : "text-muted-foreground hover:bg-secondary/60",
-                    )}
-                  >
-                    <Icon className="h-3.5 w-3.5" strokeWidth={1.8} />
-                    <span className="whitespace-nowrap">
-                      {f.name}
-                      {project.files.find((file) => file.id === f.id)?.text !==
-                      project.files.find((file) => file.id === f.id)?.saved
-                        ? " · " + t("reader.unsaved")
-                        : ""}
-                    </span>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        close(f.id)
-                      }}
-                      className="rounded p-0.5 opacity-0 transition-opacity hover:bg-accent group-hover:opacity-100"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </div>
+                  <ContextMenu key={f.id}>
+                    <ContextMenuTrigger asChild>
+                      <div
+                        onClick={() => (f.kind === "latex" ? onTex(f.id) : onActive(f.id))}
+                        ref={(el) => {
+                          if (isActive) el?.scrollIntoView({ block: "nearest", inline: "nearest" })
+                        }}
+                        className={cn(
+                          "group flex cursor-pointer select-none items-center gap-1.5 border-r border-border px-3 text-[12px]",
+                          isActive
+                            ? "bg-background text-foreground shadow-[inset_0_2px_0_0_hsl(var(--primary))]"
+                            : "text-muted-foreground hover:bg-secondary/60",
+                        )}
+                      >
+                        <Icon className="h-3.5 w-3.5" strokeWidth={1.8} />
+                        <span className="whitespace-nowrap">
+                          {f.name}
+                          {project.files.find((file) => file.id === f.id)?.text !==
+                          project.files.find((file) => file.id === f.id)?.saved
+                            ? " · " + t("reader.unsaved")
+                            : ""}
+                        </span>
+                        {pinned.includes(f.id) ? (
+                          <Pin
+                            aria-label={t("tab.pinned")}
+                            className="h-3 w-3 shrink-0 text-muted-foreground"
+                          />
+                        ) : (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              close(f.id)
+                            }}
+                            className="rounded p-0.5 opacity-0 transition-opacity hover:bg-accent group-hover:opacity-100"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        )}
+                      </div>
+                    </ContextMenuTrigger>
+                    <ContextMenuContent className="w-44">
+                      <ContextMenuItem onSelect={() => close(f.id)}>
+                        {t("tab.close")}
+                      </ContextMenuItem>
+                      <ContextMenuItem
+                        disabled={openFiles.length <= pinned.length + 1}
+                        onSelect={() => closeOthers(f.id)}
+                      >
+                        {t("tab.closeOthers")}
+                      </ContextMenuItem>
+                      <ContextMenuItem
+                        disabled={openFiles.length <= pinned.length}
+                        onSelect={closeAll}
+                      >
+                        {t("tab.closeAll")}
+                      </ContextMenuItem>
+                      <ContextMenuSeparator />
+                      <ContextMenuItem onSelect={() => togglePin(f.id)}>
+                        {pinned.includes(f.id) ? t("tab.unpin") : t("tab.pin")}
+                      </ContextMenuItem>
+                    </ContextMenuContent>
+                  </ContextMenu>
                 )
               })}
             </div>
@@ -451,6 +580,66 @@ export function ReaderView({
           />
         </Panel>
       )}
-    </PanelGroup>
+      </PanelGroup>
+      <Dialog open={!!treeAction} onOpenChange={(open) => !open && setTreeAction(null)}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>
+              {treeAction?.action === "delete"
+                ? t("tree.deleteTitle", { name: treeAction.node.name })
+                : treeAction?.action === "rename"
+                  ? t("tree.renameTitle", { name: treeAction.node.name })
+                  : treeAction?.action === "new-folder"
+                    ? t("tree.newFolder")
+                    : t("tree.newFile")}
+            </DialogTitle>
+          </DialogHeader>
+          {treeAction?.action === "delete" ? (
+            <p className="text-sm text-muted-foreground">
+              {t(
+                treeAction.node.kind === "folder"
+                  ? "tree.deleteFolderConfirm"
+                  : "tree.deleteConfirm",
+                { name: treeAction.node.name },
+              )}
+            </p>
+          ) : (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault()
+                void runTreeAction()
+              }}
+            >
+              <input
+                autoFocus
+                value={actionName}
+                onChange={(e) => setActionName(e.target.value)}
+                placeholder={t("tree.namePlaceholder")}
+                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
+              />
+            </form>
+          )}
+          <DialogFooter>
+            <button
+              onClick={() => setTreeAction(null)}
+              className="rounded border border-border px-3 py-1.5 text-xs hover:bg-secondary"
+            >
+              {t("common.cancel")}
+            </button>
+            <button
+              onClick={() => void runTreeAction()}
+              className={cn(
+                "rounded px-3 py-1.5 text-xs",
+                treeAction?.action === "delete"
+                  ? "border border-danger/40 text-danger hover:bg-danger/10"
+                  : "bg-primary text-primary-foreground",
+              )}
+            >
+              {t("common.confirm")}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }
