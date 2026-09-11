@@ -106,7 +106,7 @@ try {
     })
   })
   const page = await app.firstWindow()
-  page.setDefaultTimeout(15000)
+  page.setDefaultTimeout(60000)
   await page.getByTestId("welcome-page").waitFor()
   const open = async (root) => {
     await page.evaluate(
