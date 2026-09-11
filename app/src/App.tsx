@@ -241,7 +241,7 @@ function ProjectApp() {
             : `relative flex h-11 shrink-0 items-center ${mac ? "window-drag pl-[80px]" : windows ? "window-drag pr-[150px]" : ""}`
         }
       >
-        <div className="flex min-w-0 items-center gap-2 pl-3.5">
+        <div className="relative z-10 flex min-w-0 items-center gap-2 pl-3.5">
           <div className="shrink-0">
             <ProjectMenu />
           </div>
