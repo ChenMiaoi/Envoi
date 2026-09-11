@@ -66,7 +66,7 @@ try {
   await page.getByTestId("welcome-page").waitFor()
   await page.getByRole("button", { name: /打开示例项目/ }).click()
   await page.getByRole("button", { name: "main.tex", exact: true }).waitFor()
-  const menu = page.getByRole("button", { name: "选择模型", exact: true })
+  const menu = page.locator('[data-picker="model"]')
   await menu.click()
   await page.getByText("正在获取模型列表…", { exact: true }).waitFor()
   await page.getByRole("button", { name: "Fixture discovered model", exact: true }).waitFor()
