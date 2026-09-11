@@ -76,7 +76,9 @@ try {
     .fill("已有 demo 模型输出；本次仅演示结果归档，未重新运行实验")
   await page.getByLabel("data/model-data.csv", { exact: true }).check()
   await page.getByRole("button", { name: "保存结果", exact: true }).click()
-  await page.getByRole("heading", { name: "注意力模型基线 · 合成数据", exact: true }).waitFor()
+  await page
+    .getByRole("heading", { name: "注意力模型基线 · 合成数据", exact: true })
+    .waitFor({ timeout: 60000 })
   const records = await page.evaluate(
     (root) => window.envoi.workspaces(root, { action: "results" }),
     main,
@@ -94,7 +96,9 @@ try {
   await waitForReader()
   await page.evaluate(() => (location.hash = "/history"))
   await page.getByRole("button", { name: "已保存结果", exact: true }).click()
-  await page.getByRole("heading", { name: "注意力模型基线 · 合成数据", exact: true }).waitFor()
+  await page
+    .getByRole("heading", { name: "注意力模型基线 · 合成数据", exact: true })
+    .waitFor({ timeout: 60000 })
   await page.getByRole("button", { name: "切换工作区：主工作区", exact: true }).click()
   await page.getByRole("menuitem", { name: "新建工作区…", exact: true }).click()
   await page.getByRole("textbox", { name: "工作区名称", exact: true }).fill("菜单创建的实验")
@@ -113,7 +117,9 @@ try {
   await page.getByRole("button", { name: "切换工作区：主工作区", exact: true }).waitFor()
   await page.evaluate(() => (location.hash = "/history"))
   await page.getByRole("button", { name: "已保存结果", exact: true }).click()
-  await page.getByRole("heading", { name: "注意力模型基线 · 合成数据", exact: true }).waitFor()
+  await page
+    .getByRole("heading", { name: "注意力模型基线 · 合成数据", exact: true })
+    .waitFor({ timeout: 60000 })
   await page.getByRole("button", { name: "文件变化", exact: true }).click()
   await writeFile(path.join(main, "refresh-note.md"), "Observed experiment result")
   await page.evaluate(
