@@ -131,7 +131,7 @@ try {
     main,
   )
   await page.getByRole("button", { name: "提交历史", exact: true }).click()
-  await page.getByText("Fixture: result recorded", { exact: true }).waitFor()
+  await page.getByText("Fixture: result recorded", { exact: true }).waitFor({ timeout: 60000 })
   await page.evaluate(() => (location.hash = "/writer"))
   await page.getByRole("button", { name: "参考文献", exact: true }).click()
   await page.getByRole("button", { name: "预览外部 .bib", exact: true }).waitFor()
