@@ -577,6 +577,7 @@ export function ProjectMenu() {
                       mode === "new"
                         ? await createPaper(location, name.trim(), template, enableGit)
                         : location
+                    setMode(null)
                     await activate(rootPath)
                     if (mode === "new" && enableGit) {
                       try {
@@ -588,7 +589,6 @@ export function ProjectMenu() {
                         )
                       }
                     }
-                    setMode(null)
                   }
                 })
               }
