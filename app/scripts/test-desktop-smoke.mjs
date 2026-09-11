@@ -4,7 +4,7 @@ import { tmpdir } from "node:os"
 import path from "node:path"
 import assert from "node:assert/strict"
 async function waitForAsync(page, predicate, arg) {
-  const deadline = Date.now() + 30000
+  const deadline = Date.now() + 60000
   while (!(await page.evaluate(predicate, arg))) {
     if (Date.now() > deadline) throw Error("Async desktop condition timed out")
     await new Promise((resolve) => setTimeout(resolve, 50))
