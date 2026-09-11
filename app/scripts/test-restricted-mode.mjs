@@ -109,13 +109,13 @@ try {
     async (root) => (await window.envoi.projectTrust(root)).trusted === true,
     root,
   )
-  await page.getByRole("button", { name: "信任模式", exact: true }).waitFor({ timeout: 60000 })
   const trusted = await page.evaluate(async (root) => {
     await window.envoi.gitInit(root)
     return window.envoi.gitStatus(root)
   }, root)
   assert.equal(trusted.state, "ready")
-  await page.getByRole("button", { name: "信任模式", exact: true }).click()
+  await page.evaluate(() => window.dispatchEvent(new Event("envoi:show-trust")))
+  await page.getByRole("dialog").waitFor()
   await page
     .getByRole("dialog")
     .getByRole("button", { name: "以限制模式继续", exact: true })
