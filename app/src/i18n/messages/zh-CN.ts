@@ -763,6 +763,7 @@ export const zhCN = {
   "project.identityAria": "项目：{name}，打开项目管理",
   "project.localConnectionMenu": "项目本地连接…",
   "project.localPathAria": "所选位置的本地绝对路径",
+  "project.locationLabel": "项目位置",
   "project.localPathLabel": "所选位置的本地路径 · 首次连接本机工具时填写一次",
 
   "project.localPathPlaceholder": "已选择位置的本机绝对路径",
@@ -808,6 +809,7 @@ export const zhCN = {
   "project.saveConnection": "保存项目连接",
   "project.selectionCancelled": "已取消选择，未删除。",
   "project.templateCategoryAria": "模板分类",
+  "project.templateLabel": "论文模板",
   "project.templateCurrent": "当前：{name}。模板体系，不代表具体会议年度投稿规则。",
   "project.templateSearchAria": "搜索论文模板",
   "project.templateSearchPlaceholder": "搜索计算机论文模板…",

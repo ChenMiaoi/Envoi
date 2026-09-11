@@ -830,6 +830,7 @@ const ja: Messages = {
   "project.identityAria": "プロジェクト：{name}、プロジェクト管理を開く",
   "project.localConnectionMenu": "プロジェクトのローカル接続…",
   "project.localPathAria": "選択した場所のローカル絶対パス",
+  "project.locationLabel": "プロジェクトの場所",
   "project.localPathLabel": "選択した場所のローカルパス · ローカルツール初回接続時に一度だけ入力",
 
   "project.localPathPlaceholder": "選択した場所のローカル絶対パス",
@@ -880,6 +881,7 @@ const ja: Messages = {
   "project.saveConnection": "プロジェクト接続を保存",
   "project.selectionCancelled": "選択がキャンセルされました。削除されていません。",
   "project.templateCategoryAria": "テンプレート分類",
+  "project.templateLabel": "論文テンプレート",
   "project.templateCurrent":
     "現在：{name}。テンプレート体系であり、具体的な会議年度の投稿規則を表すものではありません。",
   "project.templateSearchAria": "論文テンプレートを検索",

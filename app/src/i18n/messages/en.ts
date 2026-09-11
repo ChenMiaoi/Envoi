@@ -810,6 +810,7 @@ const en: Messages = {
   "project.identityAria": "Project: {name}, open project management",
   "project.localConnectionMenu": "Project Local Connection…",
   "project.localPathAria": "Local absolute path of the selected location",
+  "project.locationLabel": "Project location",
   "project.localPathLabel":
     "Local path of the selected location · fill in once when first connecting local tools",
 
@@ -860,6 +861,7 @@ const en: Messages = {
   "project.saveConnection": "Save Project Connection",
   "project.selectionCancelled": "Selection cancelled; nothing was deleted.",
   "project.templateCategoryAria": "Template category",
+  "project.templateLabel": "Paper template",
   "project.templateCurrent":
     "Current: {name}. Template families only; they do not represent any conference\\'s yearly submission rules.",
   "project.templateSearchAria": "Search paper templates",

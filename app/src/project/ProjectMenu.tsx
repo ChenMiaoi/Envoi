@@ -7,7 +7,7 @@ import { ProjectManagement } from "./ProjectManagement"
 import { BrandMark } from "@/components/BrandMark"
 import { usePreferences } from "@/settings/context"
 import { useCallback, useEffect, useState } from "react"
-import { Folder, FolderOpen, ArrowUp, HardDrive, FilePlus2 } from "lucide-react"
+import { Folder, FolderOpen, ArrowUp, HardDrive, FilePlus2, Search, Check } from "lucide-react"
 import { createPaper, createTextFile, dirtyFiles, readProject } from "@/lib/projectFiles"
 import {
   authorizedRoots,
@@ -36,6 +36,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Switch } from "@/components/ui/switch"
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 export function ProjectMenu() {
   const { preferences } = usePreferences()
   const { t } = useT()
@@ -228,6 +233,14 @@ export function ProjectMenu() {
     setDiscard(false)
     setMessage("")
   }
+  const pick = () =>
+    void run(async () => {
+      const root = await envoi().pickDirectory()
+      if (!root) return
+      await browse([root])
+      await rememberRoot(root)
+      setRoots(await authorizedRoots())
+    })
   return (
     <>
       <ProjectManagement />
@@ -291,7 +304,9 @@ export function ProjectMenu() {
       >
         <DialogContent
           aria-describedby={mode === "file" ? undefined : "project-open-description"}
-          className="gap-0 overflow-hidden p-0 max-h-[90vh] overflow-y-auto sm:max-w-[850px]"
+          className={`max-h-[90vh] gap-0 overflow-hidden overflow-y-auto p-0 ${
+            mode === "open" ? "sm:max-w-[860px]" : "sm:max-w-[600px]"
+          }`}
         >
           <DialogHeader className="border-b border-border px-6 py-5">
             <DialogTitle>
@@ -308,75 +323,77 @@ export function ProjectMenu() {
             )}
           </DialogHeader>
           <div className="flex min-h-72">
-            <aside className="w-44 shrink-0 border-r border-border bg-background/40 p-3">
-              <div className="mb-2 px-2 text-xs text-muted-foreground">
-                {t("project.authorizedLocations")}
-              </div>
-              {roots.map((entry) => (
-                <button
-                  key={entry.id}
-                  disabled={busy || mode === "file" || !entry.path}
-                  className="mb-1 block w-full truncate rounded px-2 py-2 text-left text-xs hover:bg-secondary"
-                  onClick={() =>
-                    void run(async () => {
-                      await rememberRoot(entry.path!)
-                      await browse([entry.path!])
-                    })
-                  }
-                >
-                  {entry.name}
-                </button>
-              ))}
-              {!project.rootPath && (
-                <p className="mb-3 px-2 text-[10px] text-muted-foreground">
-                  {t("project.notConnectedHint")}
-                </p>
-              )}
-              <div className="mb-3 flex items-center gap-2 px-2 text-xs text-muted-foreground">
-                <HardDrive className="h-3.5 w-3.5" />
-                {t("project.recentHeading")}
-              </div>
-              {!recent.length && (
-                <p className="px-2 text-xs text-muted-foreground">{t("project.noRecent")}</p>
-              )}
-              {recent.map((entry) => (
-                <button
-                  key={entry.id}
-                  disabled={busy || mode === "file" || !entry.path}
-                  className="mb-1 flex w-full items-center gap-2 rounded px-2 py-2 text-left text-xs hover:bg-secondary disabled:opacity-40"
-                  onClick={() =>
-                    void run(async () => {
-                      await browse([entry.path!])
-                    })
-                  }
-                >
-                  <Folder className="h-3.5 w-3.5 shrink-0" />
-                  <span className="truncate">{entry.name}</span>
-                </button>
-              ))}
-            </aside>
-            <div className="min-w-0 flex-1 space-y-4 p-5">
-              {mode !== "file" ? (
+            {mode === "open" && (
+              <aside className="w-44 shrink-0 border-r border-border bg-background/40 p-3">
+                <div className="mb-2 px-2 text-xs text-muted-foreground">
+                  {t("project.authorizedLocations")}
+                </div>
+                {roots.map((entry) => (
+                  <button
+                    key={entry.id}
+                    disabled={busy || !entry.path}
+                    className="mb-1 block w-full truncate rounded px-2 py-2 text-left text-xs hover:bg-secondary"
+                    onClick={() =>
+                      void run(async () => {
+                        await rememberRoot(entry.path!)
+                        await browse([entry.path!])
+                      })
+                    }
+                  >
+                    {entry.name}
+                  </button>
+                ))}
+                {!project.rootPath && (
+                  <p className="mb-3 px-2 text-[10px] text-muted-foreground">
+                    {t("project.notConnectedHint")}
+                  </p>
+                )}
+                <div className="mb-3 flex items-center gap-2 px-2 text-xs text-muted-foreground">
+                  <HardDrive className="h-3.5 w-3.5" />
+                  {t("project.recentHeading")}
+                </div>
+                {!recent.length && (
+                  <p className="px-2 text-xs text-muted-foreground">{t("project.noRecent")}</p>
+                )}
+                {recent.map((entry) => (
+                  <button
+                    key={entry.id}
+                    disabled={busy || !entry.path}
+                    className="mb-1 flex w-full items-center gap-2 rounded px-2 py-2 text-left text-xs hover:bg-secondary disabled:opacity-40"
+                    onClick={() =>
+                      void run(async () => {
+                        await browse([entry.path!])
+                      })
+                    }
+                  >
+                    <Folder className="h-3.5 w-3.5 shrink-0" />
+                    <span className="truncate">{entry.name}</span>
+                  </button>
+                ))}
+              </aside>
+            )}
+            <div className="min-w-0 flex-1 space-y-5 p-6">
+              {mode === "open" ? (
                 <>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-stretch overflow-hidden rounded-md border border-border bg-background">
                     <button
                       disabled={busy || trail.length < 2}
                       aria-label={t("project.parentDirAria")}
-                      className="rounded border border-border p-2 disabled:opacity-30"
+                      className="border-r border-border px-2.5 text-muted-foreground transition hover:bg-secondary hover:text-foreground disabled:opacity-30"
                       onClick={() => void run(() => browse(trail.slice(0, -1)))}
                     >
-                      <ArrowUp className="h-4 w-4" />
+                      <ArrowUp className="h-3.5 w-3.5" />
                     </button>
                     <div
-                      className="min-w-0 flex-1 truncate rounded border border-border bg-background px-3 py-2 text-xs"
+                      className="min-w-0 flex-1 truncate px-3 py-2 text-xs"
                       title={location ?? ""}
                     >
                       {location ? location : t("project.noLocation")}
                     </div>
                   </div>
-                  <div className="max-h-44 min-h-28 overflow-auto rounded-lg border border-border bg-background/40 p-2">
+                  <div className="max-h-52 min-h-36 overflow-auto rounded-lg border border-border bg-background/40 p-1.5">
                     {!location ? (
-                      <div className="flex flex-col items-center gap-2 py-5 text-xs text-muted-foreground">
+                      <div className="flex min-h-32 flex-col items-center justify-center gap-2 py-5 text-xs text-muted-foreground">
                         <FolderOpen className="h-7 w-7" />
                         <span>{t("project.emptyFolderHint")}</span>
                       </div>
@@ -388,7 +405,7 @@ export function ProjectMenu() {
                       folders.map((folder) => (
                         <button
                           key={folder}
-                          className="flex w-full items-center gap-2 rounded px-2 py-2 text-left text-xs hover:bg-secondary"
+                          className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-xs hover:bg-secondary"
                           disabled={busy}
                           onClick={() =>
                             void run(() => browse([...trail, `${location}/${folder}`]))
@@ -400,24 +417,40 @@ export function ProjectMenu() {
                       ))
                     )}
                   </div>
-                  <button
-                    disabled={busy}
-                    className="rounded border border-border px-3 py-2 text-xs hover:bg-secondary"
-                    onClick={() =>
-                      void run(async () => {
-                        const root = await envoi().pickDirectory()
-                        if (!root) return
-                        await browse([root])
-                        await rememberRoot(root)
-                        setRoots(await authorizedRoots())
-                      })
-                    }
-                  >
-                    {t("project.chooseLocation")}
-                  </button>
+                  <div className="flex justify-end">
+                    <Button variant="outline" size="sm" disabled={busy} onClick={pick}>
+                      {t("project.chooseLocation")}
+                    </Button>
+                  </div>
                 </>
+              ) : mode === "new" ? (
+                <div className="space-y-2">
+                  <Label className="text-xs">{t("project.locationLabel")}</Label>
+                  <div className="flex items-center gap-2">
+                    <div
+                      className="flex h-9 min-w-0 flex-1 items-center gap-2 rounded-md border border-input bg-background px-3"
+                      title={location ?? ""}
+                    >
+                      <FolderOpen className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                      <span
+                        className={`truncate text-xs ${location ? "" : "text-muted-foreground"}`}
+                      >
+                        {location ? location : t("project.noLocation")}
+                      </span>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="shrink-0"
+                      disabled={busy}
+                      onClick={pick}
+                    >
+                      {t("project.chooseLocation")}
+                    </Button>
+                  </div>
+                </div>
               ) : (
-                <div className="rounded border border-border bg-background p-3 text-xs">
+                <div className="rounded-lg border border-border bg-background p-3 text-xs">
                   <div className="mb-2 flex items-center gap-2">
                     <FilePlus2 className="h-4 w-4" />
                     {project.name}
@@ -430,39 +463,56 @@ export function ProjectMenu() {
                 </div>
               )}
               {mode !== "open" && (
-                <label className="block space-y-2 text-xs">
-                  <span>{mode === "new" ? t("project.nameLabel") : t("project.pathLabel")}</span>
-                  <input
+                <div className="space-y-2">
+                  <Label htmlFor="project-entry-name" className="text-xs">
+                    {mode === "new" ? t("project.nameLabel") : t("project.pathLabel")}
+                  </Label>
+                  <Input
+                    id="project-entry-name"
                     autoFocus
                     value={name}
                     onChange={(event) => setName(event.target.value)}
                     placeholder={mode === "new" ? "my-research-paper" : "chapters/method.tex"}
-                    className="w-full rounded border border-input bg-background px-3 py-2 outline-none focus:border-primary"
+                    className="text-xs"
                   />
-                </label>
+                </div>
               )}
               {mode === "new" && (
                 <div className="space-y-2">
-                  <div className="flex gap-2">
-                    <input
-                      aria-label={t("project.templateSearchAria")}
-                      value={query}
-                      onChange={(event) => setQuery(event.target.value)}
-                      placeholder={t("project.templateSearchPlaceholder")}
-                      className="min-w-0 flex-1 rounded border border-input bg-background px-3 py-2 text-xs"
-                    />
-                    <select
-                      aria-label={t("project.templateCategoryAria")}
-                      value={category}
-                      onChange={(event) => setCategory(event.target.value)}
-                      className="rounded border border-input bg-background text-xs"
-                    >
-                      {["全部", "通用", "会议", "期刊"].map((item) => (
-                        <option key={item}>{item}</option>
-                      ))}
-                    </select>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <Label className="text-xs">{t("project.templateLabel")}</Label>
+                    <div className="flex items-center gap-2">
+                      <ToggleGroup
+                        type="single"
+                        variant="outline"
+                        size="sm"
+                        value={category}
+                        onValueChange={(value) => value && setCategory(value)}
+                        aria-label={t("project.templateCategoryAria")}
+                      >
+                        {["全部", "通用", "会议", "期刊"].map((item) => (
+                          <ToggleGroupItem
+                            key={item}
+                            value={item}
+                            className="h-7 px-2.5 text-[11px]"
+                          >
+                            {item}
+                          </ToggleGroupItem>
+                        ))}
+                      </ToggleGroup>
+                      <div className="relative">
+                        <Search className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                          aria-label={t("project.templateSearchAria")}
+                          value={query}
+                          onChange={(event) => setQuery(event.target.value)}
+                          placeholder={t("project.templateSearchPlaceholder")}
+                          className="h-8 w-44 pl-7 text-xs"
+                        />
+                      </div>
+                    </div>
                   </div>
-                  <div className="grid max-h-48 grid-cols-2 gap-2 overflow-auto">
+                  <div className="grid max-h-56 grid-cols-2 gap-2 overflow-auto">
                     {paperTemplates
                       .filter(
                         (item) =>
@@ -473,49 +523,61 @@ export function ProjectMenu() {
                         <button
                           key={item.id}
                           onClick={() => setTemplate(item.id)}
-                          className={`rounded border p-3 text-left text-xs ${template === item.id ? "border-primary bg-primary/10" : "border-border bg-background"}`}
+                          className={`relative rounded-lg border p-3 text-left transition ${
+                            template === item.id
+                              ? "border-primary bg-primary/10 shadow-[0_0_18px_-6px_hsl(var(--primary)/0.7)]"
+                              : "border-border bg-background hover:border-primary/40 hover:bg-secondary/40"
+                          }`}
                         >
-                          <span className="block font-medium">{item.name}</span>
+                          <span className="block pr-4 text-xs font-medium">{item.name}</span>
                           <span className="mt-1 block text-[10px] text-muted-foreground">
                             {item.category} · {item.version}
                           </span>
+                          {template === item.id && (
+                            <Check className="absolute right-2.5 top-2.5 h-3.5 w-3.5 text-primary" />
+                          )}
                         </button>
                       ))}
                   </div>
-                  <p className="text-[10px] text-muted-foreground">
-                    {t("project.templateCurrent", {
-                      name: paperTemplates.find((item) => item.id === template)?.name ?? "",
-                    })}
-                  </p>
-                  {template !== "research" && (
-                    <a
-                      className="text-[10px] text-primary"
-                      href={paperTemplates.find((item) => item.id === template)?.source}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      {t("project.templateSource")}
-                    </a>
-                  )}
+                  <div className="flex items-baseline justify-between gap-2">
+                    <p className="text-[10px] text-muted-foreground">
+                      {t("project.templateCurrent", {
+                        name: paperTemplates.find((item) => item.id === template)?.name ?? "",
+                      })}
+                    </p>
+                    {template !== "research" && (
+                      <a
+                        className="shrink-0 text-[10px] text-primary"
+                        href={paperTemplates.find((item) => item.id === template)?.source}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        {t("project.templateSource")}
+                      </a>
+                    )}
+                  </div>
                 </div>
               )}
               {mode === "new" && (
-                <div className="space-y-1 text-xs">
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={enableGit}
-                      onChange={(event) => setEnableGit(event.target.checked && gitAvailable)}
-                    />
-                    {t("project.enableGit")}
-                  </label>
-                  <p role="status" className="text-[10px] text-muted-foreground">
-                    {gitStatus}
-                  </p>
+                <div className="flex items-center justify-between gap-4 rounded-lg border border-border bg-background/40 px-3 py-2.5">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="project-git-toggle" className="text-xs font-medium">
+                      {t("project.enableGit")}
+                    </Label>
+                    <p role="status" className="text-[10px] text-muted-foreground">
+                      {gitStatus}
+                    </p>
+                  </div>
+                  <Switch
+                    id="project-git-toggle"
+                    checked={enableGit}
+                    disabled={!gitAvailable}
+                    onCheckedChange={(value) => setEnableGit(value && gitAvailable)}
+                  />
                 </div>
               )}
               {changed > 0 && mode !== "file" && (
-                <div className="rounded border border-warning/30 p-3 text-xs text-warning">
+                <div className="rounded-lg border border-warning/30 p-3 text-xs text-warning">
                   <p>{t("project.unsavedFilesWarning", { count: changed })}</p>
                   <button className="my-2 underline" disabled={busy} onClick={() => void saveAll()}>
                     {t("project.saveAllFirst")}
@@ -532,16 +594,12 @@ export function ProjectMenu() {
               )}
             </div>
           </div>
-
-          <div className="flex justify-end gap-2 border-t border-border bg-background/30 px-5 py-4">
-            <button
-              disabled={busy}
-              onClick={() => setMode(null)}
-              className="rounded border border-border px-4 py-2 text-xs"
-            >
+          <div className="flex justify-end gap-2 border-t border-border bg-background/30 px-6 py-4">
+            <Button variant="outline" size="sm" disabled={busy} onClick={() => setMode(null)}>
               {t("project.cancel")}
-            </button>
-            <button
+            </Button>
+            <Button
+              size="sm"
               disabled={
                 busy ||
                 (mode === "file" && taskBusy) ||
@@ -550,7 +608,7 @@ export function ProjectMenu() {
                 (mode !== "open" && !name.trim()) ||
                 (!!changed && mode !== "file" && !discard)
               }
-              className="rounded bg-primary px-4 py-2 text-xs font-medium text-primary-foreground disabled:opacity-40"
+              className="shadow-[0_0_12px_-2px_hsl(var(--primary)/0.5)]"
               onClick={() =>
                 void run(async () => {
                   if (mode === "file") {
@@ -600,7 +658,7 @@ export function ProjectMenu() {
                   : mode === "file"
                     ? t("project.createFile")
                     : t("project.openCurrentDirectory")}
-            </button>
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
