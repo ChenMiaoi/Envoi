@@ -184,7 +184,11 @@ export function ReaderView({
           return
         }
         const dir =
-            action === "rename" ? path.split("/").slice(0, -1).join("/") : node.kind === "folder" ? path : path.split("/").slice(0, -1).join("/"),
+            action === "rename"
+              ? path.split("/").slice(0, -1).join("/")
+              : node.kind === "folder"
+                ? path
+                : path.split("/").slice(0, -1).join("/"),
           target = dir ? `${dir}/${name}` : name
         if (action === "new-file") {
           await createTextFile(rootPath, target, "")
@@ -246,340 +250,343 @@ export function ReaderView({
   return (
     <>
       <PanelGroup orientation="horizontal" className="h-full">
-      {/* 左：目录树 */}
-      {showTree && (
-        <Panel defaultSize="18%" minSize="14%" maxSize="30%" className="bg-card">
-          <div className="flex h-full flex-col">
-            <div className="flex h-9 shrink-0 items-center justify-between px-3 text-[11px] uppercase tracking-widest text-muted-foreground">
-              <span>{t("reader.explorer")}</span>
-              <button
-                disabled={busy || !project.rootPath}
-                className="rounded px-2 py-1 normal-case tracking-normal hover:bg-secondary disabled:opacity-40"
-                onClick={() => window.dispatchEvent(new Event("envoi:new-note"))}
-              >
-                新建笔记
-              </button>
+        {/* 左：目录树 */}
+        {showTree && (
+          <Panel defaultSize="18%" minSize="14%" maxSize="30%" className="bg-card">
+            <div className="flex h-full flex-col">
+              <div className="flex h-9 shrink-0 items-center justify-between px-3 text-[11px] uppercase tracking-widest text-muted-foreground">
+                <span>{t("reader.explorer")}</span>
+                <button
+                  disabled={busy || !project.rootPath}
+                  className="rounded px-2 py-1 normal-case tracking-normal hover:bg-secondary disabled:opacity-40"
+                  onClick={() => window.dispatchEvent(new Event("envoi:new-note"))}
+                >
+                  新建笔记
+                </button>
+              </div>
+              <div className="min-h-0 flex-1">
+                <FileTree
+                  rootName={project.id === "empty" ? undefined : project.name}
+                  nodes={fileTree}
+                  activeId={activeId}
+                  onOpen={openNode}
+                  onMenu={project.rootPath ? onTreeMenu : undefined}
+                />
+              </div>
             </div>
-            <div className="min-h-0 flex-1">
-              <FileTree
-                rootName={project.id === "empty" ? undefined : project.name}
-                nodes={fileTree}
-                activeId={activeId}
-                onOpen={openNode}
-                onMenu={project.rootPath ? onTreeMenu : undefined}
-              />
-            </div>
-          </div>
-        </Panel>
-      )}
-      {showTree && (
-        <PanelResizeHandle className="w-px bg-border transition-colors hover:bg-primary/60" />
-      )}
+          </Panel>
+        )}
+        {showTree && (
+          <PanelResizeHandle className="w-px bg-border transition-colors hover:bg-primary/60" />
+        )}
 
-      {/* 中：编辑/预览区 */}
-      <Panel minSize="30%">
-        <div className="flex h-full flex-col bg-background">
-          {/* 标签栏 */}
-          <div className="flex h-9 shrink-0 items-stretch border-b border-border bg-card">
-            <div className="scrollbar-none flex min-w-0 flex-1 items-stretch overflow-x-auto">
-              {openFiles.map((f) => {
-                const Icon = tabIcon[f.kind] ?? FileText
-                const isActive = f.id === activeId
-                return (
-                  <ContextMenu key={f.id}>
-                    <ContextMenuTrigger asChild>
-                      <div
-                        onClick={() => (f.kind === "latex" ? onTex(f.id) : onActive(f.id))}
-                        ref={(el) => {
-                          if (isActive) el?.scrollIntoView({ block: "nearest", inline: "nearest" })
-                        }}
-                        className={cn(
-                          "group flex cursor-pointer select-none items-center gap-1.5 border-r border-border px-3 text-[12px]",
-                          isActive
-                            ? "bg-background text-foreground shadow-[inset_0_2px_0_0_hsl(var(--primary))]"
-                            : "text-muted-foreground hover:bg-secondary/60",
-                        )}
-                      >
-                        <Icon className="h-3.5 w-3.5" strokeWidth={1.8} />
-                        <span className="whitespace-nowrap">
-                          {f.name}
-                          {project.files.find((file) => file.id === f.id)?.text !==
-                          project.files.find((file) => file.id === f.id)?.saved
-                            ? " · " + t("reader.unsaved")
-                            : ""}
-                        </span>
-                        {pinned.includes(f.id) ? (
-                          <Pin
-                            aria-label={t("tab.pinned")}
-                            className="h-3 w-3 shrink-0 text-muted-foreground"
-                          />
-                        ) : (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              close(f.id)
-                            }}
-                            className="rounded p-0.5 opacity-0 transition-opacity hover:bg-accent group-hover:opacity-100"
-                          >
-                            <X className="h-3 w-3" />
-                          </button>
-                        )}
-                      </div>
-                    </ContextMenuTrigger>
-                    <ContextMenuContent className="w-44">
-                      <ContextMenuItem onSelect={() => close(f.id)}>
-                        {t("tab.close")}
-                      </ContextMenuItem>
-                      <ContextMenuItem
-                        disabled={openFiles.length <= pinned.length + 1}
-                        onSelect={() => closeOthers(f.id)}
-                      >
-                        {t("tab.closeOthers")}
-                      </ContextMenuItem>
-                      <ContextMenuItem
-                        disabled={openFiles.length <= pinned.length}
-                        onSelect={closeAll}
-                      >
-                        {t("tab.closeAll")}
-                      </ContextMenuItem>
-                      <ContextMenuSeparator />
-                      <ContextMenuItem onSelect={() => togglePin(f.id)}>
-                        {pinned.includes(f.id) ? t("tab.unpin") : t("tab.pin")}
-                      </ContextMenuItem>
-                    </ContextMenuContent>
-                  </ContextMenu>
-                )
-              })}
-            </div>
-            <div className="flex shrink-0 items-center border-l border-border">
-              {kind === "pdf" &&
-                activeData &&
-                project.files.some((file) => file.id === activeId) && (
-                  <button
-                    disabled={importing || busy}
-                    className="shrink-0 px-3 text-xs disabled:opacity-40"
-                    onClick={async () => {
-                      if (!project.rootPath) return
-                      setImporting(true)
-                      try {
-                        const data =
-                          activeData.file ??
-                          new File(
-                            [
-                              Uint8Array.from(
-                                atob(
-                                  (await envoi().fsRead(project.rootPath, activeData.path))
-                                    .base64 ?? "",
+        {/* 中：编辑/预览区 */}
+        <Panel minSize="30%">
+          <div className="flex h-full flex-col bg-background">
+            {/* 标签栏 */}
+            <div className="flex h-9 shrink-0 items-stretch border-b border-border bg-card">
+              <div className="scrollbar-none flex min-w-0 flex-1 items-stretch overflow-x-auto">
+                {openFiles.map((f) => {
+                  const Icon = tabIcon[f.kind] ?? FileText
+                  const isActive = f.id === activeId
+                  return (
+                    <ContextMenu key={f.id}>
+                      <ContextMenuTrigger asChild>
+                        <div
+                          onClick={() => (f.kind === "latex" ? onTex(f.id) : onActive(f.id))}
+                          ref={(el) => {
+                            if (isActive)
+                              el?.scrollIntoView({ block: "nearest", inline: "nearest" })
+                          }}
+                          className={cn(
+                            "group flex cursor-pointer select-none items-center gap-1.5 border-r border-border px-3 text-[12px]",
+                            isActive
+                              ? "bg-background text-foreground shadow-[inset_0_2px_0_0_hsl(var(--primary))]"
+                              : "text-muted-foreground hover:bg-secondary/60",
+                          )}
+                        >
+                          <Icon className="h-3.5 w-3.5" strokeWidth={1.8} />
+                          <span className="whitespace-nowrap">
+                            {f.name}
+                            {project.files.find((file) => file.id === f.id)?.text !==
+                            project.files.find((file) => file.id === f.id)?.saved
+                              ? " · " + t("reader.unsaved")
+                              : ""}
+                          </span>
+                          {pinned.includes(f.id) ? (
+                            <Pin
+                              aria-label={t("tab.pinned")}
+                              className="h-3 w-3 shrink-0 text-muted-foreground"
+                            />
+                          ) : (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                close(f.id)
+                              }}
+                              className="rounded p-0.5 opacity-0 transition-opacity hover:bg-accent group-hover:opacity-100"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          )}
+                        </div>
+                      </ContextMenuTrigger>
+                      <ContextMenuContent className="w-44">
+                        <ContextMenuItem onSelect={() => close(f.id)}>
+                          {t("tab.close")}
+                        </ContextMenuItem>
+                        <ContextMenuItem
+                          disabled={openFiles.length <= pinned.length + 1}
+                          onSelect={() => closeOthers(f.id)}
+                        >
+                          {t("tab.closeOthers")}
+                        </ContextMenuItem>
+                        <ContextMenuItem
+                          disabled={openFiles.length <= pinned.length}
+                          onSelect={closeAll}
+                        >
+                          {t("tab.closeAll")}
+                        </ContextMenuItem>
+                        <ContextMenuSeparator />
+                        <ContextMenuItem onSelect={() => togglePin(f.id)}>
+                          {pinned.includes(f.id) ? t("tab.unpin") : t("tab.pin")}
+                        </ContextMenuItem>
+                      </ContextMenuContent>
+                    </ContextMenu>
+                  )
+                })}
+              </div>
+              <div className="flex shrink-0 items-center border-l border-border">
+                {kind === "pdf" &&
+                  activeData &&
+                  project.files.some((file) => file.id === activeId) && (
+                    <button
+                      disabled={importing || busy}
+                      className="shrink-0 px-3 text-xs disabled:opacity-40"
+                      onClick={async () => {
+                        if (!project.rootPath) return
+                        setImporting(true)
+                        try {
+                          const data =
+                            activeData.file ??
+                            new File(
+                              [
+                                Uint8Array.from(
+                                  atob(
+                                    (await envoi().fsRead(project.rootPath, activeData.path))
+                                      .base64 ?? "",
+                                  ),
+                                  (c) => c.charCodeAt(0),
                                 ),
-                                (c) => c.charCodeAt(0),
-                              ),
-                            ],
-                            activeData.path.split("/").pop() ?? "paper.pdf",
-                            { type: "application/pdf" },
-                          )
-                        const papers = await importLibraryFiles([data])
-                        await researchLibrary(project.rootPath, {
-                          action: "import",
-                          papers: await encodeNative(papers),
-                        })
-                        window.dispatchEvent(new Event("envoi:library-updated"))
-                        setMessage("PDF 已归档到当前研究的论文库。")
-                        void navigate("/library")
-                      } catch (error) {
-                        setMessage((error as Error).message)
-                      } finally {
-                        setImporting(false)
-                      }
-                    }}
+                              ],
+                              activeData.path.split("/").pop() ?? "paper.pdf",
+                              { type: "application/pdf" },
+                            )
+                          const papers = await importLibraryFiles([data])
+                          await researchLibrary(project.rootPath, {
+                            action: "import",
+                            papers: await encodeNative(papers),
+                          })
+                          window.dispatchEvent(new Event("envoi:library-updated"))
+                          setMessage("PDF 已归档到当前研究的论文库。")
+                          void navigate("/library")
+                        } catch (error) {
+                          setMessage((error as Error).message)
+                        } finally {
+                          setImporting(false)
+                        }
+                      }}
+                    >
+                      {importing ? "正在归档…" : "归档到论文库"}
+                    </button>
+                  )}
+                {(kind === "csv" || kind === "tsv") && (
+                  <button
+                    disabled={busy}
+                    className="shrink-0 px-3 text-xs"
+                    onClick={() => setDataEditing(dataEditing === activeId ? null : activeId)}
                   >
-                    {importing ? "正在归档…" : "归档到论文库"}
+                    {dataEditing === activeId ? "完成编辑" : "编辑数据"}
                   </button>
                 )}
-              {(kind === "csv" || kind === "tsv") && (
-                <button
-                  disabled={busy}
-                  className="shrink-0 px-3 text-xs"
-                  onClick={() => setDataEditing(dataEditing === activeId ? null : activeId)}
-                >
-                  {dataEditing === activeId ? "完成编辑" : "编辑数据"}
-                </button>
-              )}
-              {kind === "markdown" && (
+                {kind === "markdown" && (
+                  <div className="flex items-center gap-1 px-2">
+                    <>
+                      <button
+                        title={t("reader.mdPreview")}
+                        aria-label={t("reader.mdPreview")}
+                        aria-pressed={mdPreview}
+                        onClick={() =>
+                          activeId && setMdMode((m) => ({ ...m, [activeId]: "preview" }))
+                        }
+                        className={cn(
+                          "rounded-md p-1.5 transition-colors",
+                          mdPreview ? "text-primary" : "text-muted-foreground hover:bg-secondary",
+                        )}
+                      >
+                        <Eye className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        title={t("reader.mdSource")}
+                        aria-label={t("reader.mdSource")}
+                        aria-pressed={!mdPreview}
+                        onClick={() =>
+                          activeId && setMdMode((m) => ({ ...m, [activeId]: "source" }))
+                        }
+                        className={cn(
+                          "rounded-md p-1.5 transition-colors",
+                          !mdPreview ? "text-primary" : "text-muted-foreground hover:bg-secondary",
+                        )}
+                      >
+                        <Code2 className="h-3.5 w-3.5" />
+                      </button>
+                    </>
+                  </div>
+                )}
                 <div className="flex items-center gap-1 px-2">
-                  <>
-                    <button
-                      title={t("reader.mdPreview")}
-                      aria-label={t("reader.mdPreview")}
-                      aria-pressed={mdPreview}
-                      onClick={() =>
-                        activeId && setMdMode((m) => ({ ...m, [activeId]: "preview" }))
-                      }
-                      className={cn(
-                        "rounded-md p-1.5 transition-colors",
-                        mdPreview ? "text-primary" : "text-muted-foreground hover:bg-secondary",
-                      )}
-                    >
-                      <Eye className="h-3.5 w-3.5" />
-                    </button>
-                    <button
-                      title={t("reader.mdSource")}
-                      aria-label={t("reader.mdSource")}
-                      aria-pressed={!mdPreview}
-                      onClick={() => activeId && setMdMode((m) => ({ ...m, [activeId]: "source" }))}
-                      className={cn(
-                        "rounded-md p-1.5 transition-colors",
-                        !mdPreview ? "text-primary" : "text-muted-foreground hover:bg-secondary",
-                      )}
-                    >
-                      <Code2 className="h-3.5 w-3.5" />
-                    </button>
-                  </>
+                  <button
+                    title={showTree ? t("reader.hideTree") : t("reader.showTree")}
+                    onClick={() => setShowTree(!showTree)}
+                    className={cn(
+                      "rounded-md p-1.5 transition-colors",
+                      showTree ? "text-primary" : "text-muted-foreground hover:bg-secondary",
+                    )}
+                  >
+                    <FolderTree className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    title={showChat ? t("reader.hideChat") : t("reader.showChat")}
+                    onClick={() => setShowChat(!showChat)}
+                    className={cn(
+                      "rounded-md p-1.5 transition-colors",
+                      showChat ? "text-primary" : "text-muted-foreground hover:bg-secondary",
+                    )}
+                  >
+                    <MessageSquareText className="h-3.5 w-3.5" />
+                  </button>
                 </div>
-              )}
-              <div className="flex items-center gap-1 px-2">
-                <button
-                  title={showTree ? t("reader.hideTree") : t("reader.showTree")}
-                  onClick={() => setShowTree(!showTree)}
-                  className={cn(
-                    "rounded-md p-1.5 transition-colors",
-                    showTree ? "text-primary" : "text-muted-foreground hover:bg-secondary",
-                  )}
-                >
-                  <FolderTree className="h-3.5 w-3.5" />
-                </button>
-                <button
-                  title={showChat ? t("reader.hideChat") : t("reader.showChat")}
-                  onClick={() => setShowChat(!showChat)}
-                  className={cn(
-                    "rounded-md p-1.5 transition-colors",
-                    showChat ? "text-primary" : "text-muted-foreground hover:bg-secondary",
-                  )}
-                >
-                  <MessageSquareText className="h-3.5 w-3.5" />
-                </button>
               </div>
             </div>
-          </div>
 
-          {/* 内容：打开后默认进入对应预览模式 */}
-          <div className="min-h-0 flex-1">
-            {!active ? (
-              <div className="flex h-full flex-col items-center justify-center gap-2 text-muted-foreground">
-                <div className="text-[13px]">{t("reader.openHint")}</div>
-              </div>
-            ) : activeData?.text === undefined && kind !== "image" && kind !== "pdf" ? (
-              <p className="p-4 text-sm text-muted-foreground">{t("reader.notText")}</p>
-            ) : kind === "markdown" && mdPreview ? (
-              <MarkdownViewer
-                key={active.id}
-                source={fileContents[active.id] ?? ""}
-                path={activeData?.path ?? active.name}
-                onOpenDoc={(file) =>
-                  openNode({ id: file.id, name: file.path, kind: file.kind } as FileNode)
-                }
-              />
-            ) : kind === "markdown" ? (
-              <MarkdownEditor
-                key={active.id}
-                source={fileContents[active.id] ?? ""}
-                readOnly={busy}
-                onChange={(text) => edit(active.id, text)}
-                path={activeData?.path ?? active.name}
-                files={project.files}
-                onOpen={(file) => openNode({ id: file.id, name: file.path, kind: file.kind })}
-              />
-            ) : (kind === "csv" || kind === "tsv") && activeData?.text !== undefined ? (
-              <DelimitedEditor
-                key={active.id}
-                source={activeData.text}
-                delimiter={kind === "tsv" ? "\t" : ","}
-                onChange={(text) => edit(active.id, text)}
-                readOnly={busy || dataEditing !== activeId}
-              />
-            ) : kind === "text" && activeData?.text !== undefined ? (
-              <textarea
-                aria-label={t("reader.textEditorAria")}
-                readOnly={busy}
-                value={activeData.text}
-                onChange={(e) => edit(active.id, e.target.value)}
-                data-content-typography="editor"
-                className="h-full w-full resize-none overflow-auto whitespace-pre-wrap break-words bg-transparent p-4 outline-none"
-                style={{
-                  fontFamily: fontCss(preferences.fontFamily, editorFonts),
-                  fontSize: preferences.fontSize,
-                  lineHeight: preferences.lineHeight,
-                  tabSize: preferences.tabSize,
-                }}
-              />
-            ) : kind === "latex" ? (
-              <LatexViewer source={fileContents[active.id] ?? ""} />
-            ) : kind === "bib" ? (
-              <BibViewer source={fileContents[active.id] ?? ""} />
-            ) : kind === "pdf" ? (
-              activeData?.file || activeData?.url ? (
-                <TexCompilePreview
-                  key={`${active.id}:${activeData?.file?.lastModified ?? activeData?.url}`}
-                  initialSource={{
-                    name: activeData.path,
-                    file: activeData.file,
-                    url: activeData.url,
+            {/* 内容：打开后默认进入对应预览模式 */}
+            <div className="min-h-0 flex-1">
+              {!active ? (
+                <div className="flex h-full flex-col items-center justify-center gap-2 text-muted-foreground">
+                  <div className="text-[13px]">{t("reader.openHint")}</div>
+                </div>
+              ) : activeData?.text === undefined && kind !== "image" && kind !== "pdf" ? (
+                <p className="p-4 text-sm text-muted-foreground">{t("reader.notText")}</p>
+              ) : kind === "markdown" && mdPreview ? (
+                <MarkdownViewer
+                  key={active.id}
+                  source={fileContents[active.id] ?? ""}
+                  path={activeData?.path ?? active.name}
+                  onOpenDoc={(file) =>
+                    openNode({ id: file.id, name: file.path, kind: file.kind } as FileNode)
+                  }
+                />
+              ) : kind === "markdown" ? (
+                <MarkdownEditor
+                  key={active.id}
+                  source={fileContents[active.id] ?? ""}
+                  readOnly={busy}
+                  onChange={(text) => edit(active.id, text)}
+                  path={activeData?.path ?? active.name}
+                  files={project.files}
+                  onOpen={(file) => openNode({ id: file.id, name: file.path, kind: file.kind })}
+                />
+              ) : (kind === "csv" || kind === "tsv") && activeData?.text !== undefined ? (
+                <DelimitedEditor
+                  key={active.id}
+                  source={activeData.text}
+                  delimiter={kind === "tsv" ? "\t" : ","}
+                  onChange={(text) => edit(active.id, text)}
+                  readOnly={busy || dataEditing !== activeId}
+                />
+              ) : kind === "text" && activeData?.text !== undefined ? (
+                <textarea
+                  aria-label={t("reader.textEditorAria")}
+                  readOnly={busy}
+                  value={activeData.text}
+                  onChange={(e) => edit(active.id, e.target.value)}
+                  data-content-typography="editor"
+                  className="h-full w-full resize-none overflow-auto whitespace-pre-wrap break-words bg-transparent p-4 outline-none"
+                  style={{
+                    fontFamily: fontCss(preferences.fontFamily, editorFonts),
+                    fontSize: preferences.fontSize,
+                    lineHeight: preferences.lineHeight,
+                    tabSize: preferences.tabSize,
                   }}
                 />
+              ) : kind === "latex" ? (
+                <LatexViewer source={fileContents[active.id] ?? ""} />
+              ) : kind === "bib" ? (
+                <BibViewer source={fileContents[active.id] ?? ""} />
+              ) : kind === "pdf" ? (
+                activeData?.file || activeData?.url ? (
+                  <TexCompilePreview
+                    key={`${active.id}:${activeData?.file?.lastModified ?? activeData?.url}`}
+                    initialSource={{
+                      name: activeData.path,
+                      file: activeData.file,
+                      url: activeData.url,
+                    }}
+                  />
+                ) : (
+                  <p className="p-4 text-xs text-muted-foreground">{t("reader.noPdfContent")}</p>
+                )
+              ) : kind === "image" && activeData?.url ? (
+                <img
+                  className="max-h-full max-w-full object-contain"
+                  src={activeData.url}
+                  alt={active.name}
+                />
               ) : (
-                <p className="p-4 text-xs text-muted-foreground">{t("reader.noPdfContent")}</p>
-              )
-            ) : kind === "image" && activeData?.url ? (
-              <img
-                className="max-h-full max-w-full object-contain"
-                src={activeData.url}
-                alt={active.name}
-              />
-            ) : (
-              <p className="p-4 text-xs text-muted-foreground">{t("reader.noPreview")}</p>
+                <p className="p-4 text-xs text-muted-foreground">{t("reader.noPreview")}</p>
+              )}
+            </div>
+
+            {/* 底部信息条 */}
+            {active && (
+              <div className="flex h-7 shrink-0 items-center justify-between border-t border-border bg-card px-3 text-[11px] text-muted-foreground">
+                <span>
+                  <ViewerBadge kind={kind ?? active.kind} />
+                </span>
+                <span className="font-editor">
+                  {kind === "pdf"
+                    ? t("reader.pdfPaging")
+                    : t("reader.lineCount", {
+                        n: (fileContents[active.id] ?? "").split("\n").length,
+                      })}
+                </span>
+              </div>
             )}
           </div>
-
-          {/* 底部信息条 */}
-          {active && (
-            <div className="flex h-7 shrink-0 items-center justify-between border-t border-border bg-card px-3 text-[11px] text-muted-foreground">
-              <span>
-                <ViewerBadge kind={kind ?? active.kind} />
-              </span>
-              <span className="font-editor">
-                {kind === "pdf"
-                  ? t("reader.pdfPaging")
-                  : t("reader.lineCount", {
-                      n: (fileContents[active.id] ?? "").split("\n").length,
-                    })}
-              </span>
-            </div>
-          )}
-        </div>
-      </Panel>
-
-      {/* 右：AI 聊天 */}
-      {showChat && (
-        <PanelResizeHandle className="w-px bg-border transition-colors hover:bg-primary/60" />
-      )}
-      {showChat && (
-        <Panel defaultSize="23%" minSize="16%" maxSize="40%">
-          <ChatPanel
-            context={
-              active
-                ? {
-                    label: activeData?.path ?? active.name,
-                    text:
-                      activeData?.text !== undefined
-                        ? activeData.text
-                        : kind === "pdf" && pdfContext?.id === active.id
-                          ? pdfContext.text
-                          : "",
-                  }
-                : undefined
-            }
-          />
         </Panel>
-      )}
+
+        {/* 右：AI 聊天 */}
+        {showChat && (
+          <PanelResizeHandle className="w-px bg-border transition-colors hover:bg-primary/60" />
+        )}
+        {showChat && (
+          <Panel defaultSize="23%" minSize="16%" maxSize="40%">
+            <ChatPanel
+              context={
+                active
+                  ? {
+                      label: activeData?.path ?? active.name,
+                      text:
+                        activeData?.text !== undefined
+                          ? activeData.text
+                          : kind === "pdf" && pdfContext?.id === active.id
+                            ? pdfContext.text
+                            : "",
+                    }
+                  : undefined
+              }
+            />
+          </Panel>
+        )}
       </PanelGroup>
       <Dialog open={!!treeAction} onOpenChange={(open) => !open && setTreeAction(null)}>
         <DialogContent className="sm:max-w-sm">
