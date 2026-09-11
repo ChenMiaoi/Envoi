@@ -248,10 +248,8 @@ function ProjectApp() {
           <ProjectIdentity />
           <WorkspaceBadge />
         </div>
-        <div className="pointer-events-none absolute inset-x-0 flex justify-center">
-          <div className="pointer-events-auto">
-            <ActivityBar view={view} />
-          </div>
+        <div className="absolute left-1/2 -translate-x-1/2">
+          <ActivityBar view={view} />
         </div>
         <div className="min-w-0 flex-1" />
         <div className="flex shrink-0 items-center pr-3.5">
