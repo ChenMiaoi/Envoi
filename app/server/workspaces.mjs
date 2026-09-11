@@ -150,7 +150,17 @@ export async function commitWorkspace(root, input) {
       const value = await git(repo.root, ["config", "--get", key]).catch(() => "")
       if (!value.trim()) options.push("-c", `${key}=${fallback}`)
     }
-    await git(repo.root, ["add", "--all"])
+    // Foreign repositories lack the template .gitignore; keep Envoi's private data out of history.
+    await git(repo.root, ["add", "--all", "--", ".", ":(exclude).envoi", ":(exclude).paperdesk"])
+    for (const shared of [".envoi/project.json", ".paperdesk/project.json"]) {
+      if (
+        await lstat(path.join(repo.root, shared)).then(
+          (info) => info.isFile(),
+          () => false,
+        )
+      )
+        await git(repo.root, ["add", "--", shared])
+    }
     await git(repo.root, [...options, "commit", "-m", message])
     return { commit: (await git(repo.root, ["rev-parse", "HEAD"])).trim() }
   })

@@ -14,7 +14,11 @@ async function gitBridge<T>(call: () => Promise<unknown>, failure: string): Prom
   return result as T
 }
 export async function initializeLocalGit(rootPath: string) {
-  await gitBridge(() => envoi().gitInit(rootPath), translate("git.initFailed"))
+  // 已存在的仓库会被直接沿用（existing: true），分支以实际为准。
+  const result = await gitBridge<{ branch?: string }>(
+    () => envoi().gitInit(rootPath),
+    translate("git.initFailed"),
+  )
   // 标记项目配置中的 git 状态；配置文件缺失时初始化仍视为成功。
   for (const configPath of [
     `${managementDirName}/project.json`,
@@ -26,7 +30,7 @@ export async function initializeLocalGit(rootPath: string) {
       .catch(() => undefined)
     if (content?.text === undefined) continue
     const json = JSON.parse(content.text)
-    json.git = { ...json.git, status: "initialized" }
+    json.git = { ...json.git, branch: result.branch ?? json.git?.branch, status: "initialized" }
     await envoi().fsWrite(rootPath, configPath, { text: JSON.stringify(json, null, 2) + "\n" })
     return
   }

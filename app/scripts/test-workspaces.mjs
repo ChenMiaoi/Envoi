@@ -146,3 +146,30 @@ test("workspaces isolate identities and edits, preserve result provenance, and b
     await rm(temp, { recursive: true, force: true, maxRetries: 3 })
   }
 })
+
+test("baseline commit keeps Envoi private data out of foreign repositories", async () => {
+  const root = await realpath(await mkdtemp(path.join(tmpdir(), "envoi-foreign-commit-")))
+  try {
+    execFileSync("git", ["init", "-b", "master"], { cwd: root })
+    await writeFile(path.join(root, "paper.tex"), "draft")
+    await mkdir(path.join(root, ".envoi", "library", "notes"), { recursive: true })
+    await writeFile(path.join(root, ".envoi", "library", "library.sqlite"), "sqlite")
+    await writeFile(path.join(root, ".envoi", "library", "notes", "paper.md"), "private notes")
+    await writeFile(path.join(root, ".envoi", "project.json"), "{}")
+    await mkdir(path.join(root, ".paperdesk"), { recursive: true })
+    await writeFile(path.join(root, ".paperdesk", "legacy.json"), "legacy")
+    const { commit } = await commitWorkspace(root, { message: "baseline" })
+    const committed = execFileSync("git", ["show", "--pretty=format:", "--name-only", commit], {
+      cwd: root,
+      encoding: "utf8",
+    })
+      .split("\n")
+      .filter(Boolean)
+      .sort()
+    assert.deepEqual(committed, [".envoi/project.json", "paper.tex"])
+    // Private data remains on disk, merely untracked.
+    assert.equal(await readText(path.join(root, ".envoi", "library", "notes", "paper.md")), "private notes")
+  } finally {
+    await rm(root, { recursive: true, force: true, maxRetries: 3 })
+  }
+})

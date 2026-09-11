@@ -27,6 +27,18 @@ try {
   await writeFile(path.join(root, "a.tex"), "one")
   let result = await readBoundGitStatus(input)
   assert(result.files.some((f) => f.path === "a.tex" && f.untracked))
+  // Only project.json inside the management dirs is shown; private data stays hidden.
+  await mkdir(path.join(root, ".envoi", "library"), { recursive: true })
+  await writeFile(path.join(root, ".envoi", "library", "note.md"), "private")
+  await writeFile(path.join(root, ".envoi", "project.json"), "{}")
+  await mkdir(path.join(root, ".paperdesk"), { recursive: true })
+  await writeFile(path.join(root, ".paperdesk", "notes.json"), "legacy")
+  await writeFile(path.join(root, ".paperdesk", "project.json"), "{}")
+  result = await readBoundGitStatus(input)
+  assert(result.files.some((f) => f.path === ".envoi/project.json"))
+  assert(!result.files.some((f) => f.path === ".envoi/git-proof"))
+  assert(result.files.some((f) => f.path === ".paperdesk/project.json"))
+  assert(!result.files.some((f) => f.path === ".paperdesk/notes.json"))
   // Fixture staging is confined to this temporary test repository, never the demo.
   execFileSync("git", ["add", "a.tex"], { cwd: root })
   await writeFile(path.join(root, "a.tex"), "two")

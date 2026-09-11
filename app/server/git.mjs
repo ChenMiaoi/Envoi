@@ -70,7 +70,7 @@ async function boundRoot({ directory, proof, proofKind }) {
 }
 export async function gitInitAt(root) {
   const runtime = gitReady()
-  // Never reinitialize an existing repository or silently nest inside one.
+  root = await realpath(root)
   let existing
   try {
     existing = execFileSync(detectTool("git") ?? "git", ["rev-parse", "--show-toplevel"], {
@@ -81,8 +81,26 @@ export async function gitInitAt(root) {
       stdio: ["ignore", "pipe", "ignore"],
     }).trim()
   } catch {}
-  if (existing)
-    throw Error(`此位置已属于 Git 仓库 ${existing}，未更改已有历史；请选择独立位置或取消启用 Git。`)
+  if (existing && (await realpath(existing).catch(() => existing)) === root) {
+    // The opened project is already a repository: adopt it, history untouched.
+    let branch
+    try {
+      branch = execFileSync(detectTool("git") ?? "git", ["symbolic-ref", "--short", "HEAD"], {
+        windowsHide: true,
+        cwd: root,
+        encoding: "utf8",
+        timeout: 5000,
+      }).trim()
+    } catch {
+      branch = execFileSync(detectTool("git") ?? "git", ["rev-parse", "--short", "HEAD"], {
+        windowsHide: true,
+        cwd: root,
+        encoding: "utf8",
+        timeout: 5000,
+      }).trim()
+    }
+    return { ok: true, branch, version: runtime.version, existing: true }
+  }
   if (
     await lstat(path.join(root, ".git")).then(
       () => true,
@@ -90,6 +108,7 @@ export async function gitInitAt(root) {
     )
   )
     throw Error("已有 .git，未覆盖。")
+  // An enclosing repository (dotfiles home, monorepo) must not block the project's own repository.
   execFileSync(detectTool("git") ?? "git", ["init", "-b", "main"], {
     windowsHide: true,
     cwd: root,
@@ -156,7 +175,11 @@ export async function gitStatusAt(root) {
   const files = parseGitStatus(
     run(["status", "--porcelain=v1", "-z", "--untracked-files=all", "--", "."]),
     prefix,
-  ).filter((file) => !/^\.(?:envoi|paperdesk)\/(?:git|agent)-proof(?:-|$)/.test(file.path))
+  ).filter((file) => {
+    // Panel mirrors the template .gitignore: only project.json inside the management dirs is shared.
+    const managed = file.path.match(/^\.(?:envoi|paperdesk)\//)
+    return !managed || file.path === managed[0] + "project.json"
+  })
   return { ok: true, state: "ready", branch, detached, files, version: runtime.version }
 }
 export async function readBoundGitStatus(input) {
