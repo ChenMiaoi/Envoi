@@ -103,6 +103,14 @@ export function WorkspacePanel({
     }
   }, [refresh, root, selected])
   useEffect(() => {
+    const listener = (event: Event) => {
+      const directory = (event as CustomEvent<string>).detail
+      if (typeof directory === "string") setSelected(directory)
+    }
+    window.addEventListener("envoi:open-recent", listener)
+    return () => window.removeEventListener("envoi:open-recent", listener)
+  }, [])
+  useEffect(() => {
     let live = true
     if (selected && tab === "changes")
       void envoi()
