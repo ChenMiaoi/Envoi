@@ -19,15 +19,7 @@ jobs:
           node-version: 24
           cache: npm
           cache-dependency-path: app/package-lock.json
-      - run: npm run setup
-      - run: npm run format:check
-      - run: npm run lint
-      - run: npm run build
-      - run: npm test
-      - run: npm run test:ai
-      - run: npm run test:local
-      - run: npm run test:desktop
-        if: runner.os == 'Windows'
+      - run: npm run ci:check
 # The runner has no TeX toolchain installed, so TeX-dependent local tests
 # self-skip rather than fail. test:demo (needs a compiled example PDF from
 # demo:build) stays a manual per-machine step; see CONTRIBUTING.md.

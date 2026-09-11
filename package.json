@@ -19,6 +19,7 @@
     "test:ai": "npm --prefix app run test:ai",
     "test:local": "npm --prefix app run test:local",
     "test:demo": "npm --prefix app run test:demo",
+    "ci:check": "node scripts/ci-check.mjs",
     "lint": "npm --prefix app run lint",
     "demo:build": "npm --prefix app run demo:build",
     "demo:snapshot": "npm --prefix app run demo:snapshot",

@@ -49,6 +49,7 @@ export function ProjectTrust() {
         throw Error(t("trust.restart"))
       if (trusted) {
         await envoi().grantProjectTrust(root)
+        await state?.refresh()
         const config = await envoi()
           .fsRead(root, ".envoi/project.json")
           .then((file) => {
@@ -64,7 +65,10 @@ export function ProjectTrust() {
           window.dispatchEvent(new Event("envoi:connection-updated"))
           window.dispatchEvent(new Event("envoi:workspaces-updated"))
         }
-      } else await envoi().restrictProject(root)
+      } else {
+        await envoi().restrictProject(root)
+        await state?.refresh()
+      }
       setOpen(false)
     } catch (reason) {
       setError(ipcError(reason).message)
