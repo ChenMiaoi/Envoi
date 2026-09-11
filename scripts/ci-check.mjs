@@ -2,7 +2,12 @@ import { spawnSync } from "node:child_process"
 import process from "node:process"
 
 const npm = process.platform === "win32" ? "npm.cmd" : "npm"
-const env = { ...process.env, CI: "1" }
+const env = {
+  ...process.env,
+  CI: "1",
+  npm_config_registry: "https://registry.npmjs.org",
+  npm_config_replace_registry_host: "always",
+}
 const spawnOptions = {
   env,
   shell: process.platform === "win32",
