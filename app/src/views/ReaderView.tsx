@@ -83,7 +83,7 @@ export function ReaderView({
   const [showChat, setShowChat] = useState(true)
   const [showTree, setShowTree] = useState(true)
   const [mdMode, setMdMode] = useState<Record<string, "preview" | "source">>({})
-  const mdPreview = kind === "markdown" && (mdMode[activeId ?? ""] ?? "preview") === "preview"
+  const mdPreview = kind === "markdown" && mdMode[activeId ?? ""] === "preview"
   const active = openFiles.find((f) => f.id === activeId)
   const [pdfContext, setPdfContext] = useState<{ id: string; text: string } | null>(null)
   useEffect(() => {
@@ -182,143 +182,153 @@ export function ReaderView({
       <Panel minSize="30%">
         <div className="flex h-full flex-col bg-background">
           {/* 标签栏 */}
-          <div className="scrollbar-none flex h-9 shrink-0 items-stretch overflow-x-auto border-b border-border bg-card">
-            {openFiles.map((f) => {
-              const Icon = tabIcon[f.kind] ?? FileText
-              const isActive = f.id === activeId
-              return (
-                <div
-                  key={f.id}
-                  onClick={() => (f.kind === "latex" ? onTex(f.id) : onActive(f.id))}
+          <div className="flex h-9 shrink-0 items-stretch border-b border-border bg-card">
+            <div className="scrollbar-none flex min-w-0 flex-1 items-stretch overflow-x-auto">
+              {openFiles.map((f) => {
+                const Icon = tabIcon[f.kind] ?? FileText
+                const isActive = f.id === activeId
+                return (
+                  <div
+                    key={f.id}
+                    onClick={() => (f.kind === "latex" ? onTex(f.id) : onActive(f.id))}
+                    ref={(el) => {
+                      if (isActive) el?.scrollIntoView({ block: "nearest", inline: "nearest" })
+                    }}
+                    className={cn(
+                      "group flex cursor-pointer select-none items-center gap-1.5 border-r border-border px-3 text-[12px]",
+                      isActive
+                        ? "bg-background text-foreground shadow-[inset_0_2px_0_0_hsl(var(--primary))]"
+                        : "text-muted-foreground hover:bg-secondary/60",
+                    )}
+                  >
+                    <Icon className="h-3.5 w-3.5" strokeWidth={1.8} />
+                    <span className="whitespace-nowrap">
+                      {f.name}
+                      {project.files.find((file) => file.id === f.id)?.text !==
+                      project.files.find((file) => file.id === f.id)?.saved
+                        ? " · " + t("reader.unsaved")
+                        : ""}
+                    </span>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        close(f.id)
+                      }}
+                      className="rounded p-0.5 opacity-0 transition-opacity hover:bg-accent group-hover:opacity-100"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                )
+              })}
+            </div>
+            <div className="flex shrink-0 items-center border-l border-border">
+              {kind === "pdf" &&
+                activeData &&
+                project.files.some((file) => file.id === activeId) && (
+                  <button
+                    disabled={importing || busy}
+                    className="shrink-0 px-3 text-xs disabled:opacity-40"
+                    onClick={async () => {
+                      if (!project.rootPath) return
+                      setImporting(true)
+                      try {
+                        const data =
+                          activeData.file ??
+                          new File(
+                            [
+                              Uint8Array.from(
+                                atob(
+                                  (await envoi().fsRead(project.rootPath, activeData.path))
+                                    .base64 ?? "",
+                                ),
+                                (c) => c.charCodeAt(0),
+                              ),
+                            ],
+                            activeData.path.split("/").pop() ?? "paper.pdf",
+                            { type: "application/pdf" },
+                          )
+                        const papers = await importLibraryFiles([data])
+                        await researchLibrary(project.rootPath, {
+                          action: "import",
+                          papers: await encodeNative(papers),
+                        })
+                        window.dispatchEvent(new Event("envoi:library-updated"))
+                        setMessage("PDF 已归档到当前研究的论文库。")
+                        void navigate("/library")
+                      } catch (error) {
+                        setMessage((error as Error).message)
+                      } finally {
+                        setImporting(false)
+                      }
+                    }}
+                  >
+                    {importing ? "正在归档…" : "归档到论文库"}
+                  </button>
+                )}
+              {(kind === "csv" || kind === "tsv") && (
+                <button
+                  disabled={busy}
+                  className="shrink-0 px-3 text-xs"
+                  onClick={() => setDataEditing(dataEditing === activeId ? null : activeId)}
+                >
+                  {dataEditing === activeId ? "完成编辑" : "编辑数据"}
+                </button>
+              )}
+              {kind === "markdown" && (
+                <div className="flex items-center gap-1 px-2">
+                  <>
+                    <button
+                      title={t("reader.mdPreview")}
+                      aria-label={t("reader.mdPreview")}
+                      aria-pressed={mdPreview}
+                      onClick={() =>
+                        activeId && setMdMode((m) => ({ ...m, [activeId]: "preview" }))
+                      }
+                      className={cn(
+                        "rounded-md p-1.5 transition-colors",
+                        mdPreview ? "text-primary" : "text-muted-foreground hover:bg-secondary",
+                      )}
+                    >
+                      <Eye className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      title={t("reader.mdSource")}
+                      aria-label={t("reader.mdSource")}
+                      aria-pressed={!mdPreview}
+                      onClick={() => activeId && setMdMode((m) => ({ ...m, [activeId]: "source" }))}
+                      className={cn(
+                        "rounded-md p-1.5 transition-colors",
+                        !mdPreview ? "text-primary" : "text-muted-foreground hover:bg-secondary",
+                      )}
+                    >
+                      <Code2 className="h-3.5 w-3.5" />
+                    </button>
+                  </>
+                </div>
+              )}
+              <div className="flex items-center gap-1 px-2">
+                <button
+                  title={showTree ? t("reader.hideTree") : t("reader.showTree")}
+                  onClick={() => setShowTree(!showTree)}
                   className={cn(
-                    "group flex cursor-pointer select-none items-center gap-1.5 border-r border-border px-3 text-[12px]",
-                    isActive
-                      ? "bg-background text-foreground shadow-[inset_0_2px_0_0_hsl(var(--primary))]"
-                      : "text-muted-foreground hover:bg-secondary/60",
+                    "rounded-md p-1.5 transition-colors",
+                    showTree ? "text-primary" : "text-muted-foreground hover:bg-secondary",
                   )}
                 >
-                  <Icon className="h-3.5 w-3.5" strokeWidth={1.8} />
-                  <span className="whitespace-nowrap">
-                    {f.name}
-                    {project.files.find((file) => file.id === f.id)?.text !==
-                    project.files.find((file) => file.id === f.id)?.saved
-                      ? " · " + t("reader.unsaved")
-                      : ""}
-                  </span>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      close(f.id)
-                    }}
-                    className="rounded p-0.5 opacity-0 transition-opacity hover:bg-accent group-hover:opacity-100"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </div>
-              )
-            })}
-            <div className="flex-1" />
-            {kind === "pdf" && activeData && project.files.some((file) => file.id === activeId) && (
-              <button
-                disabled={importing || busy}
-                className="shrink-0 px-3 text-xs disabled:opacity-40"
-                onClick={async () => {
-                  if (!project.rootPath) return
-                  setImporting(true)
-                  try {
-                    const data =
-                      activeData.file ??
-                      new File(
-                        [
-                          Uint8Array.from(
-                            atob(
-                              (await envoi().fsRead(project.rootPath, activeData.path)).base64 ??
-                                "",
-                            ),
-                            (c) => c.charCodeAt(0),
-                          ),
-                        ],
-                        activeData.path.split("/").pop() ?? "paper.pdf",
-                        { type: "application/pdf" },
-                      )
-                    const papers = await importLibraryFiles([data])
-                    await researchLibrary(project.rootPath, {
-                      action: "import",
-                      papers: await encodeNative(papers),
-                    })
-                    window.dispatchEvent(new Event("envoi:library-updated"))
-                    setMessage("PDF 已归档到当前研究的论文库。")
-                    void navigate("/library")
-                  } catch (error) {
-                    setMessage((error as Error).message)
-                  } finally {
-                    setImporting(false)
-                  }
-                }}
-              >
-                {importing ? "正在归档…" : "归档到论文库"}
-              </button>
-            )}
-            {(kind === "csv" || kind === "tsv") && (
-              <button
-                disabled={busy}
-                className="shrink-0 px-3 text-xs"
-                onClick={() => setDataEditing(dataEditing === activeId ? null : activeId)}
-              >
-                {dataEditing === activeId ? "完成编辑" : "编辑数据"}
-              </button>
-            )}
-            {kind === "markdown" && (
-              <div className="flex items-center gap-1 px-2">
-                <>
-                  <button
-                    title={t("reader.mdPreview")}
-                    aria-label={t("reader.mdPreview")}
-                    aria-pressed={mdPreview}
-                    onClick={() => activeId && setMdMode((m) => ({ ...m, [activeId]: "preview" }))}
-                    className={cn(
-                      "rounded-md p-1.5 transition-colors",
-                      mdPreview ? "text-primary" : "text-muted-foreground hover:bg-secondary",
-                    )}
-                  >
-                    <Eye className="h-3.5 w-3.5" />
-                  </button>
-                  <button
-                    title={t("reader.mdSource")}
-                    aria-label={t("reader.mdSource")}
-                    aria-pressed={!mdPreview}
-                    onClick={() => activeId && setMdMode((m) => ({ ...m, [activeId]: "source" }))}
-                    className={cn(
-                      "rounded-md p-1.5 transition-colors",
-                      !mdPreview ? "text-primary" : "text-muted-foreground hover:bg-secondary",
-                    )}
-                  >
-                    <Code2 className="h-3.5 w-3.5" />
-                  </button>
-                </>
+                  <FolderTree className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  title={showChat ? t("reader.hideChat") : t("reader.showChat")}
+                  onClick={() => setShowChat(!showChat)}
+                  className={cn(
+                    "rounded-md p-1.5 transition-colors",
+                    showChat ? "text-primary" : "text-muted-foreground hover:bg-secondary",
+                  )}
+                >
+                  <MessageSquareText className="h-3.5 w-3.5" />
+                </button>
               </div>
-            )}
-            <div className="flex items-center gap-1 px-2">
-              <button
-                title={showTree ? t("reader.hideTree") : t("reader.showTree")}
-                onClick={() => setShowTree(!showTree)}
-                className={cn(
-                  "rounded-md p-1.5 transition-colors",
-                  showTree ? "text-primary" : "text-muted-foreground hover:bg-secondary",
-                )}
-              >
-                <FolderTree className="h-3.5 w-3.5" />
-              </button>
-              <button
-                title={showChat ? t("reader.hideChat") : t("reader.showChat")}
-                onClick={() => setShowChat(!showChat)}
-                className={cn(
-                  "rounded-md p-1.5 transition-colors",
-                  showChat ? "text-primary" : "text-muted-foreground hover:bg-secondary",
-                )}
-              >
-                <MessageSquareText className="h-3.5 w-3.5" />
-              </button>
             </div>
           </div>
 
