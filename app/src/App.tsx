@@ -228,7 +228,7 @@ function ProjectApp() {
   }
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden text-foreground">
+    <div className="relative flex h-screen flex-col overflow-hidden text-foreground">
       {page.redirect && <Navigate to={page.redirect} replace />}
       {(mac || windows) && emptyWorkspace && (
         <div aria-hidden="true" className="window-drag fixed inset-x-0 top-0 z-40 h-10" />
@@ -238,25 +238,32 @@ function ProjectApp() {
         className={
           emptyWorkspace
             ? "hidden"
-            : `flex h-11 shrink-0 items-center ${mac ? "window-drag pl-[80px]" : windows ? "window-drag pr-[150px]" : ""}`
+            : `relative flex h-11 shrink-0 items-center ${mac ? "window-drag pl-[80px]" : windows ? "window-drag pr-[150px]" : ""}`
         }
       >
-        <div className="flex min-w-0 max-w-[55%] items-center gap-2 pl-3.5">
+        <div className="flex min-w-0 items-center gap-2 pl-3.5">
           <div className="shrink-0">
             <ProjectMenu />
           </div>
           <ProjectIdentity />
           <WorkspaceBadge />
         </div>
-        <div className="flex min-w-0 flex-1 justify-center px-3">
+        <div className="pointer-events-none absolute inset-x-0 flex justify-center">
+          <div className="pointer-events-auto">
+            <ActivityBar view={view} />
+          </div>
+        </div>
+        <div className="min-w-0 flex-1" />
+        <div className="flex shrink-0 items-center pr-3.5">
           <button
             onClick={() => setPaletteOpen(true)}
-            className="flex h-6.5 w-72 max-w-full items-center gap-2 rounded-full border border-white/[0.08] bg-card/40 px-3 text-[11.5px] text-muted-foreground backdrop-blur-xl backdrop-saturate-150 transition-colors hover:border-primary/50"
-            style={{ height: 26 }}
+            className="flex h-7 w-44 max-w-full items-center gap-2 rounded-full border border-white/[0.08] bg-card/40 px-3 text-[11.5px] text-muted-foreground backdrop-blur-xl backdrop-saturate-150 transition-colors hover:border-primary/50"
           >
             <Search className="h-3 w-3" />
-            <span className="min-w-0 flex-1 truncate text-left">{t("app.searchPlaceholder")}</span>
-            <kbd className="hidden shrink-0 rounded border border-border bg-secondary px-1 font-editor text-[10px] sm:inline">
+            <span className="hidden min-w-0 flex-1 truncate text-left lg:inline">
+              {t("app.searchPlaceholder")}
+            </span>
+            <kbd className="hidden shrink-0 rounded border border-border bg-secondary px-1 font-editor text-[10px] lg:inline">
               {commandChordLabel("palette", resolveBindings(effective.bindings), mac)}
             </kbd>
           </button>
@@ -264,8 +271,7 @@ function ProjectApp() {
       </div>
 
       {/* 主体 */}
-      <div className={`flex min-h-0 flex-1 ${emptyWorkspace ? "" : "gap-2.5 px-2.5"}`}>
-        {!emptyWorkspace && <ActivityBar view={view} />}
+      <div className={`flex min-h-0 flex-1 ${emptyWorkspace ? "" : "px-2.5 pb-12"}`}>
         <div
           className={`min-w-0 flex-1 ${emptyWorkspace ? "" : "overflow-hidden rounded-xl border border-white/[0.07] bg-background/60 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05),0_24px_80px_-24px_rgba(0,0,0,0.55)] backdrop-blur-2xl backdrop-saturate-150"}`}
         >
@@ -347,8 +353,8 @@ function ProjectApp() {
 
       {/* 状态栏 */}
       {!emptyWorkspace && (
-        <div className="flex shrink-0 justify-center pb-2.5 text-[11px] text-muted-foreground">
-          <div className="flex h-7 items-center gap-3 rounded-full border border-white/[0.08] bg-card/40 px-4 shadow-[0_8px_32px_-12px_rgba(0,0,0,0.5)] backdrop-blur-xl backdrop-saturate-150 tabular-nums">
+        <div className="pointer-events-none absolute inset-x-0 bottom-3.5 z-30 flex justify-center text-[11px] text-muted-foreground">
+          <div className="pointer-events-auto flex h-7 items-center gap-3 rounded-full border border-white/[0.08] bg-card/40 px-4 shadow-[0_8px_32px_-12px_rgba(0,0,0,0.5)] backdrop-blur-xl backdrop-saturate-150 tabular-nums">
             {project.id !== "empty" && <ProjectTrust />}
             {project.id !== "empty" && <GitStatusPanel />}
             {project.id !== "empty" && (
@@ -359,13 +365,6 @@ function ProjectApp() {
                 }}
               />
             )}
-            <button
-              onClick={() => setPaletteOpen(true)}
-              title={t("command.palette")}
-              className="-mx-1 rounded px-1 transition-colors hover:bg-white/[0.06] hover:text-foreground"
-            >
-              {view ? t(`view.${view}`) : t("app.statusbar.pageNavigation")}
-            </button>
             <span aria-hidden="true" className="h-3 w-px bg-border" />
             <button
               onClick={() => void navigate("/settings/global/ai")}

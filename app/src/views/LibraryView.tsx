@@ -711,7 +711,7 @@ export function LibraryView() {
   const groups = [...new Set(index?.papers.map((p) => p.collection || "未分类") ?? [])]
   return (
     <div className="flex h-full flex-col" data-testid="research-library">
-      <header className="flex h-12 shrink-0 items-center gap-3 border-b border-border/70 bg-card/30 px-4 text-xs">
+      <header className="flex h-11 shrink-0 items-center gap-3 border-b border-border/70 bg-card px-4 text-xs">
         <nav
           aria-label="论文库视图"
           className="flex rounded-lg border border-border/70 bg-secondary/50 p-0.5"
@@ -890,46 +890,52 @@ export function LibraryView() {
             />
           ) : (
             <Group orientation="horizontal">
-              <Panel defaultSize="20%" minSize="150px" maxSize="35%">
-                <nav className="h-full overflow-auto bg-card/40 p-3">
-                  <input
-                    aria-label="搜索研究论文"
-                    className={field + " mb-3 w-full"}
-                    placeholder="搜索标题、作者、标签…"
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                  />
-                  {groups.map((group) => (
-                    <details open key={group} className="mb-3">
-                      <summary className="cursor-pointer py-2 text-xs font-medium">{group}</summary>
-                      {index?.papers
-                        .filter(
-                          (p) =>
-                            (p.collection || "未分类") === group &&
-                            [p.title, p.author, ...p.tags]
-                              .join(" ")
-                              .toLowerCase()
-                              .includes(query.toLowerCase()),
-                        )
-                        .map((p) => (
-                          <button
-                            key={p.id}
-                            className={`mb-1 w-full rounded p-2 text-left text-xs leading-5 ${selected === p.id ? "bg-accent text-primary" : "hover:bg-secondary"}`}
-                            onClick={() => selectPaper(p.id)}
-                          >
-                            {p.title}
-                            <span className="mt-1 block text-[10px] text-muted-foreground">
-                              {p.year || "年份待核对"} · {p.attachmentPath ?? "无附件"}
-                            </span>
-                          </button>
-                        ))}
-                    </details>
-                  ))}
-                  {!index?.papers.length && (
-                    <p className="py-6 text-xs leading-6 text-muted-foreground">
-                      {t("library.startImport")}
-                    </p>
-                  )}
+              <Panel defaultSize="18%" minSize="14%" maxSize="30%">
+                <nav className="flex h-full flex-col bg-card">
+                  <div className="flex h-9 shrink-0 items-center border-b border-border px-2">
+                    <input
+                      aria-label="搜索研究论文"
+                      className={field + " h-7 w-full"}
+                      placeholder="搜索标题、作者、标签…"
+                      value={query}
+                      onChange={(e) => setQuery(e.target.value)}
+                    />
+                  </div>
+                  <div className="flex-1 overflow-auto p-2">
+                    {groups.map((group) => (
+                      <details open key={group} className="mb-3">
+                        <summary className="cursor-pointer py-2 text-xs font-medium">
+                          {group}
+                        </summary>
+                        {index?.papers
+                          .filter(
+                            (p) =>
+                              (p.collection || "未分类") === group &&
+                              [p.title, p.author, ...p.tags]
+                                .join(" ")
+                                .toLowerCase()
+                                .includes(query.toLowerCase()),
+                          )
+                          .map((p) => (
+                            <button
+                              key={p.id}
+                              className={`mb-1 w-full rounded p-2 text-left text-xs leading-5 ${selected === p.id ? "bg-accent text-primary" : "hover:bg-secondary"}`}
+                              onClick={() => selectPaper(p.id)}
+                            >
+                              {p.title}
+                              <span className="mt-1 block text-[10px] text-muted-foreground">
+                                {p.year || "年份待核对"} · {p.attachmentPath ?? "无附件"}
+                              </span>
+                            </button>
+                          ))}
+                      </details>
+                    ))}
+                    {!index?.papers.length && (
+                      <p className="py-6 text-xs leading-6 text-muted-foreground">
+                        {t("library.startImport")}
+                      </p>
+                    )}
+                  </div>
                 </nav>
               </Panel>
               <Handle />

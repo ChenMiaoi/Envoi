@@ -142,12 +142,13 @@ try {
   )
   await page.keyboard.press("Escape")
   await page.keyboard.press(process.platform === "darwin" ? "Meta+s" : "Control+s")
-  await page.waitForFunction(
-    async (root) =>
-      (await window.envoi.fsRead(root, "references.bib")).text.includes("workflowcheck"),
-    main,
-  )
-  assert.match(await readFile(path.join(main, "references.bib"), "utf8"), /year=\{2026\}/)
+  // fsRead 可能命中未落盘的脏缓冲,必须以磁盘内容为准轮询。
+  let bibOnDisk = ""
+  for (let i = 0; i < 75 && !/year=\{2026\}/.test(bibOnDisk); i++) {
+    await new Promise((resolve) => setTimeout(resolve, 200))
+    bibOnDisk = await readFile(path.join(main, "references.bib"), "utf8")
+  }
+  assert.match(bibOnDisk, /year=\{2026\}/)
   await page.setViewportSize({ width: 760, height: 650 })
   assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth))
   await page.setViewportSize({ width: 1440, height: 900 })

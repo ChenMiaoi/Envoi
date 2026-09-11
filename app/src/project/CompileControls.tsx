@@ -164,7 +164,7 @@ export function CompileControls({ hasPdf = false }: { hasPdf?: boolean }) {
   }, [queuedSave, running, busy, saving, run])
   return (
     <div className="shrink-0 border-b border-border/60 text-[11px]">
-      <div className="flex h-8 flex-wrap items-center justify-between gap-2 px-3">
+      <div className="flex h-9 flex-wrap items-center justify-between gap-2 px-3">
         <button
           className="-mx-1 flex min-w-0 items-center gap-1 rounded px-1 text-muted-foreground transition-colors hover:bg-white/[0.05] hover:text-foreground"
           aria-expanded={open}

@@ -146,7 +146,7 @@ export function WorkspacePanel({
   }
   return (
     <div className="flex h-full min-h-0 flex-col bg-background" data-testid="research-workspaces">
-      <header className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-border bg-card px-5 py-3">
+      <header className="flex h-11 shrink-0 items-center justify-between gap-3 border-b border-border bg-card px-4">
         <div>
           <h1 className="text-sm font-medium">版本与实验</h1>
         </div>
@@ -176,7 +176,7 @@ export function WorkspacePanel({
       {error && <Notification message={error} kind={"error"} />}
       {notice && <Notification message={notice} kind={"success"} />}
       <div className="flex min-h-0 flex-1 max-md:flex-col">
-        <aside className="w-64 shrink-0 overflow-auto border-r border-border bg-card/30 p-3 max-md:max-h-44 max-md:w-full max-md:border-b max-md:border-r-0">
+        <aside className="w-72 shrink-0 overflow-auto border-r border-border bg-card p-3 max-md:max-h-44 max-md:w-full max-md:border-b max-md:border-r-0">
           <p className="mb-3 px-2 text-[11px] text-muted-foreground">
             工作区 · {overview?.workspaces.length ?? 0}
           </p>

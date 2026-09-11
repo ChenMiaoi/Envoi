@@ -132,7 +132,7 @@ export function WriterView({
   return (
     <PanelGroup orientation="horizontal" className="h-full">
       {/* 左：资源 / 大纲 */}
-      <Panel defaultSize="16%" minSize="12%" maxSize="28%" className="bg-card">
+      <Panel defaultSize="18%" minSize="14%" maxSize="30%" className="bg-card">
         <div className="flex h-full flex-col">
           <div className="flex h-9 shrink-0 items-center gap-1 border-b border-border px-2">
             {sideTabs.map((item) => (

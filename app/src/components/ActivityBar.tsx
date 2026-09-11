@@ -9,44 +9,30 @@ const items: { id: ViewId; icon: typeof BookOpenText }[] = [
   { id: "writer", icon: PenLine },
   { id: "library", icon: LibraryBig },
   { id: "history", icon: History },
+  { id: "settings", icon: Settings },
 ]
 
 export function ActivityBar({ view }: { view?: ViewId }) {
   const { t } = useT()
   return (
-    <div className="flex h-full w-12 flex-col items-center py-2">
-      {items.slice(0, 4).map((it) => (
+    <nav aria-label={t("app.statusbar.pageNavigation")} className="flex items-center gap-0.5">
+      {items.map((it) => (
         <NavLink
           end
           to={viewPaths[it.id]}
           key={it.id}
           title={t(`view.${it.id}`)}
           className={cn(
-            "group relative mb-1.5 flex h-10 w-10 items-center justify-center rounded-lg transition-colors",
+            "flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs transition-colors",
             view === it.id
               ? "bg-accent/70 text-primary [filter:drop-shadow(0_0_5px_hsl(var(--primary)/0.45))]"
-              : "text-muted-foreground hover:bg-secondary hover:text-foreground",
+              : "text-muted-foreground hover:bg-white/[0.06] hover:text-foreground",
           )}
         >
-          {view === it.id && (
-            <span className="absolute left-[-9px] top-1/2 h-5 w-[2.5px] -translate-y-1/2 rounded-full bg-primary shadow-[0_0_8px_hsl(var(--primary)/0.9)]" />
-          )}
-          <it.icon className="h-[18px] w-[18px]" strokeWidth={1.8} />
+          <it.icon className="h-3.5 w-3.5 shrink-0" strokeWidth={1.8} />
+          <span className="hidden xl:inline">{t(`view.${it.id}`)}</span>
         </NavLink>
       ))}
-      <div className="flex-1" />
-      <NavLink
-        to={viewPaths.settings}
-        title={t("view.settings")}
-        className={cn(
-          "flex h-10 w-10 items-center justify-center rounded-lg transition-colors",
-          view === "settings"
-            ? "bg-accent text-primary"
-            : "text-muted-foreground hover:bg-secondary hover:text-foreground",
-        )}
-      >
-        <Settings className="h-[18px] w-[18px]" strokeWidth={1.8} />
-      </NavLink>
-    </div>
+    </nav>
   )
 }

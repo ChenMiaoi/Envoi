@@ -291,28 +291,24 @@ export function SettingsView() {
   if ((category as string) === "shortcuts") return <ShortcutsView />
   return (
     <div className="flex h-full flex-col bg-background">
-      <header className="border-b border-border px-7 py-5">
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <h1 className="text-xl font-semibold">{t("view.settings")}</h1>
-          </div>
-          <div className="flex rounded-lg border border-border bg-card p-1">
-            {(["global", "project"] as const).map((value) => (
-              <NavLink
-                key={value}
-                to={`/settings/${value}/${category}`}
-                className={`rounded-md px-4 py-2 text-xs ${scope === value ? "bg-accent text-primary" : "text-muted-foreground"}`}
-              >
-                {t(value === "global" ? "settings.header.global" : "settings.header.project")}
-              </NavLink>
-            ))}
-          </div>
+      <header className="flex h-11 shrink-0 items-center justify-between border-b border-border bg-card px-4">
+        <h1 className="text-sm font-medium">{t("view.settings")}</h1>
+        <div className="flex rounded-lg border border-border bg-background p-0.5">
+          {(["global", "project"] as const).map((value) => (
+            <NavLink
+              key={value}
+              to={`/settings/${value}/${category}`}
+              className={`rounded-md px-3 py-1 text-xs ${scope === value ? "bg-accent text-primary" : "text-muted-foreground"}`}
+            >
+              {t(value === "global" ? "settings.header.global" : "settings.header.project")}
+            </NavLink>
+          ))}
         </div>
       </header>
       <div className="flex min-h-0 flex-1">
         <nav
           aria-label={t("settings.navAria")}
-          className="w-44 shrink-0 space-y-1 border-r border-border bg-card/50 p-3"
+          className="w-72 shrink-0 space-y-1 border-r border-border bg-card p-3"
         >
           {Object.entries(settingCategories).map(([id, labelKey]) => (
             <NavLink

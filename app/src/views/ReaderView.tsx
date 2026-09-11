@@ -151,7 +151,7 @@ export function ReaderView({
     <PanelGroup orientation="horizontal" className="h-full">
       {/* 左：目录树 */}
       {showTree && (
-        <Panel defaultSize="17%" minSize="12%" maxSize="30%" className="bg-card">
+        <Panel defaultSize="18%" minSize="14%" maxSize="30%" className="bg-card">
           <div className="flex h-full flex-col">
             <div className="flex h-9 shrink-0 items-center justify-between px-3 text-[11px] uppercase tracking-widest text-muted-foreground">
               <span>{t("reader.explorer")}</span>
