@@ -100,6 +100,7 @@ npm run dev
 | `npm run build`        | 类型检查与构建                   |
 | `npm run lint`         | 静态检查                         |
 | `npm test`             | 核心逻辑测试                     |
+| `npm run ci:check`     | 与 CI 等价的完整检查             |
 | `npm run test:desktop` | 桌面交互回归，先运行构建         |
 | `npm run test:local`   | 本机 TeX、Git、ChkTeX 等工具检查 |
 | `npm run test:ai`      | AI 集成与数据迁移检查            |

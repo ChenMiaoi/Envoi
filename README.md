@@ -100,6 +100,7 @@ The first `dev` or `build` run installs the dependencies under `app/` automatica
 | `npm run build`        | Type checking and build                            |
 | `npm run lint`         | Static checks                                      |
 | `npm test`             | Core logic tests                                   |
+| `npm run ci:check`     | Full CI-equivalent validation                      |
 | `npm run test:desktop` | Desktop interaction regression tests after a build |
 | `npm run test:local`   | Local TeX, Git, ChkTeX, and related tool checks    |
 | `npm run test:ai`      | AI integration and data migration checks           |

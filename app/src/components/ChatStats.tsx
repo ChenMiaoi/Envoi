@@ -95,7 +95,7 @@ export function ChatStats({ record, busy }: { record: AgentRecord | null; busy: 
           aria-label={t("chat.statsTitle")}
           title={t("chat.statsTitle")}
           disabled={!assistants.length}
-          className="shrink-0 rounded-full p-1.5 text-muted-foreground hover:text-foreground disabled:opacity-40"
+          className="shrink-0 rounded-full p-1.5 text-muted-foreground hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
         >
           <ChartNoAxesColumn className="h-3.5 w-3.5" />
         </button>

@@ -15,6 +15,14 @@ npm run package:mac # macOS
 npm run package:win # Windows
 ```
 
+For CI-equivalent validation from the repository root, run `npm run ci:check`.
+This is the single authoritative entry point used by both local Windows
+validation and the GitHub Windows job: it runs the same commands in the same
+order and includes `test:desktop` on Windows. Node.js versions (Node 24 or
+newer) and npm registry selection are intentionally not part of this parity
+contract. macOS uses the same entry point but omits the Windows-only desktop
+step.
+
 `dev:desktop` and `build:desktop` are explicit aliases. `app/release/` contains platform-specific output. The current packaging configuration produces unsigned local builds; distribution signing and notarization require the project owner's Apple credentials. TeX Live, Git and optional ChkTeX/Biber are detected on the machine, not bundled. Windows and macOS are supported. Windows packaging reuses the installed Electron runtime and produces an NSIS installer; Windows distribution signing is not configured.
 
 ## One workspace trust decision
