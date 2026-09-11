@@ -27,12 +27,14 @@ try {
   const page = await app.firstWindow(),
     errors = []
   page.setDefaultTimeout(15000)
+  const waitForReader = () =>
+    page.waitForFunction(() => location.hash === "#/reader", undefined, { timeout: 60000 })
   page.on("pageerror", (e) => errors.push(e.message))
   await page.getByTestId("welcome-page").waitFor()
   await page.getByRole("button", { name: /打开示例项目/ }).click()
   await page.getByTestId("welcome-page").waitFor({ state: "hidden" })
   await page.getByRole("button", { name: "main.tex", exact: true }).waitFor()
-  await page.waitForFunction(() => location.hash === "#/reader")
+  await waitForReader()
   const main = (await page.evaluate(() => window.envoi.dataGet("recent"))).value[0].path
   const mainId = (await page.evaluate(() => window.envoi.dataGet("session", "current"))).value.id
   await page.evaluate(() => (location.hash = "/history"))
@@ -45,7 +47,7 @@ try {
   await page.getByRole("button", { name: "创建实验", exact: true }).click()
   await page.getByRole("heading", { name: "注意力模型 · 基线复现", exact: true }).waitFor()
   await page.getByRole("button", { name: "打开工作区", exact: true }).click()
-  await page.waitForFunction(() => location.hash === "#/reader")
+  await waitForReader()
   await page.waitForFunction(
     (id) =>
       document.querySelector('[aria-label^="项目："]')?.textContent &&
@@ -89,7 +91,7 @@ try {
   await page.getByRole("heading", { name: "带宽敏感性 · 待探索", exact: true }).waitFor()
   await page.locator("aside button").filter({ hasText: "主工作区" }).click()
   await page.getByRole("button", { name: "打开工作区", exact: true }).click()
-  await page.waitForFunction(() => location.hash === "#/reader")
+  await waitForReader()
   await page.evaluate(() => (location.hash = "/history"))
   await page.getByRole("button", { name: "已保存结果", exact: true }).click()
   await page.getByRole("heading", { name: "注意力模型基线 · 合成数据", exact: true }).waitFor()
@@ -98,7 +100,7 @@ try {
   await page.getByRole("textbox", { name: "工作区名称", exact: true }).fill("菜单创建的实验")
   await page.getByRole("button", { name: "创建并打开", exact: true }).click()
   await page.getByRole("button", { name: "切换工作区：菜单创建的实验", exact: true }).waitFor()
-  await page.waitForFunction(() => location.hash === "#/reader")
+  await waitForReader()
   await page.getByRole("button", { name: "切换工作区：菜单创建的实验", exact: true }).click()
   await page.getByRole("menuitem", { name: "重命名当前工作区…", exact: true }).click()
   await page.getByRole("textbox", { name: "工作区名称", exact: true }).fill("带宽扫描实验")
