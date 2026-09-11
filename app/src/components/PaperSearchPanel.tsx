@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from "react"
 import { researchLibrary, type ResearchPaper } from "@/lib/researchLibrary"
 import { ipcError } from "@/lib/desktop"
+import { notify, notifyLoading } from "@/lib/notifications"
 import { synthesizeBib, citationKeyFor } from "@/lib/paperMetadata"
 import {
   mergeSearchResults,
@@ -101,10 +102,12 @@ export function PaperSearchPanel({
       }),
     )
   }
-  const addPaper = async (paper: PaperSearchResult, withPdf: boolean) => {
+  const addPaper = async (paper: PaperSearchResult) => {
     const key = normalizeTitle(paper.title) + ":" + paper.year
     if (adding[key]) return
-    setAdding((value) => ({ ...value, [key]: withPdf ? "pdf" : "meta" }))
+    setAdding((value) => ({ ...value, [key]: paper.pdfUrl ? "pdf" : "meta" }))
+    const toastId = `library-add-${key}`
+    if (paper.pdfUrl) notifyLoading(`正在下载 PDF：${paper.title}…`, toastId)
     try {
       const record: Record<string, unknown> = {
         id: crypto.randomUUID(),
@@ -120,21 +123,33 @@ export function PaperSearchPanel({
       }
       record.citationKey = citationKeyFor(record as never)
       record.bib = synthesizeBib(record as never, record.citationKey as string)
-      if (withPdf) {
-        const file = await researchLibrary<{ name: string; base64: string }>(root, {
-          action: "download-pdf",
-          url: paper.pdfUrl,
-        })
-        record.attachment = { $blob: file.base64, type: "application/pdf" }
-        record.attachmentName = file.name
+      let pdfError = ""
+      if (paper.pdfUrl) {
+        try {
+          const file = await researchLibrary<{ name: string; base64: string }>(root, {
+            action: "download-pdf",
+            url: paper.pdfUrl,
+          })
+          record.attachment = { $blob: file.base64, type: "application/pdf" }
+          record.attachmentName = file.name
+        } catch (error) {
+          pdfError = ipcError(error).message
+        }
       }
       await researchLibrary(root, { action: "import", papers: [record] })
       setAdded((value) => [...value, key])
       onImported()
+      if (pdfError)
+        notify(`PDF 下载失败（${pdfError}），已先保存文献条目：${paper.title}`, "warning", toastId)
+      else if (paper.pdfUrl) notify(`已下载并加入论文库：${paper.title}`, "success", toastId)
+      else
+        notify(
+          `已加入论文库：${paper.title}（该来源未提供开放全文 PDF，可稍后补充）`,
+          "warning",
+          toastId,
+        )
     } catch (error) {
-      window.dispatchEvent(
-        new CustomEvent("envoi:storage-warning", { detail: ipcError(error).message }),
-      )
+      notify(`加入论文库失败：${ipcError(error).message}`, "error", toastId)
     } finally {
       setAdding((value) => ({ ...value, [key]: undefined }))
     }
@@ -365,22 +380,23 @@ export function PaperSearchPanel({
                         原文页面 ↗
                       </a>
                     )}
-                    {paper.pdfUrl && !shelvedPaper && (
-                      <button
-                        className={ghostButton}
-                        disabled={!!busy}
-                        title={paper.pdfUrl}
-                        onClick={() => void addPaper(paper, true)}
-                      >
-                        {busy === "pdf" ? "正在获取 PDF…" : "PDF 入库"}
-                      </button>
-                    )}
                     <button
                       className="rounded-lg bg-primary px-2.5 py-1.5 text-xs font-medium text-primary-foreground shadow-sm transition-all hover:bg-primary/90 disabled:opacity-50"
                       disabled={shelvedPaper || !!busy}
-                      onClick={() => void addPaper(paper, false)}
+                      title={
+                        paper.pdfUrl
+                          ? "下载开放全文 PDF 并入库"
+                          : "该来源无开放全文，仅保存文献条目"
+                      }
+                      onClick={() => void addPaper(paper)}
                     >
-                      {busy === "meta" ? "正在加入…" : shelvedPaper ? "已加入" : "加入论文库"}
+                      {busy === "pdf"
+                        ? "正在获取 PDF…"
+                        : busy === "meta"
+                          ? "正在加入…"
+                          : shelvedPaper
+                            ? "已加入"
+                            : "加入论文库"}
                     </button>
                   </span>
                 </footer>

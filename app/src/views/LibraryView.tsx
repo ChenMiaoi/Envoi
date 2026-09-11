@@ -3,6 +3,7 @@ import { useLocation } from "react-router"
 import { envoi } from "@/lib/desktop"
 import { useT } from "@/i18n/useT"
 import { Notification } from "@/components/Notification"
+import { notify } from "@/lib/notifications"
 import { useEffect, useRef, useState, useCallback } from "react"
 import { bibliographyNames } from "@/lib/bibliography"
 import { synthesizeBib, citationKeyFor, bibtexKey } from "@/lib/paperMetadata"
@@ -31,6 +32,10 @@ import {
   ResizableHandle as Handle,
 } from "@/components/ui/resizable"
 const field = "rounded border border-input bg-background px-2 py-1.5 text-xs"
+const headerPrimary =
+  "rounded-lg bg-primary px-2.5 py-1.5 text-xs font-medium text-primary-foreground shadow-sm transition-all hover:bg-primary/90 active:scale-[0.98] disabled:opacity-50"
+const headerGhost =
+  "rounded-lg border border-border/70 px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:border-border hover:bg-secondary hover:text-foreground active:scale-[0.98] disabled:opacity-50"
 const notice = (error: unknown) =>
   window.dispatchEvent(
     new CustomEvent("envoi:storage-warning", { detail: (error as Error).message }),
@@ -228,13 +233,13 @@ function PaperWorkspace({
       const bib = paper.bib ?? synthesizeBib(paper, paper.citationKey || citationKeyFor(paper))
       const key = bibtexKey(bib) ?? paper.citationKey
       if (key && target.text?.includes("{" + key + ",")) {
-        setError("项目已包含引用：" + key)
+        notify(t("library.citeKeyExists", { key, path: target.path }), "warning")
         return
       }
       editProject(target.id, (target.text ?? "") + "\n" + bib + "\n")
-      setError("已加入 " + target.path + "，保存项目后写入磁盘。")
+      notify(t("library.citeWritten", { key: key ?? "", path: target.path }), "success")
     } catch (error) {
-      setError((error as Error).message)
+      notify((error as Error).message, "error")
     }
   }
   const send = async (value: string) => {
@@ -322,8 +327,11 @@ function PaperWorkspace({
                   .join(" · ") || "元数据待补全"}
               </div>
             </div>
-            <button onClick={cite}>引用到项目</button>
+            <button className={headerPrimary} title={t("library.citeToProject")} onClick={cite}>
+              引用到项目
+            </button>
             <button
+              className={headerGhost}
               disabled={busy}
               title="PDF 移入 papers/.trash，保留阅读记录"
               onClick={async () => {
@@ -331,6 +339,7 @@ function PaperWorkspace({
                   await flush()
                   if (blocked.current) return
                   await call("remove")
+                  notify(`已移出论文库：${paper.title}（PDF 已移至 papers/.trash）`, "info")
                   onChanged()
                 } catch (e) {
                   notice(e)
@@ -339,7 +348,11 @@ function PaperWorkspace({
             >
               移出论文库
             </button>
-            <button disabled={busy} onClick={() => attachmentInput.current?.click()}>
+            <button
+              className={headerGhost}
+              disabled={busy}
+              onClick={() => attachmentInput.current?.click()}
+            >
               {file ? "替换 PDF" : "补充 PDF"}
             </button>
             <input
@@ -360,6 +373,7 @@ function PaperWorkspace({
                     setDetail(await call<PaperDetail>("get"))
                     setPdfText("")
                     onChanged()
+                    notify(`已更新 PDF 附件：${next.name}`, "success")
                   } catch (error) {
                     setError((error as Error).message)
                   }
@@ -368,12 +382,14 @@ function PaperWorkspace({
             />
             {selection && (
               <button
+                className={headerGhost}
                 onClick={() => {
                   const page = selectionPage.current
                   edit(
                     draft.current +
                       `\n\n> ${selection}\n\n[原文第 ${page} 页](envoi-paper:${paper.id}/${paper.attachmentHash}/${page})\n`,
                   )
+                  notify(`已摘录选段到笔记（第 ${page} 页）`, "success")
                 }}
               >
                 摘录到笔记

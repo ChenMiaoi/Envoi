@@ -17,3 +17,10 @@ export function notify(
   })
   return toast[kind](message, { id, testId, duration: notificationDuration[kind] })
 }
+
+/** Indeterminate background work; resolve by calling notify with the same id. */
+export function notifyLoading(message: string, id: string) {
+  if (!message.trim()) return
+  logEvent({ event: "notification.shown", level: "info" })
+  return toast.loading(message, { id })
+}

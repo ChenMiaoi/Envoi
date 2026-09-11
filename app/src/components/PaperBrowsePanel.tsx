@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react"
 import { envoi } from "@/lib/desktop"
+import { notify, notifyLoading } from "@/lib/notifications"
 import { researchLibrary, type ResearchPaper } from "@/lib/researchLibrary"
 import { extractIdentifiers } from "@/lib/paperMetadata"
 import { lookupPaperIdentifier } from "@/lib/metadataLookup"
@@ -21,18 +22,17 @@ export function PaperBrowsePanel({ root, papers }: { root: string; papers: Resea
     [current, setCurrent] = useState(home),
     [loading, setLoading] = useState(true),
     [failed, setFailed] = useState(""),
-    [notice, setNotice] = useState(""),
     [saving, setSaving] = useState(false),
     [canNav, setCanNav] = useState({ back: false, forward: false })
   const identifiers = extractIdentifiers(current)
   useEffect(() => {
     void envoi()
       .bindPaperBrowse(root)
-      .catch((error) => setNotice((error as Error).message))
+      .catch((error) => notify(`网页浏览绑定失败：${(error as Error).message}`, "error"))
     return envoi().onBrowseImported((event) => {
-      if (event.error) setNotice(`下载入库失败：${event.error}`)
+      if (event.error) notify(`下载入库失败：${event.error}`, "error")
       else {
-        setNotice(`已下载并加入论文库：${event.title}`)
+        notify(`已下载并加入论文库：${event.title}`, "success")
         window.dispatchEvent(new CustomEvent("envoi:library-updated"))
       }
     })
@@ -69,7 +69,6 @@ export function PaperBrowsePanel({ root, papers }: { root: string; papers: Resea
     const id = identifiers.doi ?? identifiers.arxiv
     if (!id || saving) return
     setSaving(true)
-    setNotice("")
     try {
       const found = await lookupPaperIdentifier(id)
       if (!found) throw Error("未能从页面标识获取文献信息")
@@ -93,10 +92,10 @@ export function PaperBrowsePanel({ root, papers }: { root: string; papers: Resea
           },
         ],
       })
-      setNotice(`已保存到论文库：${found.fields.title ?? id}`)
+      notify(`已保存到论文库：${found.fields.title ?? id}（未包含 PDF）`, "warning")
       window.dispatchEvent(new CustomEvent("envoi:library-updated"))
     } catch (error) {
-      setNotice(`保存失败：${(error as Error).message}`)
+      notify(`保存失败：${(error as Error).message}`, "error")
     } finally {
       setSaving(false)
     }
@@ -109,7 +108,7 @@ export function PaperBrowsePanel({ root, papers }: { root: string; papers: Resea
   const fetchPdf = async () => {
     if (!pdfTarget || saving) return
     setSaving(true)
-    setNotice("")
+    notifyLoading("正在下载 PDF…", "browse-pdf-fetch")
     try {
       const file = await researchLibrary<{ name: string; base64: string }>(root, {
         action: "download-pdf",
@@ -128,9 +127,9 @@ export function PaperBrowsePanel({ root, papers }: { root: string; papers: Resea
           base64: file.base64,
           name: file.name,
         })
-        setNotice(`已为《${existing.title}》补充 PDF 附件`)
+        notify(`已为《${existing.title}》补充 PDF 附件`, "success", "browse-pdf-fetch")
       } else if (existing) {
-        setNotice(`论文库已包含该文献及其 PDF：${existing.title}`)
+        notify(`论文库已包含该文献及其 PDF：${existing.title}`, "info", "browse-pdf-fetch")
       } else {
         const title =
           found?.fields.title ??
@@ -161,11 +160,11 @@ export function PaperBrowsePanel({ root, papers }: { root: string; papers: Resea
             },
           ],
         })
-        setNotice(`已下载并加入论文库：${title}`)
+        notify(`已下载并加入论文库：${title}`, "success", "browse-pdf-fetch")
       }
       window.dispatchEvent(new CustomEvent("envoi:library-updated"))
     } catch (error) {
-      setNotice(`下载失败：${(error as Error).message}`)
+      notify(`下载失败：${(error as Error).message}`, "error", "browse-pdf-fetch")
     } finally {
       setSaving(false)
     }
@@ -265,14 +264,6 @@ export function PaperBrowsePanel({ root, papers }: { root: string; papers: Resea
           页面中的 PDF 下载会直接进入当前论文库
         </span>
       </div>
-      {notice && (
-        <p
-          role="status"
-          className="shrink-0 border-b border-border/60 bg-secondary/30 px-4 py-1.5 text-[11px] text-muted-foreground"
-        >
-          {notice}
-        </p>
-      )}
       <div className="relative min-h-0 flex-1">
         <webview
           ref={guest}
