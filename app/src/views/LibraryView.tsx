@@ -597,6 +597,7 @@ export function LibraryView() {
   const [sourceOpen, setSourceOpen] = useState(false)
   const [mode, setMode] = useState<"library" | "search" | "browse">("library")
   const [browseVisited, setBrowseVisited] = useState(false)
+  const [browseTarget, setBrowseTarget] = useState<{ url: string; request: number }>()
   const [sourceUrl, setSourceUrl] = useState("")
   const input = useRef<HTMLInputElement>(null),
     selectionClock = useRef(Date.now())
@@ -903,6 +904,11 @@ export function LibraryView() {
               root={root}
               papers={index?.papers ?? []}
               onImported={() => void load()}
+              onBrowse={(url) => {
+                setBrowseTarget((current) => ({ url, request: (current?.request ?? 0) + 1 }))
+                setBrowseVisited(true)
+                setMode("browse")
+              }}
             />
           ) : (
             <Group orientation="horizontal">
@@ -989,7 +995,12 @@ export function LibraryView() {
         </div>
         {browseVisited && (
           <div className="h-full" hidden={mode !== "browse"}>
-            <PaperBrowsePanel root={root} papers={index?.papers ?? []} />
+            <PaperBrowsePanel
+              key={browseTarget?.request ?? 0}
+              root={root}
+              papers={index?.papers ?? []}
+              initialUrl={browseTarget?.url}
+            />
           </div>
         )}
       </div>

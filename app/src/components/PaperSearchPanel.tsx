@@ -24,10 +24,12 @@ export function PaperSearchPanel({
   root,
   papers,
   onImported,
+  onBrowse,
 }: {
   root: string
   papers: ResearchPaper[]
   onImported: () => void
+  onBrowse: (url: string) => void
 }) {
   const [query, setQuery] = useState(""),
     [enabled, setEnabled] = useState<SourceId[]>(sources.map((s) => s.id)),
@@ -188,15 +190,17 @@ export function PaperSearchPanel({
         >
           {pending && !results.length ? "检索中…" : "搜索"}
         </button>
-        <a
+        <button
+          type="button"
           className={ghostButton + " flex h-9 shrink-0 items-center"}
-          href={"https://scholar.google.com/scholar?q=" + encodeURIComponent(query)}
-          target="_blank"
-          rel="noreferrer"
-          title="打开外部网页，结果不作为原生检索来源"
+          disabled={!query.trim()}
+          title="在内置网页中搜索，结果不作为原生检索来源"
+          onClick={() =>
+            onBrowse("https://scholar.google.com/scholar?q=" + encodeURIComponent(query.trim()))
+          }
         >
-          Google Scholar ↗
-        </a>
+          Google Scholar
+        </button>
       </form>
       <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1.5 border-b border-border/60 px-4 py-2">
         {sources.map((source) => (

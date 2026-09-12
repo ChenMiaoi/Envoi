@@ -16,10 +16,18 @@ const bookmarks = [
 ]
 const iconButton =
   "flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:opacity-40"
-export function PaperBrowsePanel({ root, papers }: { root: string; papers: ResearchPaper[] }) {
+export function PaperBrowsePanel({
+  root,
+  papers,
+  initialUrl = home,
+}: {
+  root: string
+  papers: ResearchPaper[]
+  initialUrl?: string
+}) {
   const guest = useRef<WebviewTag | null>(null)
-  const [address, setAddress] = useState(home),
-    [current, setCurrent] = useState(home),
+  const [address, setAddress] = useState(initialUrl),
+    [current, setCurrent] = useState(initialUrl),
     [loading, setLoading] = useState(true),
     [failed, setFailed] = useState(""),
     [saving, setSaving] = useState(false),
@@ -267,7 +275,7 @@ export function PaperBrowsePanel({ root, papers }: { root: string; papers: Resea
       <div className="relative min-h-0 flex-1">
         <webview
           ref={guest}
-          src={home}
+          src={initialUrl}
           partition="persist:paperbrowse"
           webpreferences="contextIsolation=yes, sandbox=yes"
           className="h-full w-full bg-background"
