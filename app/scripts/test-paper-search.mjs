@@ -186,6 +186,73 @@ test("merge dedupes by DOI, keeps sources and per-source citations", () => {
   )
 })
 
+test("cross-source ranking prioritizes topical relevance over citations and overlap", () => {
+  const paper = (source, title, extra = {}) => ({
+    source,
+    title,
+    authors: [],
+    year: "2026",
+    abstract: "",
+    venue: "",
+    publisher: "",
+    openAccess: null,
+    ...extra,
+  })
+  const directRecent = paper("arxiv", "Memory Safety for Embedded Rust", {
+    arxivId: "2601.00001",
+    citationCount: 0,
+  })
+  const weakClassic = paper("openalex", "Memory Hierarchies in Embedded Systems", {
+    doi: "10.1000/weak",
+    year: "1998",
+    citationCount: 5000,
+  })
+  const overlapA = paper("openalex", "A Survey of Embedded Systems", {
+    doi: "10.1000/overlap",
+    citationCount: 100,
+  })
+  const overlapB = { ...overlapA, source: "semanticscholar", citationCount: 90 }
+  const abstractMatch = paper("crossref", "Safer Firmware Design", {
+    doi: "10.1000/abstract",
+    abstract: "We study memory safety techniques for Rust firmware on constrained devices.",
+  })
+  const authorMatch = paper("semanticscholar", "Ownership Types", {
+    doi: "10.1000/author",
+    authors: ["Rust Memory Safety Group"],
+  })
+  const batches = [
+    [weakClassic, overlapA],
+    [overlapB, authorMatch],
+    [abstractMatch],
+    [directRecent],
+  ]
+  const ranked = mergeSearchResults(batches, "memory safety rust", { currentYear: 2026 })
+  assert.deepEqual(
+    ranked.map((item) => item.title),
+    [
+      "Memory Safety for Embedded Rust",
+      "Safer Firmware Design",
+      "Memory Hierarchies in Embedded Systems",
+      "A Survey of Embedded Systems",
+      "Ownership Types",
+    ],
+  )
+  assert.match(ranked[0].ranking.reasons[0], /标题/)
+  assert.equal(
+    ranked[0].ranking.reasons.some((reason) => /被引/.test(reason)),
+    false,
+  )
+  assert.ok(ranked[0].ranking.score > ranked[3].ranking.score)
+  assert.deepEqual(
+    mergeSearchResults(
+      [...batches].reverse().map((batch) => [...batch].reverse()),
+      "memory safety rust",
+      { currentYear: 2026 },
+    ).map((item) => item.title),
+    ranked.map((item) => item.title),
+  )
+})
+
 test("results are cached per source and query; filters do not bust the cache", async () => {
   let calls = 0
   const fetchOnce = async () => (calls++, json({ message: { items: [] } }))

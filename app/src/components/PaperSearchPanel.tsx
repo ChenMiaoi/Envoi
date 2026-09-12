@@ -35,6 +35,7 @@ export function PaperSearchPanel({
     [yearTo, setYearTo] = useState(""),
     [openAccessOnly, setOpenAccessOnly] = useState(false),
     [searched, setSearched] = useState(false),
+    [searchedQuery, setSearchedQuery] = useState(""),
     [batches, setBatches] = useState<Partial<Record<SourceId, SourcePaper[]>>>({}),
     [status, setStatus] = useState<Partial<Record<SourceId, SourceStatus>>>({}),
     [added, setAdded] = useState<string[]>([]),
@@ -42,8 +43,12 @@ export function PaperSearchPanel({
     [expanded, setExpanded] = useState<Record<string, boolean>>({})
   const run = useRef(0)
   const results = useMemo(
-    () => mergeSearchResults(sources.map((s) => batches[s.id] ?? [])),
-    [batches],
+    () =>
+      mergeSearchResults(
+        sources.map((s) => batches[s.id] ?? []),
+        searchedQuery,
+      ),
+    [batches, searchedQuery],
   )
   const pending = sources.some((s) => status[s.id]?.state === "pending")
   // “已入库”标记：论文库不保存 DOI，用规范化标题+年份与引用键识别。
@@ -61,11 +66,12 @@ export function PaperSearchPanel({
   }
   const search = async (retry?: SourceId) => {
     const targets = retry ? [retry] : enabled
-    const text = query.trim()
+    const text = retry ? searchedQuery : query.trim()
     if (!text || !targets.length) return
     const ticket = ++run.current
     setSearched(true)
     if (!retry) {
+      setSearchedQuery(text)
       setBatches({})
       setStatus({})
     }
@@ -361,6 +367,11 @@ export function PaperSearchPanel({
                     </span>
                   ))}
                 </p>
+                {!!paper.ranking?.reasons.length && (
+                  <p className="mt-1.5 text-[10px] text-primary/80">
+                    排序依据：{paper.ranking.reasons.slice(0, 3).join(" · ")}
+                  </p>
+                )}
                 {paper.abstract && (
                   <p
                     className={`mt-2 cursor-pointer whitespace-pre-line text-xs leading-5 text-muted-foreground ${expanded[key] ? "" : "line-clamp-3"}`}

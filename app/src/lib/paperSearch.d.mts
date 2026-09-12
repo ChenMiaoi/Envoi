@@ -14,6 +14,7 @@ export interface PaperSearchResult {
   sources: string[]
   citations: { source: string; count: number }[]
   versions: string[]
+  ranking?: { score: number; reasons: string[] }
 }
 /** 适配器返回的单一来源结果（合并前）；sources 之外的字段同上，citationCount/version 为单值。 */
 export type SourcePaper = Omit<PaperSearchResult, "sources" | "citations" | "versions"> & {
@@ -37,7 +38,21 @@ export function dedupeKey(item: {
   title?: string
   year?: string
 }): string
-export function mergeSearchResults(batches: SourcePaper[][]): PaperSearchResult[]
+export function scoreSearchResult(
+  item: PaperSearchResult,
+  query: string,
+  options?: { currentYear?: number },
+): { score: number; reasons: string[] }
+export function rankSearchResults(
+  results: PaperSearchResult[],
+  query: string,
+  options?: { currentYear?: number },
+): PaperSearchResult[]
+export function mergeSearchResults(
+  batches: SourcePaper[][],
+  query?: string,
+  options?: { currentYear?: number },
+): PaperSearchResult[]
 export function applySearchFilters<T extends { year?: string; openAccess?: boolean | null }>(
   results: T[],
   options?: SearchFilters,

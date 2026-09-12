@@ -24,9 +24,109 @@ export function dedupeKey(item) {
   return "title:" + normalizeTitle(item.title) + ":" + String(item.year ?? "")
 }
 const longer = (a, b) => (String(b ?? "").length > String(a ?? "").length ? b : a)
+const QUERY_STOP_WORDS = new Set([
+  "a",
+  "an",
+  "and",
+  "by",
+  "for",
+  "from",
+  "in",
+  "of",
+  "on",
+  "or",
+  "the",
+  "to",
+  "with",
+])
+const queryParts = (query) => {
+  const phrase = normalizeTitle(query)
+  const all = [...new Set(phrase.split(" ").filter(Boolean))]
+  const meaningful = all.filter((term) => !QUERY_STOP_WORDS.has(term))
+  return { phrase, terms: meaningful.length ? meaningful : all }
+}
+const fieldTerms = (value) => new Set(normalizeTitle(value).split(" ").filter(Boolean))
+const coverage = (terms, value) => {
+  if (!terms.length) return 0
+  const words = fieldTerms(value)
+  return terms.filter((term) => words.has(term)).length / terms.length
+}
+const containsPhrase = (value, phrase) => {
+  if (!phrase) return false
+  const field = normalizeTitle(value)
+  return phrase.includes(" ") ? ` ${field} `.includes(` ${phrase} `) : fieldTerms(field).has(phrase)
+}
+const validYear = (value) => {
+  const year = Number(value)
+  return Number.isInteger(year) && year >= 1000 && year <= 3000 ? year : 0
+}
+const roundScore = (value) => Math.round(value * 10) / 10
+
+// 跨来源统一评分。主题相关性占绝对主导；引用量按论文年龄折算且封顶，
+// 多来源发现只作很小的置信度加分，不能把弱匹配推到直接匹配之前。
+export function scoreSearchResult(item, query, options = {}) {
+  const { phrase, terms } = queryParts(query)
+  if (!phrase || !terms.length) return { score: 0, reasons: [] }
+  const titleCoverage = coverage(terms, item.title),
+    abstractCoverage = coverage(terms, item.abstract),
+    authorCoverage = coverage(terms, (item.authors ?? []).join(" ")),
+    venueCoverage = coverage(terms, [item.venue, item.publisher].filter(Boolean).join(" ")),
+    titlePhrase = containsPhrase(item.title, phrase),
+    abstractPhrase = containsPhrase(item.abstract, phrase)
+  let score =
+    titleCoverage * 60 +
+    (titlePhrase ? 40 : 0) +
+    abstractCoverage * 25 +
+    (abstractPhrase || abstractCoverage === 1 ? 12 : 0) +
+    authorCoverage * 8 +
+    venueCoverage * 8
+  const reasons = []
+  if (titlePhrase) reasons.push("标题包含完整检索词")
+  else if (titleCoverage)
+    reasons.push(`标题匹配 ${Math.round(titleCoverage * terms.length)}/${terms.length} 个关键词`)
+  if (abstractPhrase) reasons.push("摘要包含完整检索词")
+  else if (abstractCoverage === 1) reasons.push("摘要覆盖全部关键词")
+  else if (abstractCoverage)
+    reasons.push(`摘要匹配 ${Math.round(abstractCoverage * terms.length)}/${terms.length} 个关键词`)
+  if (authorCoverage) reasons.push("作者匹配检索词")
+  if (venueCoverage) reasons.push("发表来源匹配检索词")
+
+  const citations = Math.max(0, ...(item.citations ?? []).map((entry) => Number(entry.count) || 0))
+  if (citations) {
+    const currentYear = validYear(options.currentYear) || new Date().getUTCFullYear(),
+      year = validYear(item.year),
+      age = year ? Math.max(1, currentYear - year + 1) : 1,
+      citationScore = Math.min(8, Math.log2(1 + citations / age) * 2)
+    score += citationScore
+    if (citationScore >= 1) reasons.push("被引次数提供年龄折算加分")
+  }
+  const sourceBonus = Math.min(3, Math.max(0, (item.sources?.length ?? 1) - 1) * 1.5)
+  score += sourceBonus
+  if (sourceBonus) reasons.push(`由 ${item.sources.length} 个来源发现`)
+  return { score: roundScore(score), reasons }
+}
+
+export function rankSearchResults(results, query, options = {}) {
+  if (!normalizeTitle(query))
+    return [...(results ?? [])].sort((a, b) => b.sources.length - a.sources.length)
+  return (results ?? [])
+    .map((item, index) => ({
+      item: { ...item, ranking: scoreSearchResult(item, query, options) },
+      index,
+    }))
+    .sort(
+      (a, b) =>
+        b.item.ranking.score - a.item.ranking.score ||
+        normalizeTitle(a.item.title).localeCompare(normalizeTitle(b.item.title), "en") ||
+        String(b.item.year).localeCompare(String(a.item.year), "en") ||
+        dedupeKey(a.item).localeCompare(dedupeKey(b.item), "en") ||
+        a.index - b.index,
+    )
+    .map(({ item }) => item)
+}
 // 合并多个来源的结果批次：同一篇文献保留全部发现来源与各自引用次数（不相加），
 // 字段取首个非空值，摘要取较长者，开放状态取确定值（true 优先，未知不当作无全文）。
-export function mergeSearchResults(batches) {
+export function mergeSearchResults(batches, query = "", options = {}) {
   const merged = [],
     byKey = new Map()
   for (const batch of batches)
@@ -70,8 +170,7 @@ export function mergeSearchResults(batches) {
         target.openAccess =
           item.openAccess === true ? true : (target.openAccess ?? item.openAccess ?? null)
     }
-  // 来源排名融合的初步近似：被更多来源独立发现的文献排在前面，其余保持到达顺序。
-  return merged.sort((a, b) => b.sources.length - a.sources.length)
+  return rankSearchResults(merged, query, options)
 }
 const asYear = (value) => {
   const year = Number(value)
