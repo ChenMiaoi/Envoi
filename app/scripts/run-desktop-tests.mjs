@@ -20,6 +20,7 @@ const tests = [
     ],
   ],
   ["numeric settings", ["scripts/test-number-settings.mjs"]],
+  ["paper search settings", ["scripts/test-paper-search-settings-ui.mjs"]],
   ["system fonts", ["scripts/test-system-fonts.mjs"]],
   ["Git tree", ["scripts/test-git-tree.mjs"]],
   ["restricted mode", ["scripts/test-restricted-mode.mjs"]],

@@ -61,6 +61,12 @@ const validYear = (value) => {
   return Number.isInteger(year) && year >= 1000 && year <= 3000 ? year : 0
 }
 const roundScore = (value) => Math.round(value * 10) / 10
+const SOURCE_LABELS = {
+  openalex: "OpenAlex",
+  semanticscholar: "Semantic Scholar",
+  crossref: "Crossref",
+  arxiv: "arXiv",
+}
 
 // 跨来源统一评分。主题相关性占绝对主导；引用量按论文年龄折算且封顶，
 // 多来源发现只作很小的置信度加分，不能把弱匹配推到直接匹配之前。
@@ -88,6 +94,16 @@ export function scoreSearchResult(item, query, options = {}) {
   else if (abstractCoverage === 1) reasons.push("摘要覆盖全部关键词")
   else if (abstractCoverage)
     reasons.push(`摘要匹配 ${Math.round(abstractCoverage * terms.length)}/${terms.length} 个关键词`)
+  const preferredSource = (item.sourceWeights ?? [])
+    .filter((entry) => Number.isInteger(entry.weight))
+    .sort((a, b) => b.weight - a.weight || a.source.localeCompare(b.source, "en"))[0]
+  if (preferredSource) {
+    const preferenceScore = (Math.min(3, Math.max(0, preferredSource.weight)) - 1) * 2
+    score += preferenceScore
+    if (preferenceScore > 0)
+      reasons.push(`优先来源：${SOURCE_LABELS[preferredSource.source] ?? preferredSource.source}`)
+    else if (preferenceScore < 0) reasons.push("来源优先级较低")
+  }
   if (authorCoverage) reasons.push("作者匹配检索词")
   if (venueCoverage) reasons.push("发表来源匹配检索词")
 
@@ -148,6 +164,7 @@ export function mergeSearchResults(batches, query = "", options = {}) {
           pdfUrl: String(item.pdfUrl ?? ""),
           openAccess: item.openAccess === true ? true : item.openAccess === false ? false : null,
           sources: [],
+          sourceWeights: [],
           citations: [],
           versions: [],
         }
@@ -155,6 +172,14 @@ export function mergeSearchResults(batches, query = "", options = {}) {
         merged.push(target)
       }
       if (!target.sources.includes(item.source)) target.sources.push(item.source)
+      if (!target.sourceWeights.some((entry) => entry.source === item.source))
+        target.sourceWeights.push({
+          source: item.source,
+          weight:
+            Number.isInteger(item.sourceWeight) && item.sourceWeight >= 0 && item.sourceWeight <= 3
+              ? item.sourceWeight
+              : 1,
+        })
       if (item.citationCount != null && !target.citations.some((c) => c.source === item.source))
         target.citations.push({ source: item.source, count: Number(item.citationCount) || 0 })
       if (item.version && !target.versions.includes(item.version))

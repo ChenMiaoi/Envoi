@@ -163,6 +163,29 @@ export async function configureTools(input) {
   return toolInfo()
 }
 const paperSearchPath = path.join(homedir(), ".config/envoi/paper-search.json")
+const paperSearchSources = ["openalex", "semanticscholar", "crossref", "arxiv"]
+const defaultSourceWeights = () =>
+  Object.fromEntries(paperSearchSources.map((source) => [source, 1]))
+const sourceWeights = (value, strict = false) => {
+  const weights = defaultSourceWeights()
+  if (value == null) return weights
+  if (typeof value !== "object" || Array.isArray(value)) {
+    if (strict) throw Error("来源权重格式无效")
+    return weights
+  }
+  if (strict && Object.keys(value).some((source) => !paperSearchSources.includes(source)))
+    throw Error("来源权重包含未知检索来源")
+  for (const source of paperSearchSources) {
+    const weight = value[source]
+    if (weight == null) continue
+    if (!Number.isInteger(weight) || weight < 0 || weight > 3) {
+      if (strict) throw Error("来源权重必须是 0 到 3 的整数")
+      continue
+    }
+    weights[source] = weight
+  }
+  return weights
+}
 // 在线论文检索的用户级配置：个人 API Key 与联系邮箱（polite pool）。
 // 独立文件存放，避免 configureTools 重写 tools.json 时丢失。
 export function paperSearchConfig(file = paperSearchPath) {
@@ -172,15 +195,18 @@ export function paperSearchConfig(file = paperSearchPath) {
       semanticScholarKey:
         typeof value.semanticScholarKey === "string" ? value.semanticScholarKey : "",
       contactEmail: typeof value.contactEmail === "string" ? value.contactEmail : "",
+      sourceWeights: sourceWeights(value.sourceWeights),
     }
   } catch {
-    return { semanticScholarKey: "", contactEmail: "" }
+    return { semanticScholarKey: "", contactEmail: "", sourceWeights: defaultSourceWeights() }
   }
 }
 export async function configurePaperSearch(input, file = paperSearchPath) {
   if (
     !input ||
-    Object.keys(input).some((key) => !["semanticScholarKey", "contactEmail"].includes(key))
+    Object.keys(input).some(
+      (key) => !["semanticScholarKey", "contactEmail", "sourceWeights"].includes(key),
+    )
   )
     throw Error("Unsupported paper search configuration")
   const key = String(input.semanticScholarKey ?? "").trim(),
@@ -188,10 +214,15 @@ export async function configurePaperSearch(input, file = paperSearchPath) {
   if (key && !/^[\w-]{1,200}$/.test(key)) throw Error("Semantic Scholar API Key 格式无效")
   if (email && !/^[^\s@]{1,100}@[^\s@]{1,100}\.[^\s@]{1,100}$/.test(email))
     throw Error("联系邮箱格式无效")
+  const weights = sourceWeights(input.sourceWeights, true)
   await mkdir(path.dirname(file), { recursive: true })
   await writeFile(
     file,
-    JSON.stringify({ semanticScholarKey: key, contactEmail: email }, null, 2) + "\n",
+    JSON.stringify(
+      { semanticScholarKey: key, contactEmail: email, sourceWeights: weights },
+      null,
+      2,
+    ) + "\n",
     { mode: 0o600 },
   )
   return paperSearchConfig(file)

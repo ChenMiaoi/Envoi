@@ -12,14 +12,19 @@ export interface PaperSearchResult {
   /** true 确认开放；false 确认非开放；null 未知（不能展示为“无开放全文”） */
   openAccess: boolean | null
   sources: string[]
+  sourceWeights: { source: string; weight: number }[]
   citations: { source: string; count: number }[]
   versions: string[]
   ranking?: { score: number; reasons: string[] }
 }
 /** 适配器返回的单一来源结果（合并前）；sources 之外的字段同上，citationCount/version 为单值。 */
-export type SourcePaper = Omit<PaperSearchResult, "sources" | "citations" | "versions"> & {
+export type SourcePaper = Omit<
+  PaperSearchResult,
+  "sources" | "sourceWeights" | "citations" | "versions"
+> & {
   source: string
   sourceId?: string
+  sourceWeight?: number
   citationCount?: number
   version?: string
 }

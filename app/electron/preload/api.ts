@@ -54,11 +54,20 @@ export interface EnvoiBridge {
   // 工具
   tools(): Promise<Record<string, unknown>>
   configureTools(input: { chktexPath: string | null }): Promise<Record<string, unknown>>
-  paperSearchConfig(): Promise<{ semanticScholarKey: string; contactEmail: string }>
+  paperSearchConfig(): Promise<{
+    semanticScholarKey: string
+    contactEmail: string
+    sourceWeights: Record<"openalex" | "semanticscholar" | "crossref" | "arxiv", number>
+  }>
   configurePaperSearch(input: {
     semanticScholarKey: string
     contactEmail: string
-  }): Promise<{ semanticScholarKey: string; contactEmail: string }>
+    sourceWeights: Record<"openalex" | "semanticscholar" | "crossref" | "arxiv", number>
+  }): Promise<{
+    semanticScholarKey: string
+    contactEmail: string
+    sourceWeights: Record<"openalex" | "semanticscholar" | "crossref" | "arxiv", number>
+  }>
   // 内置论文浏览：绑定当前论文库（PDF 下载直接入库），下载完成事件
   bindPaperBrowse(root: string): Promise<unknown>
   onBrowseImported(cb: (event: { title?: string; error?: string }) => void): () => void

@@ -251,5 +251,11 @@ export async function searchPapers(input, request = fetch, readConfig = paperSea
   const results = await cached(`${source}|${query.toLowerCase()}|${limit}`, () =>
     enqueue(source, () => adapters[source](query, options, request)),
   )
-  return { source, results: applySearchFilters(results, options) }
+  return {
+    source,
+    results: applySearchFilters(results, options).map((item) => ({
+      ...item,
+      sourceWeight: settings.sourceWeights?.[source] ?? 1,
+    })),
+  }
 }

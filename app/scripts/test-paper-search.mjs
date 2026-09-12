@@ -253,6 +253,34 @@ test("cross-source ranking prioritizes topical relevance over citations and over
   )
 })
 
+test("source priority breaks close relevance decisions without overpowering topic matches", () => {
+  const paper = (source, sourceWeight, title) => ({
+    source,
+    sourceWeight,
+    title,
+    authors: [],
+    year: "2026",
+    abstract: "",
+    venue: "",
+    publisher: "",
+    openAccess: null,
+  })
+  const lowDirect = paper("openalex", 0, "Memory Safety Alpha")
+  const highDirect = paper("arxiv", 3, "Memory Safety Beta")
+  const highUnrelated = paper("semanticscholar", 3, "Unrelated Compiler Study")
+  const ranked = mergeSearchResults(
+    [[lowDirect], [highUnrelated], [], [highDirect]],
+    "memory safety",
+    { currentYear: 2026 },
+  )
+  assert.deepEqual(
+    ranked.map((item) => item.title),
+    ["Memory Safety Beta", "Memory Safety Alpha", "Unrelated Compiler Study"],
+  )
+  assert.match(ranked[0].ranking.reasons.join(" "), /优先来源.*arXiv/)
+  assert.match(ranked[1].ranking.reasons.join(" "), /优先级较低/)
+})
+
 test("results are cached per source and query; filters do not bust the cache", async () => {
   let calls = 0
   const fetchOnce = async () => (calls++, json({ message: { items: [] } }))
@@ -289,23 +317,34 @@ test("user config reaches the request: API key header and mailto", async () => {
   try {
     await assert.rejects(configurePaperSearch({ contactEmail: "not-an-email" }, file), /邮箱/)
     await assert.rejects(configurePaperSearch({ semanticScholarKey: "bad key!" }, file), /Key/)
+    await assert.rejects(configurePaperSearch({ sourceWeights: { unknown: 1 } }, file), /未知/)
+    await assert.rejects(configurePaperSearch({ sourceWeights: { arxiv: 4 } }, file), /0 到 3/)
     const saved = await configurePaperSearch(
-      { semanticScholarKey: "abc123", contactEmail: "me@example.org" },
+      {
+        semanticScholarKey: "abc123",
+        contactEmail: "me@example.org",
+        sourceWeights: { openalex: 2, semanticscholar: 3, crossref: 0, arxiv: 1 },
+      },
       file,
     )
-    assert.deepEqual(saved, { semanticScholarKey: "abc123", contactEmail: "me@example.org" })
+    assert.deepEqual(saved, {
+      semanticScholarKey: "abc123",
+      contactEmail: "me@example.org",
+      sourceWeights: { openalex: 2, semanticscholar: 3, crossref: 0, arxiv: 1 },
+    })
     assert.deepEqual(paperSearchConfig(file), saved)
     let seen
-    await searchPapers(
+    const semanticSearch = await searchPapers(
       { source: "semanticscholar", query: "config probe" },
       async (url, options) => {
         seen = { url: String(url), headers: options.headers }
-        return json({ data: [] })
+        return json({ data: [{ paperId: "weighted", title: "Weighted result" }] })
       },
       () => paperSearchConfig(file),
     )
     assert.equal(seen.headers["x-api-key"], "abc123")
     assert.match(seen.headers["User-Agent"], /me@example\.org/)
+    assert.equal(semanticSearch.results[0].sourceWeight, 3)
     await searchPapers(
       { source: "openalex", query: "config probe" },
       async (url) => {
@@ -315,6 +354,12 @@ test("user config reaches the request: API key header and mailto", async () => {
       () => paperSearchConfig(file),
     )
     assert.match(seen.url, /mailto=me%40example\.org/)
+    assert.deepEqual(paperSearchConfig(path.join(dir, "missing.json")).sourceWeights, {
+      openalex: 1,
+      semanticscholar: 1,
+      crossref: 1,
+      arxiv: 1,
+    })
   } finally {
     await rm(dir, { recursive: true, force: true })
   }
