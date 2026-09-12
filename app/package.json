@@ -31,7 +31,7 @@
     "i18n:inventory": "node scripts/i18n-inventory.mjs",
     "predev:desktop": "node scripts/sync-pdfjs-assets.mjs",
     "prebuild:desktop": "node scripts/sync-pdfjs-assets.mjs",
-    "test:desktop": "node --test scripts/test-project-trash.mjs scripts/test-logging.mjs scripts/test-workspace-trust.mjs scripts/test-desktop-backend.mjs scripts/test-example-project.mjs scripts/test-workspaces.mjs scripts/test-research-library.mjs scripts/test-paper-download.mjs scripts/test-paper-search.mjs scripts/test-paper-files.mjs && node scripts/test-number-settings.mjs && node scripts/test-system-fonts.mjs && node scripts/test-git-tree.mjs && node scripts/test-restricted-mode.mjs && node scripts/test-desktop-smoke.mjs && node scripts/test-project-removal-ui.mjs && node scripts/test-workspace-ui.mjs && node scripts/test-background-agent-ui.mjs && node scripts/test-research-start-ui.mjs && node scripts/test-save-compile.mjs && node scripts/test-model-menu.mjs && node scripts/test-pdf-scheduler.mjs && node scripts/test-research-library-ui.mjs && node scripts/test-diagnostics-ui.mjs",
+    "test:desktop": "node scripts/run-desktop-tests.mjs",
     "dev:web": "vite",
     "build:web": "tsc -b && vite build",
     "measure:startup": "node scripts/measure-startup.mjs",

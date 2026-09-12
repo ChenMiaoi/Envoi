@@ -168,7 +168,10 @@ test("baseline commit keeps Envoi private data out of foreign repositories", asy
       .sort()
     assert.deepEqual(committed, [".envoi/project.json", "paper.tex"])
     // Private data remains on disk, merely untracked.
-    assert.equal(await readText(path.join(root, ".envoi", "library", "notes", "paper.md")), "private notes")
+    assert.equal(
+      await readText(path.join(root, ".envoi", "library", "notes", "paper.md")),
+      "private notes",
+    )
   } finally {
     await rm(root, { recursive: true, force: true, maxRetries: 3 })
   }

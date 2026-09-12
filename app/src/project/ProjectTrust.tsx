@@ -19,12 +19,14 @@ export function ProjectTrust() {
   const state = useProjectTrust(root)
   const { t } = useT()
   const [open, setOpen] = useState(false)
+  const [localTrusted, setLocalTrusted] = useState<boolean>()
   const [working, setWorking] = useState(false)
   const [error, setError] = useState("")
   const undecided = !!state && !state.decided
   useEffect(() => {
     setOpen(false)
     setError("")
+    setLocalTrusted(undefined)
   }, [root])
   useEffect(() => {
     if (undecided) setOpen(true)
@@ -50,6 +52,7 @@ export function ProjectTrust() {
       if (trusted) {
         await envoi().grantProjectTrust(root)
         await state?.refresh()
+        setLocalTrusted(true)
         const config = await envoi()
           .fsRead(root, ".envoi/project.json")
           .then((file) => {
@@ -68,6 +71,7 @@ export function ProjectTrust() {
       } else {
         await envoi().restrictProject(root)
         await state?.refresh()
+        setLocalTrusted(false)
       }
       setOpen(false)
     } catch (reason) {
@@ -79,14 +83,14 @@ export function ProjectTrust() {
   return (
     <>
       <button className="flex items-center gap-1 text-primary" onClick={() => setOpen(true)}>
-        {state?.trusted ? <ShieldCheck size={13} /> : <ShieldAlert size={13} />}
-        {t(state?.trusted ? "trust.trusted" : "trust.restricted")}
+        {(localTrusted ?? state?.trusted) ? <ShieldCheck size={13} /> : <ShieldAlert size={13} />}
+        {t((localTrusted ?? state?.trusted) ? "trust.trusted" : "trust.restricted")}
       </button>
       <Dialog
         open={open}
         onOpenChange={(value) => {
           if (!working) {
-            if (!value && !state?.decided) void decide(false)
+            if (!value && !state?.decided && localTrusted === undefined) void decide(false)
             else setOpen(value)
           }
         }}

@@ -29,7 +29,11 @@ try {
   assert.equal(adopted.existing, true)
   assert.equal(adopted.branch, "main")
   // An existing foreign repository keeps its branch and history.
-  execFileSync("git", ["-c", "user.name=T", "-c", "user.email=t@t", "commit", "--allow-empty", "-m", "one"], { cwd: root })
+  execFileSync(
+    "git",
+    ["-c", "user.name=T", "-c", "user.email=t@t", "commit", "--allow-empty", "-m", "one"],
+    { cwd: root },
+  )
   execFileSync("git", ["branch", "-m", "main", "master"], { cwd: root })
   const foreign = await initializeBoundGit({ directory: root, proof })
   assert.equal(foreign.existing, true)

@@ -117,13 +117,18 @@ try {
       async (root) => (await window.envoi.dataGet("session", "current"))?.value?.rootPath === root,
       root,
     )
-    await page
-      .getByRole("button", { name: path.basename(root), exact: true })
-      .first()
-      .waitFor()
+    await page.waitForFunction((name) => {
+      return [...document.querySelectorAll("button")].some(
+        (button) => button.offsetParent !== null && button.textContent?.includes(name),
+      )
+    }, path.basename(root))
     await page.evaluate(
       () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
     )
+    if ((await page.evaluate(() => location.hash)) === "#/writer") {
+      await page.evaluate(() => (location.hash = "/reader"))
+      await page.waitForFunction(() => location.hash === "#/reader")
+    }
     await page.evaluate(() => (location.hash = "/writer"))
     await page.getByRole("textbox", { name: "LaTeX 正文编辑器" }).waitFor()
   }

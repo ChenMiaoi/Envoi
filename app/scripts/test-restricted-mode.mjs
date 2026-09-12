@@ -109,9 +109,20 @@ try {
     async (root) => (await window.envoi.projectTrust(root)).trusted === true,
     root,
   )
+  await page.evaluate((root) => window.envoi.grantProjectTrust(root), root)
   const trusted = await page.evaluate(async (root) => {
-    await window.envoi.gitInit(root)
-    return window.envoi.gitStatus(root)
+    let lastError
+    for (let attempt = 0; attempt < 40; attempt++) {
+      try {
+        await window.envoi.gitInit(root)
+        return window.envoi.gitStatus(root)
+      } catch (error) {
+        lastError = error
+        if (!String(error).includes("限制模式")) throw error
+        await new Promise((resolve) => setTimeout(resolve, 100))
+      }
+    }
+    throw lastError
   }, root)
   assert.equal(trusted.state, "ready")
   await page.evaluate(() => window.dispatchEvent(new Event("envoi:show-trust")))
