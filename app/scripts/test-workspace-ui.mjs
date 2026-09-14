@@ -122,7 +122,7 @@ try {
     .waitFor({ timeout: 60000 })
   await page.getByRole("button", { name: "文件变化", exact: true }).click()
   await writeFile(path.join(main, "refresh-note.md"), "Observed experiment result")
-  await page.evaluate(
+  const committed = await page.evaluate(
     async (root) =>
       window.envoi.workspaces(root, {
         action: "commit",
@@ -130,6 +130,9 @@ try {
       }),
     main,
   )
+  assert.match(committed.commit, /^[a-f0-9]{40}$/)
+  const directLog = await page.evaluate((root) => window.envoi.gitLog(root), main)
+  assert(directLog.commits.some((commit) => commit.subject === "Fixture: result recorded"))
   await page.getByRole("button", { name: "提交历史", exact: true }).click()
   await page.getByText("Fixture: result recorded", { exact: true }).waitFor({ timeout: 60000 })
   await page.evaluate(() => (location.hash = "/writer"))

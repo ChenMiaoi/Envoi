@@ -1,7 +1,7 @@
 import { seedFixtureTrust } from "./fixture-trust.mjs"
 import { _electron } from "playwright"
 import { createRequire } from "node:module"
-import { mkdtemp, mkdir, writeFile, rm, realpath } from "node:fs/promises"
+import { mkdtemp, mkdir, readFile, writeFile, rm, realpath } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import assert from "node:assert/strict"
@@ -109,6 +109,9 @@ try {
   page.setDefaultTimeout(60000)
   await page.getByTestId("welcome-page").waitFor()
   const open = async (root) => {
+    const expected = await readFile(path.join(root, "main.tex"), "utf8")
+    await page.evaluate(() => (location.hash = "/settings"))
+    await page.waitForFunction(() => location.hash === "#/settings")
     await page.evaluate(
       (root) => window.dispatchEvent(new CustomEvent("envoi:open-recent", { detail: root })),
       root,
@@ -117,20 +120,16 @@ try {
       async (root) => (await window.envoi.dataGet("session", "current"))?.value?.rootPath === root,
       root,
     )
-    await page.waitForFunction((name) => {
-      return [...document.querySelectorAll("button")].some(
-        (button) => button.offsetParent !== null && button.textContent?.includes(name),
-      )
-    }, path.basename(root))
-    await page.evaluate(
-      () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
-    )
-    if ((await page.evaluate(() => location.hash)) === "#/writer") {
-      await page.evaluate(() => (location.hash = "/reader"))
-      await page.waitForFunction(() => location.hash === "#/reader")
-    }
+    await page.waitForFunction(() => location.hash === "#/reader")
     await page.evaluate(() => (location.hash = "/writer"))
-    await page.getByRole("textbox", { name: "LaTeX 正文编辑器" }).waitFor()
+    await page.waitForFunction(() => location.hash === "#/writer")
+    const editor = page.getByRole("textbox", { name: "LaTeX 正文编辑器" })
+    await editor.waitFor()
+    await page.waitForFunction(
+      ({ label, expected }) =>
+        document.querySelector(`textarea[aria-label="${label}"]`)?.value === expected,
+      { label: "LaTeX 正文编辑器", expected },
+    )
   }
   await open(roots[0])
   const input = page.getByRole("textbox", { name: "询问科研助手" })
