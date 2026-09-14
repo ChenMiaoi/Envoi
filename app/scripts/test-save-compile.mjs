@@ -95,8 +95,43 @@ try {
   )
   await page.evaluate(() => (location.hash = "/reader"))
   await page.getByRole("button", { name: "notes.md", exact: true }).click()
-  await page.getByRole("button", { name: "源码编辑", exact: true }).click()
+  assert.equal(await page.getByRole("button", { name: "美化预览", exact: true }).count(), 0)
+  assert.equal(await page.getByRole("button", { name: "源码编辑", exact: true }).count(), 0)
   const noteEditor = page.getByRole("textbox", { name: "Markdown 连续实时编辑器", exact: true })
+  assert.deepEqual(
+    await noteEditor.evaluate((element) => {
+      const style = getComputedStyle(element)
+      const editor = element.getBoundingClientRect()
+      const scroller = element.parentElement.getBoundingClientRect()
+      return {
+        centerOffset: Math.round(
+          Math.abs(editor.left + editor.width / 2 - (scroller.left + scroller.width / 2)),
+        ),
+        maxWidth: style.maxWidth,
+        padding: style.padding,
+      }
+    }),
+    { centerOffset: 0, maxWidth: "720px", padding: "32px 40px" },
+  )
+  await noteEditor.fill(
+    "# Rendered heading\n\n> [!note] Rich callout\n\n1. First item\n\n2. Second item\n\n3. Third item\n\n---\n\nEditable paragraph",
+  )
+  await page.locator(".cm-markdown-block h1", { hasText: "Rendered heading" }).waitFor()
+  await page.locator(".cm-markdown-block .callout", { hasText: "Rich callout" }).waitFor()
+  await page.locator(".cm-markdown-block hr").waitFor()
+  const spacerHeights = await page
+    .locator(".cm-md-preview-spacer")
+    .evaluateAll((elements) => elements.map((element) => element.getBoundingClientRect().height))
+  assert.ok(spacerHeights.length > 0)
+  assert.ok(spacerHeights.every((height) => height === 0))
+  const listItems = await page
+    .locator(".cm-markdown-block li")
+    .evaluateAll((elements) => elements.map((element) => element.getBoundingClientRect().top))
+  assert.equal(listItems.length, 3)
+  assert.ok(listItems[1] - listItems[0] < 48, JSON.stringify(listItems))
+  assert.ok(listItems[2] - listItems[1] < 48, JSON.stringify(listItems))
+  await page.locator(".cm-markdown-block h1", { hasText: "Rendered heading" }).click()
+  await page.locator(".cm-line", { hasText: "# Rendered heading" }).waitFor()
   await noteEditor.fill("Saved note")
   await noteEditor.press(chord)
   await until(async () => (await readFile(path.join(root, "notes.md"), "utf8")) === "Saved note")

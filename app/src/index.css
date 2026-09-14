@@ -522,6 +522,9 @@
 .markdown-body li {
   margin: 0.25em 0;
 }
+.markdown-body li > p {
+  margin: 0.2em 0;
+}
 .markdown-body li::marker {
   color: hsl(var(--primary));
 }

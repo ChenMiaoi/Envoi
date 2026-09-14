@@ -30,8 +30,6 @@ import {
   Image as ImageIcon,
   FolderTree,
   MessageSquareText,
-  Eye,
-  Code2,
   Pin,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -43,7 +41,7 @@ import { FileTree, type TreeMenuAction } from "@/components/FileTree"
 import { ChatPanel } from "@/components/ChatPanel"
 import { DelimitedEditor } from "@/components/DelimitedEditor"
 import { MarkdownEditor } from "@/components/MarkdownEditor"
-import { LatexViewer, BibViewer, ViewerBadge, MarkdownViewer } from "@/components/viewers"
+import { LatexViewer, BibViewer, ViewerBadge } from "@/components/viewers"
 import { envoi } from "@/lib/desktop"
 import { researchLibrary } from "@/lib/researchLibrary"
 import { importLibraryFiles } from "@/lib/paperLibrary"
@@ -96,8 +94,6 @@ export function ReaderView({
   const kind = activeData ? fileKind(activeData.path) : undefined
   const [showChat, setShowChat] = useState(true)
   const [showTree, setShowTree] = useState(true)
-  const [mdMode, setMdMode] = useState<Record<string, "preview" | "source">>({})
-  const mdPreview = kind === "markdown" && mdMode[activeId ?? ""] === "preview"
   const active = openFiles.find((f) => f.id === activeId)
   const [pdfContext, setPdfContext] = useState<{ id: string; text: string } | null>(null)
   useEffect(() => {
@@ -409,40 +405,6 @@ export function ReaderView({
                     {dataEditing === activeId ? "完成编辑" : "编辑数据"}
                   </button>
                 )}
-                {kind === "markdown" && (
-                  <div className="flex items-center gap-1 px-2">
-                    <>
-                      <button
-                        title={t("reader.mdPreview")}
-                        aria-label={t("reader.mdPreview")}
-                        aria-pressed={mdPreview}
-                        onClick={() =>
-                          activeId && setMdMode((m) => ({ ...m, [activeId]: "preview" }))
-                        }
-                        className={cn(
-                          "rounded-md p-1.5 transition-colors",
-                          mdPreview ? "text-primary" : "text-muted-foreground hover:bg-secondary",
-                        )}
-                      >
-                        <Eye className="h-3.5 w-3.5" />
-                      </button>
-                      <button
-                        title={t("reader.mdSource")}
-                        aria-label={t("reader.mdSource")}
-                        aria-pressed={!mdPreview}
-                        onClick={() =>
-                          activeId && setMdMode((m) => ({ ...m, [activeId]: "source" }))
-                        }
-                        className={cn(
-                          "rounded-md p-1.5 transition-colors",
-                          !mdPreview ? "text-primary" : "text-muted-foreground hover:bg-secondary",
-                        )}
-                      >
-                        <Code2 className="h-3.5 w-3.5" />
-                      </button>
-                    </>
-                  </div>
-                )}
                 <div className="flex items-center gap-1 px-2">
                   <button
                     title={showTree ? t("reader.hideTree") : t("reader.showTree")}
@@ -476,15 +438,6 @@ export function ReaderView({
                 </div>
               ) : activeData?.text === undefined && kind !== "image" && kind !== "pdf" ? (
                 <p className="p-4 text-sm text-muted-foreground">{t("reader.notText")}</p>
-              ) : kind === "markdown" && mdPreview ? (
-                <MarkdownViewer
-                  key={active.id}
-                  source={fileContents[active.id] ?? ""}
-                  path={activeData?.path ?? active.name}
-                  onOpenDoc={(file) =>
-                    openNode({ id: file.id, name: file.path, kind: file.kind } as FileNode)
-                  }
-                />
               ) : kind === "markdown" ? (
                 <MarkdownEditor
                   key={active.id}

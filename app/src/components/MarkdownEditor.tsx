@@ -13,12 +13,14 @@ import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import remarkMath from "remark-math"
 import rehypeKatex from "rehype-katex"
+import rehypeHighlight from "rehype-highlight"
 import { usePreferences } from "@/settings/context"
 import { editorFonts, textFonts } from "@/settings/model"
 import { resolveProjectLink, markdownDocument, editMarkdownChanges } from "@/lib/markdownEditing"
 import type { ProjectFile } from "@/lib/projectFiles"
 import { rehypeCallouts } from "@/lib/rehypeCallouts"
 import { translate } from "@/i18n/runtime"
+import { MarkdownCodeBlock } from "./MarkdownCodeBlock"
 /* 代码块内嵌语法着色：token 颜色与阅读预览一致（主题色相槽） */
 const codeHighlight = HighlightStyle.define([
   { tag: tags.keyword, color: "hsl(var(--hue-violet))" },
@@ -46,53 +48,99 @@ class PreviewWidget extends WidgetType {
   private root?: Root
   readonly source: string
   readonly from: number
-  readonly file?: ProjectFile
+  readonly path: string
+  readonly files: ProjectFile[]
+  readonly onOpen?: (file: ProjectFile) => void
+  readonly onSource?: (url: string) => void
   readonly block: boolean
-  constructor(source: string, from: number, file?: ProjectFile, block = false) {
+  constructor(
+    source: string,
+    from: number,
+    path: string,
+    files: ProjectFile[],
+    onOpen?: (file: ProjectFile) => void,
+    onSource?: (url: string) => void,
+    block = false,
+  ) {
     super()
     this.source = source
     this.from = from
-    this.file = file
+    this.path = path
+    this.files = files
+    this.onOpen = onOpen
+    this.onSource = onSource
     this.block = block
   }
   eq(other: PreviewWidget) {
     return (
       other.source === this.source &&
       other.from === this.from &&
-      other.file?.url === this.file?.url &&
+      other.path === this.path &&
+      other.files === this.files &&
       other.block === this.block
     )
   }
   toDOM(view: EditorView) {
     const dom = document.createElement(this.block ? "div" : "span")
-    dom.className = "markdown-body cm-markdown-widget"
+    dom.className = `markdown-body cm-markdown-widget${this.block ? " cm-markdown-block" : ""}`
     dom.addEventListener("mousedown", (event) => {
+      if ((event.target as HTMLElement).closest("a, button")) return
       event.preventDefault()
       view.dispatch({ selection: { anchor: this.from } })
       view.focus()
     })
-    if (this.file?.url) {
-      const image = document.createElement("img")
-      image.src = this.file.url
-      image.alt = this.file.path
-      image.style.maxWidth = "100%"
-      dom.append(image)
-    } else {
-      this.root = createRoot(dom)
-      this.root.render(
-        <ReactMarkdown
-          remarkPlugins={[remarkGfm, remarkMath]}
-          rehypePlugins={[rehypeKatex, rehypeCallouts]}
-          skipHtml
-          components={{
-            img: ({ alt }) => <span>{alt}</span>,
-            p: ({ children }) => <span>{children}</span>,
-          }}
-        >
-          {this.source}
-        </ReactMarkdown>,
-      )
-    }
+    this.root = createRoot(dom)
+    this.root.render(
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm, remarkMath]}
+        rehypePlugins={[rehypeKatex, rehypeCallouts, [rehypeHighlight, { detect: false }]]}
+        skipHtml
+        components={{
+          pre: MarkdownCodeBlock,
+          img: ({ src, alt }) => {
+            const target = typeof src === "string" ? resolveProjectLink(this.path, src) : undefined
+            const file = target
+              ? this.files.find(
+                  (candidate) => candidate.path === target && candidate.kind === "image",
+                )
+              : undefined
+            return file?.url ? (
+              <img src={file.url} alt={alt ?? file.path} />
+            ) : (
+              <span className="text-muted-foreground">[{alt ?? src ?? "image"}]</span>
+            )
+          },
+          a: ({ href, children }) => {
+            const target = href ? resolveProjectLink(this.path, href) : undefined
+            const file = target
+              ? this.files.find((candidate) => candidate.path === target)
+              : undefined
+            if (href?.startsWith("envoi-paper:") && this.onSource)
+              return (
+                <button className="markdown-doclink" onClick={() => this.onSource?.(href)}>
+                  {children}
+                </button>
+              )
+            if (file && this.onOpen)
+              return (
+                <button className="markdown-doclink" onClick={() => this.onOpen?.(file)}>
+                  {children}
+                </button>
+              )
+            return /^https?:\/\//i.test(href ?? "") ? (
+              <a href={href} target="_blank" rel="noopener noreferrer">
+                {children}
+              </a>
+            ) : (
+              <span>{children}</span>
+            )
+          },
+          p: ({ children }) => (this.block ? <p>{children}</p> : <span>{children}</span>),
+        }}
+      >
+        {this.source}
+      </ReactMarkdown>,
+    )
     return dom
   }
   destroy() {
@@ -156,8 +204,37 @@ export function MarkdownEditor({
           lines.add(state.doc.line(n).from)
       }
       for (const from of lines) ranges.push(Decoration.line({ class: "cm-md-editing" }).range(from))
-      syntaxTree(state).iterate({
+      for (let number = 1; number <= state.doc.lines; number++) {
+        const line = state.doc.line(number)
+        if (!line.text.trim() && !active(line.from, line.to))
+          ranges.push(Decoration.line({ class: "cm-md-preview-spacer" }).range(line.from))
+      }
+      const tree = syntaxTree(state)
+      const rendered = new Set<string>()
+      const richBlocks =
+        /^(?:ATXHeading[1-6]|SetextHeading[12]|Paragraph|BulletList|OrderedList|Blockquote|FencedCode|CodeBlock|Table|HorizontalRule)$/
+      for (let node = tree.topNode.firstChild; node; node = node.nextSibling) {
+        if (!richBlocks.test(node.name) || active(node.from, node.to)) continue
+        const text = state.doc.sliceString(node.from, node.to)
+        ranges.push(
+          Decoration.replace({
+            widget: new PreviewWidget(
+              text,
+              node.from,
+              path,
+              files,
+              onOpen,
+              sourceLink.current,
+              true,
+            ),
+            block: true,
+          }).range(node.from, node.to),
+        )
+        rendered.add(`${node.from}:${node.to}`)
+      }
+      tree.iterate({
         enter(node) {
+          if (rendered.has(`${node.from}:${node.to}`)) return false
           const name = node.name,
             text = state.doc.sliceString(node.from, node.to)
           if (name === "FencedCode" || name === "CodeBlock") {
@@ -176,7 +253,15 @@ export function MarkdownEditor({
           if (name === "Table" && !active(node.from, node.to)) {
             ranges.push(
               Decoration.replace({
-                widget: new PreviewWidget(text, node.from, undefined, true),
+                widget: new PreviewWidget(
+                  text,
+                  node.from,
+                  path,
+                  files,
+                  onOpen,
+                  sourceLink.current,
+                  true,
+                ),
                 block: true,
               }).range(node.from, node.to),
             )
@@ -188,10 +273,16 @@ export function MarkdownEditor({
             const file = files.find((file) => file.path === target && file.kind === "image")
             if (file?.url) {
               ranges.push(
-                Decoration.replace({ widget: new PreviewWidget(text, node.from, file) }).range(
-                  node.from,
-                  node.to,
-                ),
+                Decoration.replace({
+                  widget: new PreviewWidget(
+                    text,
+                    node.from,
+                    path,
+                    files,
+                    onOpen,
+                    sourceLink.current,
+                  ),
+                }).range(node.from, node.to),
               )
               return false
             }
@@ -255,7 +346,15 @@ export function MarkdownEditor({
         if (!code)
           ranges.push(
             Decoration.replace({
-              widget: new PreviewWidget(match[0], from, undefined, match[0].includes("\n")),
+              widget: new PreviewWidget(
+                match[0],
+                from,
+                path,
+                files,
+                onOpen,
+                sourceLink.current,
+                match[0].includes("\n"),
+              ),
               block: match[0].includes("\n"),
             }).range(from, to),
           )
@@ -357,8 +456,23 @@ export function MarkdownEditor({
               lineHeight: String(preferences.previewLineHeight),
               overflow: "auto",
             },
-            ".cm-content": { padding: "24px 32px", caretColor: "hsl(var(--primary))" },
+            ".cm-content": {
+              boxSizing: "border-box",
+              width: "100%",
+              maxWidth: "720px",
+              minHeight: "100%",
+              margin: "0 auto",
+              padding: "32px 40px",
+              caretColor: "hsl(var(--primary))",
+            },
             ".cm-line": { overflowWrap: "anywhere" },
+            ".cm-line.cm-md-preview-spacer": {
+              height: "0",
+              minHeight: "0",
+              lineHeight: "0",
+              overflow: "hidden",
+              padding: "0",
+            },
             "&.cm-focused": { outline: "none" },
             ".cm-cursor": { borderLeftColor: "hsl(var(--primary))" },
             ".cm-selectionBackground, &.cm-focused .cm-selectionBackground": {
@@ -415,6 +529,11 @@ export function MarkdownEditor({
               borderRadius: "0 6px 6px 0",
             },
             ".cm-markdown-widget": { fontSize: "inherit", fontFamily: "inherit" },
+            ".cm-markdown-block": {
+              display: "block",
+              width: "100%",
+              whiteSpace: "normal",
+            },
             ".cm-markdown-widget table": { fontSize: "inherit" },
           },
           { dark: true },
