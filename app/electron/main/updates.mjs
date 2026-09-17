@@ -7,18 +7,49 @@ import { pipeline } from "node:stream/promises"
 
 const repository = "https://github.com/ChenMiaoi/Envoi"
 const releaseApi = "https://api.github.com/repos/ChenMiaoi/Envoi/releases/latest"
+const previewApi = "https://api.github.com/repos/ChenMiaoi/Envoi/releases?per_page=100"
 const maxInstallerBytes = 1024 * 1024 * 1024
 
-export function newerVersion(candidate, current) {
-  const parse = (value) =>
-    /^v?(\d+)\.(\d+)\.(\d+)(?:-rc[1-9]\d*)?$/.exec(value)?.slice(1, 4).map(Number)
-  const next = parse(candidate)
-  const installed = parse(current)
-  if (!next || !installed) throw Error("Invalid release version")
+function parseVersion(value) {
+  const match = /^v?(\d+)\.(\d+)\.(\d+)(?:-rc([1-9]\d*))?$/.exec(value)
+  if (!match) throw Error("Invalid release version")
+  return { core: match.slice(1, 4).map(Number), rc: match[4] ? Number(match[4]) : null }
+}
+
+function compareCore(next, installed) {
   for (let i = 0; i < 3; i++) {
-    if (next[i] !== installed[i]) return next[i] > installed[i]
+    if (next[i] !== installed[i]) return next[i] > installed[i] ? 1 : -1
   }
-  return false
+  return 0
+}
+
+export function newerVersion(candidate, current) {
+  return compareCore(parseVersion(candidate).core, parseVersion(current).core) > 0
+}
+
+function newerPreviewVersion(candidate, current) {
+  const next = parseVersion(candidate)
+  const installed = parseVersion(current)
+  const core = compareCore(next.core, installed.core)
+  if (core !== 0) return core > 0
+  return installed.rc === null || next.rc > installed.rc
+}
+
+function latestPreview(releases) {
+  if (!Array.isArray(releases)) throw Error("Invalid release list")
+  return releases
+    .filter(
+      (release) =>
+        release &&
+        !release.draft &&
+        release.prerelease === true &&
+        /^v\d+\.\d+\.\d+-rc[1-9]\d*$/.test(release.tag_name),
+    )
+    .sort((a, b) => {
+      const next = parseVersion(a.tag_name)
+      const previous = parseVersion(b.tag_name)
+      return compareCore(previous.core, next.core) || previous.rc - next.rc
+    })[0]
 }
 
 export function releaseInstaller(release, platform = process.platform, arch = process.arch) {
@@ -50,7 +81,8 @@ export function releaseInstaller(release, platform = process.platform, arch = pr
 }
 
 export async function checkUpdate(currentVersion, request = fetch, target = {}) {
-  const response = await request(releaseApi, {
+  const preview = target.channel === "preview"
+  const response = await request(preview ? previewApi : releaseApi, {
     headers: { Accept: "application/vnd.github+json" },
     signal: AbortSignal.timeout(15000),
   })
@@ -58,15 +90,24 @@ export async function checkUpdate(currentVersion, request = fetch, target = {}) 
     return { currentVersion, status: "inaccessible" }
   }
   if (!response.ok) throw Error(`GitHub HTTP ${response.status}`)
-  const release = await response.json()
-  if (release.draft || release.prerelease || !/^v\d+\.\d+\.\d+$/.test(release.tag_name))
+  const payload = await response.json()
+  const release = preview ? latestPreview(payload) : payload
+  if (preview && !release)
+    return { currentVersion, status: "unpublished", downloadAvailable: false, installer: null }
+  if (
+    !preview &&
+    (release.draft || release.prerelease || !/^v\d+\.\d+\.\d+$/.test(release.tag_name))
+  )
     throw Error("Invalid stable release")
-  const available = newerVersion(release.tag_name, currentVersion)
+  const available = preview
+    ? newerPreviewVersion(release.tag_name, currentVersion)
+    : newerVersion(release.tag_name, currentVersion)
   const installer = available ? releaseInstaller(release, target.platform, target.arch) : null
   return {
     currentVersion,
     latestVersion: release.tag_name.slice(1),
     status: available ? "available" : "current",
+    prerelease: preview,
     downloadAvailable: !!installer,
     installer,
   }

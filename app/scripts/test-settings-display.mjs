@@ -64,6 +64,26 @@ try {
   await page.mouse.move(100, 100)
   await info.waitFor({ state: "detached", timeout: 8000 })
   assert.equal(await page.getByRole("button", { name: "下载更新", exact: true }).isVisible(), true)
+  await instance.evaluate(({ ipcMain }) => {
+    ipcMain.removeHandler("envoi:check-update")
+    ipcMain.handle("envoi:check-update", (_event, channel) => ({
+      currentVersion: "0.4.1",
+      latestVersion: channel === "preview" ? "0.4.1-rc1" : "0.4.1",
+      status: channel === "preview" ? "available" : "current",
+      downloadAvailable: channel === "preview",
+      prerelease: channel === "preview",
+    }))
+    ipcMain.removeHandler("envoi:download-update")
+    ipcMain.handle("envoi:download-update", () => ({ path: "/tmp/Envoi-0.4.1-rc1-arm64.dmg" }))
+    ipcMain.removeHandler("envoi:open-downloaded-update")
+    ipcMain.handle("envoi:open-downloaded-update", () => {})
+  })
+  await page.getByRole("combobox", { name: "更新渠道" }).selectOption("preview")
+  await page.getByRole("button", { name: "检查更新", exact: true }).click()
+  await page.getByText("v0.4.1-rc1", { exact: true }).waitFor()
+  await page.getByRole("button", { name: "下载预发布版", exact: true }).click()
+  await page.getByRole("button", { name: "打开安装包", exact: true }).waitFor()
+  await page.getByRole("button", { name: "打开安装包", exact: true }).click()
   // A scroll fixture uses the actual bundled stylesheet and former conflicting class's replacement.
   await page.evaluate(() => {
     const panel = document.createElement("div")

@@ -303,22 +303,26 @@ function registerIpc(): void {
   })
   let updateInstaller: Awaited<ReturnType<typeof checkUpdate>>["installer"] = null
   let pendingUpdateDownload: Promise<{ path: string }> | undefined
+  let downloadedUpdatePath: string | undefined
   handle("envoi:app-version", () => app.getVersion())
-  handle("envoi:check-update", async () => {
+  handle("envoi:check-update", async (_event, channel: "stable" | "preview" = "stable") => {
     updateInstaller = null
-    const result = await checkUpdate(app.getVersion())
+    downloadedUpdatePath = undefined
+    const result = await checkUpdate(app.getVersion(), fetch, { channel })
     updateInstaller = result.installer ?? null
     return {
       currentVersion: result.currentVersion,
       latestVersion: result.latestVersion,
       status: result.status,
       downloadAvailable: result.downloadAvailable ?? false,
+      prerelease: result.prerelease ?? false,
     }
   })
   handle("envoi:download-update", async () => {
     if (!updateInstaller) throw Error("No compatible update installer; check for updates first")
     pendingUpdateDownload ??= downloadReleaseInstaller(updateInstaller, app.getPath("downloads"))
       .then((file: string) => {
+        downloadedUpdatePath = file
         shell.showItemInFolder(file)
         return { path: file }
       })
@@ -326,6 +330,11 @@ function registerIpc(): void {
         pendingUpdateDownload = undefined
       })
     return pendingUpdateDownload
+  })
+  handle("envoi:open-downloaded-update", async () => {
+    if (!downloadedUpdatePath) throw Error("Download an update first")
+    const error = await shell.openPath(downloadedUpdatePath)
+    if (error) throw Error(error)
   })
   handle("envoi:library", async (event, root: string, input: Record<string, unknown>) => {
     root = await requireBoundRoot(root)

@@ -30,6 +30,16 @@ const release = {
     },
   ],
 }
+const previewRelease = {
+  ...release,
+  tag_name: "v0.4.1-rc1",
+  prerelease: true,
+  assets: release.assets.map((asset) => ({
+    ...asset,
+    name: asset.name.replace("0.4.1", "0.4.1-rc1"),
+    browser_download_url: asset.browser_download_url.replaceAll("0.4.1", "0.4.1-rc1"),
+  })),
+}
 
 test("release versions compare numerically and never downgrade", () => {
   assert.equal(newerVersion("v0.10.0", "0.9.9"), true)
@@ -70,6 +80,39 @@ test("release checks select only a verified installer for this system", async ()
     checkUpdate("0.1.0", async () => {
       throw Error("offline")
     }),
+  )
+})
+
+test("pre-release checks are opt-in and select the newest published RC", async () => {
+  const target = { channel: "preview", platform: "darwin", arch: "arm64" }
+  const request = async (url) => {
+    assert.match(url, /\/releases\?per_page=100$/)
+    return {
+      ok: true,
+      json: async () => [
+        { ...previewRelease, tag_name: "v0.4.1-rc2", draft: true },
+        previewRelease,
+        release,
+        { ...previewRelease, tag_name: "v0.4.0-rc2" },
+      ],
+    }
+  }
+  const fromStable = await checkUpdate("0.4.1", request, target)
+  assert.equal(fromStable.status, "available")
+  assert.equal(fromStable.prerelease, true)
+  assert.equal(fromStable.latestVersion, "0.4.1-rc1")
+  assert.equal(fromStable.installer?.name, "Envoi-0.4.1-rc1-arm64.dmg")
+  assert.equal((await checkUpdate("0.4.1-rc1", request, target)).status, "current")
+  assert.equal((await checkUpdate("0.4.2", request, target)).status, "current")
+  const empty = await checkUpdate(
+    "0.4.1",
+    async () => ({ ok: true, json: async () => [release] }),
+    target,
+  )
+  assert.equal(empty.status, "unpublished")
+  await assert.rejects(
+    checkUpdate("0.4.1", async () => ({ ok: true, json: async () => ({}) }), target),
+    /Invalid release list/,
   )
 })
 

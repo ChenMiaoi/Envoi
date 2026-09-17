@@ -15,13 +15,15 @@ export interface EnvoiBridge {
   diagnosticsExport(): Promise<boolean>
   diagnosticsLog(entry: import("../../shared/log-record").RendererLog): void
   appVersion(): Promise<string>
-  checkUpdate(): Promise<{
+  checkUpdate(channel?: "stable" | "preview"): Promise<{
     currentVersion: string
     latestVersion?: string
-    status: "inaccessible" | "available" | "current"
+    status: "inaccessible" | "available" | "current" | "unpublished"
     downloadAvailable: boolean
+    prerelease: boolean
   }>
   downloadUpdate(): Promise<{ path: string }>
+  openDownloadedUpdate(): Promise<void>
   library(root: string, input: Record<string, unknown>): Promise<unknown>
   workspaces(root: string, input: Record<string, unknown>): Promise<unknown>
   windowColors(colors: { color: string; symbolColor: string }): Promise<void>

@@ -20,6 +20,23 @@ const OVERRIDES_HK = [
   ["兼容", "相容"],
   ["默認", "預設"],
 ]
+const KEY_OVERRIDES_TW = {
+  "settings.search.priorityTitle": "來源優先級",
+  "settings.search.priorityAria": "{source} 來源優先級",
+  "settings.update.channel": "更新頻道",
+  "settings.update.preview": "預先發行版",
+  "settings.update.previewAvailable": "發現預先發行版本",
+  "settings.update.noPreview": "暫無預先發行版本。",
+  "settings.update.downloadPreview": "下載預先發行版",
+  "settings.update.openInstaller": "開啟安裝程式",
+  "settings.update.noInstaller": "發現新版本，但沒有適用於目前系統的可驗證安裝程式。",
+}
+const KEY_OVERRIDES_HK = {
+  "settings.update.openInstaller": "開啟安裝程式",
+  "settings.update.downloaded": "更新已下載，檔案位置：",
+  "settings.update.noInstaller": "發現新版本，但沒有適用於目前系統的可驗證安裝程式。",
+  "tree.paste": "貼上",
+}
 
 function parseDictionary(path) {
   let text = readFileSync(path, "utf8").replace(/\/\*[\s\S]*?\*\//g, "")
@@ -67,8 +84,8 @@ function pipeline(convert, overrides = []) {
 const pairs = parseDictionary(join(messagesDir, "zh-CN.ts"))
 const tw = pipeline(convertTW, OVERRIDES_TW)
 const hk = pipeline(convertHK, OVERRIDES_HK)
-const twPairs = pairs.map(([key, value]) => [key, tw(value)])
-const hkPairs = pairs.map(([key, value]) => [key, hk(value)])
+const twPairs = pairs.map(([key, value]) => [key, KEY_OVERRIDES_TW[key] ?? tw(value)])
+const hkPairs = pairs.map(([key, value]) => [key, KEY_OVERRIDES_HK[key] ?? hk(value)])
 writeFileSync(join(messagesDir, "zh-TW.ts"), render("zhTW", twPairs))
 writeFileSync(join(messagesDir, "zh-HK.ts"), render("zhHK", hkPairs))
 console.log(`zh-TW / zh-HK generated from ${pairs.length} keys.`)
