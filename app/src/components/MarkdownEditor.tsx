@@ -5,8 +5,7 @@ import { EditorState, StateField, Compartment, type Range } from "@codemirror/st
 import { EditorView, Decoration, WidgetType, keymap, type DecorationSet } from "@codemirror/view"
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands"
 import { markdown } from "@codemirror/lang-markdown"
-import { syntaxTree, syntaxHighlighting, HighlightStyle } from "@codemirror/language"
-import { tags } from "@lezer/highlight"
+import { syntaxTree, syntaxHighlighting } from "@codemirror/language"
 import { GFM } from "@lezer/markdown"
 import { languages } from "@codemirror/language-data"
 import ReactMarkdown from "react-markdown"
@@ -16,33 +15,12 @@ import rehypeKatex from "rehype-katex"
 import rehypeHighlight from "rehype-highlight"
 import { usePreferences } from "@/settings/context"
 import { editorFonts, textFonts } from "@/settings/model"
+import { codeHighlight } from "@/lib/codeHighlight"
 import { resolveProjectLink, markdownDocument, editMarkdownChanges } from "@/lib/markdownEditing"
 import type { ProjectFile } from "@/lib/projectFiles"
 import { rehypeCallouts } from "@/lib/rehypeCallouts"
 import { translate } from "@/i18n/runtime"
 import { MarkdownCodeBlock } from "./MarkdownCodeBlock"
-/* 代码块内嵌语法着色：token 颜色与阅读预览一致（主题色相槽） */
-const codeHighlight = HighlightStyle.define([
-  { tag: tags.keyword, color: "hsl(var(--hue-violet))" },
-  { tag: [tags.string, tags.special(tags.string)], color: "hsl(var(--hue-green))" },
-  { tag: [tags.number, tags.bool, tags.atom], color: "hsl(var(--hue-orange))" },
-  { tag: tags.comment, color: "hsl(var(--hue-sage))", fontStyle: "italic" },
-  {
-    tag: [tags.function(tags.variableName), tags.function(tags.propertyName)],
-    color: "hsl(var(--hue-blue))",
-  },
-  {
-    tag: [tags.typeName, tags.className, tags.standard(tags.variableName)],
-    color: "hsl(var(--hue-cyan))",
-  },
-  {
-    tag: [tags.propertyName, tags.attributeName, tags.variableName],
-    color: "hsl(var(--hue-yellow))",
-  },
-  { tag: [tags.labelName, tags.namespace], color: "hsl(var(--hue-pink))" },
-  { tag: [tags.operator, tags.punctuation], color: "hsl(var(--muted-foreground))" },
-  { tag: tags.meta, color: "hsl(var(--muted-foreground))" },
-])
 
 class PreviewWidget extends WidgetType {
   private root?: Root
