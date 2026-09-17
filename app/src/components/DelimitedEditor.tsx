@@ -36,7 +36,7 @@ export function DelimitedEditor({
     const table = tableRef.current
     if (!table) return
     const measure = () => {
-      const sample = table.querySelector("textarea")
+      const sample = table.querySelector(".data-table-cell")
       if (!sample) return
       const computed = getComputedStyle(sample),
         span = document.createElement("span")
@@ -75,7 +75,7 @@ export function DelimitedEditor({
     return () => {
       active = false
     }
-  }, [parsed.rows, hasHeader, preferences.previewFontSize, preferences.previewFontFamily])
+  }, [parsed.rows, hasHeader, readOnly, preferences.previewFontSize, preferences.previewFontFamily])
   if (parsed.error)
     return (
       <div className="flex h-full flex-col">
@@ -151,17 +151,22 @@ export function DelimitedEditor({
                       scope={hasHeader && r === 0 ? "col" : undefined}
                       className="align-top"
                     >
-                      <textarea
-                        aria-label={t("editor.cellAria", { r: r + 1, c: c + 1 })}
-                        readOnly={readOnly}
-                        wrap="off"
-                        rows={Math.max(1, cell.value.split(/\r\n|\r|\n/).length)}
-                        value={cell.value}
-                        onChange={(event) =>
-                          onChange(editDelimitedCell(source, cell, event.target.value, delimiter))
-                        }
-                        className={`data-table-cell${numeric ? " text-right" : ""}`}
-                      />
+                      {readOnly ? (
+                        <div className={`data-table-cell${numeric ? " text-right" : ""}`}>
+                          {cell.value || "\u00a0"}
+                        </div>
+                      ) : (
+                        <textarea
+                          aria-label={t("editor.cellAria", { r: r + 1, c: c + 1 })}
+                          wrap="off"
+                          rows={Math.max(1, cell.value.split(/\r\n|\r|\n/).length)}
+                          value={cell.value}
+                          onChange={(event) =>
+                            onChange(editDelimitedCell(source, cell, event.target.value, delimiter))
+                          }
+                          className={`data-table-cell${numeric ? " text-right" : ""}`}
+                        />
+                      )}
                     </Cell>
                   )
                 })}

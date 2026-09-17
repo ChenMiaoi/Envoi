@@ -41,7 +41,8 @@ import { FileTree, type TreeMenuAction } from "@/components/FileTree"
 import { ChatPanel } from "@/components/ChatPanel"
 import { DelimitedEditor } from "@/components/DelimitedEditor"
 import { MarkdownEditor } from "@/components/MarkdownEditor"
-import { LatexViewer, BibViewer, ViewerBadge } from "@/components/viewers"
+import { MarkdownViewer, LatexViewer, BibViewer, ViewerBadge } from "@/components/viewers"
+import { commandChordLabel, resolveBindings } from "@/navigation/shortcuts"
 import { envoi } from "@/lib/desktop"
 import { researchLibrary } from "@/lib/researchLibrary"
 import { importLibraryFiles } from "@/lib/paperLibrary"
@@ -83,7 +84,7 @@ export function ReaderView({
   const { project, edit, busy, setMessage } = useProject()
   const navigate = useNavigate()
   const [importing, setImporting] = useState(false)
-  const [dataEditing, setDataEditing] = useState<string | null>(null)
+  const [readOnlyFiles, setReadOnlyFiles] = useState<string[]>([])
   const { t } = useT()
   const fileTree = useMemo(
     () => projectTree(project.files, project.directories),
@@ -92,6 +93,15 @@ export function ReaderView({
   const fileContents = Object.fromEntries(project.files.map((file) => [file.id, file.text]))
   const activeData = [...project.files, ...libraryFiles].find((file) => file.id === activeId)
   const kind = activeData ? fileKind(activeData.path) : undefined
+  const canToggleReadOnly =
+    kind === "markdown" || kind === "csv" || kind === "tsv" || kind === "text"
+  const readOnly = Boolean(activeId && readOnlyFiles.includes(activeId))
+  const toggleReadOnly = () => {
+    if (!activeId || !canToggleReadOnly) return
+    setReadOnlyFiles((files) =>
+      files.includes(activeId) ? files.filter((id) => id !== activeId) : [...files, activeId],
+    )
+  }
   const [showChat, setShowChat] = useState(true)
   const [showTree, setShowTree] = useState(true)
   const active = openFiles.find((f) => f.id === activeId)
@@ -126,6 +136,7 @@ export function ReaderView({
   )
   const [copiedPath, setCopiedPath] = useState<string | null>(null)
   const close = (id: string) => {
+    setReadOnlyFiles((files) => files.filter((item) => item !== id))
     setPinned((list) => list.filter((item) => item !== id))
     const rest = openFiles.filter((f) => f.id !== id)
     onOpenFiles(rest)
@@ -242,6 +253,12 @@ export function ReaderView({
   }
 
   useEffect(() => {
+    const onReadOnly = () => {
+      if (!activeId || !["markdown", "csv", "tsv", "text"].includes(kind ?? "")) return
+      setReadOnlyFiles((files) =>
+        files.includes(activeId) ? files.filter((id) => id !== activeId) : [...files, activeId],
+      )
+    }
     const onTab = (event: Event) => {
       const action = (event as CustomEvent<string>).detail
       const index = openFiles.findIndex((f) => f.id === activeId)
@@ -266,11 +283,13 @@ export function ReaderView({
     }
     window.addEventListener("envoi:tab", onTab)
     window.addEventListener("envoi:panel", onPanel)
+    window.addEventListener("envoi:reader-read-only", onReadOnly)
     return () => {
       window.removeEventListener("envoi:tab", onTab)
       window.removeEventListener("envoi:panel", onPanel)
+      window.removeEventListener("envoi:reader-read-only", onReadOnly)
     }
-  }, [openFiles, activeId, onOpenFiles, onActive])
+  }, [openFiles, activeId, kind, onOpenFiles, onActive])
 
   return (
     <>
@@ -427,13 +446,18 @@ export function ReaderView({
                       {importing ? "正在归档…" : "归档到论文库"}
                     </button>
                   )}
-                {(kind === "csv" || kind === "tsv") && (
+                {canToggleReadOnly && (
                   <button
-                    disabled={busy}
-                    className="shrink-0 px-3 text-xs"
-                    onClick={() => setDataEditing(dataEditing === activeId ? null : activeId)}
+                    aria-pressed={readOnly}
+                    title={commandChordLabel(
+                      "reader-read-only",
+                      resolveBindings(preferences.bindings),
+                      /Mac/.test(navigator.platform),
+                    )}
+                    className="shrink-0 px-3 text-xs hover:text-primary"
+                    onClick={toggleReadOnly}
                   >
-                    {dataEditing === activeId ? "完成编辑" : "编辑数据"}
+                    {readOnly ? t("reader.readOnly") : t("reader.livePreview")}
                   </button>
                 )}
                 <div className="flex items-center gap-1 px-2">
@@ -469,6 +493,14 @@ export function ReaderView({
                 </div>
               ) : activeData?.text === undefined && kind !== "image" && kind !== "pdf" ? (
                 <p className="p-4 text-sm text-muted-foreground">{t("reader.notText")}</p>
+              ) : kind === "markdown" && readOnly ? (
+                <MarkdownViewer
+                  source={fileContents[active.id] ?? ""}
+                  path={activeData?.path ?? active.name}
+                  onOpenDoc={(file) =>
+                    openNode({ id: file.id, name: file.path, kind: fileKind(file.path) })
+                  }
+                />
               ) : kind === "markdown" ? (
                 <MarkdownEditor
                   key={active.id}
@@ -485,12 +517,12 @@ export function ReaderView({
                   source={activeData.text}
                   delimiter={kind === "tsv" ? "\t" : ","}
                   onChange={(text) => edit(active.id, text)}
-                  readOnly={busy || dataEditing !== activeId}
+                  readOnly={busy || readOnly}
                 />
               ) : kind === "text" && activeData?.text !== undefined ? (
                 <textarea
                   aria-label={t("reader.textEditorAria")}
-                  readOnly={busy}
+                  readOnly={busy || readOnly}
                   value={activeData.text}
                   onChange={(e) => edit(active.id, e.target.value)}
                   data-content-typography="editor"

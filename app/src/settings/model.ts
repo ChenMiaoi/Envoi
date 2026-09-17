@@ -1,11 +1,17 @@
 import { normalizeFont } from "./fonts"
-import { migrateLegacyBindings, normalizeBindings } from "../navigation/shortcuts"
+import {
+  DEFAULT_BINDS,
+  migrateLegacyBindings,
+  normalizeBindings,
+  parseBinding,
+  validateChord,
+} from "../navigation/shortcuts"
 import { isLocaleId, type LocaleId } from "@/i18n/locales"
 import type { MessageKey } from "@/i18n/messages/zh-CN"
 export type Engine = "pdflatex" | "xelatex"
 export type TextFont = string
 export interface Preferences {
-  version: 1
+  version: 2
   language: LocaleId
   bindings: string[]
   uiFontFamily: TextFont
@@ -29,7 +35,7 @@ export interface ProjectConfiguration {
   overrides: { engine?: Engine; lintEnabled?: boolean; disabledRules?: number[] }
 }
 export const defaults: Preferences = {
-  version: 1,
+  version: 2,
   language: "zh-CN",
   bindings: [],
   uiFontFamily: "system",
@@ -108,14 +114,28 @@ function range(value: unknown, min: number, max: number, fallback: number) {
     : fallback
 }
 export function normalizePreferences(raw: unknown): Preferences {
-  const value = raw && typeof raw === "object" ? (raw as Partial<Preferences>) : {}
+  const value =
+    raw && typeof raw === "object"
+      ? (raw as Omit<Partial<Preferences>, "version"> & { version?: number })
+      : {}
   const legacy = "shortcuts" in value ? value.shortcuts : undefined
+  const bindings = normalizeBindings(
+    Array.isArray(value.bindings) ? value.bindings : migrateLegacyBindings(legacy),
+  )
+  if (value.version === 1 && bindings.length) {
+    const added = DEFAULT_BINDS.find(
+      (line) => parseBinding(line)?.command.id === "reader-read-only",
+    )!
+    if (
+      !bindings.some((line) => parseBinding(line)?.command.id === "reader-read-only") &&
+      !validateChord(parseBinding(added)!.chord, bindings)
+    )
+      bindings.push(added)
+  }
   return {
-    version: 1,
+    version: 2,
     language: isLocaleId(value.language) ? value.language : defaults.language,
-    bindings: normalizeBindings(
-      Array.isArray(value.bindings) ? value.bindings : migrateLegacyBindings(legacy),
-    ),
+    bindings,
     uiFontFamily: normalizeFont(value.uiFontFamily, textFonts),
     uiFontSize: range(value.uiFontSize, 10, 24, defaults.uiFontSize),
     previewFontFamily: normalizeFont(value.previewFontFamily, textFonts),

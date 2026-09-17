@@ -77,6 +77,10 @@ test("shortcut matching recognizes Ctrl and Cmd chords and scoped reader command
   assert.equal(matchBinding({ ...key, ctrlKey: false, metaKey: true }, bindings)?.id, "save")
   assert.equal(matchBinding({ ...key, shiftKey: true }, bindings), undefined)
   assert.equal(
+    matchBinding({ ...key, key: "r", code: "KeyR", altKey: true }, bindings)?.id,
+    "reader-read-only",
+  )
+  assert.equal(
     matchBinding(
       { key: "!", code: "Digit1", ctrlKey: true, metaKey: false, shiftKey: true, altKey: false },
       bindings,

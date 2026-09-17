@@ -58,6 +58,14 @@ test("shortcut preferences store canonical binding strings and migrate legacy ov
   assert(migrated.bindings.includes("mod+alt+enter = compile"))
 })
 
+test("existing shortcut tables gain the read-only toggle only during migration", () => {
+  const migrated = normalizePreferences({ version: 1, bindings: ["mod+s = save"] })
+  assert(migrated.bindings.includes("mod+alt+r = reader read only"))
+  assert.equal(migrated.version, 2)
+  const unbound = normalizePreferences({ ...migrated, bindings: ["mod+s = save"] })
+  assert.deepEqual(unbound.bindings, ["mod+s = save"])
+})
+
 test("legacy editor typography remains independent of UI and reading preferences", () => {
   const migrated = normalizePreferences({ fontFamily: "monaco", fontSize: 18 })
   assert.equal(migrated.fontSize, 18)

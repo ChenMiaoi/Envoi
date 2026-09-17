@@ -156,6 +156,15 @@ export const commands: Command[] = [
     detail: "next",
   },
   {
+    id: "reader-read-only",
+    action: "reader read only",
+    get label() {
+      return translate("command.reader-read-only")
+    },
+    scope: "reader",
+    event: "envoi:reader-read-only",
+  },
+  {
     id: "panel-tree",
     action: "panel tree",
     get label() {
@@ -221,6 +230,7 @@ export const DEFAULT_BINDS = [
   "mod+alt+w = tab close",
   "mod+alt+left = tab prev",
   "mod+alt+right = tab next",
+  "mod+alt+r = reader read only",
   "mod+alt+e = panel tree",
   "mod+alt+a = panel chat",
   "mod+alt+1 = panel outline",
