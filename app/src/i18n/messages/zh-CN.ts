@@ -158,6 +158,7 @@ export const zhCN = {
   "app.statusbar.pageNavigation": "页面导航",
   "app.statusbar.runtime": "AI · 已连接",
   "app.statusbar.disconnected": "AI · 未连接",
+  "app.statusbar.lspUnavailable": "LSP 不可用",
   /* ---------- 快捷键命令 ---------- */
   "command.save": "保存全部修改",
   "command.palette": "命令面板",

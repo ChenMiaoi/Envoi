@@ -152,6 +152,7 @@ const zhHK: Messages = {
   "app.statusbar.pageNavigation": "頁面導航",
   "app.statusbar.runtime": "AI · 已連接",
   "app.statusbar.disconnected": "AI · 未連接",
+  "app.statusbar.lspUnavailable": "LSP 不可用",
   "command.save": "保存全部修改",
   "command.palette": "命令面板",
   "command.view-reader": "閲讀頁",

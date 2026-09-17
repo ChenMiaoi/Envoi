@@ -26,6 +26,7 @@ import { ProjectProvider } from "@/project/ProjectProvider"
 import { ProjectMenu } from "@/project/ProjectMenu"
 import { useProject } from "@/project/context"
 import { projectTree } from "@/lib/projectFiles"
+import { useLspStatus } from "@/lib/lspStatus"
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { ProblemsPanel, type ProblemTarget } from "@/project/ProblemsPanel"
 import { GitStatusPanel } from "@/project/GitStatusPanel"
@@ -119,6 +120,7 @@ function ProjectApp() {
   const agent = useAgent()
   const { t } = useT()
   const { effective } = useSettings()
+  const lspStatus = useLspStatus()
   const { project } = useProject()
   const trust = useProjectTrust(project.rootPath)
   const fileTree = useMemo(
@@ -385,6 +387,18 @@ function ProjectApp() {
                     ? t("common.selectModel")
                     : `${t("app.statusbar.runtime")} · ${agent.config.model}`}
             </button>
+            {view === "reader" && lspStatus && (
+              <button
+                onClick={() => void navigate("/settings/global/compile")}
+                title={t("settings.tools.heading")}
+                className="-mx-1 flex items-center gap-1.5 rounded px-1 font-editor transition-colors hover:bg-white/[0.06] hover:text-foreground"
+              >
+                <span
+                  className={`inline-block h-1.5 w-1.5 rounded-full ${lspStatus.state === "ready" ? "bg-primary shadow-[0_0_6px_hsl(var(--primary)/0.9)]" : "bg-warning"}`}
+                />
+                {lspStatus.state === "ready" ? lspStatus.server : t("app.statusbar.lspUnavailable")}
+              </button>
+            )}
             <button
               onClick={() =>
                 void navigate(

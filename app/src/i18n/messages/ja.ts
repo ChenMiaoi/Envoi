@@ -165,6 +165,7 @@ const ja: Messages = {
   "app.statusbar.pageNavigation": "ページナビゲーション",
   "app.statusbar.runtime": "AI · 接続済み",
   "app.statusbar.disconnected": "AI · 未接続",
+  "app.statusbar.lspUnavailable": "LSP 利用不可",
   "command.save": "すべての変更を保存",
   "command.palette": "コマンドパレット",
   "command.view-reader": "閲覧ページ",

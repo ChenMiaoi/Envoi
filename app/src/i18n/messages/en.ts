@@ -161,6 +161,7 @@ const en: Messages = {
   "app.statusbar.pageNavigation": "Page navigation",
   "app.statusbar.runtime": "AI · Connected",
   "app.statusbar.disconnected": "AI · not connected",
+  "app.statusbar.lspUnavailable": "LSP unavailable",
   "command.save": "Save all changes",
   "command.palette": "Command palette",
   "command.view-reader": "Reading page",

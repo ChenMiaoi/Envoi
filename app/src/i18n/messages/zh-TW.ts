@@ -152,6 +152,7 @@ const zhTW: Messages = {
   "app.statusbar.pageNavigation": "頁面導航",
   "app.statusbar.runtime": "AI · 已連線",
   "app.statusbar.disconnected": "AI · 未連線",
+  "app.statusbar.lspUnavailable": "LSP 無法使用",
   "command.save": "儲存全部修改",
   "command.palette": "命令面板",
   "command.view-reader": "閱讀頁",
