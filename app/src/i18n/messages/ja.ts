@@ -103,6 +103,10 @@ const ja: Messages = {
   "settings.update.check": "更新を確認",
   "settings.update.busy": "お待ちください…",
   "settings.update.download": "更新をダウンロード",
+  "settings.update.downloading": "ダウンロード中…",
+  "settings.update.downloaded": "更新をダウンロードしました。保存先:",
+  "settings.update.noInstaller":
+    "新しいバージョンがありますが、この環境に対応する検証可能なインストーラーはありません。",
   "settings.update.error": "失敗しました。再試行してください",
   "settings.update.unpublished": "正式版はまだ公開されていません。",
   "settings.update.available": "新しいバージョン",

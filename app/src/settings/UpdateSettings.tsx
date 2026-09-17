@@ -8,7 +8,9 @@ export function UpdateSettings() {
   const { t } = useT()
   const [version, setVersion] = useState("—")
   const [status, setStatus] = useState<"idle" | "inaccessible" | "available" | "current">("idle")
+  const [downloadAvailable, setDownloadAvailable] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [downloading, setDownloading] = useState(false)
   useEffect(() => {
     let active = true
     void Promise.resolve()
@@ -25,16 +27,24 @@ export function UpdateSettings() {
   }, [])
   async function run(download = false) {
     setBusy(true)
+    setDownloading(download)
     try {
-      if (download) await envoi().downloadUpdate()
-      else {
+      if (download) {
+        const result = await envoi().downloadUpdate()
+        notify(`${t("settings.update.downloaded")} ${result.path}`, "success", "app-update")
+      } else {
         setStatus("idle")
+        setDownloadAvailable(false)
         const result = await envoi().checkUpdate()
         setVersion(result.currentVersion)
         setStatus(result.status)
+        setDownloadAvailable(result.downloadAvailable)
         notify(
-          `${t(`settings.update.${result.status}`)}${result.status === "available" ? ` ${result.latestVersion}` : ""}`,
-          result.status === "inaccessible"
+          result.status === "available" && !result.downloadAvailable
+            ? t("settings.update.noInstaller")
+            : `${t(`settings.update.${result.status}`)}${result.status === "available" ? ` ${result.latestVersion}` : ""}`,
+          result.status === "inaccessible" ||
+            (result.status === "available" && !result.downloadAvailable)
             ? "warning"
             : result.status === "current"
               ? "success"
@@ -46,6 +56,7 @@ export function UpdateSettings() {
       notify(`${t("settings.update.error")}: ${ipcError(error).message}`, "error", "app-update")
     } finally {
       setBusy(false)
+      setDownloading(false)
     }
   }
   const button = "min-h-9 rounded-lg border border-input px-3 py-2 text-xs disabled:opacity-50"
@@ -57,13 +68,13 @@ export function UpdateSettings() {
           <button className={button} disabled={busy} onClick={() => void run()}>
             {t(busy ? "settings.update.busy" : "settings.update.check")}
           </button>
-          {status === "available" && (
+          {status === "available" && downloadAvailable && (
             <button
               className={button + " bg-primary text-primary-foreground"}
               disabled={busy}
               onClick={() => void run(true)}
             >
-              {t("settings.update.download")}
+              {t(downloading ? "settings.update.downloading" : "settings.update.download")}
             </button>
           )}
         </div>

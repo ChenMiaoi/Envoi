@@ -5,7 +5,7 @@ import { diagnostics, operationContext } from "./diagnostics"
 import { randomUUID } from "node:crypto"
 import { libraryRequest, researchRoot } from "../../server/research-library.mjs"
 import { createExampleProject } from "./example-project.mjs"
-import { checkUpdate } from "./updates.mjs"
+import { checkUpdate, downloadReleaseInstaller } from "./updates.mjs"
 import {
   inspectProjectDeletion,
   trashProjectDirectory,
@@ -301,17 +301,31 @@ function registerIpc(): void {
     if (++limit.count > 100) return
     diagnostics.write(value.level!, "renderer", value.event!, {}, value.error)
   })
-  let updateUrl: string | undefined
+  let updateInstaller: Awaited<ReturnType<typeof checkUpdate>>["installer"] = null
+  let pendingUpdateDownload: Promise<{ path: string }> | undefined
   handle("envoi:app-version", () => app.getVersion())
   handle("envoi:check-update", async () => {
-    updateUrl = undefined
+    updateInstaller = null
     const result = await checkUpdate(app.getVersion())
-    if (result.status === "available") updateUrl = result.url
-    return result
+    updateInstaller = result.installer ?? null
+    return {
+      currentVersion: result.currentVersion,
+      latestVersion: result.latestVersion,
+      status: result.status,
+      downloadAvailable: result.downloadAvailable ?? false,
+    }
   })
   handle("envoi:download-update", async () => {
-    if (!updateUrl) throw Error("Check for updates first")
-    await shell.openExternal(updateUrl)
+    if (!updateInstaller) throw Error("No compatible update installer; check for updates first")
+    pendingUpdateDownload ??= downloadReleaseInstaller(updateInstaller, app.getPath("downloads"))
+      .then((file: string) => {
+        shell.showItemInFolder(file)
+        return { path: file }
+      })
+      .finally(() => {
+        pendingUpdateDownload = undefined
+      })
+    return pendingUpdateDownload
   })
   handle("envoi:library", async (event, root: string, input: Record<string, unknown>) => {
     root = await requireBoundRoot(root)

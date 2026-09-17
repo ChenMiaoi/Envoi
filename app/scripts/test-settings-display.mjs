@@ -54,6 +54,7 @@ try {
       currentVersion: "0.1.0",
       latestVersion: "0.2.0",
       status: "available",
+      downloadAvailable: true,
     }))
   })
   await page.getByRole("button", { name: "检查更新", exact: true }).click()

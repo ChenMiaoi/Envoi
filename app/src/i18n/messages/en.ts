@@ -99,6 +99,10 @@ const en: Messages = {
   "settings.update.check": "Check for updates",
   "settings.update.busy": "Please wait…",
   "settings.update.download": "Download update",
+  "settings.update.downloading": "Downloading…",
+  "settings.update.downloaded": "Update downloaded to:",
+  "settings.update.noInstaller":
+    "A new version is available, but no verified installer matches this system.",
   "settings.update.error": "Operation failed; try again",
   "settings.update.unpublished": "No stable release published yet.",
   "settings.update.available": "New version available",

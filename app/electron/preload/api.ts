@@ -19,8 +19,9 @@ export interface EnvoiBridge {
     currentVersion: string
     latestVersion?: string
     status: "inaccessible" | "available" | "current"
+    downloadAvailable: boolean
   }>
-  downloadUpdate(): Promise<void>
+  downloadUpdate(): Promise<{ path: string }>
   library(root: string, input: Record<string, unknown>): Promise<unknown>
   workspaces(root: string, input: Record<string, unknown>): Promise<unknown>
   windowColors(colors: { color: string; symbolColor: string }): Promise<void>

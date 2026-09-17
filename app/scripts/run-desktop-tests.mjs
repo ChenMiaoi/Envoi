@@ -17,6 +17,7 @@ const tests = [
       "scripts/test-paper-download.mjs",
       "scripts/test-paper-search.mjs",
       "scripts/test-paper-files.mjs",
+      "scripts/test-updates.mjs",
     ],
   ],
   ["numeric settings", ["scripts/test-number-settings.mjs"]],
