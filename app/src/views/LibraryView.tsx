@@ -297,10 +297,11 @@ function PaperWorkspace({
       controller.current = null
     }
   }
-  if (!detail) return <div className="p-6 text-sm">{error || "正在打开文献…"}</div>
+  if (!detail)
+    return <div className="workspace-pane h-full p-6 text-sm">{error || "正在打开文献…"}</div>
   return (
     <Group orientation="horizontal">
-      <Panel defaultSize="65%" minSize="25%">
+      <Panel defaultSize="65%" minSize="25%" className="workspace-pane">
         <div
           ref={reader}
           className="flex h-full flex-col"
@@ -417,8 +418,8 @@ function PaperWorkspace({
           </div>
         </div>
       </Panel>
-      <Handle />
-      <Panel defaultSize="35%" minSize="280px">
+      <Handle className="workspace-pane-divider" />
+      <Panel defaultSize="35%" minSize="280px" className="workspace-pane">
         <aside
           data-testid="paper-notes-panel"
           className="flex h-full min-h-0 flex-col bg-background"
@@ -721,14 +722,16 @@ export function LibraryView() {
   }
   if (!root)
     return (
-      <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-        {t("library.openProjectFirst")}
+      <div className="h-full p-1.5">
+        <div className="workspace-pane flex h-full items-center justify-center text-sm text-muted-foreground">
+          {t("library.openProjectFirst")}
+        </div>
       </div>
     )
   const groups = [...new Set(index?.papers.map((p) => p.collection || "未分类") ?? [])]
   return (
-    <div className="flex h-full flex-col" data-testid="research-library">
-      <header className="flex h-11 shrink-0 items-center gap-3 border-b border-border/70 bg-card px-4 text-xs">
+    <div className="flex h-full min-h-0 flex-col gap-3 p-1.5" data-testid="research-library">
+      <header className="workspace-pane flex h-11 shrink-0 items-center gap-3 px-4 text-xs">
         <nav
           aria-label="论文库视图"
           className="flex rounded-lg border border-border/70 bg-secondary/50 p-0.5"
@@ -815,20 +818,23 @@ export function LibraryView() {
       </header>
       {index?.root !== root && (
         <p
-          className="border-b px-4 py-2 text-xs text-muted-foreground"
+          className="workspace-pane shrink-0 px-4 py-2 text-xs text-muted-foreground"
           title={index?.papersDirectory}
         >
           当前关联主工作区的 papers/。
         </p>
       )}
       {!!index?.warnings?.length && (
-        <p role="status" className="px-4 py-1 text-xs text-muted-foreground">
+        <p
+          role="status"
+          className="workspace-pane shrink-0 px-4 py-2 text-xs text-muted-foreground"
+        >
           {index.warnings.join("；")}
         </p>
       )}
       {sourceOpen && (
         <form
-          className="flex flex-wrap gap-2 border-b px-4 py-2 text-xs"
+          className="workspace-pane flex shrink-0 flex-wrap gap-2 px-4 py-2 text-xs"
           onSubmit={async (event) => {
             event.preventDefault()
             if (busy || !sourceUrl.trim()) return
@@ -900,19 +906,21 @@ export function LibraryView() {
       <div className="min-h-0 flex-1">
         <div className="h-full" hidden={mode === "browse"}>
           {mode === "search" ? (
-            <PaperSearchPanel
-              root={root}
-              papers={index?.papers ?? []}
-              onImported={() => void load()}
-              onBrowse={(url) => {
-                setBrowseTarget((current) => ({ url, request: (current?.request ?? 0) + 1 }))
-                setBrowseVisited(true)
-                setMode("browse")
-              }}
-            />
+            <div className="workspace-pane h-full">
+              <PaperSearchPanel
+                root={root}
+                papers={index?.papers ?? []}
+                onImported={() => void load()}
+                onBrowse={(url) => {
+                  setBrowseTarget((current) => ({ url, request: (current?.request ?? 0) + 1 }))
+                  setBrowseVisited(true)
+                  setMode("browse")
+                }}
+              />
+            </div>
           ) : (
             <Group orientation="horizontal">
-              <Panel defaultSize="18%" minSize="14%" maxSize="30%">
+              <Panel defaultSize="18%" minSize="14%" maxSize="30%" className="workspace-pane">
                 <nav className="flex h-full flex-col bg-card">
                   <div className="flex h-9 shrink-0 items-center border-b border-border px-2">
                     <input
@@ -960,7 +968,7 @@ export function LibraryView() {
                   </div>
                 </nav>
               </Panel>
-              <Handle />
+              <Handle className="workspace-pane-divider" />
               <Panel minSize="50%">
                 {visited.map((id) => {
                   const paper = index?.papers.find((p) => p.id === id)
@@ -976,7 +984,7 @@ export function LibraryView() {
                   ) : null
                 })}
                 {!selected && (
-                  <div className="flex h-full flex-col items-center justify-center gap-2 px-10 text-center text-sm text-muted-foreground">
+                  <div className="workspace-pane flex h-full flex-col items-center justify-center gap-2 px-10 text-center text-sm text-muted-foreground">
                     {index?.papers.length ? (
                       <p>从左侧选择一篇文献。</p>
                     ) : (
@@ -994,7 +1002,7 @@ export function LibraryView() {
           )}
         </div>
         {browseVisited && (
-          <div className="h-full" hidden={mode !== "browse"}>
+          <div className="workspace-pane h-full" hidden={mode !== "browse"}>
             <PaperBrowsePanel
               key={browseTarget?.request ?? 0}
               root={root}

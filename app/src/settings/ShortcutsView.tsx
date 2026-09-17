@@ -65,100 +65,106 @@ export function ShortcutsView() {
     (item) => (!scope || item.scope === scope) && item.label.includes(query),
   )
   return (
-    <div className="h-full overflow-auto p-7">
-      <div className="mx-auto max-w-3xl">
-        <Link className="text-xs text-primary" to="/settings/global/general">
-          {t("settings.shortcuts.back")}
-        </Link>
-        <h1 className="mt-4 text-xl font-semibold">{t("settings.general.shortcuts")}</h1>
-        <p className="mt-2 text-xs text-muted-foreground">{t("settings.shortcuts.description")}</p>
-        <div className="my-5 flex gap-3">
-          <input
-            aria-label={t("settings.shortcuts.searchAria")}
-            placeholder={t("settings.shortcuts.searchPlaceholder")}
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            className="min-w-0 flex-1 rounded border border-input bg-card p-2 text-xs"
-          />
-          <select
-            aria-label={t("settings.shortcuts.scopeAria")}
-            value={scope}
-            onChange={(e) => setScope(e.target.value)}
-            className="rounded border border-input bg-card p-2 text-xs"
-          >
-            <option value="">{t("settings.shortcuts.allScopes")}</option>
-            {(Object.keys(scopeNames) as Scope[]).map((name) => (
-              <option key={name} value={name}>
-                {scopeNames[name]}
-              </option>
-            ))}
-          </select>
-          <button
-            className="text-xs text-primary"
-            onClick={() => {
-              update({ bindings: [] })
-              setRecording(null)
-              setMessage(t("settings.shortcuts.allReset"))
-            }}
-          >
-            {t("settings.shortcuts.resetAll")}
-          </button>
-        </div>
-        <Notification message={error || message} kind={error ? "error" : "success"} />
-        <div className="rounded-xl border border-border bg-card px-5">
-          {visible.map((item) => {
-            const chord = commandChord(item.id, bindings)
-            return (
-              <div
-                key={item.id}
-                className="flex flex-wrap items-center justify-between gap-4 border-b border-border py-4 last:border-0"
-              >
-                <div>
-                  <h2 className="text-sm">{item.label}</h2>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {scopeNames[item.scope]} · {item.action}
-                  </p>
-                </div>
-                <div className="flex items-center gap-3">
-                  {recording === item.id ? (
-                    <input
-                      data-shortcut-recorder
-                      autoFocus
-                      readOnly
-                      aria-label={t("settings.shortcuts.recordAria", { label: item.label })}
-                      placeholder={t("settings.shortcuts.recordPlaceholder")}
-                      className="w-52 rounded border border-primary bg-background p-2 text-xs"
-                      onKeyDown={(event) => {
-                        event.preventDefault()
-                        event.stopPropagation()
-                        if (event.key === "Escape") {
-                          setRecording(null)
-                          return
-                        }
-                        if (["Control", "Meta", "Shift", "Alt"].includes(event.key)) return
-                        const next = eventChord(event)
-                        if (next) save(item, next)
-                      }}
-                    />
-                  ) : (
-                    <button
-                      className="rounded border border-border px-3 py-2 text-xs"
-                      aria-label={t("settings.shortcuts.modifyAria", { label: item.label })}
-                      onClick={() => {
-                        setMessage("")
-                        setRecording(item.id)
-                      }}
-                    >
-                      <kbd>{chord ? chordLabel(chord, mac) : t("settings.shortcuts.unbound")}</kbd>
+    <div className="h-full p-1.5">
+      <div className="workspace-pane h-full overflow-auto bg-background p-7">
+        <div className="mx-auto max-w-3xl">
+          <Link className="text-xs text-primary" to="/settings/global/general">
+            {t("settings.shortcuts.back")}
+          </Link>
+          <h1 className="mt-4 text-xl font-semibold">{t("settings.general.shortcuts")}</h1>
+          <p className="mt-2 text-xs text-muted-foreground">
+            {t("settings.shortcuts.description")}
+          </p>
+          <div className="my-5 flex gap-3">
+            <input
+              aria-label={t("settings.shortcuts.searchAria")}
+              placeholder={t("settings.shortcuts.searchPlaceholder")}
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              className="min-w-0 flex-1 rounded border border-input bg-card p-2 text-xs"
+            />
+            <select
+              aria-label={t("settings.shortcuts.scopeAria")}
+              value={scope}
+              onChange={(e) => setScope(e.target.value)}
+              className="rounded border border-input bg-card p-2 text-xs"
+            >
+              <option value="">{t("settings.shortcuts.allScopes")}</option>
+              {(Object.keys(scopeNames) as Scope[]).map((name) => (
+                <option key={name} value={name}>
+                  {scopeNames[name]}
+                </option>
+              ))}
+            </select>
+            <button
+              className="text-xs text-primary"
+              onClick={() => {
+                update({ bindings: [] })
+                setRecording(null)
+                setMessage(t("settings.shortcuts.allReset"))
+              }}
+            >
+              {t("settings.shortcuts.resetAll")}
+            </button>
+          </div>
+          <Notification message={error || message} kind={error ? "error" : "success"} />
+          <div className="rounded-xl border border-border bg-card px-5">
+            {visible.map((item) => {
+              const chord = commandChord(item.id, bindings)
+              return (
+                <div
+                  key={item.id}
+                  className="flex flex-wrap items-center justify-between gap-4 border-b border-border py-4 last:border-0"
+                >
+                  <div>
+                    <h2 className="text-sm">{item.label}</h2>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {scopeNames[item.scope]} · {item.action}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    {recording === item.id ? (
+                      <input
+                        data-shortcut-recorder
+                        autoFocus
+                        readOnly
+                        aria-label={t("settings.shortcuts.recordAria", { label: item.label })}
+                        placeholder={t("settings.shortcuts.recordPlaceholder")}
+                        className="w-52 rounded border border-primary bg-background p-2 text-xs"
+                        onKeyDown={(event) => {
+                          event.preventDefault()
+                          event.stopPropagation()
+                          if (event.key === "Escape") {
+                            setRecording(null)
+                            return
+                          }
+                          if (["Control", "Meta", "Shift", "Alt"].includes(event.key)) return
+                          const next = eventChord(event)
+                          if (next) save(item, next)
+                        }}
+                      />
+                    ) : (
+                      <button
+                        className="rounded border border-border px-3 py-2 text-xs"
+                        aria-label={t("settings.shortcuts.modifyAria", { label: item.label })}
+                        onClick={() => {
+                          setMessage("")
+                          setRecording(item.id)
+                        }}
+                      >
+                        <kbd>
+                          {chord ? chordLabel(chord, mac) : t("settings.shortcuts.unbound")}
+                        </kbd>
+                      </button>
+                    )}
+                    <button className="text-xs text-muted-foreground" onClick={() => reset(item)}>
+                      {t("settings.shortcuts.reset")}
                     </button>
-                  )}
-                  <button className="text-xs text-muted-foreground" onClick={() => reset(item)}>
-                    {t("settings.shortcuts.reset")}
-                  </button>
+                  </div>
                 </div>
-              </div>
-            )
-          })}
+              )
+            })}
+          </div>
         </div>
       </div>
     </div>

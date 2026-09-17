@@ -353,8 +353,8 @@ export function SettingsView() {
       : t("common.inheritanceOverride")
   if ((category as string) === "shortcuts") return <ShortcutsView />
   return (
-    <div className="flex h-full flex-col bg-background">
-      <header className="flex h-11 shrink-0 items-center justify-between border-b border-border bg-card px-4">
+    <div className="flex h-full min-h-0 flex-col gap-3 p-1.5">
+      <header className="workspace-pane flex h-11 shrink-0 items-center justify-between px-4">
         <h1 className="text-sm font-medium">{t("view.settings")}</h1>
         <div className="flex rounded-lg border border-border bg-background p-0.5">
           {(["global", "project"] as const).map((value) => (
@@ -368,10 +368,10 @@ export function SettingsView() {
           ))}
         </div>
       </header>
-      <div className="flex min-h-0 flex-1">
+      <div className="flex min-h-0 flex-1 gap-3">
         <nav
           aria-label={t("settings.navAria")}
-          className="w-72 shrink-0 space-y-1 border-r border-border bg-card p-3"
+          className="workspace-pane w-72 shrink-0 space-y-1 p-3"
         >
           {Object.entries(settingCategories).map(([id, labelKey]) => (
             <NavLink
@@ -386,7 +386,7 @@ export function SettingsView() {
             </NavLink>
           ))}
         </nav>
-        <div className="min-w-0 flex-1 overflow-auto p-7">
+        <div className="workspace-pane min-w-0 flex-1 overflow-auto bg-background p-7">
           <div className="mx-auto max-w-3xl">
             <h2 className="mb-3 text-base font-medium">{t(settingCategories[category])}</h2>
             {error && <Notification message={error} kind="error" />}
