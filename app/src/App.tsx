@@ -357,8 +357,8 @@ function ProjectApp() {
 
       {/* 状态栏 */}
       {!emptyWorkspace && (
-        <div className="pointer-events-none absolute inset-x-0 bottom-3.5 z-30 flex justify-center text-[11px] text-muted-foreground">
-          <div className="pointer-events-auto flex h-7 items-center gap-3 rounded-full border border-white/[0.08] bg-card/40 px-4 shadow-[0_8px_32px_-12px_rgba(0,0,0,0.5)] backdrop-blur-xl backdrop-saturate-150 tabular-nums">
+        <div className="pointer-events-none absolute bottom-3.5 left-1/2 z-30 w-max max-w-[calc(100vw-1.5rem)] -translate-x-1/2 text-[11px] text-muted-foreground">
+          <div className="pointer-events-auto scrollbar-none flex h-7 max-w-full items-center gap-3 overflow-x-auto rounded-full border border-white/[0.08] bg-card/40 px-4 shadow-[0_8px_32px_-12px_rgba(0,0,0,0.5)] backdrop-blur-xl backdrop-saturate-150 tabular-nums">
             {project.id !== "empty" && <ProjectTrust />}
             {project.id !== "empty" && <GitStatusPanel />}
             {project.id !== "empty" && (
