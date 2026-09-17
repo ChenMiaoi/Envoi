@@ -277,12 +277,20 @@ export const zhCN = {
 
   "settings.tools.validatedSaved": "工具配置已保存。",
   "settings.tools.heading": "本机工具 · 高级",
+  "settings.tools.group.core": "核心",
+  "settings.tools.group.latex": "LaTeX",
+  "settings.tools.group.cpp": "C/C++",
+  "settings.tools.group.python": "Python",
+  "settings.tools.group.rust": "Rust",
+  "settings.tools.group.build": "构建系统",
+  "settings.tools.refresh": "重新检测",
+  "settings.tools.projectVenv": "当前项目环境 (.venv)",
+  "settings.tools.projectVenvMissing":
+    "未检测到 .venv 或 venv；创建后 Python 语言服务将优先使用其中的工具。",
 
   "settings.tools.chktexHint": "留空以自动探测。",
   "settings.tools.chktexPathAria": "ChkTeX 可执行路径",
 
-  "settings.tools.texlabFound": "发现本地程序",
-  "settings.tools.texlabMissing": "未检测到",
   /* ---------- 迁移增补（fragments 合并） ---------- */
   "ai.noOptions": "暂无可选项",
   "ai.operationFailed": "AI 操作失败",
@@ -963,7 +971,6 @@ export const zhCN = {
   "settings.shortcuts.searchAria": "搜索快捷键",
   "settings.shortcuts.searchPlaceholder": "搜索命令…",
   "settings.shortcuts.unbound": "未绑定",
-  "settings.tools.chktexProgram": "ChkTeX 程序",
   "settings.tools.restoreAutoDetect": "恢复自动探测",
   "settings.tools.validateSave": "校验并保存",
 

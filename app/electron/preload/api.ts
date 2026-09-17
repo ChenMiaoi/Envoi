@@ -55,7 +55,7 @@ export interface EnvoiBridge {
   }): Promise<{ available: boolean; items?: unknown[]; error?: string }>
 
   // 工具
-  tools(): Promise<Record<string, unknown>>
+  tools(options?: { refresh?: boolean; root?: string }): Promise<Record<string, unknown>>
   configureTools(input: { chktexPath: string | null }): Promise<Record<string, unknown>>
   paperSearchConfig(): Promise<{
     semanticScholarKey: string

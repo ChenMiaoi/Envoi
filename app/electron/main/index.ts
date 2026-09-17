@@ -519,9 +519,9 @@ function registerIpc(): void {
         root: await requireBoundRoot(input.rootPath ?? ""),
       }),
   )
-  handle("envoi:tools", async (event) => {
+  handle("envoi:tools", async (event, options?: { refresh?: boolean; root?: string }) => {
     await requireToolContext(event)
-    return toolsBackend.call("tools")
+    return toolsBackend.call("tools", [options])
   })
   handle("envoi:paper-search-config", () => paperSearchConfig())
   handle("envoi:configure-paper-search", (_event, input: unknown) => configurePaperSearch(input))

@@ -7,7 +7,7 @@ process.on("uncaughtExceptionMonitor", (error) => {
 })
 import { compileSnapshot, runtimeInfo } from "../../server/compiler.mjs"
 import { lintText } from "../../server/lint.mjs"
-import { configureTools, toolInfo } from "../../server/tool-config.mjs"
+import { configureTools, pythonEnvironment, toolInfo } from "../../server/tool-config.mjs"
 import { gitInitAt, gitLogAt, gitRuntime, gitShowAt, gitStatusAt } from "../../server/git.mjs"
 import { TaskRegistry } from "./task-registry.mjs"
 const tasks = new TaskRegistry()
@@ -37,7 +37,16 @@ async function dispatch(message) {
   if (method === "runtime") return runtimeInfo({ trusted: true })
   if (method === "gitRuntime") return gitRuntime()
   if (method in git) return git[method](...args)
-  if (method === "tools") return { ...toolInfo(), latex: runtimeInfo({ trusted: true }) }
+  if (method === "tools") {
+    const options = args?.[0] ?? {}
+    const environment =
+      typeof options.root === "string" && options.root ? pythonEnvironment(options.root) : undefined
+    return {
+      ...(await toolInfo({ refresh: !!options.refresh })),
+      latex: runtimeInfo({ trusted: true }),
+      projectPython: options.root ? { available: !!environment, path: environment ?? "" } : null,
+    }
+  }
   if (method === "configureTools")
     return { ...(await configureTools(args[0])), latex: runtimeInfo({ trusted: true }) }
   if (method === "compile")

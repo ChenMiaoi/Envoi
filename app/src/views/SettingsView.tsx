@@ -8,12 +8,13 @@ import { PaperSearchSettings } from "@/settings/PaperSearchSettings"
 import { notify } from "@/lib/notifications"
 import { Notification } from "@/components/Notification"
 import { ShortcutsView } from "@/settings/ShortcutsView"
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { NavLink, useLocation, Link } from "react-router"
 import { useProject } from "@/project/context"
 import { usePreferences } from "@/settings/context"
 import { useSettings } from "@/settings/useSettings"
 import { useT } from "@/i18n/useT"
+import { type MessageKey } from "@/i18n/runtime"
 import { envoi, ipcError } from "@/lib/desktop"
 import { locales, type LocaleId } from "@/i18n/locales"
 import {
@@ -122,43 +123,66 @@ function Rules({
     </div>
   )
 }
+// 与 server/tool-registry.mjs 的分组保持一致；行数据由后端按注册表生成。
+type ToolGroupId = "core" | "latex" | "cpp" | "python" | "rust" | "build"
+interface ToolRow {
+  id: string
+  binary: string
+  label: string
+  kind?: string
+  available: boolean
+  path: string
+  version?: string
+  error?: string
+  configured?: boolean
+}
 interface Tools {
   system?: { platform: string; release: string; arch: string; machine: string }
-  git?: { available: boolean; path: string; version?: string; error?: string }
-  biber?: { available: boolean; path: string; version?: string; error?: string }
-  chktex: { available: boolean; path: string; configured: boolean; error: string }
-  texlab: { available: boolean; path: string; integrationAvailable: boolean }
+  groups?: Partial<Record<ToolGroupId, ToolRow[]>>
   latex: { available: boolean; error?: string; root?: string }
+  projectPython?: { available: boolean; path: string } | null
 }
+const toolGroupOrder: ToolGroupId[] = ["core", "latex", "cpp", "python", "rust", "build"]
+const toolGroupLabels: Record<ToolGroupId, MessageKey> = {
+  core: "settings.tools.group.core",
+  latex: "settings.tools.group.latex",
+  cpp: "settings.tools.group.cpp",
+  python: "settings.tools.group.python",
+  rust: "settings.tools.group.rust",
+  build: "settings.tools.group.build",
+}
+const chktexOf = (tools: Tools) => tools.groups?.latex?.find((tool) => tool.id === "chktex")
 function LocalTools() {
   const { t } = useT()
+  const rootPath = useProject().project.rootPath
   const [tools, setTools] = useState<Tools | null>(null),
     [path, setPath] = useState(""),
     [busy, setBusy] = useState(false)
+  const load = useCallback(
+    async (refresh: boolean) => {
+      try {
+        const result = (await envoi().tools({
+          refresh,
+          root: rootPath ?? undefined,
+        })) as unknown as Tools
+        setTools(result)
+        setPath(chktexOf(result)?.path ?? "")
+      } catch (error) {
+        notify(ipcError(error).message, "error", "local-tools")
+      }
+    },
+    [rootPath],
+  )
   useEffect(() => {
-    let active = true
-    void Promise.resolve()
-      .then(() => envoi().tools() as unknown as Tools)
-      .then((result) => {
-        if (active) {
-          setTools(result)
-          setPath(result.chktex.path)
-        }
-      })
-      .catch((error) => {
-        if (active) notify(ipcError(error).message, "error", "local-tools")
-      })
-    return () => {
-      active = false
-    }
-  }, [t])
+    void load(false)
+  }, [load])
   async function save(value: string | null) {
     if (!tools) return
     setBusy(true)
     try {
       const result = (await envoi().configureTools({ chktexPath: value })) as unknown as Tools
       setTools(result)
-      setPath(result.chktex.path)
+      setPath(chktexOf(result)?.path ?? "")
       notify(t("settings.tools.validatedSaved"), "success", "local-tools")
     } catch (error) {
       notify(ipcError(error).message, "error", "local-tools")
@@ -168,7 +192,14 @@ function LocalTools() {
   }
   return (
     <div className="mt-6 rounded-xl border border-border bg-background/40 p-4">
-      <h3 className="text-sm font-medium">{t("settings.tools.heading")}</h3>
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-medium">{t("settings.tools.heading")}</h3>
+        {tools && (
+          <button className="text-xs text-primary" onClick={() => void load(true)}>
+            {t("settings.tools.refresh")}
+          </button>
+        )}
+      </div>
       {!tools && (
         <p role="status" className="mt-2 text-xs text-muted-foreground">
           {t("settings.tools.probing")}
@@ -188,49 +219,81 @@ function LocalTools() {
               </span>
             </Row>
           )}
-          {(["git", "biber"] as const).map(
-            (name) =>
-              tools[name] && (
-                <Row
-                  key={name}
-                  label={name === "git" ? "Git" : "Biber"}
-                  hint={tools[name]?.path || tools[name]?.error}
-                >
-                  <span className="text-xs">
-                    {tools[name]?.available
-                      ? tools[name]?.version || t("common.available")
-                      : t("common.unavailable")}
+          {toolGroupOrder.map((group) => {
+            const rows = tools.groups?.[group]
+            if (!rows?.length) return null
+            const ready = rows.filter((tool) => tool.available).length
+            return (
+              <div key={group} className="mt-4 border-t border-border pt-3">
+                <h4 className="mb-2 flex items-baseline justify-between text-xs font-medium">
+                  {t(toolGroupLabels[group])}
+                  <span className="font-normal text-muted-foreground">
+                    {ready}/{rows.length}
                   </span>
-                </Row>
-              ),
-          )}
-          <Row
-            label="LaTeX"
-            hint={tools.latex.available ? tools.latex.root || undefined : tools.latex.error}
-          >
-            <span className="text-xs">
-              {tools.latex.available ? t("common.available") : t("common.unavailable")}
-            </span>
-          </Row>
-          <Row label={t("settings.tools.chktexProgram")} hint={t("settings.tools.chktexHint")}>
-            <span className="text-xs">
-              {tools.chktex.available ? t("common.available") : t("common.unavailable")}
-            </span>
-          </Row>
-          <div className="flex flex-wrap gap-2">
-            <input
-              aria-label={t("settings.tools.chktexPathAria")}
-              value={path}
-              onChange={(e) => setPath(e.target.value)}
-              className={input + " min-w-0 flex-1 font-editor"}
-            />
-            <button disabled={busy} className={input} onClick={() => void save(path)}>
-              {t("settings.tools.validateSave")}
-            </button>
-            <button disabled={busy} className={input} onClick={() => void save(null)}>
-              {t("settings.tools.restoreAutoDetect")}
-            </button>
-          </div>
+                </h4>
+                {group === "latex" && (
+                  <Row
+                    label="LaTeX"
+                    hint={tools.latex.available ? tools.latex.root || undefined : tools.latex.error}
+                  >
+                    <span className="text-xs">
+                      {tools.latex.available ? t("common.available") : t("common.unavailable")}
+                    </span>
+                  </Row>
+                )}
+                {rows.map((tool) => (
+                  <Row
+                    key={tool.id}
+                    label={tool.kind === "lsp" ? `${tool.label} · LSP` : tool.label}
+                    hint={tool.path || tool.error}
+                  >
+                    <span className="text-xs">
+                      {tool.available
+                        ? tool.version || t("common.available")
+                        : t("common.unavailable")}
+                    </span>
+                  </Row>
+                ))}
+                {group === "python" && tools.projectPython && (
+                  <Row
+                    label={t("settings.tools.projectVenv")}
+                    hint={
+                      tools.projectPython.available
+                        ? tools.projectPython.path
+                        : t("settings.tools.projectVenvMissing")
+                    }
+                  >
+                    <span className="text-xs">
+                      {tools.projectPython.available
+                        ? t("common.available")
+                        : t("common.unavailable")}
+                    </span>
+                  </Row>
+                )}
+                {group === "latex" && (
+                  <>
+                    <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+                      {t("settings.tools.chktexHint")}
+                    </p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <input
+                        aria-label={t("settings.tools.chktexPathAria")}
+                        value={path}
+                        onChange={(e) => setPath(e.target.value)}
+                        className={input + " min-w-0 flex-1 font-editor"}
+                      />
+                      <button disabled={busy} className={input} onClick={() => void save(path)}>
+                        {t("settings.tools.validateSave")}
+                      </button>
+                      <button disabled={busy} className={input} onClick={() => void save(null)}>
+                        {t("settings.tools.restoreAutoDetect")}
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            )
+          })}
         </>
       )}
     </div>

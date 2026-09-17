@@ -274,12 +274,20 @@ const en: Messages = {
 
   "settings.tools.validatedSaved": "Tool settings saved.",
   "settings.tools.heading": "Local tools · advanced",
+  "settings.tools.group.core": "Core",
+  "settings.tools.group.latex": "LaTeX",
+  "settings.tools.group.cpp": "C/C++",
+  "settings.tools.group.python": "Python",
+  "settings.tools.group.rust": "Rust",
+  "settings.tools.group.build": "Build systems",
+  "settings.tools.refresh": "Re-detect",
+  "settings.tools.projectVenv": "Current project environment (.venv)",
+  "settings.tools.projectVenvMissing":
+    "No .venv or venv detected; once created, Python language servers prefer its tools.",
 
   "settings.tools.chktexHint": "Leave empty to auto-detect.",
   "settings.tools.chktexPathAria": "ChkTeX executable path",
 
-  "settings.tools.texlabFound": "local program found",
-  "settings.tools.texlabMissing": "not detected",
   /* ---------- 迁移增补（fragments 合并） ---------- */
   "ai.noOptions": "No options available",
   "ai.operationFailed": "AI operation failed",
@@ -1028,7 +1036,6 @@ const en: Messages = {
   "settings.shortcuts.searchAria": "Search shortcuts",
   "settings.shortcuts.searchPlaceholder": "Search commands…",
   "settings.shortcuts.unbound": "Unbound",
-  "settings.tools.chktexProgram": "ChkTeX program",
   "settings.tools.restoreAutoDetect": "Restore auto-detect",
   "settings.tools.validateSave": "Validate and save",
 

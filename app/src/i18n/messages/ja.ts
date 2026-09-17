@@ -278,12 +278,20 @@ const ja: Messages = {
 
   "settings.tools.validatedSaved": "ツール設定を保存しました。",
   "settings.tools.heading": "ローカルツール · 詳細",
+  "settings.tools.group.core": "コア",
+  "settings.tools.group.latex": "LaTeX",
+  "settings.tools.group.cpp": "C/C++",
+  "settings.tools.group.python": "Python",
+  "settings.tools.group.rust": "Rust",
+  "settings.tools.group.build": "ビルドシステム",
+  "settings.tools.refresh": "再検出",
+  "settings.tools.projectVenv": "現在のプロジェクト環境 (.venv)",
+  "settings.tools.projectVenvMissing":
+    ".venv / venv が見つかりません。作成すると Python 言語サーバーがその中のツールを優先します。",
 
   "settings.tools.chktexHint": "空欄で自動検出します。",
   "settings.tools.chktexPathAria": "ChkTeX 実行ファイルのパス",
 
-  "settings.tools.texlabFound": "ローカルプログラムを検出",
-  "settings.tools.texlabMissing": "検出されませんでした",
   /* ---------- 迁移增补（fragments 合并） ---------- */
   "ai.noOptions": "選択肢がありません",
   "ai.operationFailed": "AI 操作に失敗しました",
@@ -1049,7 +1057,6 @@ const ja: Messages = {
   "settings.shortcuts.searchAria": "ショートカットを検索",
   "settings.shortcuts.searchPlaceholder": "コマンドを検索…",
   "settings.shortcuts.unbound": "未割り当て",
-  "settings.tools.chktexProgram": "ChkTeX プログラム",
   "settings.tools.restoreAutoDetect": "自動検出に戻す",
   "settings.tools.validateSave": "検証して保存",
 

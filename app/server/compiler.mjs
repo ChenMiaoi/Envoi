@@ -328,7 +328,7 @@ export function compilerPlugin() {
         res.setHeader("Content-Type", "application/json")
         res.setHeader("Cache-Control", "no-store")
         if (req.method === "GET" && req.url === "/api/envoi/tools") {
-          res.end(JSON.stringify({ ...toolInfo(), latex: runtimeInfo(), token }))
+          res.end(JSON.stringify({ ...(await toolInfo()), latex: runtimeInfo(), token }))
           return
         }
         if (

@@ -1,8 +1,18 @@
-import { readFileSync, realpathSync, accessSync, constants, readdirSync, statSync } from "node:fs"
+import {
+  readFileSync,
+  realpathSync,
+  accessSync,
+  constants,
+  existsSync,
+  readdirSync,
+  statSync,
+} from "node:fs"
 import { mkdir, writeFile } from "node:fs/promises"
-import { execFileSync } from "node:child_process"
+import { execFile, execFileSync } from "node:child_process"
 import { homedir, release, machine } from "node:os"
 import path from "node:path"
+import { promisify } from "node:util"
+import { toolCatalog, toolGroups } from "./tool-registry.mjs"
 const configPath = path.join(homedir(), ".config/envoi/tools.json"),
   legacyConfigPath = path.join(homedir(), ".config/paperdesk/tools.json")
 function config() {
@@ -29,9 +39,13 @@ export function toolDirectories() {
     fallback = programRoots.flatMap((root) => [
       path.join(root, "Git", "cmd"),
       path.join(root, "Programs", "Git", "cmd"),
+      path.join(root, "LLVM", "bin"),
+      path.join(root, "CMake", "bin"),
+      path.join(root, "Programs", "CMake", "bin"),
       path.join(root, "MiKTeX", "miktex", "bin", "x64"),
       path.join(root, "Programs", "MiKTeX", "miktex", "bin", "x64"),
     ])
+    fallback.push(path.join(homedir(), ".cargo", "bin"), path.join(homedir(), ".local", "bin"))
     const texRoot = path.join(env.SystemDrive ?? "C:", "texlive")
     try {
       fallback.push(
@@ -49,7 +63,14 @@ export function toolDirectories() {
     }
   } else if (process.platform === "darwin")
     fallback = ["/opt/homebrew/bin", "/Library/TeX/texbin", "/usr/local/bin", "/usr/bin"]
-  else fallback = ["/usr/local/bin", "/usr/bin", "/bin"]
+  else
+    fallback = [
+      "/usr/local/bin",
+      "/usr/bin",
+      "/bin",
+      path.join(homedir(), ".cargo", "bin"),
+      path.join(homedir(), ".local", "bin"),
+    ]
   return [
     ...new Set(
       [explicit, ...inherited, ...fallback]
@@ -71,6 +92,14 @@ export function detectTool(name) {
       }
     })
 }
+// 项目级 Python 环境：以 pyvenv.cfg 为凭据识别项目根下的 .venv/venv 目录。
+// LSP 启动（lsp-service）与设置页展示（backend tools）共用这一份实现。
+export function pythonEnvironment(root) {
+  if (typeof root !== "string" || !path.isAbsolute(root)) return undefined
+  return [".venv", "venv"]
+    .map((name) => path.join(root, name))
+    .find((folder) => existsSync(path.join(folder, "pyvenv.cfg")))
+}
 export function environmentInfo() {
   return {
     platform: process.platform,
@@ -80,26 +109,70 @@ export function environmentInfo() {
     node: process.versions.node,
   }
 }
-function probeTool(name, args = ["--version"]) {
-  const executable = detectTool(name)
-  if (!executable) return { available: false, path: "", error: `${name} not found` }
+const executeFile = promisify(execFile)
+// 导出供测试直接构造工具链探测；生产路径由 probeCatalog 调用。
+export async function probeVersion(tool, args = ["--version"]) {
+  const binaries = tool.binaries ?? [tool.binary]
+  const paths = binaries.map((binary) => detectTool(binary))
+  const missing = binaries.filter((_, index) => !paths[index])
+  if (missing.length)
+    return { available: false, path: "", error: `${missing.join(", ")} not found` }
   try {
-    return {
-      available: true,
-      path: executable,
-      version: execFileSync(executable, args, {
-        windowsHide: true,
-        encoding: "utf8",
-        timeout: 5000,
-        maxBuffer: 100000,
-        stdio: ["ignore", "pipe", "pipe"],
-      })
-        .trim()
-        .split(/\r?\n/)[0],
-    }
+    const { stdout } = await executeFile(paths[0], args, {
+      windowsHide: true,
+      encoding: "utf8",
+      timeout: 5000,
+      maxBuffer: 100000,
+    })
+    return { available: true, path: paths[0], version: stdout.trim().split(/\r?\n/)[0] }
   } catch (error) {
-    return { available: false, path: executable, error: error.message }
+    return { available: false, path: paths[0], error: error.message }
   }
+}
+function probePresence(binary) {
+  const executable = detectTool(binary)
+  return executable
+    ? { available: true, path: executable }
+    : { available: false, path: "", error: `${binary} not found` }
+}
+function probeChktex() {
+  const configured = config().chktexPath
+  let status = {
+    available: false,
+    path: chktexPath() ?? "",
+    configured: !!configured,
+    error: "未找到 ChkTeX",
+  }
+  try {
+    const executable = validateChktexPath(status.path)
+    status = { ...status, available: true, path: executable, error: "" }
+  } catch (error) {
+    status.error = error.message
+  }
+  return status
+}
+async function probeCatalog() {
+  const probed = new Map()
+  await Promise.all(
+    toolCatalog.map(async (tool) => {
+      const status =
+        tool.probe === "version"
+          ? await probeVersion(tool)
+          : tool.probe === "presence"
+            ? probePresence(tool.binary)
+            : probeChktex()
+      probed.set(tool.id, { ...tool, ...status })
+    }),
+  )
+  const groups = Object.fromEntries(toolGroups.map((group) => [group, []]))
+  for (const tool of toolCatalog) groups[tool.group].push(probed.get(tool.id))
+  return { system: environmentInfo(), groups, configurationScope: "local-user" }
+}
+// 探测结果按进程缓存；设置页“重新检测”与保存 ChkTeX 配置时显式失效。
+let cachedInfo
+export function toolInfo({ refresh = false } = {}) {
+  if (refresh) cachedInfo = undefined
+  return (cachedInfo ??= probeCatalog())
 }
 export function chktexPath() {
   return config().chktexPath ?? detectTool("chktex")
@@ -124,30 +197,6 @@ export function validateChktexPath(value) {
   if (!/ChkTeX v\d/.test(version)) throw Error("程序未通过 ChkTeX 版本校验。")
   return resolved
 }
-export function toolInfo() {
-  const configured = config().chktexPath
-  let chktex = {
-    available: false,
-    path: chktexPath() ?? "",
-    configured: !!configured,
-    error: "未找到 ChkTeX",
-  }
-  try {
-    const executable = validateChktexPath(chktex.path)
-    chktex = { ...chktex, available: true, path: executable, error: "" }
-  } catch (error) {
-    chktex.error = error.message
-  }
-  const texlab = detectTool("texlab")
-  return {
-    system: environmentInfo(),
-    git: probeTool("git"),
-    biber: probeTool("biber"),
-    chktex,
-    texlab: { available: !!texlab, path: texlab ?? "", integrationAvailable: false },
-    configurationScope: "local-user",
-  }
-}
 export async function configureTools(input) {
   if (
     !input ||
@@ -160,7 +209,7 @@ export async function configureTools(input) {
   await writeFile(configPath, JSON.stringify({ chktexPath: selected }, null, 2) + "\n", {
     mode: 0o600,
   })
-  return toolInfo()
+  return toolInfo({ refresh: true })
 }
 const paperSearchPath = path.join(homedir(), ".config/envoi/paper-search.json")
 const paperSearchSources = ["openalex", "semanticscholar", "crossref", "arxiv"]

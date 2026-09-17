@@ -41,7 +41,7 @@ const bridge: EnvoiBridge = {
   cancelCompile: () => invoke("envoi:cancel-compile"),
   lint: (input) => invoke("envoi:lint", input),
 
-  tools: () => invoke("envoi:tools"),
+  tools: (options) => invoke("envoi:tools", options),
   configureTools: (input) => invoke("envoi:configure-tools", input),
   paperSearchConfig: () => invoke("envoi:paper-search-config"),
   configurePaperSearch: (input) => invoke("envoi:configure-paper-search", input),

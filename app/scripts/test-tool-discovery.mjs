@@ -3,7 +3,13 @@ import assert from "node:assert/strict"
 import { mkdtemp, mkdir, writeFile, rm } from "node:fs/promises"
 import path from "node:path"
 import { tmpdir } from "node:os"
-import { detectTool, executableName, environmentInfo } from "../server/tool-config.mjs"
+import {
+  detectTool,
+  executableName,
+  environmentInfo,
+  probeVersion,
+  pythonEnvironment,
+} from "../server/tool-config.mjs"
 import { build } from "esbuild"
 import { pathToFileURL } from "node:url"
 
@@ -27,6 +33,53 @@ test("tool discovery handles spaces, executable suffix, override priority and di
     process.env.ENVOI_TEX_BIN = override
     assert.equal(detectTool("envoi-test-tool"), path.join(override, name))
     assert.equal(environmentInfo().arch, process.arch)
+  } finally {
+    process.env = saved
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test("project Python environment requires pyvenv.cfg inside .venv or venv", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "envoi-venv-"))
+  try {
+    assert.equal(pythonEnvironment("relative/path"), undefined)
+    assert.equal(pythonEnvironment(root), undefined)
+    const environment = path.join(root, ".venv")
+    await mkdir(environment)
+    assert.equal(pythonEnvironment(root), undefined)
+    await writeFile(path.join(environment, "pyvenv.cfg"), "")
+    assert.equal(pythonEnvironment(root), environment)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test("toolchain probe requires every binary and reads the version from the first", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "envoi toolchain "))
+  const saved = { ...process.env }
+  try {
+    const bin = path.join(root, "bin")
+    await mkdir(bin)
+    process.env.PATH = bin
+    process.env.ENVOI_TEX_BIN = bin
+    delete process.env.PAPERDESK_TEX_BIN
+    const binaries = ["envoi-fake-cc", "envoi-fake-cxx"]
+    let result = await probeVersion({ binaries })
+    assert.equal(result.available, false)
+    assert.match(result.error, /envoi-fake-cc/)
+    assert.match(result.error, /envoi-fake-cxx/)
+    const script = '#!/bin/sh\necho "fake-cc 1.0"\n'
+    await writeFile(path.join(bin, executableName("envoi-fake-cc")), script, { mode: 0o755 })
+    result = await probeVersion({ binaries })
+    assert.equal(result.available, false)
+    assert.ok(!result.error.includes("envoi-fake-cc"))
+    assert.match(result.error, /envoi-fake-cxx not found/)
+    if (process.platform !== "win32") {
+      await writeFile(path.join(bin, "envoi-fake-cxx"), script, { mode: 0o755 })
+      result = await probeVersion({ binaries })
+      assert.equal(result.available, true)
+      assert.equal(result.version, "fake-cc 1.0")
+    }
   } finally {
     process.env = saved
     await rm(root, { recursive: true, force: true })
