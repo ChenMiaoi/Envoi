@@ -31,6 +31,7 @@ import {
   Pin,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { fileIconUrl } from "@/lib/fileIcons"
 import { type FileNode } from "@/data/workspace"
 import { useProject } from "@/project/context"
 import { createTextFile, fileKind, projectTree } from "@/lib/projectFiles"
@@ -362,7 +363,11 @@ export function ReaderView({
                               : "text-muted-foreground hover:bg-secondary/60",
                           )}
                         >
-                          <Icon className="h-3.5 w-3.5" strokeWidth={1.8} />
+                          {fileIconUrl(f.name) ? (
+                            <img src={fileIconUrl(f.name)} className="h-3.5 w-3.5" alt="" />
+                          ) : (
+                            <Icon className="h-3.5 w-3.5" strokeWidth={1.8} />
+                          )}
                           <span className="whitespace-nowrap">
                             {f.name}
                             {project.files.find((file) => file.id === f.id)?.text !==

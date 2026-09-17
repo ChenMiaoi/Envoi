@@ -14,6 +14,7 @@ import {
   Folder,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { fileIconUrl } from "@/lib/fileIcons"
 import { useT } from "@/i18n/useT"
 import {
   ContextMenu,
@@ -64,6 +65,7 @@ function TreeItem({
   const isFolder = node.kind === "folder"
   const isRoot = node.id === "project-root"
   const Icon = isFolder ? (open ? FolderOpen : Folder) : (kindIcon[node.kind] ?? FileText)
+  const iconUrl = !isFolder ? fileIconUrl(node.name) : undefined
   const active = node.id === activeId
   const { status } = useGitStatus()
   const { project } = useProject()
@@ -116,13 +118,17 @@ function TreeItem({
       ) : (
         <span className="w-3.5 shrink-0" />
       )}
-      <Icon
-        className={cn(
-          "h-3.5 w-3.5 shrink-0",
-          isFolder ? "text-muted-foreground" : kindColor[node.kind],
-        )}
-        strokeWidth={1.8}
-      />
+      {iconUrl ? (
+        <img src={iconUrl} className="h-3.5 w-3.5 shrink-0" alt="" />
+      ) : (
+        <Icon
+          className={cn(
+            "h-3.5 w-3.5 shrink-0",
+            isFolder ? "text-muted-foreground" : kindColor[node.kind],
+          )}
+          strokeWidth={1.8}
+        />
+      )}
       <span
         title={node.name}
         className={cn(
