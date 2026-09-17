@@ -35,6 +35,8 @@ test("release versions compare numerically and never downgrade", () => {
   assert.equal(newerVersion("v0.10.0", "0.9.9"), true)
   assert.equal(newerVersion("v0.1.0", "0.1.0"), false)
   assert.equal(newerVersion("v0.1.0", "0.2.0"), false)
+  assert.equal(newerVersion("v0.4.1", "0.4.1-rc1"), false)
+  assert.equal(newerVersion("v0.4.2", "0.4.1-rc1"), true)
   assert.throws(() => newerVersion("invalid", "0.1.0"))
 })
 

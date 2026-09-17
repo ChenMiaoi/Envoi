@@ -28,8 +28,8 @@ jobs:
           TAG_NAME: ${{ github.ref_name }}
         shell: bash
         run: |
-          if [[ ! "$TAG_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "Tag must match v<major>.<minor>.<patch>; got $TAG_NAME" >&2
+          if [[ ! "$TAG_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-rc[1-9][0-9]*)?$ ]]; then
+            echo "Tag must match v<major>.<minor>.<patch>[-rc<number>]; got $TAG_NAME" >&2
             exit 1
           fi
 
@@ -145,13 +145,20 @@ jobs:
           TAG_NAME: ${{ github.ref_name }}
         shell: bash
         run: |
+          release_flags=()
+          if [[ "$TAG_NAME" == *-rc* ]]; then
+            release_flags+=(--prerelease --latest=false)
+          else
+            release_flags+=(--prerelease=false)
+          fi
           if gh release view "$TAG_NAME" >/dev/null 2>&1; then
-            gh release edit "$TAG_NAME" --notes-file "docs/releases/$TAG_NAME.md"
+            gh release edit "$TAG_NAME" --notes-file "docs/releases/$TAG_NAME.md" "${release_flags[@]}"
           else
             gh release create "$TAG_NAME" \
               --verify-tag \
               --title "Envoi $TAG_NAME" \
-              --notes-file "docs/releases/$TAG_NAME.md"
+              --notes-file "docs/releases/$TAG_NAME.md" \
+              "${release_flags[@]}"
           fi
 
       - name: Upload release files

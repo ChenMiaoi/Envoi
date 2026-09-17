@@ -10,7 +10,8 @@ const releaseApi = "https://api.github.com/repos/ChenMiaoi/Envoi/releases/latest
 const maxInstallerBytes = 1024 * 1024 * 1024
 
 export function newerVersion(candidate, current) {
-  const parse = (value) => /^v?(\d+)\.(\d+)\.(\d+)$/.exec(value)?.slice(1).map(Number)
+  const parse = (value) =>
+    /^v?(\d+)\.(\d+)\.(\d+)(?:-rc[1-9]\d*)?$/.exec(value)?.slice(1, 4).map(Number)
   const next = parse(candidate)
   const installed = parse(current)
   if (!next || !installed) throw Error("Invalid release version")
