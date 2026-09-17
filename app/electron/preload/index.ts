@@ -42,7 +42,8 @@ const bridge: EnvoiBridge = {
   lint: (input) => invoke("envoi:lint", input),
 
   tools: (options) => invoke("envoi:tools", options),
-  lspOpen: (root, path, text, token) => invoke("envoi:lsp-open", root, path, text, token),
+  lspOpen: (root, path, text, token, preferredServer) =>
+    invoke("envoi:lsp-open", root, path, text, token, preferredServer),
   lspChange: (root, path, text) => invoke("envoi:lsp-change", root, path, text),
   lspQuery: (root, path, method, offset, text) =>
     invoke("envoi:lsp-query", root, path, method, offset, text),

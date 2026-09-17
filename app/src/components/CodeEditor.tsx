@@ -18,6 +18,7 @@ import { clearLspDiagnostics, publishLspDiagnostics, publishLspStatus } from "@/
 import { codeHighlight } from "@/lib/codeHighlight"
 import { fontCss } from "@/settings/fonts"
 import { usePreferences } from "@/settings/context"
+import { lspLanguageForPath } from "@/lib/lspLanguage"
 import { editorFonts } from "@/settings/model"
 
 type LspPosition = { line: number; character: number }
@@ -247,7 +248,7 @@ export function CodeEditor({
       : () => {}
     if (root)
       void envoi()
-        .lspOpen(root, path, source, token)
+        .lspOpen(root, path, source, token, preferences.lspServers[lspLanguageForPath(path) ?? ""])
         .then((result) => {
           if (!alive) {
             void envoi().lspClose(root, path, token)

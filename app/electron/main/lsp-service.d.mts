@@ -8,6 +8,7 @@ export class LspService {
     resolve?: (
       root: string,
       language: string,
+      preferredServer?: string,
     ) => { command: string; args: string[]; name: string } | undefined,
   )
   open(
@@ -16,6 +17,7 @@ export class LspService {
     file: string,
     text: string,
     token: string,
+    preferredServer?: string,
   ): Promise<{ available: boolean; server?: string; error?: string }>
   change(owner: number, root: string, file: string, text: string): void
   query(

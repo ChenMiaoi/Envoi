@@ -277,7 +277,14 @@ function handle(channel: string, listener: Parameters<typeof ipcMain.handle>[1])
 function registerIpc(): void {
   handle(
     "envoi:lsp-open",
-    async (event, root: string, file: string, text: string, token: string) => {
+    async (
+      event,
+      root: string,
+      file: string,
+      text: string,
+      token: string,
+      preferredServer?: string,
+    ) => {
       root = await requireBoundRoot(root)
       if (activeRoots.get(event.sender.id) !== root) throw Error("Project is not active")
       if (typeof file !== "string" || !lspLanguage(file))
@@ -285,7 +292,7 @@ function registerIpc(): void {
       safePathParts(file)
       if (typeof token !== "string" || !/^[0-9a-f-]{36}$/i.test(token))
         throw Error("Invalid editor token")
-      return lspService.open(event.sender.id, root, file, text, token)
+      return lspService.open(event.sender.id, root, file, text, token, preferredServer)
     },
   )
   handle("envoi:lsp-change", async (event, root: string, file: string, text: string) => {

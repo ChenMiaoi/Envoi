@@ -7,8 +7,12 @@ import { usePreferences } from "@/settings/context"
 import { envoi } from "@/lib/desktop"
 import { ProjectIdentity } from "@/project/ProjectIdentity"
 import { WorkspaceBadge } from "@/project/WorkspaceBadge"
-import { useAgent } from "@/agent/context"
 import { AgentProvider } from "@/agent/AgentProvider"
+import {
+  AiStatusControl,
+  LspStatusControl,
+  CompileStatusControl,
+} from "@/components/StatusBarSettings"
 import {
   commands,
   matchBinding,
@@ -117,7 +121,6 @@ function ProjectSession() {
   )
 }
 function ProjectApp() {
-  const agent = useAgent()
   const { t } = useT()
   const { effective } = useSettings()
   const lspStatus = useLspStatus()
@@ -379,51 +382,14 @@ function ProjectApp() {
               />
             )}
             <span aria-hidden="true" className="h-3 w-px bg-border" />
-            <button
-              onClick={() => void navigate("/settings/global/ai")}
-              title={t("settings.category.ai")}
-              className="-mx-1 flex items-center gap-1.5 rounded px-1 transition-colors hover:bg-white/[0.06] hover:text-foreground"
-            >
-              <span
-                className={`inline-block h-1.5 w-1.5 rounded-full ${agent.status?.runtime ? "bg-primary shadow-[0_0_6px_hsl(var(--primary)/0.9)]" : "bg-muted-foreground"}`}
-              />
-              {!agent.status?.runtime
-                ? t("app.statusbar.disconnected")
-                : agent.busy
-                  ? t("chat.awaitingResponse")
-                  : !agent.config?.model ||
-                      !agent.status.models.some(
-                        (model) =>
-                          model.available &&
-                          `${model.provider}/${model.id}` === agent.config?.model,
-                      )
-                    ? t("common.selectModel")
-                    : `${t("app.statusbar.runtime")} · ${agent.config.model}`}
-            </button>
+            <AiStatusControl />
             {view === "reader" && lspStatus && (
-              <button
-                onClick={() => void navigate("/settings/global/compile")}
-                title={t("settings.tools.heading")}
-                className="-mx-1 flex items-center gap-1.5 rounded px-1 font-editor transition-colors hover:bg-white/[0.06] hover:text-foreground"
-              >
-                <span
-                  className={`inline-block h-1.5 w-1.5 rounded-full ${lspStatus.state === "ready" ? "bg-primary shadow-[0_0_6px_hsl(var(--primary)/0.9)]" : "bg-warning"}`}
-                />
-                {lspStatus.state === "ready" ? lspStatus.server : t("app.statusbar.lspUnavailable")}
-              </button>
+              <LspStatusControl
+                status={lspStatus}
+                path={project.files.find((file) => file.id === activeId)?.path ?? ""}
+              />
             )}
-            <button
-              onClick={() =>
-                void navigate(
-                  project.id !== "empty" ? "/settings/project/compile" : "/settings/global/compile",
-                )
-              }
-              title={t("settings.category.compile")}
-              className="-mx-1 flex items-center gap-2 rounded px-1 font-editor transition-colors hover:bg-white/[0.06] hover:text-foreground"
-            >
-              <span>{effective.engine === "xelatex" ? "XeLaTeX" : "pdfLaTeX"}</span>
-              <span>UTF-8</span>
-            </button>
+            <CompileStatusControl />
           </div>
         </div>
       )}

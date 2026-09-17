@@ -70,3 +70,40 @@ test("LSP fallback chains derive from the tool registry in catalog order", () =>
   assert.deepEqual(servers.meson, [["mesonlsp", "--lsp"]])
   assert.deepEqual(servers.toml, [["taplo", "lsp", "stdio"]])
 })
+
+test("changing the preferred language server replaces the active session", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "envoi-lsp-switch-"))
+  const fixture = fileURLToPath(new URL("./fixtures/lsp-fixture.mjs", import.meta.url))
+  const requested = []
+  const service = new LspService(
+    () => {},
+    (_root, _language, preferred) => {
+      requested.push(preferred)
+      return { command: process.execPath, args: [fixture], name: preferred ?? "automatic" }
+    },
+  )
+  try {
+    await writeFile(path.join(root, "main.py"), "hello")
+    await service.open(3, root, "main.py", "hello", "editor-one")
+    const first = service.sessions.values().next().value
+    assert.equal(first.spec.name, "automatic")
+    assert.deepEqual(await service.open(3, root, "main.py", "hello", "editor-two", "pylsp"), {
+      available: true,
+      server: "pylsp",
+    })
+    const second = service.sessions.values().next().value
+    assert.notEqual(second, first)
+    assert.deepEqual(requested, [undefined, "pylsp"])
+    if (first.process.exitCode === null && first.process.signalCode === null)
+      await once(first.process, "exit")
+    service.close(3, root, "main.py", "editor-one")
+    assert.equal(service.sessions.size, 1)
+    service.close(3, root, "main.py", "editor-two")
+    if (second.process.exitCode === null && second.process.signalCode === null)
+      await once(second.process, "exit")
+    assert.equal(service.sessions.size, 0)
+  } finally {
+    service.dispose(3)
+    await rm(root, { recursive: true, force: true })
+  }
+})

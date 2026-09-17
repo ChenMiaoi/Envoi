@@ -61,6 +61,7 @@ export interface EnvoiBridge {
     path: string,
     text: string,
     token: string,
+    preferredServer?: string,
   ): Promise<{ available: boolean; server?: string; error?: string }>
   lspChange(root: string, path: string, text: string): Promise<void>
   lspQuery(

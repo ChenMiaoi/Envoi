@@ -39,6 +39,7 @@ const tests = [
   ["research start UI", ["scripts/test-research-start-ui.mjs"]],
   ["save and compile", ["scripts/test-save-compile.mjs"]],
   ["model menu", ["scripts/test-model-menu.mjs"]],
+  ["status bar settings", ["scripts/test-status-bar-settings.mjs"]],
   ["PDF scheduler", ["scripts/test-pdf-scheduler.mjs"]],
   ["research library UI", ["scripts/test-research-library-ui.mjs"]],
   ["diagnostics UI", ["scripts/test-diagnostics-ui.mjs"]],
@@ -52,6 +53,7 @@ const quickTests = new Set([
   "restricted mode",
   "desktop smoke",
   "save and compile",
+  "status bar settings",
   "PDF scheduler",
   "diagnostics UI",
 ])

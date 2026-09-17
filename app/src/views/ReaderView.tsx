@@ -50,6 +50,7 @@ import { encodeNative } from "@/lib/localData"
 import { useNavigate } from "react-router"
 import { extractPdfText } from "@/lib/metadataLookup"
 import { useT } from "@/i18n/useT"
+import { lspLanguageForPath } from "@/lib/lspLanguage"
 
 const tabIcon: Record<string, typeof FileText> = {
   pdf: BookMarked,
@@ -535,7 +536,7 @@ export function ReaderView({
                 />
               ) : kind === "text" && activeData?.text !== undefined ? (
                 <CodeEditor
-                  key={active.id}
+                  key={`${active.id}:${preferences.lspServers[lspLanguageForPath(activeData.path) ?? ""] ?? ""}`}
                   root={project.rootPath}
                   path={activeData.path}
                   source={activeData.text}

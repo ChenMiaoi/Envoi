@@ -29,6 +29,7 @@ export interface Preferences {
   engine: Engine
   lintEnabled: boolean
   defaultGit: boolean
+  lspServers: Record<string, string>
 }
 export interface ProjectConfiguration {
   version: 1
@@ -53,6 +54,7 @@ export const defaults: Preferences = {
   engine: "pdflatex",
   lintEnabled: true,
   defaultGit: true,
+  lspServers: {},
 }
 /** 主题完整色板定义在 index.css 的 [data-theme] 块中；这里只保存元数据与设置页预览色。 */
 export type ThemeId = "graphite" | "classic" | "midnight" | "forest" | "paper" | "mist"
@@ -151,6 +153,15 @@ export function normalizePreferences(raw: unknown): Preferences {
     engine: value.engine === "xelatex" ? "xelatex" : "pdflatex",
     lintEnabled: typeof value.lintEnabled === "boolean" ? value.lintEnabled : defaults.lintEnabled,
     defaultGit: typeof value.defaultGit === "boolean" ? value.defaultGit : defaults.defaultGit,
+    lspServers:
+      value.lspServers && typeof value.lspServers === "object" && !Array.isArray(value.lspServers)
+        ? Object.fromEntries(
+            Object.entries(value.lspServers).filter(
+              ([language, server]) =>
+                /^[a-z]+$/.test(language) && typeof server === "string" && /^[\w-]+$/.test(server),
+            ),
+          )
+        : {},
   }
 }
 export function projectConfiguration(raw: unknown, legacyEngine?: string): ProjectConfiguration {

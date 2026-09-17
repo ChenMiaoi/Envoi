@@ -3,7 +3,7 @@ import { existsSync, realpathSync, statSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
 import { detectTool, pythonEnvironment } from "../../server/tool-config.mjs"
-import { lspServersByLanguage } from "../../server/tool-registry.mjs"
+import { lspServersByLanguage, toolCatalog } from "../../server/tool-registry.mjs"
 
 // 服务器回退链由 tool-registry.mjs 的目录派生：kind 为 lsp 的条目按目录顺序排优先级。
 const servers = lspServersByLanguage()
@@ -46,8 +46,18 @@ function uriKey(uri) {
     return null
   }
 }
-function executable(root, language) {
-  for (const [name, ...args] of servers[language] ?? []) {
+function executable(root, language, preferredServer) {
+  const preferred = preferredServer
+    ? toolCatalog.find(
+        (tool) =>
+          tool.id === preferredServer && tool.kind === "lsp" && tool.languages?.includes(language),
+      )
+    : undefined
+  if (preferredServer && !preferred) return undefined
+  const candidates = preferred
+    ? [[preferred.binary, ...(preferred.args ?? [])]]
+    : (servers[language] ?? [])
+  for (const [name, ...args] of candidates) {
     const local =
       language === "python" && pythonEnvironment(root)
         ? path.join(
@@ -80,7 +90,7 @@ export class LspService {
   key(owner, root, language) {
     return `${owner}\0${root}\0${language}`
   }
-  async open(owner, root, file, text, token) {
+  async open(owner, root, file, text, token, preferredServer) {
     const language = lspLanguage(file)
     if (!language) return { available: false, error: "No language server for this file" }
     if (typeof text !== "string" || Buffer.byteLength(text) > 5_000_000)
@@ -88,10 +98,16 @@ export class LspService {
     const target = path.resolve(root, file)
     const existing = existsSync(target) ? realpathSync(target) : realpathSync(path.dirname(target))
     if (!within(root, target) || !within(root, existing)) throw Error("Invalid source path")
-    const spec = this.resolve(root, language)
+    const spec = this.resolve(root, language, preferredServer)
     if (!spec) return { available: false, error: `No ${language} language server found` }
     const key = this.key(owner, root, language)
     let session = this.sessions.get(key)
+    if (session && (session.spec.name !== spec.name || session.spec.command !== spec.command)) {
+      session.docs.clear()
+      session.stop()
+      this.sessions.delete(key)
+      session = undefined
+    }
     if (!session) {
       session = new Session(
         spec,
@@ -208,6 +224,9 @@ class Session {
       },
     })
     this.process.stdout.on("data", (chunk) => this.read(chunk))
+    this.process.stdin.on("error", (error) => {
+      if (!this.stopping) this.fail(error)
+    })
     this.process.on("error", (error) => this.fail(error))
     this.process.on("exit", () => this.fail(Error(`${this.spec.name} stopped`)))
     await this.request("initialize", {
@@ -320,6 +339,7 @@ class Session {
     this.onExit()
   }
   stop() {
+    this.stopping = true
     this.process?.kill()
   }
 }
