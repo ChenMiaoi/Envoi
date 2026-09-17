@@ -978,6 +978,7 @@ const en: Messages = {
   "settings.provider.completeLogin": "Complete sign-in on the authorization page",
   "settings.provider.connectProvider": "Connect provider",
   "settings.provider.continue": "Continue",
+  "settings.provider.deviceCode": "Enter this code on the authorization page",
   "settings.provider.getApiKey": "Get an API Key",
   "settings.provider.invalidAuthUrl": "The authorization URL is invalid; sign in again.",
   "settings.provider.loggedIn": "Signed in",

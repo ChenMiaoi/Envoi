@@ -868,6 +868,7 @@ const zhTW: Messages = {
   "settings.provider.completeLogin": "請在授權頁面完成登入",
   "settings.provider.connectProvider": "連線服務商",
   "settings.provider.continue": "繼續",
+  "settings.provider.deviceCode": "在授權頁面輸入此驗證碼",
   "settings.provider.getApiKey": "獲取 API Key",
   "settings.provider.invalidAuthUrl": "授權地址無效，請重新登入。",
   "settings.provider.loggedIn": "已登入",

@@ -17,6 +17,7 @@ interface OAuthJob {
   id: string
   state: string
   url?: string
+  userCode?: string
   instructions?: string
   error?: string
   prompt?: { message: string; placeholder?: string; options?: { id: string; label: string }[] }
@@ -231,6 +232,14 @@ export function ProviderConfiguration({
               )}
               {job.instructions && (
                 <p className="break-words text-xs text-muted-foreground">{job.instructions}</p>
+              )}
+              {job.userCode && (
+                <div className="rounded-lg border border-input bg-muted/30 px-3 py-2">
+                  <p className="text-xs text-muted-foreground">
+                    {t("settings.provider.deviceCode")}
+                  </p>
+                  <p className="select-all font-mono text-lg tracking-widest">{job.userCode}</p>
+                </div>
               )}
               {job.prompt && (
                 <form

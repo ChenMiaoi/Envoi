@@ -297,7 +297,12 @@ export function createAgentCore({ trustedDesktop = false } = {}) {
           notify: (event) =>
             event.type === "auth_url"
               ? options.onAuth({ url: event.url, instructions: event.instructions })
-              : event.type === "progress" && options.onProgress?.(event.message),
+              : event.type === "device_code"
+                ? options.onDeviceCode({
+                    url: event.verificationUri,
+                    userCode: event.userCode,
+                  })
+                : event.type === "progress" && options.onProgress?.(event.message),
         }),
     }
     const config = await jsonFile(path.join(agentDir, "models.json"), { providers: {} })
@@ -645,10 +650,13 @@ export function createAgentCore({ trustedDesktop = false } = {}) {
       const id = randomUUID(),
         job = { id, provider: body.provider, controller: new AbortController(), state: "starting" }
       authJobs.set(id, job)
-      setTimeout(() => {
-        job.controller.abort()
-        authJobs.delete(id)
-      }, 600000).unref()
+      setTimeout(
+        () => {
+          job.controller.abort()
+          authJobs.delete(id)
+        },
+        body.provider === "kimi-coding" ? 960000 : 600000,
+      ).unref()
       const prompt = (question) =>
         new Promise((resolve, reject) => {
           job.prompt = question
@@ -666,6 +674,11 @@ export function createAgentCore({ trustedDesktop = false } = {}) {
             job.instructions = info.instructions
             job.state = "authorize"
           },
+          onDeviceCode: (info) => {
+            job.url = info.url
+            job.userCode = info.userCode
+            job.state = "authorize"
+          },
           onPrompt: prompt,
           onManualCodeInput: () => prompt({ message: "粘贴授权后的回调地址或验证码" }),
           onSelect: (question) => prompt({ ...question, select: true }),
@@ -676,6 +689,7 @@ export function createAgentCore({ trustedDesktop = false } = {}) {
           job.state = "done"
           delete job.prompt
           delete job.url
+          delete job.userCode
           delete job.instructions
         })
         .catch(() => {
@@ -683,6 +697,7 @@ export function createAgentCore({ trustedDesktop = false } = {}) {
           job.error = "认证未完成，请重试或检查服务商配置。"
           delete job.prompt
           delete job.url
+          delete job.userCode
           delete job.instructions
         })
       return { status: 200, body: { id } }
@@ -704,6 +719,7 @@ export function createAgentCore({ trustedDesktop = false } = {}) {
           id: job.id,
           state: job.state,
           url: job.url,
+          userCode: job.userCode,
           instructions: job.instructions,
           prompt: job.prompt,
           error: job.error,

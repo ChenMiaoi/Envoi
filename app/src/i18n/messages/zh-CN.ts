@@ -916,6 +916,7 @@ export const zhCN = {
   "settings.provider.completeLogin": "请在授权页面完成登录",
   "settings.provider.connectProvider": "连接服务商",
   "settings.provider.continue": "继续",
+  "settings.provider.deviceCode": "在授权页面输入此验证码",
   "settings.provider.getApiKey": "获取 API Key",
   "settings.provider.invalidAuthUrl": "授权地址无效，请重新登录。",
   "settings.provider.loggedIn": "已登录",

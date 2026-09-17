@@ -135,6 +135,51 @@ async function bind(root, copy = false) {
 }
 try {
   assert.equal(agent.normalizeAi({}).tools, "read")
+  const kimiAuth = await serve(async (req, res) => {
+    res.setHeader("Content-Type", "application/json")
+    if (req.url === "/api/oauth/device_authorization") {
+      res.end(
+        JSON.stringify({
+          device_code: "fixture-device",
+          user_code: "ABCD-1234",
+          verification_uri: "https://auth.kimi.com/device",
+          verification_uri_complete: "https://auth.kimi.com/device?code=ABCD-1234",
+          interval: 1,
+          expires_in: 900,
+        }),
+      )
+    } else if (req.url === "/api/oauth/token") {
+      res.end(
+        JSON.stringify({
+          access_token: "fixture-access",
+          refresh_token: "fixture-refresh",
+          expires_in: 3600,
+        }),
+      )
+    } else {
+      res.statusCode = 404
+      res.end("{}")
+    }
+  })
+  process.env.KIMI_CODE_OAUTH_HOST = kimiAuth.url
+  const kimiLogin = await post("agent/oauth/start", { provider: "kimi-coding" })
+  assert.equal(kimiLogin.response.status, 200)
+  let kimiStatus
+  for (let attempt = 0; attempt < 30; attempt++) {
+    kimiStatus = (await post("agent/oauth/status", { id: kimiLogin.body.id })).body
+    if (kimiStatus.state === "authorize" || kimiStatus.state === "done") break
+    await new Promise((resolve) => setTimeout(resolve, 50))
+  }
+  assert.equal(kimiStatus.state, "authorize")
+  assert.equal(kimiStatus.userCode, "ABCD-1234")
+  assert.equal(kimiStatus.url, "https://auth.kimi.com/device?code=ABCD-1234")
+  for (let attempt = 0; attempt < 30; attempt++) {
+    kimiStatus = (await post("agent/oauth/status", { id: kimiLogin.body.id })).body
+    if (kimiStatus.state === "done" || kimiStatus.state === "failed") break
+    await new Promise((resolve) => setTimeout(resolve, 50))
+  }
+  assert.equal(kimiStatus.state, "done")
+  delete process.env.KIMI_CODE_OAUTH_HOST
   assert.equal((await post("agent/sessions", { projectId: "global" })).response.status, 400)
   const first = path.join(fixture, "paper")
   await mkdir(first)

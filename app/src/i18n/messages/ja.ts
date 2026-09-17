@@ -998,6 +998,7 @@ const ja: Messages = {
   "settings.provider.completeLogin": "認証ページでログインを完了してください",
   "settings.provider.connectProvider": "プロバイダーに接続",
   "settings.provider.continue": "続行",
+  "settings.provider.deviceCode": "認証ページでこのコードを入力してください",
   "settings.provider.getApiKey": "API キーを取得",
   "settings.provider.invalidAuthUrl": "認証 URL が無効です。再度ログインしてください。",
   "settings.provider.loggedIn": "ログインしました",
