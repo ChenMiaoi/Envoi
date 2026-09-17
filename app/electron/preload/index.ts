@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from "electron"
+import { contextBridge, ipcRenderer, webUtils } from "electron"
 import type { EnvoiBridge } from "./api"
 
 function invoke<T>(channel: string, ...args: unknown[]): Promise<T> {
@@ -89,6 +89,9 @@ const bridge: EnvoiBridge = {
   fsMkdir: (root, relPath) => invoke("envoi:fs-mkdir", root, relPath),
   fsRemove: (root, relPath) => invoke("envoi:fs-remove", root, relPath),
   fsRename: (root, from, to) => invoke("envoi:fs-rename", root, from, to),
+  fsCopy: (root, from, to) => invoke("envoi:fs-copy", root, from, to),
+  fsImport: (root, sources, directory) => invoke("envoi:fs-import", root, sources, directory),
+  importTokenForFile: (file) => invoke("envoi:fs-import-token", webUtils.getPathForFile(file)),
   fsInspectDeletion: (root) => invoke("envoi:fs-inspect-deletion", root),
   fsTrashProject: (root, typedName) => invoke("envoi:fs-trash-project", root, typedName),
   assetUrl: (root, relPath) => invoke("envoi:asset-url", root, relPath),

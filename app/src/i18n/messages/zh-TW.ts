@@ -550,6 +550,8 @@ const zhTW: Messages = {
   "tree.newFolder": "新建目錄",
   "tree.rename": "重新命名",
   "tree.delete": "刪除",
+  "tree.copy": "複製",
+  "tree.paste": "貼上",
   "tree.renameTitle": "重新命名 {name}",
   "tree.deleteTitle": "刪除 {name}",
   "tree.deleteConfirm": "將刪除檔案 {name}，此操作不可撤銷。",

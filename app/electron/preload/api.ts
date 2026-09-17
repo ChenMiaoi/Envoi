@@ -125,6 +125,9 @@ export interface EnvoiBridge {
   fsMkdir(root: string, relPath: string): Promise<void>
   fsRemove(root: string, relPath: string): Promise<void>
   fsRename(root: string, from: string, to: string): Promise<void>
+  fsCopy(root: string, from: string, to: string): Promise<void>
+  fsImport(root: string, tokens: string[], directory: string): Promise<void>
+  importTokenForFile(file: File): Promise<string>
   fsInspectDeletion(root: string): Promise<{
     path: string
     name: string

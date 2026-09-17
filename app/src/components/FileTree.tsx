@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/context-menu"
 
 import type { FileNode } from "@/data/workspace"
-export type TreeMenuAction = "new-file" | "new-folder" | "rename" | "delete"
+export type TreeMenuAction = "new-file" | "new-folder" | "rename" | "delete" | "copy" | "paste"
 
 const kindIcon: Record<string, typeof FileText> = {
   pdf: BookMarked,
@@ -48,12 +48,16 @@ function TreeItem({
   activeId,
   onOpen,
   onMenu,
+  onImport,
+  onPaste,
 }: {
   node: FileNode
   depth: number
   activeId: string | null
   onOpen: (n: FileNode) => void
   onMenu?: (action: TreeMenuAction, node: FileNode) => void
+  onImport?: (files: File[], node: FileNode) => void
+  onPaste?: (node: FileNode) => void
 }) {
   const { t } = useT()
   const [open, setOpen] = useState(true)
@@ -78,6 +82,25 @@ function TreeItem({
   const row = (
     <button
       onClick={() => (isFolder ? setOpen(!open) : onOpen(node))}
+      onKeyDown={(event) => {
+        if (!onMenu || !(event.ctrlKey || event.metaKey) || event.altKey) return
+        if (event.key.toLowerCase() === "c" && !isRoot) {
+          event.preventDefault()
+          onMenu("copy", node)
+        } else if (event.key.toLowerCase() === "v" && isFolder) {
+          event.preventDefault()
+          onPaste?.(node)
+        }
+      }}
+      onDragOver={(event) => {
+        if (isFolder && event.dataTransfer.types.includes("Files")) event.preventDefault()
+      }}
+      onDrop={(event) => {
+        if (!isFolder || !event.dataTransfer.files.length) return
+        event.preventDefault()
+        event.stopPropagation()
+        onImport?.(Array.from(event.dataTransfer.files), node)
+      }}
       className={cn(
         "flex w-full items-center gap-1.5 rounded-md py-[3.5px] pr-2 text-left text-[12.5px] transition-colors",
         active ? "bg-accent text-primary" : "text-foreground/80 hover:bg-secondary",
@@ -144,6 +167,16 @@ function TreeItem({
               </>
             )}
             {!isRoot && (
+              <ContextMenuItem onSelect={() => onMenu("copy", node)}>
+                {t("tree.copy")}
+              </ContextMenuItem>
+            )}
+            {isFolder && (
+              <ContextMenuItem onSelect={() => onMenu("paste", node)}>
+                {t("tree.paste")}
+              </ContextMenuItem>
+            )}
+            {!isRoot && (
               <ContextMenuItem onSelect={() => onMenu("rename", node)}>
                 {t("tree.rename")}
               </ContextMenuItem>
@@ -171,6 +204,8 @@ function TreeItem({
             activeId={activeId}
             onOpen={onOpen}
             onMenu={onMenu}
+            onImport={onImport}
+            onPaste={onPaste}
           />
         ))}
     </div>
@@ -182,6 +217,8 @@ export function FileTree({
   activeId,
   onOpen,
   onMenu,
+  onImport,
+  onPaste,
   rootName,
 }: {
   rootName?: string
@@ -189,6 +226,8 @@ export function FileTree({
   activeId: string | null
   onOpen: (n: FileNode) => void
   onMenu?: (action: TreeMenuAction, node: FileNode) => void
+  onImport?: (files: File[], node: FileNode) => void
+  onPaste?: (node: FileNode) => void
 }) {
   const { t } = useT()
   return (
@@ -201,6 +240,8 @@ export function FileTree({
           activeId={activeId}
           onOpen={onOpen}
           onMenu={onMenu}
+          onImport={onImport}
+          onPaste={onPaste}
         />
       ) : nodes.length ? (
         nodes.map((n) => (
@@ -211,6 +252,8 @@ export function FileTree({
             activeId={activeId}
             onOpen={onOpen}
             onMenu={onMenu}
+            onImport={onImport}
+            onPaste={onPaste}
           />
         ))
       ) : (

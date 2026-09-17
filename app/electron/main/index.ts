@@ -33,6 +33,7 @@ import { dataStore, registerProject, dataDir } from "../../server/local-data.mjs
 import { watchProjectDirectory } from "./project-watch.mjs"
 import { BackendHost } from "./backend-host"
 import { atomicProjectWrite, saveProjectFiles } from "./file-service.mjs"
+import { copyIntoProject } from "./file-transfer.mjs"
 
 import { createWorkspaceTrust } from "./workspace-trust.mjs"
 // Desktop launchers may omit installed tools from PATH; share discovery with workers and AI.
@@ -111,6 +112,7 @@ function decodeText(bytes: Buffer): string | undefined {
 
 const tokensByRoot = new Map<string, string>()
 const rootsByToken = new Map<string, string>()
+const droppedFiles = new Map<string, string>()
 
 function bindRoot(root: string): void {
   if (!tokensByRoot.has(root)) {
@@ -716,6 +718,35 @@ function registerIpc(): void {
   handle("envoi:fs-rename", async (_event, root: string, from: string, to: string) => {
     const base = await requireOpenRoot(root)
     await rename(await resolveInside(base, from), await resolveInside(base, to))
+  })
+  handle("envoi:fs-copy", async (_event, root: string, from: string, to: string) => {
+    const base = await requireOpenRoot(root)
+    await copyIntoProject(base, await resolveInside(base, from), await resolveInside(base, to))
+  })
+  handle("envoi:fs-import-token", async (_event, source: string) => {
+    if (typeof source !== "string" || !path.isAbsolute(source)) throw Error("无效来源路径")
+    await stat(source)
+    const token = randomUUID()
+    droppedFiles.set(token, source)
+    setTimeout(() => droppedFiles.delete(token), 60_000).unref()
+    return token
+  })
+  handle("envoi:fs-import", async (_event, root: string, tokens: string[], directory: string) => {
+    const base = await requireOpenRoot(root)
+    if (!Array.isArray(tokens) || !tokens.length || tokens.length > 100)
+      throw Error("无效导入文件列表")
+    if (directory) await resolveInside(base, directory)
+    for (const token of tokens) {
+      const source = droppedFiles.get(token)
+      droppedFiles.delete(token)
+      if (!source) throw Error("拖入文件已失效，请重试")
+      const name = path.basename(source)
+      await copyIntoProject(
+        base,
+        source,
+        await resolveInside(base, directory ? `${directory}/${name}` : name),
+      )
+    }
   })
   const deletionProtected = [
     app.getPath("home"),

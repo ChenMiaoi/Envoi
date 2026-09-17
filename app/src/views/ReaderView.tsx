@@ -124,6 +124,7 @@ export function ReaderView({
   const [treeAction, setTreeAction] = useState<{ action: TreeMenuAction; node: FileNode } | null>(
     null,
   )
+  const [copiedPath, setCopiedPath] = useState<string | null>(null)
   const close = (id: string) => {
     setPinned((list) => list.filter((item) => item !== id))
     const rest = openFiles.filter((f) => f.id !== id)
@@ -157,7 +158,35 @@ export function ReaderView({
   }
 
   const treePath = (node: FileNode) => (node.id === "project-root" ? "" : node.id)
+  const pasteNode = async (node: FileNode) => {
+    if (!project.rootPath || !copiedPath || busy) return
+    const directory = treePath(node)
+    const name = copiedPath.split("/").at(-1)!
+    const target = directory ? `${directory}/${name}` : name
+    try {
+      await envoi().fsCopy(project.rootPath, copiedPath, target)
+    } catch (error) {
+      setMessage((error as Error).message)
+    }
+  }
+  const importFiles = async (files: File[], node: FileNode) => {
+    if (!project.rootPath || busy) return
+    try {
+      const tokens = await Promise.all(files.map((file) => envoi().importTokenForFile(file)))
+      await envoi().fsImport(project.rootPath, tokens, treePath(node))
+    } catch (error) {
+      setMessage((error as Error).message)
+    }
+  }
   const onTreeMenu = (action: TreeMenuAction, node: FileNode) => {
+    if (action === "copy") {
+      setCopiedPath(treePath(node))
+      return
+    }
+    if (action === "paste") {
+      void pasteNode(node)
+      return
+    }
     setActionName(action === "rename" ? node.name : "")
     setTreeAction({ action, node })
   }
@@ -267,6 +296,8 @@ export function ReaderView({
                   activeId={activeId}
                   onOpen={openNode}
                   onMenu={project.rootPath ? onTreeMenu : undefined}
+                  onPaste={(node) => void pasteNode(node)}
+                  onImport={(files, node) => void importFiles(files, node)}
                 />
               </div>
             </div>

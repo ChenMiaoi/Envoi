@@ -638,6 +638,8 @@ const ja: Messages = {
   "tree.newFolder": "新規フォルダー",
   "tree.rename": "名前を変更",
   "tree.delete": "削除",
+  "tree.copy": "コピー",
+  "tree.paste": "貼り付け",
   "tree.renameTitle": "{name} の名前を変更",
   "tree.deleteTitle": "{name} を削除",
   "tree.deleteConfirm": "ファイル {name} を削除します。この操作は取り消せません。",

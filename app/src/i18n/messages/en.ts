@@ -622,6 +622,8 @@ const en: Messages = {
   "tree.newFolder": "New Folder",
   "tree.rename": "Rename",
   "tree.delete": "Delete",
+  "tree.copy": "Copy",
+  "tree.paste": "Paste",
   "tree.renameTitle": "Rename {name}",
   "tree.deleteTitle": "Delete {name}",
   "tree.deleteConfirm": "The file {name} will be deleted. This cannot be undone.",

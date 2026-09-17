@@ -589,6 +589,8 @@ export const zhCN = {
   "tree.newFolder": "新建目录",
   "tree.rename": "重命名",
   "tree.delete": "删除",
+  "tree.copy": "复制",
+  "tree.paste": "粘贴",
   "tree.renameTitle": "重命名 {name}",
   "tree.deleteTitle": "删除 {name}",
   "tree.deleteConfirm": "将删除文件 {name}，此操作不可撤销。",
