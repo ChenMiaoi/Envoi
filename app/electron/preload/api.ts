@@ -56,6 +56,24 @@ export interface EnvoiBridge {
 
   // 工具
   tools(options?: { refresh?: boolean; root?: string }): Promise<Record<string, unknown>>
+  lspOpen(
+    root: string,
+    path: string,
+    text: string,
+    token: string,
+  ): Promise<{ available: boolean; server?: string; error?: string }>
+  lspChange(root: string, path: string, text: string): Promise<void>
+  lspQuery(
+    root: string,
+    path: string,
+    method: string,
+    offset: number,
+    text: string,
+  ): Promise<unknown>
+  lspClose(root: string, path: string, token: string): Promise<void>
+  onLspDiagnostics(
+    cb: (event: { root: string; path?: string; diagnostics: unknown[] }) => void,
+  ): () => void
   configureTools(input: { chktexPath: string | null }): Promise<Record<string, unknown>>
   paperSearchConfig(): Promise<{
     semanticScholarKey: string

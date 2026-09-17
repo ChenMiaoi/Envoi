@@ -71,9 +71,12 @@ export function fileKind(path: string): FileKind {
 }
 export function isTextPath(path: string) {
   return (
-    /\.(tex|bib|md|markdown|txt|csv|tsv|json|sty|cls|bst|log|yaml|yml|toml|ini|cfg|py|r|js|ts|jsx|tsx|css|html|xml|sh|sql|c|h|cpp|rs|go|jl)$/i.test(
+    /\.(tex|bib|md|markdown|txt|csv|tsv|json|sty|cls|bst|log|yaml|yml|toml|ini|cfg|py|pyi|pyw|r|js|ts|jsx|tsx|css|html|xml|sh|sql|c|h|cc|cpp|cxx|c\+\+|hh|hpp|hxx|h\+\+|inl|tpp|rs|go|jl|cmake|mk|mak|meson)$/i.test(
       path,
-    ) || /(^|\/)(README|LICENSE|Makefile|Dockerfile|\.gitignore)$/i.test(path)
+    ) ||
+    /(^|\/)(README|LICENSE|GNUmakefile|Makefile|makefile|CMakeLists\.txt|meson\.build|meson\.options|meson_options\.txt|Cargo\.lock|uv\.lock|Dockerfile|\.gitignore|\.clangd|\.clang-format|\.python-version)$/i.test(
+      path,
+    )
   )
 }
 export function safePath(path: string) {
@@ -135,6 +138,12 @@ const skippedParts: Record<string, true> = {
   [managementDirName]: true,
   [legacyDirName]: true,
   node_modules: true,
+  ".venv": true,
+  venv: true,
+  __pycache__: true,
+  target: true,
+  "cmake-build-debug": true,
+  "cmake-build-release": true,
 }
 export async function readProject(rootPath: string): Promise<PaperProject> {
   const listing = await envoi().fsList(rootPath)

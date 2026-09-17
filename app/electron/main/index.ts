@@ -34,6 +34,7 @@ import { watchProjectDirectory } from "./project-watch.mjs"
 import { BackendHost } from "./backend-host"
 import { atomicProjectWrite, saveProjectFiles } from "./file-service.mjs"
 import { copyIntoProject } from "./file-transfer.mjs"
+import { LspService, lspLanguage } from "./lsp-service.mjs"
 
 import { createWorkspaceTrust } from "./workspace-trust.mjs"
 // Desktop launchers may omit installed tools from PATH; share discovery with workers and AI.
@@ -51,9 +52,12 @@ const workspaceTrust = createWorkspaceTrust(
 
 function isTextPath(value: string): boolean {
   return (
-    /\.(tex|bib|md|markdown|txt|csv|tsv|json|sty|cls|bst|log|yaml|yml|toml|ini|cfg|py|r|js|ts|jsx|tsx|css|html|xml|sh|sql|c|h|cpp|rs|go|jl)$/i.test(
+    /\.(tex|bib|md|markdown|txt|csv|tsv|json|sty|cls|bst|log|yaml|yml|toml|ini|cfg|py|pyi|pyw|r|js|ts|jsx|tsx|css|html|xml|sh|sql|c|h|cc|cpp|cxx|c\+\+|hh|hpp|hxx|h\+\+|inl|tpp|rs|go|jl|cmake|mk|mak|meson)$/i.test(
       value,
-    ) || /(^|\/)(README|LICENSE|Makefile|Dockerfile|\.gitignore)$/i.test(value)
+    ) ||
+    /(^|\/)(README|LICENSE|GNUmakefile|Makefile|makefile|CMakeLists\.txt|meson\.build|meson\.options|meson_options\.txt|Cargo\.lock|uv\.lock|Dockerfile|\.gitignore|\.clangd|\.clang-format|\.python-version)$/i.test(
+      value,
+    )
   )
 }
 
@@ -224,6 +228,11 @@ const watchers = new Map<number, () => void>()
 const watchGenerations = new Map<number, number>()
 const projectRoots = new Map<string, string>()
 const activeRoots = new Map<number, string>()
+const lspService = new LspService((owner: number, payload: unknown) => {
+  for (const window of BrowserWindow.getAllWindows())
+    if (window.webContents.id === owner && !window.webContents.isDestroyed())
+      window.webContents.send("envoi:lsp-diagnostics", payload)
+})
 async function requireToolContext(event: Electron.IpcMainInvokeEvent) {
   const root = activeRoots.get(event.sender.id)
   if (root) await workspaceTrust.requireTrust(root)
@@ -266,6 +275,39 @@ function handle(channel: string, listener: Parameters<typeof ipcMain.handle>[1])
 }
 
 function registerIpc(): void {
+  handle(
+    "envoi:lsp-open",
+    async (event, root: string, file: string, text: string, token: string) => {
+      root = await requireBoundRoot(root)
+      if (activeRoots.get(event.sender.id) !== root) throw Error("Project is not active")
+      if (typeof file !== "string" || !lspLanguage(file))
+        return { available: false, error: "No language server for this file" }
+      safePathParts(file)
+      if (typeof token !== "string" || !/^[0-9a-f-]{36}$/i.test(token))
+        throw Error("Invalid editor token")
+      return lspService.open(event.sender.id, root, file, text, token)
+    },
+  )
+  handle("envoi:lsp-change", async (event, root: string, file: string, text: string) => {
+    root = await requireBoundRoot(root)
+    if (activeRoots.get(event.sender.id) !== root) throw Error("Project is not active")
+    safePathParts(file)
+    lspService.change(event.sender.id, root, file, text)
+  })
+  handle(
+    "envoi:lsp-query",
+    async (event, root: string, file: string, method: string, offset: number, text: string) => {
+      root = await requireBoundRoot(root)
+      if (activeRoots.get(event.sender.id) !== root) throw Error("Project is not active")
+      safePathParts(file)
+      if (!Number.isInteger(offset) || offset < 0 || offset > text.length) return null
+      return lspService.query(event.sender.id, root, file, method, offset, text)
+    },
+  )
+  handle("envoi:lsp-close", (event, root: string, file: string, token: string) => {
+    if (typeof root === "string" && typeof file === "string" && typeof token === "string")
+      lspService.close(event.sender.id, root, file, token)
+  })
   handle("envoi:diagnostics-info", () => diagnostics.info())
   handle("envoi:diagnostics-open", async () => {
     const error = await shell.openPath(await diagnostics.open())
@@ -621,6 +663,7 @@ function registerIpc(): void {
 
   handle("envoi:close-project", async (event, root: string) => {
     const owner = event.sender.id
+    lspService.dispose(owner)
     activeRoots.delete(owner)
     watchGenerations.set(owner, (watchGenerations.get(owner) ?? 0) + 1)
     watchers.get(owner)?.()
@@ -658,7 +701,19 @@ function registerIpc(): void {
     const walk = async (directory: string, prefix: string): Promise<void> => {
       for (const entry of await readdir(directory, { withFileTypes: true })) {
         if (
-          [".git", ".envoi", ".paperdesk", "node_modules", ".DS_Store"].includes(entry.name) ||
+          [
+            ".git",
+            ".envoi",
+            ".paperdesk",
+            "node_modules",
+            ".DS_Store",
+            ".venv",
+            "venv",
+            "__pycache__",
+            "target",
+            "cmake-build-debug",
+            "cmake-build-release",
+          ].includes(entry.name) ||
           entry.isSymbolicLink()
         )
           continue
@@ -930,6 +985,7 @@ function createWindow(): void {
   )
   const owner = window.webContents.id
   window.webContents.once("destroyed", () => {
+    lspService.dispose(owner)
     watchers.get(owner)?.()
     watchers.delete(owner)
     watchGenerations.delete(owner)
@@ -976,6 +1032,7 @@ let cleanedUp = false
 app.on("will-quit", (event) => {
   if (cleanedUp) return
   event.preventDefault()
+  for (const window of BrowserWindow.getAllWindows()) lspService.dispose(window.webContents.id)
   void Promise.allSettled(backends.map((backend) => backend.dispose())).then(() => {
     diagnostics.write("info", "main", "app.stopped")
     cleanedUp = true

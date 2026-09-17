@@ -1,6 +1,4 @@
-import { fontCss } from "@/settings/fonts"
 import { usePreferences } from "@/settings/context"
-import { editorFonts } from "@/settings/model"
 import { useEffect, useMemo, useState } from "react"
 import {
   ResizablePanelGroup as PanelGroup,
@@ -41,6 +39,7 @@ import { FileTree, type TreeMenuAction } from "@/components/FileTree"
 import { ChatPanel } from "@/components/ChatPanel"
 import { DelimitedEditor } from "@/components/DelimitedEditor"
 import { MarkdownEditor } from "@/components/MarkdownEditor"
+import { CodeEditor } from "@/components/CodeEditor"
 import { MarkdownViewer, LatexViewer, BibViewer, ViewerBadge } from "@/components/viewers"
 import { commandChordLabel, resolveBindings } from "@/navigation/shortcuts"
 import { envoi } from "@/lib/desktop"
@@ -85,6 +84,11 @@ export function ReaderView({
   const navigate = useNavigate()
   const [importing, setImporting] = useState(false)
   const [readOnlyFiles, setReadOnlyFiles] = useState<string[]>([])
+  const [codeJump, setCodeJump] = useState<{
+    path: string
+    position: { line: number; character: number }
+    id: string
+  }>()
   const { t } = useT()
   const fileTree = useMemo(
     () => projectTree(project.files, project.directories),
@@ -520,18 +524,21 @@ export function ReaderView({
                   readOnly={busy || readOnly}
                 />
               ) : kind === "text" && activeData?.text !== undefined ? (
-                <textarea
-                  aria-label={t("reader.textEditorAria")}
+                <CodeEditor
+                  key={active.id}
+                  root={project.rootPath}
+                  path={activeData.path}
+                  source={activeData.text}
                   readOnly={busy || readOnly}
-                  value={activeData.text}
-                  onChange={(e) => edit(active.id, e.target.value)}
-                  data-content-typography="editor"
-                  className="h-full w-full resize-none overflow-auto whitespace-pre-wrap break-words bg-transparent p-4 outline-none"
-                  style={{
-                    fontFamily: fontCss(preferences.fontFamily, editorFonts),
-                    fontSize: preferences.fontSize,
-                    lineHeight: preferences.lineHeight,
-                    tabSize: preferences.tabSize,
+                  onChange={(text) => edit(active.id, text)}
+                  ariaLabel={t("reader.textEditorAria")}
+                  jumpTo={codeJump}
+                  onNavigate={(path, position) => {
+                    const file = project.files.find((item) => item.path === path)
+                    if (file) {
+                      setCodeJump({ path, position, id: crypto.randomUUID() })
+                      openNode({ id: file.id, name: file.path, kind: file.kind })
+                    }
                   }}
                 />
               ) : kind === "latex" ? (

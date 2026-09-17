@@ -42,6 +42,19 @@ const bridge: EnvoiBridge = {
   lint: (input) => invoke("envoi:lint", input),
 
   tools: (options) => invoke("envoi:tools", options),
+  lspOpen: (root, path, text, token) => invoke("envoi:lsp-open", root, path, text, token),
+  lspChange: (root, path, text) => invoke("envoi:lsp-change", root, path, text),
+  lspQuery: (root, path, method, offset, text) =>
+    invoke("envoi:lsp-query", root, path, method, offset, text),
+  lspClose: (root, path, token) => invoke("envoi:lsp-close", root, path, token),
+  onLspDiagnostics: (cb) => {
+    const listener = (
+      _event: unknown,
+      payload: { root: string; path?: string; diagnostics: unknown[] },
+    ) => cb(payload)
+    ipcRenderer.on("envoi:lsp-diagnostics", listener)
+    return () => ipcRenderer.removeListener("envoi:lsp-diagnostics", listener)
+  },
   configureTools: (input) => invoke("envoi:configure-tools", input),
   paperSearchConfig: () => invoke("envoi:paper-search-config"),
   configurePaperSearch: (input) => invoke("envoi:configure-paper-search", input),

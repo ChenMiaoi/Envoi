@@ -22,7 +22,7 @@
     "preview": "vite preview",
     "test:references": "node scripts/test-references.mjs",
     "test": "npm run test:references && node scripts/test-library.mjs",
-    "test:local": "node --test scripts/test-tool-discovery.mjs scripts/test-file-transfer.mjs && node scripts/test-native-compiler.mjs && node scripts/test-compiler.mjs && node scripts/test-templates.mjs && node scripts/test-git.mjs && node scripts/test-git-status.mjs && node scripts/test-git-log.mjs && node scripts/test-git-graph.mjs && node scripts/test-diagnostics.mjs && node scripts/test-lint.mjs && node scripts/test-tool-config.mjs",
+    "test:local": "node --test scripts/test-tool-discovery.mjs scripts/test-file-transfer.mjs scripts/test-lsp-service.mjs && node scripts/test-native-compiler.mjs && node scripts/test-compiler.mjs && node scripts/test-templates.mjs && node scripts/test-git.mjs && node scripts/test-git-status.mjs && node scripts/test-git-log.mjs && node scripts/test-git-graph.mjs && node scripts/test-diagnostics.mjs && node scripts/test-lint.mjs && node scripts/test-tool-config.mjs",
     "test:demo": "node scripts/test-demo-navigation.mjs && node scripts/test-diagnostic-restore.mjs",
     "demo:build": "node scripts/build-demo.mjs && node scripts/sync-demo-snapshot.mjs",
     "demo:snapshot": "node scripts/sync-demo-snapshot.mjs",
@@ -41,10 +41,12 @@
     "test:logging": "node --test scripts/test-logging.mjs && node scripts/test-diagnostics-ui.mjs"
   },
   "dependencies": {
+    "@codemirror/autocomplete": "^6.20.3",
     "@codemirror/commands": "^6.11.0",
     "@codemirror/lang-markdown": "^6.5.2",
     "@codemirror/language": "^6.12.4",
     "@codemirror/language-data": "^6.5.2",
+    "@codemirror/lint": "^6.9.7",
     "@codemirror/state": "^6.7.4",
     "@codemirror/view": "^6.43.11",
     "@earendil-works/pi-ai": "^0.85.1",

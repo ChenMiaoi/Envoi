@@ -1,0 +1,349 @@
+import { useLayoutEffect, useRef } from "react"
+import { EditorState, Compartment } from "@codemirror/state"
+import {
+  EditorView,
+  keymap,
+  hoverTooltip,
+  lineNumbers,
+  highlightActiveLine,
+  highlightActiveLineGutter,
+} from "@codemirror/view"
+import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirror/commands"
+import { LanguageDescription, syntaxHighlighting } from "@codemirror/language"
+import { languages } from "@codemirror/language-data"
+import { autocompletion, type Completion, type CompletionContext } from "@codemirror/autocomplete"
+import { lintGutter, setDiagnostics, type Diagnostic } from "@codemirror/lint"
+import { envoi } from "@/lib/desktop"
+import { clearLspDiagnostics, publishLspDiagnostics, publishLspStatus } from "@/lib/lspStatus"
+import { codeHighlight } from "@/lib/codeHighlight"
+import { fontCss } from "@/settings/fonts"
+import { usePreferences } from "@/settings/context"
+import { editorFonts } from "@/settings/model"
+
+type LspPosition = { line: number; character: number }
+type LspRange = { start: LspPosition; end: LspPosition }
+type LspDiagnostic = { range: LspRange; message: string; severity?: number; source?: string }
+type LspCompletion = {
+  label: string
+  kind?: number
+  detail?: string
+  documentation?: string | { value: string }
+  insertText?: string
+  textEdit?: { range: LspRange; newText: string }
+}
+
+function offset(view: EditorView, point: LspPosition) {
+  if (!point || point.line < 0 || point.line >= view.state.doc.lines) return null
+  const line = view.state.doc.line(point.line + 1)
+  return Math.min(line.to, line.from + Math.max(0, point.character))
+}
+function documentation(value: string | { value: string } | undefined) {
+  return typeof value === "string" ? value : (value?.value ?? "")
+}
+function textContent(value: unknown): string {
+  if (typeof value === "string") return value
+  if (Array.isArray(value)) return value.map(textContent).join("\n")
+  if (value && typeof value === "object" && "value" in value) return String(value.value)
+  return ""
+}
+
+export function CodeEditor({
+  root,
+  path,
+  source,
+  readOnly,
+  onChange,
+  onNavigate,
+  ariaLabel,
+  jumpTo,
+}: {
+  root?: string
+  path: string
+  source: string
+  readOnly: boolean
+  onChange: (text: string) => void
+  onNavigate: (path: string, position: LspPosition) => void
+  ariaLabel: string
+  jumpTo?: { path: string; position: LspPosition; id: string }
+}) {
+  const host = useRef<HTMLDivElement>(null)
+  const view = useRef<EditorView>(null)
+  const settings = useRef(new Compartment())
+  const callbacks = useRef({ onChange, onNavigate })
+  const external = useRef(false)
+  const ready = useRef(false)
+  const server = useRef("LSP")
+  const { preferences } = usePreferences()
+  callbacks.current = { onChange, onNavigate }
+
+  useLayoutEffect(() => {
+    if (!host.current) return
+    let alive = true
+    const token = crypto.randomUUID()
+    const query = (method: string, at: number, text: string) =>
+      root && ready.current
+        ? envoi()
+            .lspQuery(root, path, method, at, text)
+            .catch(() => null)
+        : Promise.resolve(null)
+    const complete = async (context: CompletionContext) => {
+      const word = context.matchBefore(/[\w]*/)
+      if (
+        !context.explicit &&
+        !word?.text &&
+        !/[.:>]$/.test(context.state.doc.sliceString(Math.max(0, context.pos - 2), context.pos))
+      )
+        return null
+      const result = await query(
+        "textDocument/completion",
+        context.pos,
+        context.state.doc.toString(),
+      )
+      if (!result || context.aborted) return null
+      const received = Array.isArray(result) ? result : (result as { items?: unknown }).items
+      const items = Array.isArray(received) ? (received as LspCompletion[]) : []
+      const options: Completion[] = items
+        .slice(0, 200)
+        .filter((item) => typeof item.label === "string")
+        .map((item) => ({
+          label: item.label,
+          detail: item.detail,
+          info: documentation(item.documentation),
+          apply: (editor, _completion, from, to) => {
+            const edit = item.textEdit
+            const start = edit?.range ? offset(editor, edit.range.start) : null
+            const end = edit?.range ? offset(editor, edit.range.end) : null
+            editor.dispatch({
+              changes: {
+                from: start ?? from,
+                to: end ?? to,
+                insert: edit?.newText ?? item.insertText ?? item.label,
+              },
+            })
+          },
+        }))
+      return options.length ? { from: word?.from ?? context.pos, options } : null
+    }
+    const editor = new EditorView({
+      parent: host.current,
+      state: EditorState.create({
+        doc: source,
+        extensions: [
+          lineNumbers(),
+          EditorView.lineWrapping,
+          history(),
+          keymap.of([indentWithTab, ...defaultKeymap, ...historyKeymap]),
+          autocompletion({ override: [complete] }),
+          lintGutter(),
+          highlightActiveLine(),
+          highlightActiveLineGutter(),
+          syntaxHighlighting(codeHighlight, { fallback: true }),
+          hoverTooltip(async (editor, pos) => {
+            const result = (await query(
+              "textDocument/hover",
+              pos,
+              editor.state.doc.toString(),
+            )) as { contents?: unknown; range?: LspRange } | null
+            const content = textContent(result?.contents)
+            if (!content) return null
+            return {
+              pos:
+                offset(
+                  editor,
+                  result?.range?.start ?? {
+                    line: editor.state.doc.lineAt(pos).number - 1,
+                    character: pos - editor.state.doc.lineAt(pos).from,
+                  },
+                ) ?? pos,
+              end: result?.range ? (offset(editor, result.range.end) ?? pos) : pos,
+              create: () => {
+                const dom = document.createElement("pre")
+                dom.className = "max-w-md whitespace-pre-wrap p-2 text-xs"
+                dom.textContent = content
+                return { dom }
+              },
+            }
+          }),
+          EditorView.domEventHandlers({
+            mousedown(event, editor) {
+              if ((!event.ctrlKey && !event.metaKey) || !ready.current) return false
+              const at = editor.posAtCoords({ x: event.clientX, y: event.clientY })
+              if (at === null) return false
+              event.preventDefault()
+              void query("textDocument/definition", at, editor.state.doc.toString()).then(
+                (result) => {
+                  const location = Array.isArray(result) ? result[0] : result
+                  const uri = location?.uri ?? location?.targetUri
+                  if (!root || typeof uri !== "string" || !uri.startsWith("file:")) return
+                  const target = decodeURIComponent(new URL(uri).pathname)
+                    .replace(/^\/([A-Za-z]:)/, "$1")
+                    .replaceAll("\\", "/")
+                  const base = root.replaceAll("\\", "/").replace(/\/$/, "")
+                  if (target.toLowerCase().startsWith(`${base.toLowerCase()}/`)) {
+                    const position = location?.targetSelectionRange?.start ?? location?.range?.start
+                    if (position)
+                      callbacks.current.onNavigate(target.slice(base.length + 1), position)
+                  }
+                },
+              )
+              return true
+            },
+          }),
+          EditorView.contentAttributes.of({
+            "aria-label": ariaLabel,
+            spellcheck: "false",
+          }),
+          EditorView.updateListener.of((update) => {
+            if (update.docChanged && !external.current)
+              callbacks.current.onChange(update.state.doc.toString())
+          }),
+          settings.current.of([]),
+          editorLanguage.of([]),
+        ],
+      }),
+    })
+    view.current = editor
+    const off = root
+      ? envoi().onLspDiagnostics((event) => {
+          if (!alive || event.root !== root || event.path !== path) return
+          const diagnostics = (
+            Array.isArray(event.diagnostics) ? (event.diagnostics as LspDiagnostic[]) : []
+          ).flatMap((item): Diagnostic[] => {
+            const from = offset(editor, item.range?.start),
+              to = offset(editor, item.range?.end)
+            return from === null || to === null
+              ? []
+              : [
+                  {
+                    from,
+                    to: Math.max(from, to),
+                    message: item.message,
+                    severity:
+                      item.severity === 1
+                        ? "error"
+                        : item.severity === 2
+                          ? "warning"
+                          : item.severity === 4
+                            ? "hint"
+                            : "info",
+                    source: item.source,
+                  },
+                ]
+          })
+          editor.dispatch(setDiagnostics(editor.state, diagnostics))
+          publishLspDiagnostics(
+            path,
+            server.current,
+            (Array.isArray(event.diagnostics) ? (event.diagnostics as LspDiagnostic[]) : [])
+              .filter((item) => item.severity === 1 || item.severity === 2)
+              .map((item) => ({
+                severity: item.severity === 1 ? ("error" as const) : ("warning" as const),
+                message: item.message,
+                line: (item.range?.start.line ?? 0) + 1,
+                column: (item.range?.start.character ?? 0) + 1,
+              })),
+          )
+        })
+      : () => {}
+    if (root)
+      void envoi()
+        .lspOpen(root, path, source, token)
+        .then((result) => {
+          if (!alive) {
+            void envoi().lspClose(root, path, token)
+            return
+          }
+          server.current = result.server ?? "LSP"
+          ready.current = result.available
+          publishLspStatus(
+            result.available
+              ? { state: "ready", server: result.server ?? "LSP" }
+              : result.error === "No language server for this file"
+                ? null
+                : { state: "unavailable" },
+          )
+          if (result.available && editor.state.doc.toString() !== source)
+            void envoi().lspChange(root, path, editor.state.doc.toString())
+        })
+        .catch(() => {
+          if (alive) publishLspStatus({ state: "unavailable" })
+        })
+    const language = LanguageDescription.matchFilename(languages, path)
+    if (language)
+      void language
+        .load()
+        .then((support) => {
+          if (alive) editor.dispatch({ effects: editorLanguage.reconfigure(support) })
+        })
+        .catch(() => {})
+    return () => {
+      alive = false
+      ready.current = false
+      publishLspStatus(null)
+      clearLspDiagnostics(path)
+      off()
+      editor.destroy()
+      view.current = null
+      if (root) void envoi().lspClose(root, path, token)
+    }
+    // An editor instance lives for one file; ReaderView keys it by file ID.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  useLayoutEffect(() => {
+    const editor = view.current
+    if (!editor || !jumpTo || jumpTo.path !== path) return
+    const at = offset(editor, jumpTo.position)
+    if (at !== null) {
+      editor.dispatch({ selection: { anchor: at }, scrollIntoView: true })
+      editor.focus()
+    }
+  }, [jumpTo, path])
+  useLayoutEffect(() => {
+    const editor = view.current
+    if (editor && editor.state.doc.toString() !== source) {
+      external.current = true
+      editor.dispatch({ changes: { from: 0, to: editor.state.doc.length, insert: source } })
+      external.current = false
+    }
+    if (root && ready.current)
+      void envoi()
+        .lspChange(root, path, source)
+        .catch(() => {})
+  }, [root, path, source])
+  useLayoutEffect(() => {
+    view.current?.dispatch({
+      effects: settings.current.reconfigure([
+        EditorState.readOnly.of(readOnly),
+        EditorView.editable.of(!readOnly),
+        EditorView.theme({
+          "&": {
+            height: "100%",
+            fontFamily: fontCss(preferences.fontFamily, editorFonts),
+            fontSize: `${preferences.fontSize}px`,
+            color: "hsl(var(--foreground))",
+          },
+          ".cm-scroller": { overflow: "auto", lineHeight: String(preferences.lineHeight) },
+          ".cm-content": { padding: "16px", tabSize: String(preferences.tabSize) },
+          "&.cm-focused": { outline: "none" },
+          ".cm-cursor": { borderLeftColor: "hsl(var(--primary))" },
+          ".cm-selectionBackground, &.cm-focused .cm-selectionBackground": {
+            background: "hsl(var(--primary) / .2)",
+          },
+          ".cm-gutters": {
+            background: "transparent",
+            color: "hsl(var(--muted-foreground) / .55)",
+            border: "none",
+          },
+          ".cm-activeLine": { background: "hsl(var(--foreground) / .045)" },
+          ".cm-activeLineGutter": {
+            background: "transparent",
+            color: "hsl(var(--foreground))",
+          },
+        }),
+      ]),
+    })
+  }, [readOnly, preferences])
+  return <div ref={host} className="h-full" />
+}
+
+const editorLanguage = new Compartment()
