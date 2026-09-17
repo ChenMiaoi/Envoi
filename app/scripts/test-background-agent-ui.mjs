@@ -108,10 +108,12 @@ try {
   const page = await app.firstWindow()
   page.setDefaultTimeout(60000)
   await page.getByTestId("welcome-page").waitFor()
-  const open = async (root) => {
+  const open = async (root, prepareNavigation = true) => {
     const expected = await readFile(path.join(root, "main.tex"), "utf8")
-    await page.evaluate(() => (location.hash = "/settings"))
-    await page.waitForFunction(() => location.hash === "#/settings")
+    if (prepareNavigation) {
+      await page.evaluate(() => (location.hash = "/settings"))
+      await page.waitForFunction(() => location.hash === "#/settings")
+    }
     await page.evaluate(
       (root) => window.dispatchEvent(new CustomEvent("envoi:open-recent", { detail: root })),
       root,
@@ -288,7 +290,7 @@ try {
   await page.evaluate(
     () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
   )
-  await open(roots[0])
+  await open(roots[0], false)
   await page.getByText("Experiment complete", { exact: true }).filter({ visible: true }).waitFor()
   assert.equal(await editor.inputValue(), "Experiment")
   console.log(
