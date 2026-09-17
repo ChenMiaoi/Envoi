@@ -130,9 +130,9 @@ export function WriterView({
     return () => window.removeEventListener("envoi:panel", onPanel)
   }, [])
   return (
-    <PanelGroup orientation="horizontal" className="h-full">
+    <PanelGroup orientation="horizontal" className="h-full p-1.5">
       {/* 左：资源 / 大纲 */}
-      <Panel defaultSize="18%" minSize="14%" maxSize="30%" className="bg-card">
+      <Panel defaultSize="18%" minSize="14%" maxSize="30%" className="workspace-pane">
         <div className="flex h-full flex-col">
           <div className="flex h-9 shrink-0 items-center gap-1 border-b border-border px-2">
             {sideTabs.map((item) => (
@@ -171,10 +171,10 @@ export function WriterView({
           </div>
         </div>
       </Panel>
-      <PanelResizeHandle className="w-px bg-border transition-colors hover:bg-primary/60" />
+      <PanelResizeHandle className="workspace-pane-divider" />
 
       {/* 中：编辑器 + 底部 AI 聊天 */}
-      <Panel defaultSize="42%" minSize="28%">
+      <Panel defaultSize="42%" minSize="28%" className="workspace-pane">
         <div className="flex h-full min-h-0 flex-col">
           <div className="min-h-0 flex-1">
             <div className="flex h-full flex-col">
@@ -238,10 +238,10 @@ export function WriterView({
           </div>
         </div>
       </Panel>
-      <PanelResizeHandle className="w-px bg-border transition-colors hover:bg-primary/60" />
+      <PanelResizeHandle className="workspace-pane-divider" />
 
       {/* 右：编译预览 */}
-      <Panel defaultSize="42%" minSize="18%" maxSize="45%">
+      <Panel defaultSize="42%" minSize="18%" maxSize="45%" className="workspace-pane">
         <ProjectPdfPreview target={pdfTarget} syncPoint={syncPoint} onLocateSource={locateSource} />
       </Panel>
     </PanelGroup>

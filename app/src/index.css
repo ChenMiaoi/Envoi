@@ -2,6 +2,41 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+/* Each workspace column is its own surface, with a draggable gap between surfaces. */
+.workspace-pane {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid hsl(var(--border));
+  border-radius: 12px;
+  background: hsl(var(--card));
+  box-shadow: 0 6px 18px -14px hsl(0 0% 0% / 0.45);
+}
+
+.workspace-pane-divider {
+  width: 12px;
+  flex: 0 0 12px;
+  cursor: col-resize;
+  touch-action: none;
+  background: transparent;
+}
+
+.workspace-pane-divider::before {
+  content: "";
+  position: absolute;
+  inset-block: 35%;
+  left: 50%;
+  width: 1px;
+  transform: translateX(-50%);
+  border-radius: 1px;
+  background: transparent;
+}
+
+.workspace-pane-divider:hover::before,
+.workspace-pane-divider:focus-visible::before,
+.workspace-pane-divider[data-separator="active"]::before {
+  background: hsl(var(--primary) / 0.8);
+}
+
 @layer base {
   /* ---------- 主题：石墨（默认，深色） ---------- */
   :root,

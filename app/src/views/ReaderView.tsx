@@ -305,10 +305,10 @@ export function ReaderView({
 
   return (
     <>
-      <PanelGroup orientation="horizontal" className="h-full">
+      <PanelGroup orientation="horizontal" className="h-full p-1.5">
         {/* 左：目录树 */}
         {showTree && (
-          <Panel defaultSize="18%" minSize="14%" maxSize="30%" className="bg-card">
+          <Panel defaultSize="18%" minSize="14%" maxSize="30%" className="workspace-pane">
             <div className="flex h-full flex-col">
               <div className="flex h-9 shrink-0 items-center justify-between px-3 text-[11px] uppercase tracking-widest text-muted-foreground">
                 <span>{t("reader.explorer")}</span>
@@ -334,12 +334,10 @@ export function ReaderView({
             </div>
           </Panel>
         )}
-        {showTree && (
-          <PanelResizeHandle className="w-px bg-border transition-colors hover:bg-primary/60" />
-        )}
+        {showTree && <PanelResizeHandle className="workspace-pane-divider" />}
 
         {/* 中：编辑/预览区 */}
-        <Panel minSize="30%">
+        <Panel minSize="30%" className="workspace-pane">
           <div className="flex h-full flex-col bg-background">
             {/* 标签栏 */}
             <div className="flex h-9 shrink-0 items-stretch border-b border-border bg-card">
@@ -600,11 +598,9 @@ export function ReaderView({
         </Panel>
 
         {/* 右：AI 聊天 */}
+        {showChat && <PanelResizeHandle className="workspace-pane-divider" />}
         {showChat && (
-          <PanelResizeHandle className="w-px bg-border transition-colors hover:bg-primary/60" />
-        )}
-        {showChat && (
-          <Panel defaultSize="23%" minSize="16%" maxSize="40%">
+          <Panel defaultSize="23%" minSize="16%" maxSize="40%" className="workspace-pane">
             <ChatPanel
               context={
                 active

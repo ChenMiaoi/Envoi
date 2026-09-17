@@ -276,7 +276,7 @@ function ProjectApp() {
       {/* 主体 */}
       <div className={`flex min-h-0 flex-1 ${emptyWorkspace ? "" : "px-2.5 pb-12"}`}>
         <div
-          className={`min-w-0 flex-1 ${emptyWorkspace ? "" : "overflow-hidden rounded-xl border border-white/[0.07] bg-background/60 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05),0_24px_80px_-24px_rgba(0,0,0,0.55)] backdrop-blur-2xl backdrop-saturate-150"}`}
+          className={`min-w-0 flex-1 ${emptyWorkspace ? "" : view === "reader" || view === "writer" ? "overflow-hidden" : "overflow-hidden rounded-xl border border-white/[0.07] bg-background/60 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05),0_24px_80px_-24px_rgba(0,0,0,0.55)] backdrop-blur-2xl backdrop-saturate-150"}`}
         >
           <Suspense
             fallback={
