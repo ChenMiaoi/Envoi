@@ -97,7 +97,8 @@ export class LspService {
       throw Error("Source file exceeds the language server limit")
     const target = path.resolve(root, file)
     const existing = existsSync(target) ? realpathSync(target) : realpathSync(path.dirname(target))
-    if (!within(root, target) || !within(root, existing)) throw Error("Invalid source path")
+    if (!within(path.resolve(root), target) || !within(realpathSync(root), existing))
+      throw Error("Invalid source path")
     const spec = this.resolve(root, language, preferredServer)
     if (!spec) return { available: false, error: `No ${language} language server found` }
     const key = this.key(owner, root, language)
