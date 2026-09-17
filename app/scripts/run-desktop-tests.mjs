@@ -1,6 +1,11 @@
 import { execFileSync, spawnSync } from "node:child_process"
 import process from "node:process"
 
+const visible = process.argv.includes("--visible")
+const quick = process.argv.includes("--quick")
+const started = performance.now()
+console.log(`Desktop tests: ${quick ? "quick" : "full"}, ${visible ? "visible" : "hidden"} windows`)
+
 const tests = [
   [
     "node:test fixtures",
@@ -38,6 +43,17 @@ const tests = [
   ["diagnostics UI", ["scripts/test-diagnostics-ui.mjs"]],
 ]
 
+const quickTests = new Set([
+  "node:test fixtures",
+  "numeric settings",
+  "Git tree",
+  "restricted mode",
+  "desktop smoke",
+  "save and compile",
+  "PDF scheduler",
+  "diagnostics UI",
+])
+
 function cleanupTree(pid) {
   if (process.platform !== "win32" || !pid) return
   spawnSync("taskkill.exe", ["/PID", String(pid), "/T", "/F"], {
@@ -68,13 +84,14 @@ function cleanupNewElectronProcesses(before) {
   for (const pid of electronPids()) if (!before.has(pid)) cleanupTree(pid)
 }
 
-for (const [name, args] of tests) {
+for (const [name, args] of tests.filter(([name]) => !quick || quickTests.has(name))) {
   console.log(`\n==> Desktop test: ${name}`)
+  const testStarted = performance.now()
   let passed = false
   for (let attempt = 1; attempt <= 2 && !passed; attempt++) {
     const before = electronPids()
     const child = spawnSync(process.execPath, args, {
-      env: process.env,
+      env: { ...process.env, ENVOI_DESKTOP_TEST_HIDDEN: visible ? "0" : "1" },
       stdio: "inherit",
       windowsHide: true,
     })
@@ -84,7 +101,10 @@ for (const [name, args] of tests) {
     passed = child.status === 0
     if (!passed && attempt === 1) console.log(`Retrying desktop test: ${name}`)
   }
+  console.log(
+    `Desktop test ${name}: ${passed ? "passed" : "failed"} in ${Math.round((performance.now() - testStarted) / 1000)}s`,
+  )
   if (!passed) process.exit(1)
 }
 
-console.log("\nDesktop tests passed.")
+console.log(`\nDesktop tests passed in ${Math.round((performance.now() - started) / 1000)}s.`)

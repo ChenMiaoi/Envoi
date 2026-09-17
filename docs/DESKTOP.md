@@ -18,10 +18,9 @@ npm run package:win # Windows
 For CI-equivalent validation from the repository root, run `npm run ci:check`.
 This is the single authoritative entry point used by both local Windows
 validation and the GitHub Windows job: it runs the same commands in the same
-order and includes `test:desktop` on Windows. Node.js versions (Node 24 or
+order and includes `test:desktop:quick` on Windows. Node.js versions (Node 24 or
 newer) and npm registry selection are intentionally not part of this parity
-contract. macOS uses the same entry point but omits the Windows-only desktop
-step.
+contract. macOS uses the same entry point and also runs desktop tests.
 
 `dev:desktop` and `build:desktop` are explicit aliases. `app/release/` contains platform-specific output. The current packaging configuration produces unsigned local builds; distribution signing and notarization require the project owner's Apple credentials. TeX Live, Git and optional ChkTeX/Biber are detected on the machine, not bundled. Windows and macOS are supported. Windows packaging reuses the installed Electron runtime and produces an NSIS installer; Windows distribution signing is not configured.
 
@@ -53,7 +52,7 @@ Local data remains in `~/.envoi/`; the renderer retains IndexedDB recovery copie
 
 Packaged navigation uses hash routes. Local assets use the `envoi:` protocol, including PDF fetches. External web links open in the default browser.
 
-`test:desktop` launches the built application against temporary data and project directories. It checks opening through the project menu, the in-app trust choice, repeated binding, nested writes, Git initialization/status, AI session access, compilation when TeX is installed, local PDF fetching, reopening after restart, external file refresh, save conflicts, native draft compilation, compiler cancellation, and utility-process crash recovery. Backend unit tests also cover concurrent saves, permissions/symlinks, task isolation, and watcher cleanup. Native dialogs are answered by the test only for its temporary fixtures. `ENVOI_DESKTOP_EXECUTABLE` can point at a packaged application executable for the same checks. It does not spend model API credits.
+`test:desktop:quick` runs key backend, trust, project, compiler and diagnostics checks on every commit. `test:desktop` runs the complete suite against temporary data and project directories; CI runs it nightly and on manual dispatch. Both commands hide test windows. Use `test:desktop:visible` for screenshots and PDF scrolling checks, which need a visible window for normal animation timing. The runner reports the duration of each test. Backend unit tests also cover concurrent saves, permissions/symlinks, task isolation, and watcher cleanup. Native dialogs are answered by the test only for its temporary fixtures. `ENVOI_DESKTOP_EXECUTABLE` can point at a packaged application executable for the same checks. It does not spend model API credits.
 
 ## Closing and removing projects
 

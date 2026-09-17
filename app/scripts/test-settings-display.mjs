@@ -31,6 +31,7 @@ try {
   await page.getByRole("button", { name: "检查更新", exact: true }).click()
   const warning = page.locator('[data-sonner-toast][data-type="warning"]')
   await warning.filter({ hasText: "暂时无法获取发布信息" }).waitFor()
+  await warning.hover()
   const placement = await page.locator("[data-sonner-toaster]").evaluate((node) => ({
     position: getComputedStyle(node).position,
     bottom: getComputedStyle(node).bottom,
@@ -45,7 +46,8 @@ try {
       node.getBoundingClientRect().bottom < innerHeight - 30
     )
   })
-  await page.screenshot({ path: path.join(temp, "notification.png") })
+  if (process.env.ENVOI_DESKTOP_TEST_HIDDEN !== "1")
+    await page.screenshot({ path: path.join(temp, "notification.png") })
   await page.getByRole("button", { name: "关闭", exact: true }).click()
   await warning.waitFor({ state: "detached" })
   await instance.evaluate(({ ipcMain }) => {
@@ -112,14 +114,13 @@ try {
     assert.equal(styles.track, "rgba(0, 0, 0, 0)")
     assert.equal(styles.buttons, "none")
     colors.push(styles.thumb)
-    await page.screenshot({ path: path.join(temp, theme + ".png") })
+    if (process.env.ENVOI_DESKTOP_TEST_HIDDEN !== "1")
+      await page.screenshot({ path: path.join(temp, theme + ".png") })
     console.log(theme, styles)
   }
   assert.notEqual(colors[0], colors[1])
-  console.log(
-    "PASS settings dismiss, retained update action, themed scrollbars; screenshots:",
-    temp,
-  )
+  console.log("PASS settings dismiss, retained update action, themed scrollbars")
+  if (process.env.ENVOI_DESKTOP_TEST_HIDDEN !== "1") console.log("Screenshots:", temp)
 } finally {
   // This isolated fixture has no user data; bypass the application's close-project guard.
   await instance.evaluate(({ app }) => app.exit(0)).catch(() => {})

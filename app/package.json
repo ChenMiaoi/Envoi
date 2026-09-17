@@ -32,6 +32,8 @@
     "predev:desktop": "node scripts/ensure-electron.mjs && node scripts/sync-pdfjs-assets.mjs",
     "prebuild:desktop": "node scripts/sync-pdfjs-assets.mjs",
     "test:desktop": "node scripts/run-desktop-tests.mjs",
+    "test:desktop:quick": "node scripts/run-desktop-tests.mjs --quick",
+    "test:desktop:visible": "node scripts/run-desktop-tests.mjs --visible",
     "dev:web": "vite",
     "build:web": "tsc -b && vite build",
     "measure:startup": "node scripts/measure-startup.mjs",

@@ -4,6 +4,9 @@ on:
   push:
     branches: [main]
   pull_request:
+  schedule:
+    - cron: "0 20 * * *"
+  workflow_dispatch:
 
 jobs:
   check:
@@ -20,6 +23,8 @@ jobs:
           cache: npm
           cache-dependency-path: app/package-lock.json
       - run: npm run ci:check
+        env:
+          ENVOI_DESKTOP_TEST_FULL: ${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && '1' || '0' }}
 # The runner has no TeX toolchain installed, so TeX-dependent local tests
 # self-skip rather than fail. test:demo (needs a compiled example PDF from
 # demo:build) stays a manual per-machine step; see CONTRIBUTING.md.

@@ -23,7 +23,10 @@ const steps = [
 ]
 
 if (["darwin", "win32"].includes(process.platform))
-  steps.push(["Run desktop tests", ["run", "test:desktop"]])
+  steps.push([
+    "Run desktop tests",
+    ["run", process.env.ENVOI_DESKTOP_TEST_FULL === "1" ? "test:desktop" : "test:desktop:quick"],
+  ])
 
 function reportEnvironment() {
   console.error("CI environment:")

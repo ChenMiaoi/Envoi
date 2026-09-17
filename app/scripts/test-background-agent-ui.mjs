@@ -168,7 +168,8 @@ try {
     }
   })
   await activity.locator("[data-thinking-round]").nth(30).waitFor({ state: "attached" })
-  await page.screenshot({ path: "/tmp/envoi-grouped-activity.png" })
+  if (process.env.ENVOI_DESKTOP_TEST_HIDDEN !== "1")
+    await page.screenshot({ path: "/tmp/envoi-grouped-activity.png" })
   await app.evaluate(() =>
     globalThis.backgroundFixture.emit({
       type: "delta",
@@ -243,7 +244,8 @@ try {
   await stats.getByText("30.0 tok/s", { exact: true }).waitFor()
   await stats.getByRole("button", { name: "本轮", exact: true }).click()
   await stats.getByText("已记录 1/1 轮；1/1 次模型调用有用量报告。", { exact: true }).waitFor()
-  await page.screenshot({ path: "/tmp/envoi-chat-statistics.png" })
+  if (process.env.ENVOI_DESKTOP_TEST_HIDDEN !== "1")
+    await page.screenshot({ path: "/tmp/envoi-chat-statistics.png" })
   // Inspect export content without writing into the user's Downloads folder.
   await page.evaluate(() => {
     const create = URL.createObjectURL,

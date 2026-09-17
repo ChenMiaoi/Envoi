@@ -27,6 +27,8 @@
     "build:desktop": "npm --prefix app run build:desktop",
     "package:mac": "npm --prefix app run package:mac",
     "test:desktop": "npm --prefix app run test:desktop",
+    "test:desktop:quick": "npm --prefix app run test:desktop:quick",
+    "test:desktop:visible": "npm --prefix app run test:desktop:visible",
     "demo:git": "node app/scripts/init-demo-git.mjs",
     "package:win": "npm --prefix app run package:win"
   }

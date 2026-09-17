@@ -69,9 +69,10 @@ try {
     dialog.showSaveDialog = async () => ({ canceled: true })
   })
   assert.equal(await page.evaluate(() => window.envoi.diagnosticsExport()), false)
-  await page.screenshot({
-    path: process.env.ENVOI_DIAGNOSTICS_SCREENSHOT ?? path.join(root, "settings.png"),
-  })
+  if (process.env.ENVOI_DESKTOP_TEST_HIDDEN !== "1")
+    await page.screenshot({
+      path: process.env.ENVOI_DIAGNOSTICS_SCREENSHOT ?? path.join(root, "settings.png"),
+    })
   console.log(
     "PASS diagnostics: main/backend/renderer logs, correlation, privacy, open folder, export and cancellation",
   )

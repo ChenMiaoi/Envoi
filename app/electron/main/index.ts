@@ -903,6 +903,7 @@ function createWindow(): void {
     width: 1440,
     height: 900,
     title: "Envoi",
+    show: process.env.ENVOI_DESKTOP_TEST_HIDDEN !== "1",
     ...(process.platform === "darwin"
       ? { titleBarStyle: "hidden" as const, trafficLightPosition: { x: 16, y: 14 } }
       : {}),
@@ -918,6 +919,7 @@ function createWindow(): void {
       sandbox: true,
       nodeIntegration: false,
       webviewTag: true,
+      backgroundThrottling: process.env.ENVOI_DESKTOP_TEST_HIDDEN !== "1",
     },
   })
   window.webContents.on("render-process-gone", (_event, details) =>

@@ -163,8 +163,10 @@ try {
   await page.setViewportSize({ width: 760, height: 650 })
   assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth))
   await page.setViewportSize({ width: 1440, height: 900 })
-  await mkdir("tmp", { recursive: true })
-  await page.screenshot({ path: path.resolve("tmp/workspaces-preview.png") })
+  if (process.env.ENVOI_DESKTOP_TEST_HIDDEN !== "1") {
+    await mkdir("tmp", { recursive: true })
+    await page.screenshot({ path: path.resolve("tmp/workspaces-preview.png") })
+  }
   assert.deepEqual(errors, [])
   console.log(
     "PASS workspace UI: create, inspect, switch, isolated identity, save result, return to main, narrow layout",
