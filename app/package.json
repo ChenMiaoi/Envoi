@@ -9,7 +9,7 @@
   },
   "main": "dist/main/index.js",
   "scripts": {
-    "predev": "node scripts/sync-pdfjs-assets.mjs",
+    "predev": "node scripts/ensure-electron.mjs && node scripts/sync-pdfjs-assets.mjs",
     "dev": "electron-vite dev --config electron.vite.config.ts",
     "prebuild": "node scripts/sync-pdfjs-assets.mjs",
     "build": "tsc -b && tsc -p tsconfig.electron.json && electron-vite build --config electron.vite.config.ts",
@@ -29,7 +29,7 @@
     "test:ai": "node scripts/test-chat-metrics.mjs && node scripts/test-chat-activity.mjs && node scripts/test-chat-markdown.mjs && node scripts/test-model-discovery.mjs && node scripts/test-provider-validation.mjs && node scripts/test-agent-native.mjs && node scripts/test-data-migration.mjs",
     "i18n:traditional": "node scripts/i18n-traditional.mjs",
     "i18n:inventory": "node scripts/i18n-inventory.mjs",
-    "predev:desktop": "node scripts/sync-pdfjs-assets.mjs",
+    "predev:desktop": "node scripts/ensure-electron.mjs && node scripts/sync-pdfjs-assets.mjs",
     "prebuild:desktop": "node scripts/sync-pdfjs-assets.mjs",
     "test:desktop": "node scripts/run-desktop-tests.mjs",
     "dev:web": "vite",
