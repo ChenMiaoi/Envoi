@@ -70,6 +70,7 @@ export function ReaderView({
   onOpenFiles,
   onActive,
   onTex,
+  codeTarget,
   libraryFiles,
 }: {
   openFiles: OpenFile[]
@@ -78,6 +79,7 @@ export function ReaderView({
   libraryFiles: import("@/lib/projectFiles").ProjectFile[]
   onActive: (id: string) => void
   onTex: (id: string) => void
+  codeTarget?: { path: string; position: { line: number; character: number }; id: string }
 }) {
   const { preferences } = usePreferences()
   const { project, edit, busy, setMessage } = useProject()
@@ -89,6 +91,11 @@ export function ReaderView({
     position: { line: number; character: number }
     id: string
   }>()
+  const [lastCodeTarget, setLastCodeTarget] = useState(codeTarget)
+  if (codeTarget && codeTarget !== lastCodeTarget) {
+    setLastCodeTarget(codeTarget)
+    setCodeJump(codeTarget)
+  }
   const { t } = useT()
   const fileTree = useMemo(
     () => projectTree(project.files, project.directories),

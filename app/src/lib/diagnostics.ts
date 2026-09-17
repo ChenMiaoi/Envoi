@@ -3,7 +3,8 @@ import type { ProjectFile } from "./projectFiles"
 export interface Diagnostic {
   id: string
   column?: number
-  source?: "compile" | "lint"
+  source?: "compile" | "lint" | "lsp"
+  server?: string
   severity: "error" | "warning"
   message: string
   path?: string

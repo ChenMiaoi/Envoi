@@ -147,6 +147,9 @@ function ProjectApp() {
     project.id === "empty" && view !== "library" && view !== "settings" && !libraryFiles.length
   const [openFiles, setOpenFiles] = useState<OpenFile[]>([])
   const [writerFile, setWriterFile] = useState<{ id: string; request: number } | undefined>()
+  const [codeTarget, setCodeTarget] = useState<
+    { path: string; position: { line: number; character: number }; id: string } | undefined
+  >()
   const openTex = (id: string) => {
     setWriterFile((previous) => ({ id, request: (previous?.request ?? 0) + 1 }))
     setView("writer")
@@ -299,6 +302,7 @@ function ProjectApp() {
                   activeId={activeId}
                   onOpenFiles={setOpenFiles}
                   onActive={setActiveId}
+                  codeTarget={codeTarget}
                 />
               </section>
             )}
@@ -362,6 +366,15 @@ function ProjectApp() {
                 onNavigate={(target) => {
                   setProblemTarget(target)
                   setView("writer")
+                }}
+                onCodeNavigate={(path, position) => {
+                  const file = project.files.find((item) => item.path === path)
+                  if (!file) return
+                  setView("reader")
+                  if (!openFiles.find((o) => o.id === file.id))
+                    setOpenFiles([...openFiles, { id: file.id, name: file.path, kind: file.kind }])
+                  setActiveId(file.id)
+                  setCodeTarget({ path, position, id: crypto.randomUUID() })
                 }}
               />
             )}

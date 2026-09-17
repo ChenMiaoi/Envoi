@@ -3,6 +3,7 @@ import { useT } from "@/i18n/useT"
 import { CircleAlert, TriangleAlert } from "lucide-react"
 import { useProject } from "./context"
 import { projectSignature } from "@/lib/compileClient"
+import { useLspDiagnostics } from "@/lib/lspStatus"
 import { diagnosticLocation, safeDiagnosticText, parseDiagnostics } from "@/lib/diagnostics"
 import type { SourceLocation } from "@/lib/paperSources"
 import {
@@ -13,7 +14,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 export type ProblemTarget = SourceLocation & { severity: "error" | "warning"; id: number }
-export function ProblemsPanel({ onNavigate }: { onNavigate: (target: ProblemTarget) => void }) {
+export function ProblemsPanel({
+  onNavigate,
+  onCodeNavigate,
+}: {
+  onNavigate: (target: ProblemTarget) => void
+  onCodeNavigate: (path: string, position: { line: number; character: number }) => void
+}) {
   const { t } = useT()
   const { project } = useProject()
   const [open, setOpen] = useState(false),
@@ -39,7 +46,20 @@ export function ProblemsPanel({ onNavigate }: { onNavigate: (target: ProblemTarg
           ),
       )
     : []
-  const items = [...compiledItems, ...lintItems],
+  const lsp = useLspDiagnostics()
+  const lspItems = [...lsp].flatMap(([path, file]) =>
+    file.items.map((item, index) => ({
+      id: `lsp:${path}:${index}`,
+      severity: item.severity,
+      message: item.message,
+      path,
+      line: item.line,
+      column: item.column,
+      source: "lsp" as const,
+      server: file.server,
+    })),
+  )
+  const items = [...compiledItems, ...lintItems, ...lspItems],
     errors = items.filter((i) => i.severity === "error").length,
     warnings = items.length - errors
   const stale = diagnostics && diagnostics.signature !== projectSignature(project)
@@ -71,9 +91,9 @@ export function ProblemsPanel({ onNavigate }: { onNavigate: (target: ProblemTarg
         onClick={() => setOpen(true)}
       >
         <CircleAlert className={`h-3 w-3 ${errors ? "text-danger" : ""}`} />
-        {diagnostics || lint ? errors : "—"}
+        {diagnostics || lint || lspItems.length ? errors : "—"}
         <TriangleAlert className={`ml-1 h-3 w-3 ${warnings ? "text-warning" : ""}`} />
-        {diagnostics || lint ? warnings : "—"}
+        {diagnostics || lint || lspItems.length ? warnings : "—"}
       </button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-2xl">
@@ -109,7 +129,7 @@ export function ProblemsPanel({ onNavigate }: { onNavigate: (target: ProblemTarg
             {!items.length ? (
               <p className="p-5 text-center text-xs text-muted-foreground">
                 {!diagnostics
-                  ? t("compile.emptyNever")
+                  ? t(lsp.size ? "compile.emptyNone" : "compile.emptyNever")
                   : diagnostics.status === "cancelled"
                     ? t("compile.emptyCancelled")
                     : t("compile.emptyNone")}
@@ -125,6 +145,14 @@ export function ProblemsPanel({ onNavigate }: { onNavigate: (target: ProblemTarg
                       key={item.id}
                       className="flex w-full items-start gap-2 rounded px-2 py-2 text-left text-xs hover:bg-secondary"
                       onClick={() => {
+                        if (item.source === "lsp") {
+                          setOpen(false)
+                          onCodeNavigate(item.path ?? "", {
+                            line: (item.line ?? 1) - 1,
+                            character: (item.column ?? 1) - 1,
+                          })
+                          return
+                        }
                         const location =
                           !stale || item.source === "lint"
                             ? diagnosticLocation(item, project.files)
@@ -142,14 +170,18 @@ export function ProblemsPanel({ onNavigate }: { onNavigate: (target: ProblemTarg
                       )}
                       <span className="min-w-0 break-words">
                         <span className="mr-1 text-[10px] text-muted-foreground">
-                          {item.source === "lint" ? "ChkTeX" : t("compile.sourceCompile")}
+                          {item.source === "lint"
+                            ? "ChkTeX"
+                            : item.source === "lsp"
+                              ? item.server
+                              : t("compile.sourceCompile")}
                         </span>
                         {item.message}
                         <span className="mt-1 block text-[10px] text-muted-foreground">
                           {item.line
                             ? t("compile.lineN", { line: item.line })
                             : t("compile.noLocation")}
-                          {stale && item.source !== "lint" ? t("compile.staleLogOnly") : ""}
+                          {stale && item.source === "compile" ? t("compile.staleLogOnly") : ""}
                         </span>
                       </span>
                     </button>
