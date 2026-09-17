@@ -22,7 +22,8 @@ const steps = [
   ["Run local integration tests", ["run", "test:local"]],
 ]
 
-if (process.platform === "win32") steps.push(["Run desktop tests", ["run", "test:desktop"]])
+if (["darwin", "win32"].includes(process.platform))
+  steps.push(["Run desktop tests", ["run", "test:desktop"]])
 
 function reportEnvironment() {
   console.error("CI environment:")

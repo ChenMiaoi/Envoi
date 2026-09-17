@@ -109,6 +109,7 @@ try {
     async (root) => (await window.envoi.projectTrust(root)).trusted === true,
     root,
   )
+  await page.getByRole("dialog").waitFor({ state: "hidden" })
   await page.evaluate((root) => window.envoi.grantProjectTrust(root), root)
   const trusted = await page.evaluate(async (root) => {
     let lastError
