@@ -4,6 +4,7 @@ import {
   AlertTriangle,
   Check,
   ChevronDown,
+  Loader2,
   RefreshCw,
   Server,
   ShieldCheck,
@@ -30,6 +31,8 @@ type Tool = {
   version?: string
   error?: string
   candidates?: { path: string; version?: string }[]
+  binary?: string
+  installable?: boolean
 }
 type ToolInfo = { groups?: Record<string, Tool[]> }
 function pathsOf(tool: Tool) {
@@ -111,6 +114,7 @@ export function ExtensionsSettings({ scope }: { scope: "global" | "project" }) {
   >({})
   const [lspProbed, setLspProbed] = useState(false)
   const [toolsProbed, setToolsProbed] = useState(false)
+  const [installing, setInstalling] = useState<Record<string, boolean>>({})
   const root = scope === "project" ? project.rootPath : undefined
   const load = useCallback(
     async (refresh: boolean) => {
@@ -275,6 +279,33 @@ export function ExtensionsSettings({ scope }: { scope: "global" | "project" }) {
       setManualError((previous) => ({ ...previous, [id]: "" }))
     } catch (cause) {
       setManualError((previous) => ({ ...previous, [id]: (cause as Error).message }))
+    }
+  }
+
+  async function installToolById(tool: Tool) {
+    setInstalling((previous) => ({ ...previous, [tool.id]: true }))
+    try {
+      const result = await envoi().installTool(tool.id)
+      // 同一二进制的多个条目（如 ruff 格式化/检查）共享安装结果
+      const peers = Object.values(tools?.groups ?? {})
+        .flat()
+        .filter((entry) => entry.binary && entry.binary === tool.binary)
+      const targets = peers.length ? peers : [tool]
+      const paths = { ...preferences.toolPaths }
+      for (const peer of targets) paths[peer.id] = result.path
+      update({ toolPaths: paths })
+      setVerifiedTools((previous) => ({
+        ...previous,
+        ...Object.fromEntries(
+          targets.map((peer) => [peer.id, { path: result.path, version: result.version }]),
+        ),
+      }))
+      setManualError((previous) => ({ ...previous, [tool.id]: "" }))
+      void load(true)
+    } catch (cause) {
+      setManualError((previous) => ({ ...previous, [tool.id]: (cause as Error).message }))
+    } finally {
+      setInstalling((previous) => ({ ...previous, [tool.id]: false }))
     }
   }
 
@@ -448,6 +479,20 @@ export function ExtensionsSettings({ scope }: { scope: "global" | "project" }) {
                     <span className="min-w-0 flex-1">
                       <StatusPill state="off" label={t("extensions.notFound")} />
                     </span>
+                  )}
+                  {!selected && tool.installable && (
+                    <button
+                      type="button"
+                      disabled={!!installing[tool.id]}
+                      aria-busy={!!installing[tool.id]}
+                      className="inline-flex shrink-0 items-center gap-1 rounded-md border border-primary/40 px-2 py-1 text-[11px] text-primary transition-colors hover:bg-primary/10 disabled:opacity-60"
+                      onClick={() => void installToolById(tool)}
+                    >
+                      {installing[tool.id] && (
+                        <Loader2 aria-hidden className="size-3 animate-spin" />
+                      )}
+                      {t("extensions.installAction")}
+                    </button>
                   )}
                   <button
                     type="button"

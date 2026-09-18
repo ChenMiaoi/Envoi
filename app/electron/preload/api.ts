@@ -84,6 +84,7 @@ export interface EnvoiBridge {
   ): Promise<unknown>
   lspClose(root: string, path: string, token: string): Promise<void>
   installLsp(language: string): Promise<{ id: string; path: string; version: string }>
+  installTool(id: string): Promise<{ id: string; path: string; version?: string }>
   languageTool(
     root: string,
     path: string,

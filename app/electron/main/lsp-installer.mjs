@@ -1,28 +1,14 @@
-import { createHash } from "node:crypto"
 import { createReadStream, createWriteStream, existsSync } from "node:fs"
-import {
-  chmod,
-  mkdir,
-  mkdtemp,
-  readFile,
-  readdir,
-  rename,
-  rm,
-  stat,
-  writeFile,
-} from "node:fs/promises"
+import { chmod, mkdir, mkdtemp, readFile, rename, rm, stat, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
-import { Readable, Transform } from "node:stream"
 import { pipeline } from "node:stream/promises"
 import { createGunzip } from "node:zlib"
 import * as tar from "tar"
-import yauzl from "yauzl"
+import { download, findBinary, json, unzip, verify } from "./installer-utils.mjs"
 
 const serverIds = { c: "clangd", cpp: "clangd", python: "pyright", rust: "rustAnalyzer" }
 const binaries = { clangd: "clangd", rustAnalyzer: "rust-analyzer", pyright: "langserver.index.js" }
-const maxArchiveBytes = 200_000_000
-const maxExtractedBytes = 600_000_000
 const installs = new Map()
 
 export function installAsset(id, platform = process.platform, arch = process.arch) {
@@ -58,15 +44,6 @@ export function installAsset(id, platform = process.platform, arch = process.arc
   return null
 }
 
-async function json(url, accept = "application/vnd.github+json") {
-  const response = await fetch(url, {
-    headers: { Accept: accept, "User-Agent": "Envoi" },
-    signal: AbortSignal.timeout(30_000),
-  })
-  if (!response.ok) throw Error(`Download metadata unavailable (${response.status})`)
-  return response.json()
-}
-
 async function release(id) {
   if (id === "pyright") {
     const metadata = await json("https://registry.npmjs.org/pyright/latest", "application/json")
@@ -95,90 +72,6 @@ async function release(id) {
     digest: asset.digest,
     format: asset.name.endsWith(".zip") ? "zip" : "gzip",
   }
-}
-
-async function download(url, destination) {
-  const response = await fetch(url, { signal: AbortSignal.timeout(180_000) })
-  if (!response.ok || !response.body)
-    throw Error(`Language server download failed (${response.status})`)
-  let size = 0
-  const limit = new Transform({
-    transform(chunk, _encoding, callback) {
-      size += chunk.length
-      callback(size > maxArchiveBytes ? Error("Language server archive is too large") : null, chunk)
-    },
-  })
-  await pipeline(
-    Readable.fromWeb(response.body),
-    limit,
-    createWriteStream(destination, { flags: "wx" }),
-  )
-}
-
-async function verify(file, digest) {
-  const [algorithm, expected] = digest.split(/[:-]/, 2)
-  const hash = createHash(algorithm)
-  for await (const chunk of createReadStream(file)) hash.update(chunk)
-  const actual = algorithm === "sha512" ? hash.digest("base64") : hash.digest("hex")
-  if (actual !== expected) throw Error("Language server archive integrity check failed")
-}
-
-async function unzip(file, directory) {
-  const zip = await new Promise((resolve, reject) =>
-    yauzl.open(file, { lazyEntries: true, validateEntrySizes: true }, (error, opened) =>
-      error ? reject(error) : resolve(opened),
-    ),
-  )
-  await new Promise((resolve, reject) => {
-    let expanded = 0
-    const fail = (error) => {
-      zip.close()
-      reject(error)
-    }
-    zip.on("error", fail)
-    zip.on("end", resolve)
-    zip.on("entry", (entry) => {
-      void (async () => {
-        const parts = entry.fileName.replace(/\/$/, "").split("/")
-        if (
-          parts.some(
-            (part) => !part || part === "." || part === ".." || /[\\:\u0000-\u001f]/u.test(part),
-          ) ||
-          entry.fileName.startsWith("/")
-        )
-          throw Error("Invalid language server archive path")
-        const mode = (entry.externalFileAttributes >>> 16) & 0o170000
-        if (mode && mode !== 0o100000 && mode !== 0o040000)
-          throw Error("Language server archive contains a link")
-        expanded += entry.uncompressedSize
-        if (expanded > maxExtractedBytes) throw Error("Language server archive is too large")
-        const target = path.join(directory, ...parts)
-        if (entry.fileName.endsWith("/")) await mkdir(target, { recursive: true })
-        else {
-          await mkdir(path.dirname(target), { recursive: true })
-          const stream = await new Promise((resolve, reject) =>
-            zip.openReadStream(entry, (error, opened) => (error ? reject(error) : resolve(opened))),
-          )
-          await pipeline(stream, createWriteStream(target, { flags: "wx", mode: 0o644 }))
-        }
-        zip.readEntry()
-      })().catch(fail)
-    })
-    zip.readEntry()
-  })
-}
-
-async function findBinary(directory, binary, depth = 5) {
-  if (depth < 0) return null
-  for (const entry of await readdir(directory, { withFileTypes: true })) {
-    const target = path.join(directory, entry.name)
-    if (entry.isFile() && entry.name === binary) return target
-    if (entry.isDirectory()) {
-      const nested = await findBinary(target, binary, depth - 1)
-      if (nested) return nested
-    }
-  }
-  return null
 }
 
 async function extract(archive, directory, id, format) {

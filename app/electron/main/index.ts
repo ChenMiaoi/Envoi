@@ -20,6 +20,7 @@ import {
   workspaceProjectName,
 } from "../../server/workspaces.mjs"
 import {
+  detectTool,
   toolDirectories,
   paperSearchConfig,
   configurePaperSearch,
@@ -39,6 +40,7 @@ import { atomicProjectWrite, saveProjectFiles } from "./file-service.mjs"
 import { copyIntoProject } from "./file-transfer.mjs"
 import { LspService, lspLanguage } from "./lsp-service.mjs"
 import { installLanguageServer, installedServer } from "./lsp-installer.mjs"
+import { installedTool, installTool, toolInstallPlan } from "./tool-installer.mjs"
 import { runLanguageTool } from "./language-tools.mjs"
 
 import { createWorkspaceTrust } from "./workspace-trust.mjs"
@@ -234,6 +236,7 @@ const watchGenerations = new Map<number, number>()
 const projectRoots = new Map<string, string>()
 const activeRoots = new Map<number, string>()
 const managedLspDirectory = () => path.join(app.getPath("userData"), "language-servers")
+const managedToolsDirectory = () => path.join(app.getPath("userData"), "tools")
 const lspService = new LspService(
   (owner: number, payload: unknown) => {
     for (const window of BrowserWindow.getAllWindows())
@@ -621,14 +624,51 @@ function registerIpc(): void {
     await requireToolContext(event)
     const root = options?.root ? await requireBoundRoot(options.root) : undefined
     const info = (await toolsBackend.call("tools", [{ refresh: options?.refresh, root }])) as {
-      groups?: Record<string, { id: string; available: boolean; path?: string; version?: string }[]>
+      groups?: Record<
+        string,
+        {
+          id: string
+          available: boolean
+          path?: string
+          version?: string
+          candidates?: { path: string; version?: string }[]
+        }[]
+      >
     }
+    const mergeInstalled = (
+      row: {
+        available: boolean
+        path?: string
+        version?: string
+        candidates?: { path: string; version?: string }[]
+      },
+      installed: { path: string; version?: string },
+    ) => {
+      const candidates = row.candidates ?? []
+      Object.assign(row, {
+        available: true,
+        path: installed.path,
+        version: installed.version,
+        candidates: candidates.some((candidate) => candidate.path === installed.path)
+          ? candidates
+          : [{ path: installed.path, version: installed.version }, ...candidates],
+      })
+    }
+    const brew = detectTool("brew")
+    const rustup = detectTool("rustup")
+    for (const rows of Object.values(info.groups ?? {}))
+      for (const row of rows) {
+        const installed = await installedTool(managedToolsDirectory(), row.id)
+        if (installed) mergeInstalled(row, installed)
+        Object.assign(row, {
+          installable: !!toolInstallPlan(row.id, { brew: !!brew, rustup: !!rustup }),
+        })
+      }
     for (const language of ["cpp", "python", "rust"]) {
       const installed = await installedServer(managedLspDirectory(), language)
       const group = info.groups?.[language]
       const row = group?.find((entry) => entry.id === installed?.id)
-      if (row && installed)
-        Object.assign(row, { available: true, path: installed.path, version: installed.version })
+      if (row && installed) mergeInstalled(row, installed)
     }
     return info
   })
@@ -637,6 +677,10 @@ function registerIpc(): void {
     const installed = await installLanguageServer(managedLspDirectory(), language)
     if (!installed) throw Error("Language server installation failed")
     return { id: installed.id, path: installed.path, version: installed.version }
+  })
+  handle("envoi:install-tool", async (event, id: string) => {
+    await requireToolContext(event)
+    return installTool(managedToolsDirectory(), id)
   })
   handle(
     "envoi:language-tool",
