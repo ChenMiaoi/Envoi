@@ -647,3 +647,64 @@ test("disk refresh keeps dirty and deleted drafts while updating clean files", a
   const deleted = mergeDiskProject(merged, await readProject(initial.rootPath!))
   assert.equal(deleted.files.find((file) => file.path === "main.tex")?.text, "unsaved draft")
 })
+
+test("project settings reject a competing write after reading their baseline", async () => {
+  const directory = new MemoryDirectory("settings-race")
+  directory.children.set("main.tex", new MemoryFile("main.tex", "source"))
+  const first = await saveProjectConfiguration(await readProject(directory.asHandle()), {
+    version: 1,
+    overrides: {},
+  })
+  const config = (await directory.getDirectoryHandle(".envoi")).children.get(
+    "project.json",
+  ) as MemoryFile
+  const save = window.envoi!.fsSave
+  const competing = JSON.stringify({ ...JSON.parse(config.contents), otherWindow: "preserve me" })
+  window.envoi!.fsSave = async (...args) => {
+    config.contents = competing
+    return save(...args)
+  }
+  await assert.rejects(
+    saveProjectConfiguration(first, {
+      version: 1,
+      overrides: { engine: "xelatex" },
+    }),
+    /外部修改/,
+  )
+  assert.equal(config.contents, competing)
+})
+
+test("ignore write failure leaves project settings unchanged and permits retry", async () => {
+  const directory = new MemoryDirectory("settings-permission")
+  directory.children.set("main.tex", new MemoryFile("main.tex", "source"))
+  const ignore = new MemoryFile(".gitignore", "custom-rule\n")
+  ignore.failWrite = true
+  directory.children.set(".gitignore", ignore)
+  const project = await readProject(directory.asHandle())
+  await assert.rejects(
+    saveProjectConfiguration(project, {
+      version: 1,
+      overrides: { engine: "xelatex" },
+    }),
+    /Permission denied/,
+  )
+  assert.equal(directory.children.has(".envoi"), false)
+  assert.equal(ignore.contents, "custom-rule\n")
+  ignore.failWrite = false
+  await saveProjectConfiguration(project, { version: 1, overrides: { engine: "xelatex" } })
+  assert.equal((await readProject(project.rootPath!)).settings?.overrides.engine, "xelatex")
+})
+
+test("unreadable settings are not treated as missing configuration", async () => {
+  const directory = new MemoryDirectory("settings-unreadable")
+  directory.children.set("main.tex", new MemoryFile("main.tex", "source"))
+  const project = await readProject(directory.asHandle())
+  window.envoi!.fsRead = async () => {
+    throw new DOMException("Permission denied", "NotAllowedError")
+  }
+  await assert.rejects(
+    saveProjectConfiguration(project, { version: 1, overrides: {} }),
+    /Permission denied/,
+  )
+  assert.equal(directory.children.has(".envoi"), false)
+})

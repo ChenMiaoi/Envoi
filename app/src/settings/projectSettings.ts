@@ -24,12 +24,23 @@ export async function saveProjectConfiguration(
     legacy = project.files.find((file) => file.path === "paperdesk.json")
   if ([known, legacy].some((file) => file && file.text !== file.saved))
     throw Error(translate("settings.project.unsavedEdits"))
-  const readDisk = async (path: string) =>
-    (
-      await envoi()
-        .fsRead(project.rootPath!, path)
-        .catch(() => undefined)
-    )?.text
+  const readDisk = async (path: string) => {
+    try {
+      const result = await envoi().fsRead(project.rootPath!, path)
+      if (result.text === undefined) throw Error(translate("settings.project.invalidFormat"))
+      return result.text
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        (error.name === "NotFoundError" || /\bENOENT\b/.test(error.message))
+      )
+        return undefined
+      throw error
+    }
+  }
+  const nativeRaw = await readDisk(projectConfigPath)
+  if (nativeRaw !== undefined && known?.path !== projectConfigPath)
+    throw Error(translate("settings.project.externallyModified"))
   let raw: string | undefined
   for (const dir of known ? [known.path.split("/")[0]] : [managementDirName, legacyDirName]) {
     raw = await readDisk(`${dir}/project.json`)
@@ -59,7 +70,8 @@ export async function saveProjectConfiguration(
     }
   }
   const ignoreKnown = project.files.find((file) => file.path === ".gitignore")
-  const ignoreRaw = (await readDisk(".gitignore")) ?? ""
+  const ignoreDisk = await readDisk(".gitignore")
+  const ignoreRaw = ignoreDisk ?? ""
   const ignoreRules = `!/${managementDirName}/\n/${managementDirName}/*\n!/${projectConfigPath}`
   const updateIgnore = !ignoreRaw.includes(ignoreRules)
   if (
@@ -84,8 +96,7 @@ export async function saveProjectConfiguration(
   if (root) metadata.main = root.path
   delete metadata.engine
   const text = JSON.stringify(metadata, null, 2) + "\n"
-  await envoi().fsMkdir(project.rootPath, managementDirName)
-  await envoi().fsWrite(project.rootPath, projectConfigPath, { text })
+  const changes: { path: string; text: string; expectedText: string | null }[] = []
   let ignoreFile = ignoreKnown
   if (updateIgnore) {
     const ignoreText =
@@ -94,13 +105,7 @@ export async function saveProjectConfiguration(
       "\n# Share project settings; keep machine bindings and caches private\n" +
       ignoreRules +
       "\n"
-    try {
-      await envoi().fsWrite(project.rootPath, ".gitignore", { text: ignoreText })
-    } catch (error) {
-      throw Error(
-        translate("settings.project.gitignoreUpdateFailed", { error: (error as Error).message }),
-      )
-    }
+    changes.push({ path: ".gitignore", text: ignoreText, expectedText: ignoreDisk ?? null })
     ignoreFile = {
       id: ".gitignore",
       path: ".gitignore",
@@ -109,6 +114,13 @@ export async function saveProjectConfiguration(
       saved: ignoreText,
     }
   }
+  // Validate/stage both files under the main-process save lock. Commit the
+  // configuration last so an ignore-file failure cannot change project settings.
+  changes.push({ path: projectConfigPath, text, expectedText: nativeRaw ?? null })
+  const result = await envoi().fsSave(project.rootPath, changes)
+  if (result.error) throw Error(result.error)
+  if (!result.saved.includes(projectConfigPath))
+    throw Error(translate("settings.project.externallyModified"))
   // Legacy files remain an untouched backup, including unknown fields. New configuration is authoritative.
   const file = {
     id: projectConfigPath,
