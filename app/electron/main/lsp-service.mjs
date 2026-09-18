@@ -294,7 +294,8 @@ class Session {
       capabilities: {
         textDocument: {
           synchronization: { dynamicRegistration: false },
-          completion: { completionItem: { snippetSupport: false } },
+          // 渲染进程按 TextMate 模板展开 snippet(占位符 Tab 跳转),可安全声明支持。
+          completion: { completionItem: { snippetSupport: true } },
           hover: {},
           definition: {},
           publishDiagnostics: {},

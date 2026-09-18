@@ -9,9 +9,19 @@ import {
   highlightActiveLineGutter,
 } from "@codemirror/view"
 import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirror/commands"
-import { LanguageDescription, syntaxHighlighting } from "@codemirror/language"
+import { LanguageDescription, syntaxHighlighting, bracketMatching } from "@codemirror/language"
 import { languages } from "@codemirror/language-data"
-import { autocompletion, type Completion, type CompletionContext } from "@codemirror/autocomplete"
+import {
+  autocompletion,
+  acceptCompletion,
+  completionKeymap,
+  snippet,
+  nextSnippetField,
+  prevSnippetField,
+  clearSnippet,
+  type Completion,
+  type CompletionContext,
+} from "@codemirror/autocomplete"
 import { lintGutter, setDiagnostics, type Diagnostic } from "@codemirror/lint"
 import { toast } from "sonner"
 import { envoi } from "@/lib/desktop"
@@ -23,6 +33,7 @@ import {
   publishToolDiagnostics,
 } from "@/lib/lspStatus"
 import { codeHighlight } from "@/lib/codeHighlight"
+import { editorChrome } from "@/lib/editorTheme"
 import { fontCss } from "@/settings/fonts"
 import { usePreferences } from "@/settings/context"
 import { lspLanguageForPath } from "@/lib/lspLanguage"
@@ -39,6 +50,7 @@ type LspCompletion = {
   detail?: string
   documentation?: string | { value: string }
   insertText?: string
+  insertTextFormat?: number
   textEdit?:
     { range: LspRange; newText: string } | { insert: LspRange; replace: LspRange; newText: string }
   additionalTextEdits?: { range: LspRange; newText: string }[]
@@ -56,6 +68,35 @@ const linters: Record<string, string> = {
   cpp: "clangTidy",
   python: "ruffLint",
   rust: "clippy",
+}
+
+// LSP CompletionItemKind → CodeMirror 补全类型(决定图标徽章)。
+const completionTypes: Record<number, string> = {
+  1: "text",
+  2: "method",
+  3: "function",
+  4: "function",
+  5: "property",
+  6: "variable",
+  7: "class",
+  8: "interface",
+  9: "namespace",
+  10: "property",
+  11: "constant",
+  12: "constant",
+  13: "enum",
+  14: "keyword",
+  15: "text",
+  16: "constant",
+  17: "text",
+  18: "text",
+  19: "text",
+  20: "constant",
+  21: "constant",
+  22: "type",
+  23: "text",
+  24: "keyword",
+  25: "type",
 }
 
 function offset(view: EditorView, point: LspPosition) {
@@ -176,11 +217,31 @@ export function CodeEditor({
         .map((item) => ({
           label: item.label,
           filterText: item.filterText,
+          type: item.kind === undefined ? undefined : completionTypes[item.kind],
           detail: item.detail,
           info: documentation(item.documentation),
           apply: (editor, _completion, from, to) => {
             const changes = completionChanges(editor.state.doc, item, from, to)
-            if (changes.length) editor.dispatch({ changes })
+            if (!changes.length) return
+            const [primary, ...extras] = changes
+            if (item.insertTextFormat !== 2) {
+              editor.dispatch({ changes })
+              return
+            }
+            // snippet 补全(clangd 函数占位符等):先插入附加编辑(import 等),
+            // 映射主编辑位置后按模板展开,Tab 在占位符间跳转。
+            const mapping = editor.state.changes(extras)
+            editor.dispatch({ changes: extras })
+            // LSP 允许 $0/$1 简写且可省略 $0(默认模板末尾);
+            // CodeMirror 只解析 ${…} 形式,先规范化再补终结位。
+            const normalized = primary.insert.replace(/(?<![\\{])\$(\d+)/g, "${$1}")
+            const template = /\$\{0[:}]/.test(normalized) ? normalized : `${normalized}\${0}`
+            snippet(template)(
+              editor,
+              _completion,
+              mapping.mapPos(primary.from, 1),
+              mapping.mapPos(primary.to, -1),
+            )
           },
         }))
       return options.length ? { from: word?.from ?? context.pos, options } : null
@@ -194,11 +255,18 @@ export function CodeEditor({
           EditorView.lineWrapping,
           history(),
           keymap.of([
+            // snippet 占位符跳转优先于补全接受与缩进。
+            { key: "Tab", run: nextSnippetField },
+            { key: "Shift-Tab", run: prevSnippetField },
+            { key: "Escape", run: clearSnippet },
             {
               key: "F12",
               run: (editor) => goToDefinition(editor, editor.state.selection.main.head),
             },
+            // Tab 优先接受补全;弹窗未打开时落到 indentWithTab。
+            { key: "Tab", run: acceptCompletion },
             indentWithTab,
+            ...completionKeymap,
             ...defaultKeymap,
             ...historyKeymap,
           ]),
@@ -207,6 +275,8 @@ export function CodeEditor({
           highlightActiveLine(),
           highlightActiveLineGutter(),
           syntaxHighlighting(codeHighlight, { fallback: true }),
+          bracketMatching(),
+          editorChrome,
           hoverTooltip(async (editor, pos) => {
             const result = (await query(
               "textDocument/hover",
@@ -227,7 +297,7 @@ export function CodeEditor({
               end: result?.range ? (offset(editor, result.range.end) ?? pos) : pos,
               create: () => {
                 const dom = document.createElement("pre")
-                dom.className = "max-w-md whitespace-pre-wrap p-2 text-xs"
+                dom.className = "cm-hover-doc"
                 dom.textContent = content
                 return { dom }
               },
@@ -510,39 +580,11 @@ export function CodeEditor({
         EditorView.theme(
           {
             "&": {
-              height: "100%",
               fontFamily: fontCss(preferences.fontFamily, editorFonts),
               fontSize: `${preferences.fontSize}px`,
-              color: "hsl(var(--foreground))",
             },
             ".cm-scroller": { overflow: "auto", lineHeight: String(preferences.lineHeight) },
-            ".cm-content": { padding: "16px", tabSize: String(preferences.tabSize) },
-            "&.cm-focused": { outline: "none" },
-            ".cm-cursor": { borderLeftColor: "hsl(var(--primary))" },
-            ".cm-selectionBackground, &.cm-focused .cm-selectionBackground": {
-              background: "hsl(var(--primary) / .2)",
-            },
-            ".cm-gutters": {
-              background: "transparent",
-              color: "hsl(var(--muted-foreground) / .55)",
-              border: "none",
-            },
-            ".cm-activeLine": { background: "hsl(var(--foreground) / .045)" },
-            ".cm-activeLineGutter": {
-              background: "transparent",
-              color: "hsl(var(--foreground))",
-            },
-            ".cm-tooltip": {
-              backgroundColor: "hsl(var(--popover))",
-              color: "hsl(var(--popover-foreground))",
-              border: "1px solid hsl(var(--border))",
-              borderRadius: "6px",
-              boxShadow: "0 8px 24px hsl(0 0% 0% / .2)",
-            },
-            ".cm-tooltip-autocomplete ul li[aria-selected]": {
-              backgroundColor: "hsl(var(--accent))",
-              color: "hsl(var(--accent-foreground))",
-            },
+            ".cm-content": { tabSize: String(preferences.tabSize) },
           },
           { dark: themes[preferences.theme].mode === "dark" },
         ),

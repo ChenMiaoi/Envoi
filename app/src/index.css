@@ -935,16 +935,22 @@ body {
 .hljs-selector-tag,
 .hljs-doctag,
 .hljs-template-tag {
-  color: hsl(var(--hue-violet));
+  color: hsl(var(--hue-red));
 }
 .hljs-string,
-.hljs-regexp,
-.hljs-addition,
 .hljs-meta .hljs-string {
+  color: hsl(var(--hue-yellow));
+}
+.hljs-regexp {
+  color: hsl(var(--hue-orange));
+}
+.hljs-addition {
   color: hsl(var(--hue-green));
 }
 .hljs-number,
-.hljs-literal,
+.hljs-literal {
+  color: hsl(var(--hue-green));
+}
 .hljs-symbol,
 .hljs-bullet,
 .hljs-link {
@@ -962,9 +968,12 @@ body {
   color: hsl(var(--hue-blue));
 }
 .hljs-title.class_,
-.hljs-type,
-.hljs-built_in {
+.hljs-type {
   color: hsl(var(--hue-cyan));
+}
+.hljs-built_in,
+.hljs-meta {
+  color: hsl(var(--hue-violet));
 }
 .hljs-attr,
 .hljs-attribute,
@@ -978,9 +987,6 @@ body {
 .hljs-selector-pseudo,
 .hljs-subst {
   color: hsl(var(--hue-pink));
-}
-.hljs-meta {
-  color: hsl(var(--muted-foreground));
 }
 .hljs-deletion {
   color: hsl(var(--hue-red));
