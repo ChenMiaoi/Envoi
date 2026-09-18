@@ -1,0 +1,55 @@
+{
+  "id": "envoi.cpp",
+  "version": "0.1.0",
+  "apiVersion": 1,
+  "displayNameKey": "extensions.cpp.name",
+  "descriptionKey": "extensions.cpp.description",
+  "activationEvents": ["onLanguage:c", "onLanguage:cpp"],
+  "capabilities": ["process", "files"],
+  "contributes": {
+    "languages": [
+      {
+        "id": "c",
+        "extensions": [".c", ".h"]
+      },
+      {
+        "id": "cpp",
+        "extensions": [".cc", ".cpp", ".cxx", ".c++", ".hh", ".hpp", ".hxx", ".h++"]
+      }
+    ],
+    "tools": [
+      {
+        "id": "gcc",
+        "binaries": ["gcc", "g++"],
+        "label": "GCC",
+        "group": "cpp",
+        "probe": "version"
+      },
+      {
+        "id": "clang",
+        "binaries": ["clang", "clang++"],
+        "label": "Clang/LLVM",
+        "group": "cpp",
+        "probe": "version"
+      },
+      {
+        "id": "clangd",
+        "binary": "clangd",
+        "label": "clangd",
+        "group": "cpp",
+        "kind": "lsp",
+        "languages": ["c", "cpp"],
+        "probe": "presence"
+      },
+      {
+        "id": "ccls",
+        "binary": "ccls",
+        "label": "ccls",
+        "group": "cpp",
+        "kind": "lsp",
+        "languages": ["c", "cpp"],
+        "probe": "presence"
+      }
+    ]
+  }
+}

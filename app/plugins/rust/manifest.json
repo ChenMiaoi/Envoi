@@ -1,0 +1,42 @@
+{
+  "id": "envoi.rust",
+  "version": "0.1.0",
+  "apiVersion": 1,
+  "displayNameKey": "extensions.rust.name",
+  "descriptionKey": "extensions.rust.description",
+  "activationEvents": ["onLanguage:rust"],
+  "capabilities": ["process", "files"],
+  "contributes": {
+    "languages": [
+      {
+        "id": "rust",
+        "extensions": [".rs"]
+      }
+    ],
+    "tools": [
+      {
+        "id": "cargo",
+        "binary": "cargo",
+        "label": "Cargo",
+        "group": "rust",
+        "probe": "version"
+      },
+      {
+        "id": "rustc",
+        "binary": "rustc",
+        "label": "Rust",
+        "group": "rust",
+        "probe": "version"
+      },
+      {
+        "id": "rustAnalyzer",
+        "binary": "rust-analyzer",
+        "label": "rust-analyzer",
+        "group": "rust",
+        "kind": "lsp",
+        "languages": ["rust"],
+        "probe": "presence"
+      }
+    ]
+  }
+}

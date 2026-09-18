@@ -1,0 +1,62 @@
+{
+  "id": "envoi.python",
+  "version": "0.1.0",
+  "apiVersion": 1,
+  "displayNameKey": "extensions.python.name",
+  "descriptionKey": "extensions.python.description",
+  "activationEvents": ["onLanguage:python"],
+  "capabilities": ["process", "files"],
+  "contributes": {
+    "languages": [
+      {
+        "id": "python",
+        "extensions": [".py", ".pyi", ".pyw"]
+      }
+    ],
+    "tools": [
+      {
+        "id": "python",
+        "binary": "python",
+        "label": "Python",
+        "group": "python",
+        "probe": "version"
+      },
+      {
+        "id": "uv",
+        "binary": "uv",
+        "label": "uv",
+        "group": "python",
+        "probe": "version"
+      },
+      {
+        "id": "basedpyright",
+        "binary": "basedpyright-langserver",
+        "label": "basedpyright",
+        "group": "python",
+        "kind": "lsp",
+        "languages": ["python"],
+        "args": ["--stdio"],
+        "probe": "presence"
+      },
+      {
+        "id": "pyright",
+        "binary": "pyright-langserver",
+        "label": "Pyright",
+        "group": "python",
+        "kind": "lsp",
+        "languages": ["python"],
+        "args": ["--stdio"],
+        "probe": "presence"
+      },
+      {
+        "id": "pylsp",
+        "binary": "pylsp",
+        "label": "python-lsp-server",
+        "group": "python",
+        "kind": "lsp",
+        "languages": ["python"],
+        "probe": "presence"
+      }
+    ]
+  }
+}
