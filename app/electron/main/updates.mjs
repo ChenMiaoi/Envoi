@@ -24,7 +24,11 @@ function compareCore(next, installed) {
 }
 
 export function newerVersion(candidate, current) {
-  return compareCore(parseVersion(candidate).core, parseVersion(current).core) > 0
+  const next = parseVersion(candidate),
+    installed = parseVersion(current)
+  const core = compareCore(next.core, installed.core)
+  if (core !== 0) return core > 0
+  return installed.rc !== null && (next.rc === null || next.rc > installed.rc)
 }
 
 function newerPreviewVersion(candidate, current) {

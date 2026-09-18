@@ -45,7 +45,7 @@ test("release versions compare numerically and never downgrade", () => {
   assert.equal(newerVersion("v0.10.0", "0.9.9"), true)
   assert.equal(newerVersion("v0.1.0", "0.1.0"), false)
   assert.equal(newerVersion("v0.1.0", "0.2.0"), false)
-  assert.equal(newerVersion("v0.4.1", "0.4.1-rc1"), false)
+  assert.equal(newerVersion("v0.4.1", "0.4.1-rc1"), true)
   assert.equal(newerVersion("v0.4.2", "0.4.1-rc1"), true)
   assert.throws(() => newerVersion("invalid", "0.1.0"))
 })
@@ -149,4 +149,22 @@ test("installer downloads into Downloads without overwriting or accepting a bad 
   } finally {
     await rm(directory, { recursive: true, force: true })
   }
+})
+
+test("stable release upgrades the same-core RC without downgrading a stable install", async () => {
+  for (const [candidate, installed, expected] of [
+    ["0.4.1", "0.4.1-rc2", true],
+    ["0.4.1-rc2", "0.4.1-rc1", true],
+    ["0.4.1-rc1", "0.4.1-rc2", false],
+    ["0.4.1-rc2", "0.4.1", false],
+    ["0.4.1", "0.4.1", false],
+    ["0.4.0", "0.4.1-rc1", false],
+  ])
+    assert.equal(newerVersion(candidate, installed), expected)
+  const result = await checkUpdate("0.4.1-rc1", async () => new Response(JSON.stringify(release)), {
+    platform: "darwin",
+    arch: "arm64",
+  })
+  assert.equal(result.status, "available")
+  assert.equal(result.latestVersion, "0.4.1")
 })
