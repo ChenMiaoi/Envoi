@@ -2,6 +2,7 @@ import { test } from "node:test"
 import assert from "node:assert/strict"
 import { mkdtemp, mkdir, writeFile, rm, symlink } from "node:fs/promises"
 import path from "node:path"
+import { execFileSync } from "node:child_process"
 import { homedir, tmpdir } from "node:os"
 import {
   detectTool,
@@ -146,6 +147,32 @@ test("a rustup proxy without the rust-analyzer component is unavailable", async 
     await assert.rejects(probeLanguageServerPath("rustAnalyzer", proxy), /not installed/)
   } finally {
     process.env = saved
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test("editor-bundled rust-analyzer outside PATH is discovered", async () => {
+  if (process.platform === "win32") return
+  const root = await mkdtemp(path.join(tmpdir(), "envoi-bundled-analyzer-"))
+  try {
+    const server = path.join(
+      root,
+      ".vscode",
+      "extensions",
+      "rust-lang.rust-analyzer-9.9.9-darwin-arm64",
+      "server",
+    )
+    await mkdir(server, { recursive: true })
+    const binary = path.join(server, "rust-analyzer")
+    await writeFile(binary, '#!/bin/sh\necho "rust-analyzer 9.9.9-standalone"\n', { mode: 0o755 })
+    // 子进程隔离 HOME：同进程测试整体替换 process.env 后 os.homedir() 不再跟随 HOME
+    const script = `import(${JSON.stringify(pathToFileURL(path.resolve("server/tool-config.mjs")).href)}).then(async (m) => console.log(JSON.stringify((await m.probeCandidates("rust-analyzer")).map((c) => c.path))))`
+    const output = execFileSync(process.execPath, ["--input-type=module", "-e", script], {
+      env: { HOME: root, PATH: "/bin" },
+      encoding: "utf8",
+    })
+    assert.deepEqual(JSON.parse(output), [binary])
+  } finally {
     await rm(root, { recursive: true, force: true })
   }
 })

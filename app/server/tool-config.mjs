@@ -87,8 +87,48 @@ export function toolDirectories() {
     ),
   ]
 }
+// 列出 parent 下每个子目录中的 child 目录；parent 不存在时返回空。
+function subDirectories(parent, child, pattern) {
+  try {
+    return readdirSync(parent)
+      .filter((entry) => !pattern || pattern.test(entry))
+      .map((entry) => path.join(parent, entry, child))
+  } catch {
+    return []
+  }
+}
+// 常见但不在 PATH 中的安装位置：
+// - rustup 工具链目录（~/.cargo/bin 代理缺失组件时找到真实二进制）
+// - VS Code 系编辑器扩展捆绑的 rust-analyzer 独立二进制
+// - Homebrew keg-only LLVM 与 Linux 版本化 LLVM（clangd/clang-format/clang-tidy 不链入 PATH）
+// - nvm 管理的 Node 全局 bin（pyright 等 npm 安装的语言服务器）
+export function extraDirectories(name) {
+  const directories = []
+  if (
+    ["rust-analyzer", "rustfmt", "cargo-clippy", "clippy-driver", "rustc", "cargo"].includes(name)
+  )
+    directories.push(...subDirectories(path.join(homedir(), ".rustup", "toolchains"), "bin"))
+  if (name === "rust-analyzer")
+    for (const editor of [".vscode", ".vscode-insiders", ".cursor", ".windsurf", ".vscode-oss"]) {
+      const extensions = path.join(homedir(), editor, "extensions")
+      try {
+        for (const entry of readdirSync(extensions))
+          if (entry.startsWith("rust-lang.rust-analyzer-"))
+            directories.push(path.join(extensions, entry, "server"))
+      } catch {
+        /* 编辑器未安装 */
+      }
+    }
+  if (["clangd", "clang-format", "clang-tidy"].includes(name))
+    if (process.platform === "darwin")
+      directories.push("/opt/homebrew/opt/llvm/bin", "/usr/local/opt/llvm/bin")
+    else if (process.platform === "linux")
+      directories.push(...subDirectories("/usr/lib", "bin", /^llvm-\d+/))
+  directories.push(...subDirectories(path.join(homedir(), ".nvm", "versions", "node"), "bin"))
+  return directories
+}
 export function detectTool(name) {
-  return toolDirectories()
+  return [...toolDirectories(), ...extraDirectories(name)]
     .map((prefix) => path.join(prefix, executableName(name)))
     .find((candidate) => {
       try {
@@ -104,6 +144,7 @@ export function toolCandidates(name, root) {
   const prefixes = [
     ...(local ? [path.join(local, process.platform === "win32" ? "Scripts" : "bin")] : []),
     ...toolDirectories(),
+    ...extraDirectories(name),
   ]
   const seen = new Set()
   return prefixes.flatMap((prefix) => {

@@ -124,7 +124,15 @@ try {
   )
   assert.equal(await cpp.getByRole("button", { name: "手动输入路径" }).count(), 5)
   assert.match(await cpp.textContent(), /语言服务器.*格式化.*代码检查/)
-  const tidyInput = cpp.getByRole("textbox", { name: "clang-tidy 手动输入路径" })
+  let tidyInput = cpp.getByRole("textbox", { name: "clang-tidy 手动输入路径" })
+  if ((await tidyInput.count()) === 0) {
+    await cpp
+      .locator(".rounded-xl", { hasText: "clang-tidy" })
+      .first()
+      .getByRole("button", { name: "手动输入路径" })
+      .click()
+    tidyInput = cpp.getByRole("textbox", { name: "clang-tidy 手动输入路径" })
+  }
   await tidyInput.fill(tidy)
   await tidyInput.locator("..").getByRole("button", { name: "使用" }).click()
   await page.waitForFunction(
