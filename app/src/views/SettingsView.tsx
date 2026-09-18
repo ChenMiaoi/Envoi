@@ -8,6 +8,7 @@ import { PaperSearchSettings } from "@/settings/PaperSearchSettings"
 import { notify } from "@/lib/notifications"
 import { Notification } from "@/components/Notification"
 import { ShortcutsView } from "@/settings/ShortcutsView"
+import { ExtensionsSettings } from "@/settings/ExtensionsSettings"
 import { useCallback, useEffect, useState } from "react"
 import { NavLink, useLocation, Link } from "react-router"
 import { useProject } from "@/project/context"
@@ -390,7 +391,9 @@ export function SettingsView() {
           <div className="mx-auto max-w-3xl">
             <h2 className="mb-3 text-base font-medium">{t(settingCategories[category])}</h2>
             {error && <Notification message={error} kind="error" />}
-            {category === "ai" ? (
+            {category === "extensions" ? (
+              <ExtensionsSettings scope={scope} />
+            ) : category === "ai" ? (
               <AiSettingsView scope={scope} />
             ) : (
               <>

@@ -45,8 +45,32 @@ try {
     root,
   )
   assert.match(await readFile(path.join(root, "hello.py"), "utf8"), /answer = value \+ 1/)
+  await page.getByRole("link", { name: "设置", exact: true }).first().click()
+  await page.getByRole("link", { name: "扩展", exact: true }).click()
+  const cpp = page.locator("article").filter({ hasText: "envoi.cpp" })
+  await cpp.getByRole("checkbox").uncheck()
+  await page.waitForFunction(
+    () =>
+      JSON.parse(localStorage.getItem("envoi.preferences.v1") ?? "{}").pluginStates?.[
+        "envoi.cpp"
+      ] === false,
+  )
+  await page.getByRole("link", { name: "阅读", exact: true }).first().click()
+  await page.getByRole("button", { name: "main.cpp", exact: true }).click()
+  await editor.click()
+  await editor.press("Control+End")
+  await editor.press("Enter")
+  await editor.type("// still editable without language service")
+  await editor.press("Control+s")
+  await page.waitForFunction(
+    async (root) =>
+      (await window.envoi.fsRead(root, "main.cpp")).text.includes(
+        "still editable without language service",
+      ),
+    root,
+  )
   assert.deepEqual(errors, [])
-  console.log("PASS code editor opens Python, C++ and TOML and preserves source edits")
+  console.log("PASS code editor preserves edits with a language plugin disabled")
 } finally {
   if (app) {
     await app.evaluate(({ app }) => app.exit(0)).catch(() => {})

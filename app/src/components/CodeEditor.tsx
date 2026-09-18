@@ -19,7 +19,8 @@ import { codeHighlight } from "@/lib/codeHighlight"
 import { fontCss } from "@/settings/fonts"
 import { usePreferences } from "@/settings/context"
 import { lspLanguageForPath } from "@/lib/lspLanguage"
-import { editorFonts } from "@/settings/model"
+import { editorFonts, pluginEnabled } from "@/settings/model"
+import { pluginForLanguage } from "@/settings/pluginCatalog"
 
 type LspPosition = { line: number; character: number }
 type LspRange = { start: LspPosition; end: LspPosition }
@@ -75,6 +76,11 @@ export function CodeEditor({
   const ready = useRef(false)
   const server = useRef("LSP")
   const { preferences } = usePreferences()
+  const enabled = pluginEnabled(
+    preferences,
+    root,
+    pluginForLanguage(lspLanguageForPath(path)) ?? "",
+  )
   callbacks.current = { onChange, onNavigate }
 
   useLayoutEffect(() => {
@@ -246,7 +252,7 @@ export function CodeEditor({
           )
         })
       : () => {}
-    if (root)
+    if (root && enabled)
       void envoi()
         .lspOpen(root, path, source, token, preferences.lspServers[lspLanguageForPath(path) ?? ""])
         .then((result) => {

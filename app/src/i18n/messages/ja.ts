@@ -1,6 +1,28 @@
 /** 日本語メッセージ。zh-CN と完全に同じキーを持つこと。 */
 import type { Messages } from "./zh-CN"
 const ja: Messages = {
+  "settings.category.extensions": "拡張機能",
+  "extensions.cpp.name": "C/C++",
+  "extensions.cpp.description": "C/C++ の補完、診断、移動",
+  "extensions.python.name": "Python",
+  "extensions.python.description": "Python の補完、診断、移動",
+  "extensions.rust.name": "Rust",
+  "extensions.rust.description": "Rust の補完、診断、移動",
+  "extensions.localEnvironment": "ローカルツール環境",
+  "extensions.openProject": "プロジェクトを開いてください。",
+  "extensions.disabled": "無効",
+  "extensions.running": "実行中",
+  "extensions.missingTool": "言語サーバーがありません",
+  "extensions.toolReady": "ツールを検出",
+  "extensions.enabled": "有効",
+  "extensions.inherited": "全体設定を継承",
+  "extensions.workspaceOverride": "ワークスペース設定",
+  "extensions.reset": "継承に戻す",
+  "extensions.languageServer": "言語サーバー",
+  "extensions.autoDetect": "自動検出",
+  "extensions.toolSettings": "ツール設定",
+  "extensions.logs": "診断ログ",
+
   "chat.statsRunning": "実行中",
   "chat.statsComplete": "完了",
   "chat.statsFailed": "失敗",

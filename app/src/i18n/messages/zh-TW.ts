@@ -1,6 +1,28 @@
 /** 由 scripts/i18n-traditional.mjs 从 zh-CN.ts 自动生成（OpenCC）。术语覆盖请修改该脚本，勿手改本文件。 */
 import type { Messages } from "./zh-CN"
 const zhTW: Messages = {
+  "settings.category.extensions": "擴充功能",
+  "extensions.cpp.name": "C/C++",
+  "extensions.cpp.description": "C 與 C++ 補全、診斷與跳轉",
+  "extensions.python.name": "Python",
+  "extensions.python.description": "Python 補全、診斷與跳轉",
+  "extensions.rust.name": "Rust",
+  "extensions.rust.description": "Rust 補全、診斷與跳轉",
+  "extensions.localEnvironment": "本機工具環境",
+  "extensions.openProject": "請先開啟專案，再設定工作區擴充功能。",
+  "extensions.disabled": "已停用",
+  "extensions.running": "執行中",
+  "extensions.missingTool": "缺少語言伺服器",
+  "extensions.toolReady": "已偵測到工具",
+  "extensions.enabled": "啟用",
+  "extensions.inherited": "繼承全域設定",
+  "extensions.workspaceOverride": "工作區覆寫",
+  "extensions.reset": "恢復繼承",
+  "extensions.languageServer": "語言伺服器",
+  "extensions.autoDetect": "自動偵測",
+  "extensions.toolSettings": "工具設定",
+  "extensions.logs": "診斷日誌",
+
   "chat.statsRunning": "執行中",
   "chat.statsComplete": "已完成",
   "chat.statsFailed": "失敗",

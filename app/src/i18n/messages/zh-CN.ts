@@ -3,6 +3,28 @@
  * 插值占位符使用 {name}；翻译文件必须与本文件键集合完全一致（编译期以 Record<MessageKey,string> 保证）。
  */
 export const zhCN = {
+  "settings.category.extensions": "扩展",
+  "extensions.cpp.name": "C/C++",
+  "extensions.cpp.description": "C 和 C++ 补全、诊断与跳转",
+  "extensions.python.name": "Python",
+  "extensions.python.description": "Python 补全、诊断与跳转",
+  "extensions.rust.name": "Rust",
+  "extensions.rust.description": "Rust 补全、诊断与跳转",
+  "extensions.localEnvironment": "本机工具环境",
+  "extensions.openProject": "请先打开项目，再设置工作区扩展。",
+  "extensions.disabled": "已停用",
+  "extensions.running": "运行中",
+  "extensions.missingTool": "缺少语言服务器",
+  "extensions.toolReady": "已检测到工具",
+  "extensions.enabled": "启用",
+  "extensions.inherited": "继承全局设置",
+  "extensions.workspaceOverride": "工作区覆盖",
+  "extensions.reset": "恢复继承",
+  "extensions.languageServer": "语言服务器",
+  "extensions.autoDetect": "自动检测",
+  "extensions.toolSettings": "工具设置",
+  "extensions.logs": "诊断日志",
+
   "chat.statsRunning": "运行中",
   "chat.statsComplete": "已完成",
   "chat.statsFailed": "失败",

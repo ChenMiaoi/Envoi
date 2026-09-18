@@ -30,6 +30,8 @@ export interface Preferences {
   lintEnabled: boolean
   defaultGit: boolean
   lspServers: Record<string, string>
+  pluginStates: Record<string, boolean>
+  pluginWorkspaces: Record<string, Record<string, boolean>>
 }
 export interface ProjectConfiguration {
   version: 1
@@ -55,6 +57,8 @@ export const defaults: Preferences = {
   lintEnabled: true,
   defaultGit: true,
   lspServers: {},
+  pluginStates: {},
+  pluginWorkspaces: {},
 }
 /** 主题完整色板定义在 index.css 的 [data-theme] 块中；这里只保存元数据与设置页预览色。 */
 export type ThemeId = "graphite" | "classic" | "midnight" | "forest" | "paper" | "mist"
@@ -162,7 +166,34 @@ export function normalizePreferences(raw: unknown): Preferences {
             ),
           )
         : {},
+    pluginStates: normalizePluginStates(value.pluginStates),
+    pluginWorkspaces:
+      value.pluginWorkspaces &&
+      typeof value.pluginWorkspaces === "object" &&
+      !Array.isArray(value.pluginWorkspaces)
+        ? Object.fromEntries(
+            Object.entries(value.pluginWorkspaces)
+              .filter(([root]) => root.length > 0 && root.length < 4096)
+              .map(([root, states]) => [root, normalizePluginStates(states)]),
+          )
+        : {},
   }
+}
+const pluginIds = new Set(["envoi.cpp", "envoi.python", "envoi.rust"])
+function normalizePluginStates(raw: unknown): Record<string, boolean> {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {}
+  return Object.fromEntries(
+    Object.entries(raw).filter(
+      ([id, enabled]) => pluginIds.has(id) && typeof enabled === "boolean",
+    ),
+  )
+}
+export function pluginEnabled(preferences: Preferences, root: string | undefined, id: string) {
+  return (
+    (root ? preferences.pluginWorkspaces[root]?.[id] : undefined) ??
+    preferences.pluginStates[id] ??
+    true
+  )
 }
 export function projectConfiguration(raw: unknown, legacyEngine?: string): ProjectConfiguration {
   const value =
@@ -184,6 +215,7 @@ export function effectivePreferences(global: Preferences, project: ProjectConfig
 }
 export const settingCategories: Record<string, MessageKey> = {
   general: "settings.category.general",
+  extensions: "settings.category.extensions",
   editor: "settings.category.editor",
   compile: "settings.category.compile",
   references: "settings.category.references",

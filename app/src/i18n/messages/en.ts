@@ -1,6 +1,28 @@
 /** English messages. Must contain exactly the same keys as zh-CN. */
 import type { Messages } from "./zh-CN"
 const en: Messages = {
+  "settings.category.extensions": "Extensions",
+  "extensions.cpp.name": "C/C++",
+  "extensions.cpp.description": "Completion, diagnostics and navigation for C and C++",
+  "extensions.python.name": "Python",
+  "extensions.python.description": "Completion, diagnostics and navigation for Python",
+  "extensions.rust.name": "Rust",
+  "extensions.rust.description": "Completion, diagnostics and navigation for Rust",
+  "extensions.localEnvironment": "Local tool environment",
+  "extensions.openProject": "Open a project to configure workspace extensions.",
+  "extensions.disabled": "Disabled",
+  "extensions.running": "Running",
+  "extensions.missingTool": "Language server missing",
+  "extensions.toolReady": "Tool detected",
+  "extensions.enabled": "Enabled",
+  "extensions.inherited": "Inherits global setting",
+  "extensions.workspaceOverride": "Workspace override",
+  "extensions.reset": "Reset to global",
+  "extensions.languageServer": "Language server",
+  "extensions.autoDetect": "Auto detect",
+  "extensions.toolSettings": "Tool settings",
+  "extensions.logs": "Diagnostic logs",
+
   "chat.statsRunning": "Running",
   "chat.statsComplete": "Completed",
   "chat.statsFailed": "Failed",
