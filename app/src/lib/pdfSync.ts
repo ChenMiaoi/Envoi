@@ -15,11 +15,15 @@ async function digest(bytes: Uint8Array) {
     (b) => b.toString(16).padStart(2, "0"),
   ).join("")
 }
-async function bytes(file: { text?: string; url?: string; file?: File }) {
+export async function previewBytes(
+  file: { text?: string; url?: string; file?: File },
+  signal?: AbortSignal,
+) {
+  signal?.throwIfAborted()
   if (file.text !== undefined) return new TextEncoder().encode(file.text)
   if (file.file) return new Uint8Array(await file.file.arrayBuffer())
   if (file.url) {
-    const response = await fetch(file.url)
+    const response = await fetch(file.url, { signal, cache: "no-store" })
     if (!response.ok) throw Error(translate("preview.resourceUnavailable"))
     return new Uint8Array(await response.arrayBuffer())
   }
@@ -30,10 +34,10 @@ async function bytes(file: { text?: string; url?: string; file?: File }) {
 const inputDigests = new WeakMap<object, Promise<string>>()
 async function inputDigest(file: { text?: string; url?: string; file?: File }) {
   const key = file.text !== undefined ? file : file.file
-  if (!key) return digest(await bytes(file))
+  if (!key) return digest(await previewBytes(file))
   let pending = inputDigests.get(key)
   if (!pending) {
-    pending = bytes(file).then(digest)
+    pending = previewBytes(file).then(digest)
     inputDigests.set(key, pending)
     void pending.catch(() => inputDigests.delete(key))
   }

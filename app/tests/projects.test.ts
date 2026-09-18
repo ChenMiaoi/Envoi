@@ -708,3 +708,45 @@ test("unreadable settings are not treated as missing configuration", async () =>
   )
   assert.equal(directory.children.has(".envoi"), false)
 })
+
+test("native compiled snapshots preserve binary SyncTeX and repair legacy byte objects", async () => {
+  const { encodeNative, decodeNative } = await import("../src/lib/localData")
+  const synctex = new Uint8Array([31, 139, 0, 255, 128])
+  const value = { compiled: { synctex }, file: new File(["PDF"], "main.pdf") }
+  const restored = decodeNative(
+    JSON.parse(JSON.stringify(await encodeNative(value))),
+  ) as typeof value
+  assert(restored.compiled.synctex instanceof Uint8Array)
+  assert.deepEqual(restored.compiled.synctex, synctex)
+  assert.equal(await restored.file.text(), "PDF")
+  assert.deepEqual(decodeNative({ compiled: { synctex: { 0: 31, 1: 139, 2: 255 } } }), {
+    compiled: { synctex: new Uint8Array([31, 139, 255]) },
+  })
+  assert.deepEqual(decodeNative({ synctex: { 0: -1 } }), { synctex: { 0: -1 } })
+})
+
+test("preview resources load URL-only SyncTeX and reject missing or cancelled reads", async () => {
+  const { previewBytes } = await import("../src/lib/pdfSync")
+  const originalFetch = globalThis.fetch
+  const expected = new Uint8Array([31, 139, 0, 255])
+  try {
+    globalThis.fetch = async (_url, options) => {
+      assert.equal(options?.cache, "no-store")
+      return new Response(expected)
+    }
+    assert.deepEqual(await previewBytes({ url: "envoi-asset://test/main.synctex.gz" }), expected)
+    assert.deepEqual(
+      await previewBytes({ file: new File([expected], "main.synctex.gz") }),
+      expected,
+    )
+    globalThis.fetch = async () => new Response("missing", { status: 404 })
+    await assert.rejects(previewBytes({ url: "envoi-asset://test/missing" }))
+    const controller = new AbortController()
+    controller.abort()
+    await assert.rejects(previewBytes({ url: "envoi-asset://test/cancelled" }, controller.signal), {
+      name: "AbortError",
+    })
+  } finally {
+    globalThis.fetch = originalFetch
+  }
+})

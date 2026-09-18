@@ -23,11 +23,12 @@ export const nativePut = <T>(
       throw ipcError(error)
     }) as Promise<NativeValue<T>>
 export async function encodeNative(value: unknown): Promise<unknown> {
-  if (value instanceof Blob) {
-    const bytes = new Uint8Array(await value.arrayBuffer())
+  if (value instanceof Uint8Array || value instanceof Blob) {
+    const bytes = value instanceof Uint8Array ? value : new Uint8Array(await value.arrayBuffer())
     let binary = ""
     for (let i = 0; i < bytes.length; i += 32768)
       binary += String.fromCharCode(...bytes.subarray(i, i + 32768))
+    if (value instanceof Uint8Array) return { $bytes: btoa(binary) }
     return {
       $blob: btoa(binary),
       type: value.type,
@@ -54,6 +55,8 @@ export function decodeNative(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(decodeNative)
   if (value && typeof value === "object") {
     const raw = value as Record<string, unknown>
+    if (typeof raw.$bytes === "string")
+      return Uint8Array.from(atob(raw.$bytes), (c) => c.charCodeAt(0))
     if (typeof raw.$blob === "string") {
       const bytes = Uint8Array.from(atob(raw.$blob), (c) => c.charCodeAt(0))
       return raw.name
@@ -63,7 +66,22 @@ export function decodeNative(value: unknown): unknown {
           })
         : new Blob([bytes], { type: String(raw.type ?? "") })
     }
-    return Object.fromEntries(Object.entries(raw).map(([key, entry]) => [key, decodeNative(entry)]))
+    return Object.fromEntries(
+      Object.entries(raw).map(([key, entry]) => {
+        // Older compiled snapshots serialized Uint8Array as an object with numeric keys.
+        if (key === "synctex" && entry && typeof entry === "object" && !Array.isArray(entry)) {
+          const parts = Object.entries(entry)
+          if (
+            parts.every(
+              ([index, byte], i) =>
+                index === String(i) && Number.isInteger(byte) && byte >= 0 && byte <= 255,
+            )
+          )
+            return [key, Uint8Array.from(parts.map(([, byte]) => byte as number))]
+        }
+        return [key, decodeNative(entry)]
+      }),
+    )
   }
   return value
 }

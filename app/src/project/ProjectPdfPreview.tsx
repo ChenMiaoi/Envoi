@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from "react"
-import { verifyPreview } from "@/lib/pdfSync"
+import { verifyPreview, previewBytes } from "@/lib/pdfSync"
 import { CompileControls } from "./CompileControls"
 import { projectSignature } from "@/lib/compileClient"
 import { paperPdf } from "@/lib/paperPdf"
@@ -22,23 +22,26 @@ export function ProjectPdfPreview({
   const [verification, setVerification] = useState<{ project: typeof project; ok: boolean } | null>(
     null,
   )
-  const [diskSync, setDiskSync] = useState<Uint8Array | null>(null)
-  const diskSyncFile = project.files.find((file) => file.path === "build/main.synctex.gz")?.file
+  const diskSyncFile = project.files.find((file) => file.path === "build/main.synctex.gz")
+  const [diskSync, setDiskSync] = useState<{
+    source: typeof diskSyncFile
+    bytes: Uint8Array | null
+  } | null>(null)
   // 重新打开的项目没有内存态编译结果，从磁盘 build/main.synctex.gz 恢复映射。
   useEffect(() => {
-    let live = true
+    const controller = new AbortController()
     void (async () => {
       let bytes: Uint8Array | null = null
       try {
         const file = diskSyncFile
-        if (file) bytes = new Uint8Array(await file.arrayBuffer())
+        if (file) bytes = await previewBytes(file, controller.signal)
       } catch {
         /* 缺失或不可读时退化为无映射。 */
       }
-      if (live) setDiskSync(bytes)
+      if (!controller.signal.aborted) setDiskSync({ source: diskSyncFile, bytes })
     })()
     return () => {
-      live = false
+      controller.abort()
     }
   }, [diskSyncFile])
   useEffect(() => {
@@ -76,7 +79,13 @@ export function ProjectPdfPreview({
           syncReady={syncReady}
           syncPoint={syncPoint}
           onLocateSource={onLocateSource}
-          syncData={active?.id === "compiled" ? (project.compiled?.synctex ?? null) : diskSync}
+          syncData={
+            active?.id === "compiled"
+              ? (project.compiled?.synctex ?? null)
+              : diskSync && diskSync.source === diskSyncFile
+                ? diskSync.bytes
+                : null
+          }
           sourcePaths={project.files
             .filter((file) => file.kind === "latex" && file.text !== undefined)
             .map((file) => file.path)}
