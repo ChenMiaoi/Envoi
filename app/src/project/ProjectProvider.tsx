@@ -7,8 +7,22 @@ import { readProject, mergeDiskProject, dirtyFiles, type PaperProject } from "@/
 import { restoreSession, saveSession, closeProjectSession } from "@/lib/projectSession"
 import { ProjectContext } from "./context"
 import { useT } from "@/i18n/useT"
+import { usePreferences } from "@/settings/context"
+import { pluginEnabled } from "@/settings/model"
+import { pluginForLanguage } from "@/settings/pluginCatalog"
+import { lspLanguageForPath } from "@/lib/lspLanguage"
+import { toast } from "sonner"
+
+const formatters: Record<string, string> = {
+  c: "clangFormat",
+  cpp: "clangFormat",
+  python: "ruffFormat",
+  rust: "rustfmt",
+}
+
 export function ProjectProvider({ children }: { children: ReactNode }) {
   const { t } = useT()
+  const { preferences } = usePreferences()
   const [project, setProjectState] = useState<PaperProject>(() =>
     initialProject(import.meta.hot?.data.project),
   )
@@ -115,8 +129,47 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         setProject,
         message: setMessage,
         saving: setSaving,
+        beforeSave: async (snapshot) => {
+          if (!snapshot.rootPath) return
+          for (const file of dirtyFiles(snapshot)) {
+            const language = lspLanguageForPath(file.path)
+            const formatter = formatters[language ?? ""]
+            if (
+              !formatter ||
+              !pluginEnabled(preferences, snapshot.rootPath, pluginForLanguage(language) ?? "")
+            )
+              continue
+            try {
+              const result = await envoi().languageTool(
+                snapshot.rootPath,
+                file.path,
+                file.text ?? "",
+                "format",
+                preferences.toolPaths[formatter],
+              )
+              if (typeof result.text !== "string" || result.text === file.text) continue
+              setProject((current) =>
+                current.id !== snapshot.id
+                  ? current
+                  : {
+                      ...current,
+                      files: current.files.map((entry) =>
+                        entry.id === file.id &&
+                        entry.text === file.text &&
+                        entry.saved === file.saved
+                          ? { ...entry, text: result.text }
+                          : entry,
+                      ),
+                    },
+              )
+            } catch (error) {
+              if (!(error instanceof Error) || !error.message.endsWith(" is not installed"))
+                toast.error(error instanceof Error ? error.message : String(error))
+            }
+          }
+        },
       }),
-    [setProject],
+    [setProject, preferences],
   )
   const closeProject = useCallback(
     async (discard = false) => {
