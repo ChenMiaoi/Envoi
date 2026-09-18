@@ -17,7 +17,7 @@ export async function saveProjectConfiguration(
 ): Promise<PaperProject> {
   if (!project.rootPath) throw Error(translate("settings.project.openRealFirst"))
   const root = project.files.find((file) => file.id === main && file.kind === "latex")
-  if (!root && ai === undefined) throw Error(translate("settings.project.mainMustBeLatex"))
+  if (!root && main && ai === undefined) throw Error(translate("settings.project.mainMustBeLatex"))
   const known =
       project.files.find((file) => file.path === projectConfigPath) ??
       project.files.find((file) => file.path === legacyProjectConfigPath),

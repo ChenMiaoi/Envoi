@@ -126,6 +126,24 @@ test("renamed binary assets regain their new URLs after disk refresh", () => {
   assert.equal(mergeDiskProject(renamed, disk).files[0].url, "envoi://b.pdf")
 })
 
+test("Markdown and code projects save project preferences without a LaTeX main", async () => {
+  const root = new MemoryDirectory("research")
+  root.children.set("notes.md", new MemoryFile("notes.md", "notes"))
+  root.children.set("analysis.py", new MemoryFile("analysis.py", "print(1)"))
+  const project = await readProject(root.asHandle())
+  assert.equal(project.rootId, "")
+  const changed = await saveProjectConfiguration(project, {
+    version: 1,
+    overrides: { lintEnabled: false },
+  })
+  assert.equal((await readProject(project.rootPath!)).settings?.overrides.lintEnabled, false)
+  await assert.rejects(
+    saveProjectConfiguration(changed, { version: 1, overrides: {} }, "analysis.py"),
+    /LaTeX/,
+  )
+  await saveProjectConfiguration(changed, { version: 1, overrides: {} })
+  assert.deepEqual((await readProject(project.rootPath!)).settings?.overrides, {})
+})
 test("safe paths reject traversal, absolute paths and empty components", () => {
   for (const path of ["../x.tex", "/x.tex", "chapters//x.tex", "a/../b", "a\\b", ""])
     assert.throws(() => safePath(path))
