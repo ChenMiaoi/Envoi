@@ -70,7 +70,10 @@ export interface EnvoiBridge {
     text: string,
     token: string,
     preferredServer?: string,
+    preferredPath?: string,
   ): Promise<{ available: boolean; server?: string; error?: string }>
+  probeLspPath(id: string, path: string): Promise<{ path: string; version?: string }>
+  probeToolPath(id: string, path: string): Promise<{ path: string; version?: string }>
   lspChange(root: string, path: string, text: string): Promise<void>
   lspQuery(
     root: string,

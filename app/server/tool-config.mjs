@@ -62,7 +62,14 @@ export function toolDirectories() {
       /* Optional installation directory. */
     }
   } else if (process.platform === "darwin")
-    fallback = ["/opt/homebrew/bin", "/Library/TeX/texbin", "/usr/local/bin", "/usr/bin"]
+    fallback = [
+      "/opt/homebrew/bin",
+      "/Library/TeX/texbin",
+      "/usr/local/bin",
+      "/usr/bin",
+      path.join(homedir(), ".cargo", "bin"),
+      path.join(homedir(), ".local", "bin"),
+    ]
   else
     fallback = [
       "/usr/local/bin",
@@ -91,6 +98,116 @@ export function detectTool(name) {
         return false
       }
     })
+}
+export function toolCandidates(name, root) {
+  const local = pythonEnvironment(root)
+  const prefixes = [
+    ...(local ? [path.join(local, process.platform === "win32" ? "Scripts" : "bin")] : []),
+    ...toolDirectories(),
+  ]
+  const seen = new Set()
+  return prefixes.flatMap((prefix) => {
+    const exact = executableName(name)
+    const suffix = process.platform === "win32" ? "\\.exe" : ""
+    const pattern = new RegExp(
+      `^${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?:-\\d+(?:\\.\\d+)*${name === "python" ? "|3(?:\\.\\d+)?" : ""})${suffix}$`,
+      process.platform === "win32" ? "i" : "",
+    )
+    let names = name === "python" ? [exact, executableName("python3")] : [exact]
+    try {
+      names = [...names, ...readdirSync(prefix).filter((entry) => pattern.test(entry))]
+    } catch {
+      /* path may not exist */
+    }
+    return names.flatMap((entry) => {
+      const candidate = path.join(prefix, entry)
+      try {
+        accessSync(candidate, constants.X_OK)
+        if (!statSync(candidate).isFile()) return []
+        const resolved = realpathSync(candidate)
+        if (seen.has(resolved)) return []
+        seen.add(resolved)
+        return [candidate]
+      } catch {
+        return []
+      }
+    })
+  })
+}
+export function validateToolPath(id, value) {
+  const tool = toolCatalog.find((entry) => entry.id === id)
+  if (
+    !tool ||
+    typeof value !== "string" ||
+    !path.isAbsolute(value) ||
+    /[\u0000-\u001f]/u.test(value)
+  )
+    throw Error("Invalid language server path")
+  const actual =
+    process.platform === "win32" ? path.basename(value).toLowerCase() : path.basename(value)
+  const expected = executableName(tool.binary ?? tool.binaries?.[0])
+  const base = process.platform === "win32" ? expected.slice(0, -4) : expected
+  const pattern = new RegExp(
+    `^${base.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?:-\\d+(?:\\.\\d+)*${base === "python" ? "|3(?:\\.\\d+)?" : ""})?${process.platform === "win32" ? "\\.exe" : ""}$`,
+  )
+  if (!pattern.test(actual)) throw Error("Selected executable does not match the language server")
+  accessSync(value, constants.X_OK)
+  if (!statSync(value).isFile()) throw Error("Invalid language server executable")
+  return value
+}
+export function validateLanguageServerPath(id, value) {
+  if (!toolCatalog.some((entry) => entry.id === id && entry.kind === "lsp"))
+    throw Error("Unknown language server")
+  return validateToolPath(id, value)
+}
+async function executableVersion(executable) {
+  try {
+    const { stdout, stderr } = await executeFile(executable, ["--version"], {
+      windowsHide: true,
+      encoding: "utf8",
+      timeout: 2000,
+      maxBuffer: 20000,
+    })
+    return (stdout || stderr).trim().split(/\r?\n/)[0] || undefined
+  } catch {
+    return undefined
+  }
+}
+function versionParts(value) {
+  return (value?.match(/\d+(?:\.\d+)+/)?.[0] ?? "").split(".").filter(Boolean).map(Number)
+}
+export function compareVersions(a, b) {
+  const left = versionParts(a),
+    right = versionParts(b)
+  for (let index = 0; index < Math.max(left.length, right.length); index++) {
+    const difference = (left[index] ?? 0) - (right[index] ?? 0)
+    if (difference) return difference
+  }
+  return 0
+}
+export async function probeCandidates(name, root) {
+  const candidates = await Promise.all(
+    toolCandidates(name, root).map(async (path) => ({
+      path,
+      version: await executableVersion(path),
+    })),
+  )
+  return candidates
+    .filter((candidate) => name !== "rust-analyzer" || candidate.version)
+    .sort((a, b) => compareVersions(b.version, a.version))
+}
+export async function probeLanguageServerPath(id, value) {
+  const resolved = validateLanguageServerPath(id, value)
+  const version = await executableVersion(resolved)
+  if (id === "rustAnalyzer" && !version)
+    throw Error("rust-analyzer is not installed in this Rust toolchain")
+  return { path: resolved, version }
+}
+export async function probeToolPath(id, value) {
+  const resolved = validateToolPath(id, value)
+  const tool = toolCatalog.find((entry) => entry.id === id)
+  if (!hasCompanions(tool, resolved)) throw Error("Toolchain companion executable is missing")
+  return { path: resolved, version: await executableVersion(resolved) }
 }
 // 项目级 Python 环境：以 pyvenv.cfg 为凭据识别项目根下的 .venv/venv 目录。
 // LSP 启动（lsp-service）与设置页展示（backend tools）共用这一份实现。
@@ -129,11 +246,39 @@ export async function probeVersion(tool, args = ["--version"]) {
     return { available: false, path: paths[0], error: error.message }
   }
 }
-function probePresence(binary) {
-  const executable = detectTool(binary)
-  return executable
-    ? { available: true, path: executable }
-    : { available: false, path: "", error: `${binary} not found` }
+async function probePresence(binary, root) {
+  const candidates = await probeCandidates(binary, root)
+  if (candidates.length)
+    return { available: true, path: candidates[0].path, version: candidates[0].version, candidates }
+  return { available: false, path: "", candidates: [], error: `${binary} not found` }
+}
+async function probeVersionCandidates(tool, root) {
+  const binaries = tool.binaries ?? [tool.binary]
+  const candidates = await probeCandidates(binaries[0], root)
+  const complete = candidates.filter(({ path: executable }) => hasCompanions(tool, executable))
+  return complete.length
+    ? {
+        available: true,
+        path: complete[0].path,
+        version: complete[0].version,
+        candidates: complete,
+      }
+    : { available: false, path: "", candidates: [] }
+}
+function hasCompanions(tool, executable) {
+  const binaries = tool.binaries ?? [tool.binary]
+  const suffix = path
+    .basename(executable)
+    .slice(binaries[0].length, process.platform === "win32" ? -4 : undefined)
+  return binaries.slice(1).every((binary) => {
+    const companion = path.join(path.dirname(executable), executableName(binary + suffix))
+    try {
+      accessSync(companion, constants.X_OK)
+      return statSync(companion).isFile()
+    } catch {
+      return false
+    }
+  })
 }
 function probeChktex() {
   const configured = config().chktexPath
@@ -151,15 +296,20 @@ function probeChktex() {
   }
   return status
 }
-async function probeCatalog() {
+async function probeCatalog(root) {
   const probed = new Map()
   await Promise.all(
     toolCatalog.map(async (tool) => {
       const status =
         tool.probe === "version"
-          ? await probeVersion(tool)
+          ? await (tool.kind === "lsp" || ["cpp", "python", "rust"].includes(tool.group)
+              ? probeVersionCandidates(tool, tool.group === "python" ? root : undefined)
+              : probeVersion(tool))
           : tool.probe === "presence"
-            ? probePresence(tool.binary)
+            ? await probePresence(
+                tool.binary,
+                tool.kind === "lsp" && tool.group === "python" ? root : undefined,
+              )
             : probeChktex()
       probed.set(tool.id, { ...tool, ...status })
     }),
@@ -170,7 +320,8 @@ async function probeCatalog() {
 }
 // 探测结果按进程缓存；设置页“重新检测”与保存 ChkTeX 配置时显式失效。
 let cachedInfo
-export function toolInfo({ refresh = false } = {}) {
+export function toolInfo({ refresh = false, root } = {}) {
+  if (root) return probeCatalog(root)
   if (refresh) cachedInfo = undefined
   return (cachedInfo ??= probeCatalog())
 }

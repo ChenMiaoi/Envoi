@@ -30,6 +30,8 @@ export interface Preferences {
   lintEnabled: boolean
   defaultGit: boolean
   lspServers: Record<string, string>
+  lspPaths: Record<string, string>
+  toolPaths: Record<string, string>
   pluginStates: Record<string, boolean>
   pluginWorkspaces: Record<string, Record<string, boolean>>
 }
@@ -57,6 +59,8 @@ export const defaults: Preferences = {
   lintEnabled: true,
   defaultGit: true,
   lspServers: {},
+  lspPaths: {},
+  toolPaths: {},
   pluginStates: {},
   pluginWorkspaces: {},
 }
@@ -163,6 +167,30 @@ export function normalizePreferences(raw: unknown): Preferences {
             Object.entries(value.lspServers).filter(
               ([language, server]) =>
                 /^[a-z]+$/.test(language) && typeof server === "string" && /^[\w-]+$/.test(server),
+            ),
+          )
+        : {},
+    lspPaths:
+      value.lspPaths && typeof value.lspPaths === "object" && !Array.isArray(value.lspPaths)
+        ? Object.fromEntries(
+            Object.entries(value.lspPaths).filter(
+              ([id, selected]) =>
+                /^[\w-]+$/.test(id) &&
+                typeof selected === "string" &&
+                selected.length < 4096 &&
+                ![...selected].some((character) => character.charCodeAt(0) < 32),
+            ),
+          )
+        : {},
+    toolPaths:
+      value.toolPaths && typeof value.toolPaths === "object" && !Array.isArray(value.toolPaths)
+        ? Object.fromEntries(
+            Object.entries(value.toolPaths).filter(
+              ([id, selected]) =>
+                /^[\w-]+$/.test(id) &&
+                typeof selected === "string" &&
+                selected.length < 4096 &&
+                ![...selected].some((character) => character.charCodeAt(0) < 32),
             ),
           )
         : {},

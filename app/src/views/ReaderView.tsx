@@ -538,7 +538,7 @@ export function ReaderView({
                 />
               ) : kind === "text" && activeData?.text !== undefined ? (
                 <CodeEditor
-                  key={`${active.id}:${preferences.lspServers[lspLanguageForPath(activeData.path) ?? ""] ?? ""}:${pluginEnabled(preferences, project.rootPath, pluginForLanguage(lspLanguageForPath(activeData.path)) ?? "")}`}
+                  key={`${active.id}:${preferences.lspServers[lspLanguageForPath(activeData.path) ?? ""] ?? ""}:${preferences.lspPaths[preferences.lspServers[lspLanguageForPath(activeData.path) ?? ""]] ?? ""}:${pluginEnabled(preferences, project.rootPath, pluginForLanguage(lspLanguageForPath(activeData.path)) ?? "")}`}
                   root={project.rootPath}
                   path={activeData.path}
                   source={activeData.text}

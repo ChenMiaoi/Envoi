@@ -25,6 +25,12 @@ const en: Messages = {
   "extensions.starting": "Starting",
   "extensions.startFailed": "Failed to start",
   "extensions.configure": "Configure {name}",
+  "extensions.manualPath": "Enter path",
+  "extensions.pathPlaceholder": "Absolute path to executable",
+  "extensions.usePath": "Use",
+  "extensions.selectVersion": "Select version",
+  "extensions.toolchain": "Toolchain",
+  "extensions.partial": "Partially available",
 
   "chat.statsRunning": "Running",
   "chat.statsComplete": "Completed",

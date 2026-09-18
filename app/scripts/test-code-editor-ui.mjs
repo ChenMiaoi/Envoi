@@ -50,7 +50,13 @@ try {
   const cpp = page.getByTestId("extension-cpp")
   assert.equal(await cpp.getByRole("combobox").count(), 0)
   await cpp.locator("button[aria-expanded]").click()
-  assert.equal(await cpp.getByRole("combobox").count(), 2)
+  await page.waitForFunction(
+    () =>
+      [...document.querySelectorAll('[data-testid="extension-cpp"] button')].filter((button) =>
+        button.textContent?.includes("手动输入路径"),
+      ).length === 3,
+  )
+  assert.equal(await cpp.getByRole("button", { name: "手动输入路径" }).count(), 3)
   await cpp.locator("button[aria-expanded]").click()
   await cpp.getByRole("checkbox").uncheck()
   await page.waitForFunction(

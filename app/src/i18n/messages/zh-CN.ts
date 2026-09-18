@@ -27,6 +27,12 @@ export const zhCN = {
   "extensions.starting": "正在启动",
   "extensions.startFailed": "启动失败",
   "extensions.configure": "配置{name}",
+  "extensions.manualPath": "手动输入路径",
+  "extensions.pathPlaceholder": "可执行文件的绝对路径",
+  "extensions.usePath": "使用",
+  "extensions.selectVersion": "选择版本",
+  "extensions.toolchain": "工具链",
+  "extensions.partial": "部分可用",
 
   "chat.statsRunning": "运行中",
   "chat.statsComplete": "已完成",

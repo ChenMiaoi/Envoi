@@ -25,6 +25,12 @@ const ja: Messages = {
   "extensions.starting": "起動中",
   "extensions.startFailed": "起動に失敗",
   "extensions.configure": "{name}を設定",
+  "extensions.manualPath": "パスを入力",
+  "extensions.pathPlaceholder": "実行ファイルの絶対パス",
+  "extensions.usePath": "使用",
+  "extensions.selectVersion": "バージョンを選択",
+  "extensions.toolchain": "ツールチェーン",
+  "extensions.partial": "一部のみ利用可能",
 
   "chat.statsRunning": "実行中",
   "chat.statsComplete": "完了",

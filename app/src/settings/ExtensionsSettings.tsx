@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useState } from "react"
 import { Link } from "react-router"
-import { ChevronDown, RefreshCw } from "lucide-react"
+import { AlertTriangle, Check, ChevronDown, RefreshCw, X } from "lucide-react"
 import { envoi } from "@/lib/desktop"
-import { useLspStatus } from "@/lib/lspStatus"
 import { useProject } from "@/project/context"
 import { useT } from "@/i18n/useT"
 import type { MessageKey } from "@/i18n/runtime"
@@ -19,8 +18,17 @@ type Tool = {
   path?: string
   version?: string
   error?: string
+  candidates?: { path: string; version?: string }[]
 }
 type ToolInfo = { groups?: Record<string, Tool[]> }
+function pathsOf(tool: Tool) {
+  if (tool.id === "rustAnalyzer" && !tool.version && !tool.candidates?.some((item) => item.version))
+    return []
+  return (
+    tool.candidates ??
+    (tool.available && tool.path ? [{ path: tool.path, version: tool.version }] : [])
+  )
+}
 
 const appearance: Record<string, { mark: string; color: string }> = {
   cpp: { mark: "C++", color: "bg-sky-500/10 text-sky-400 ring-sky-400/20" },
@@ -32,26 +40,145 @@ export function ExtensionsSettings({ scope }: { scope: "global" | "project" }) {
   const { t } = useT()
   const { project } = useProject()
   const { preferences, update } = usePreferences()
-  const lsp = useLspStatus()
   const [tools, setTools] = useState<ToolInfo | null>(null)
   const [error, setError] = useState("")
   const [refreshing, setRefreshing] = useState(false)
   const [expanded, setExpanded] = useState<string | null>(null)
+  const [manual, setManual] = useState<Record<string, string>>({})
+  const [manualTool, setManualTool] = useState<Record<string, string>>({})
+  const [manualOpen, setManualOpen] = useState<Record<string, boolean>>({})
+  const [manualError, setManualError] = useState<Record<string, string>>({})
+  const [verified, setVerified] = useState<Record<string, { path: string; version?: string }>>({})
+  const [verifiedTools, setVerifiedTools] = useState<
+    Record<string, { path: string; version?: string }>
+  >({})
   const root = scope === "project" ? project.rootPath : undefined
-  const load = useCallback(async (refresh: boolean) => {
-    setRefreshing(true)
-    try {
-      setTools((await envoi().tools({ refresh })) as ToolInfo)
-      setError("")
-    } catch (cause) {
-      setError((cause as Error).message)
-    } finally {
-      setRefreshing(false)
-    }
-  }, [])
+  const load = useCallback(
+    async (refresh: boolean) => {
+      setRefreshing(true)
+      try {
+        setTools((await envoi().tools({ refresh, root })) as ToolInfo)
+        setError("")
+      } catch (cause) {
+        setError((cause as Error).message)
+      } finally {
+        setRefreshing(false)
+      }
+    },
+    [root],
+  )
   useEffect(() => {
     void load(false)
   }, [load])
+  useEffect(() => {
+    if (!tools) return
+    const next = { ...preferences.lspServers }
+    let changed = false
+    for (const plugin of languagePlugins) {
+      const group = plugin.id.slice("envoi.".length)
+      const available = (tools.groups?.[group] ?? []).filter(
+        (tool) => tool.kind === "lsp" && pathsOf(tool).length,
+      )
+      const valid = (id?: string) =>
+        !!id && (available.some((tool) => tool.id === id) || !!preferences.lspPaths[id])
+      if (group === "cpp") {
+        const chosen = [next.cpp, next.c].find(valid) ?? available[0]?.id
+        if (chosen)
+          for (const language of ["c", "cpp"])
+            if (next[language] !== chosen) {
+              next[language] = chosen
+              changed = true
+            }
+      } else
+        for (const entry of plugin.contributes.languages) {
+          const chosen = valid(next[entry.id]) ? next[entry.id] : available[0]?.id
+          if (chosen && next[entry.id] !== chosen) {
+            next[entry.id] = chosen
+            changed = true
+          }
+        }
+    }
+    if (changed) update({ lspServers: next })
+  }, [tools, preferences.lspServers, preferences.lspPaths, update])
+  useEffect(() => {
+    let cancelled = false
+    void Promise.all(
+      Object.entries(preferences.lspPaths).map(async ([id, selected]) => {
+        try {
+          return [id, await envoi().probeLspPath(id, selected)] as const
+        } catch {
+          return [id, null] as const
+        }
+      }),
+    ).then((entries) => {
+      if (!cancelled)
+        setVerified(
+          Object.fromEntries(
+            entries.filter(
+              (entry): entry is readonly [string, { path: string; version?: string }] =>
+                entry[1] !== null,
+            ),
+          ),
+        )
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [preferences.lspPaths])
+  useEffect(() => {
+    let cancelled = false
+    void Promise.all(
+      Object.entries(preferences.toolPaths).map(async ([id, selected]) => {
+        try {
+          return [id, await envoi().probeToolPath(id, selected)] as const
+        } catch {
+          return [id, null] as const
+        }
+      }),
+    ).then((entries) => {
+      if (!cancelled)
+        setVerifiedTools(
+          Object.fromEntries(
+            entries.filter(
+              (entry): entry is readonly [string, { path: string; version?: string }] =>
+                entry[1] !== null,
+            ),
+          ),
+        )
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [preferences.toolPaths])
+
+  async function saveManual(language: string, server: string) {
+    try {
+      const result = await envoi().probeLspPath(server, manual[language]?.trim() ?? "")
+      setVerified((previous) => ({ ...previous, [server]: result }))
+      const servers = { ...preferences.lspServers, [language]: server }
+      if (language === "cpp") servers.c = server
+      update({
+        lspServers: servers,
+        lspPaths: { ...preferences.lspPaths, [server]: result.path },
+      })
+      setManualOpen((previous) => ({ ...previous, [language]: false }))
+      setManualError((previous) => ({ ...previous, [language]: "" }))
+    } catch (cause) {
+      setManualError((previous) => ({ ...previous, [language]: (cause as Error).message }))
+    }
+  }
+
+  async function saveToolManual(id: string) {
+    try {
+      const result = await envoi().probeToolPath(id, manual[id]?.trim() ?? "")
+      setVerifiedTools((previous) => ({ ...previous, [id]: result }))
+      update({ toolPaths: { ...preferences.toolPaths, [id]: result.path } })
+      setManualOpen((previous) => ({ ...previous, [id]: false }))
+      setManualError((previous) => ({ ...previous, [id]: "" }))
+    } catch (cause) {
+      setManualError((previous) => ({ ...previous, [id]: (cause as Error).message }))
+    }
+  }
 
   function setEnabled(id: string, enabled: boolean) {
     if (scope === "project" && root) {
@@ -96,31 +223,41 @@ export function ExtensionsSettings({ scope }: { scope: "global" | "project" }) {
         const group = id.slice("envoi.".length)
         const title = t(plugin.displayNameKey as MessageKey)
         const enabled = pluginEnabled(preferences, root, id)
-        const candidates = (tools?.groups?.[group] ?? []).filter((tool) => tool.kind === "lsp")
-        const selected = plugin.contributes.languages
-          .map((entry) => preferences.lspServers[entry.id])
-          .filter(Boolean)
-        const missingSelection = selected.some(
-          (toolId) => !candidates.find((tool) => tool.id === toolId)?.available,
-        )
-        const current =
-          enabled && lsp?.pluginId === id && lsp.root === project.rootPath ? lsp : null
-        const problem = current?.state === "unavailable" && current.reason === "failed"
-        const missing =
-          missingSelection || (tools !== null && !candidates.some((tool) => tool.available))
-        const status = !enabled
-          ? t("extensions.disabled")
-          : current?.state === "ready"
-            ? t("extensions.running")
-            : current?.state === "starting"
-              ? t("extensions.starting")
-              : problem
-                ? t("extensions.startFailed")
-                : !tools
-                  ? t("settings.tools.probing")
-                  : missing
-                    ? t("extensions.missingTool")
-                    : t("extensions.toolReady")
+        const groupTools = tools?.groups?.[group] ?? []
+        const candidates = groupTools.filter((tool) => tool.kind === "lsp")
+        const toolchains = groupTools.filter((tool) => tool.kind !== "lsp")
+        const chainChoices = toolchains.map((tool) => {
+          const selectedPath = preferences.toolPaths[tool.id]
+          const selected = selectedPath
+            ? (pathsOf(tool).find((candidate) => candidate.path === selectedPath) ??
+              verifiedTools[tool.id])
+            : pathsOf(tool)[0]
+          return { tool, selected }
+        })
+        const languages = group === "cpp" ? [{ id: "cpp" }] : plugin.contributes.languages
+        const choices = languages.map((entry) => {
+          const available = candidates
+            .filter((tool) => tool.languages?.includes(entry.id))
+            .flatMap((tool) => pathsOf(tool).map((candidate) => ({ ...candidate, tool })))
+          const server =
+            preferences.lspServers[entry.id] ??
+            (entry.id === "cpp" ? preferences.lspServers.c : undefined)
+          const selectedPath = server ? preferences.lspPaths[server] : undefined
+          const selected = selectedPath
+            ? (available.find(
+                (choice) => choice.tool.id === server && choice.path === selectedPath,
+              ) ??
+              (verified[server] && candidates.some((tool) => tool.id === server)
+                ? { ...verified[server], tool: candidates.find((tool) => tool.id === server)! }
+                : undefined))
+            : (available.find((choice) => choice.tool.id === server) ?? available[0])
+          return { language: entry.id, available, selected }
+        })
+        const chainReady = chainChoices.every((choice) => !!choice.selected)
+        const someChainReady = chainChoices.some((choice) => !!choice.selected)
+        const lspReady = choices.every((choice) => !!choice.selected)
+        const someLspReady = choices.some((choice) => !!choice.selected)
+        const partial = (someChainReady || someLspReady) && !(chainReady && lspReady)
         const open = expanded === id
         const visual = appearance[group]
         return (
@@ -145,13 +282,42 @@ export function ExtensionsSettings({ scope }: { scope: "global" | "project" }) {
                 className="flex min-w-0 flex-1 items-center justify-between gap-3 rounded-lg py-1 text-left focus-visible:outline-2 focus-visible:outline-primary"
               >
                 <span className="min-w-0">
-                  <span className="block text-[13px] font-semibold text-foreground">{title}</span>
-                  <span className="mt-1 inline-flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                    <span
-                      aria-hidden
-                      className={`size-1.5 rounded-full ${!enabled ? "bg-muted-foreground/60" : problem || missing ? "bg-warning" : current?.state === "ready" ? "bg-primary" : "bg-muted-foreground"}`}
-                    />
-                    {status}
+                  <span className="inline-flex items-center gap-2 text-[13px] font-semibold text-foreground">
+                    {title}
+                    {tools && partial && (
+                      <AlertTriangle
+                        aria-label={t("extensions.partial")}
+                        className="size-3.5 text-amber-500"
+                      />
+                    )}
+                  </span>
+                  <span className="mt-1 flex items-center gap-3 text-[11px] text-muted-foreground">
+                    {tools ? (
+                      <>
+                        <span className="inline-flex items-center gap-1">
+                          {chainReady ? (
+                            <Check aria-hidden className="size-3 text-green-500" />
+                          ) : someChainReady ? (
+                            <AlertTriangle aria-hidden className="size-3 text-amber-500" />
+                          ) : (
+                            <X aria-hidden className="size-3 text-red-500" />
+                          )}
+                          {t("extensions.toolchain")}
+                        </span>
+                        <span className="inline-flex items-center gap-1">
+                          {lspReady ? (
+                            <Check aria-hidden className="size-3 text-green-500" />
+                          ) : someLspReady ? (
+                            <AlertTriangle aria-hidden className="size-3 text-amber-500" />
+                          ) : (
+                            <X aria-hidden className="size-3 text-red-500" />
+                          )}
+                          {t("extensions.languageServer")}
+                        </span>
+                      </>
+                    ) : (
+                      t("settings.tools.probing")
+                    )}
                   </span>
                 </span>
                 <ChevronDown
@@ -180,57 +346,277 @@ export function ExtensionsSettings({ scope }: { scope: "global" | "project" }) {
               hidden={!open}
               className="border-t border-border/60 bg-background/30 px-4 pb-4 pt-4"
             >
-              <p className="mb-4 text-xs leading-relaxed text-muted-foreground">
-                {t(plugin.descriptionKey as MessageKey)}
+              <p className="mb-2 text-[11px] font-semibold text-muted-foreground">
+                {t("extensions.toolchain")}
               </p>
-              <div className="space-y-3">
-                {plugin.contributes.languages.map((entry) => (
-                  <label
-                    key={entry.id}
-                    className="flex flex-wrap items-center justify-between gap-2 text-xs"
-                  >
-                    <span className="font-medium text-foreground">
-                      {t("extensions.languageServer")} · {entry.id}
-                    </span>
-                    <select
-                      className="min-w-36 rounded-lg border border-input bg-background px-2.5 py-1.5 text-xs text-foreground"
-                      value={preferences.lspServers[entry.id] ?? ""}
-                      onChange={(event) => {
-                        const next = { ...preferences.lspServers }
-                        if (event.target.value) next[entry.id] = event.target.value
-                        else delete next[entry.id]
-                        update({ lspServers: next })
-                      }}
-                    >
-                      <option value="">{t("extensions.autoDetect")}</option>
-                      {candidates
-                        .filter((tool) => tool.languages?.includes(entry.id))
-                        .map((tool) => (
-                          <option key={tool.id} value={tool.id}>
-                            {tool.label}
-                          </option>
-                        ))}
-                    </select>
-                  </label>
+              <div className="space-y-2">
+                {chainChoices.map(({ tool, selected }) => {
+                  const options = [...pathsOf(tool)]
+                  if (selected && !options.some((candidate) => candidate.path === selected.path))
+                    options.unshift(selected)
+                  return (
+                    <div key={tool.id} className="space-y-2 text-xs">
+                      <div className="flex items-center gap-2">
+                        {selected ? (
+                          <Check aria-hidden className="size-4 shrink-0 text-green-500" />
+                        ) : (
+                          <X aria-hidden className="size-4 shrink-0 text-red-500" />
+                        )}
+                        <span className="w-24 shrink-0 font-medium text-foreground">
+                          {tool.label}
+                        </span>
+                        {options.length > 1 ? (
+                          <select
+                            aria-label={`${tool.label} ${t("extensions.selectVersion")}`}
+                            className="min-w-0 flex-1 rounded-lg border border-input bg-background px-2.5 py-1.5 text-xs text-foreground"
+                            value={selected?.path ?? ""}
+                            onChange={(event) =>
+                              update({
+                                toolPaths: {
+                                  ...preferences.toolPaths,
+                                  [tool.id]: event.target.value,
+                                },
+                              })
+                            }
+                          >
+                            {!selected && (
+                              <option value="" disabled>
+                                {t("extensions.selectVersion")}
+                              </option>
+                            )}
+                            {options.map((candidate) => (
+                              <option key={candidate.path} value={candidate.path}>
+                                {candidate.version ?? candidate.path}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <span
+                            className="min-w-0 flex-1 truncate text-muted-foreground"
+                            title={selected?.path}
+                          >
+                            {selected?.version ?? ""}
+                          </span>
+                        )}
+                        <button
+                          type="button"
+                          className="shrink-0 text-primary hover:underline"
+                          onClick={() =>
+                            setManualOpen((previous) => ({
+                              ...previous,
+                              [tool.id]: !previous[tool.id],
+                            }))
+                          }
+                        >
+                          {t("extensions.manualPath")}
+                        </button>
+                      </div>
+                      {selected && (
+                        <p
+                          className="truncate pl-6 text-[11px] text-muted-foreground"
+                          title={selected.path}
+                        >
+                          {selected.path}
+                        </p>
+                      )}
+                      {(manualOpen[tool.id] || !selected) && (
+                        <div className="space-y-2 pl-6">
+                          <div className="flex gap-2">
+                            <input
+                              aria-label={`${tool.label} ${t("extensions.manualPath")}`}
+                              className="min-w-0 flex-1 rounded-lg border border-input bg-background px-2.5 py-1.5 text-foreground"
+                              placeholder={t("extensions.pathPlaceholder")}
+                              value={manual[tool.id] ?? ""}
+                              onChange={(event) =>
+                                setManual((previous) => ({
+                                  ...previous,
+                                  [tool.id]: event.target.value,
+                                }))
+                              }
+                              onKeyDown={(event) => {
+                                if (event.key === "Enter") void saveToolManual(tool.id)
+                              }}
+                            />
+                            <button
+                              type="button"
+                              className="rounded-lg bg-primary px-3 py-1.5 text-primary-foreground"
+                              onClick={() => void saveToolManual(tool.id)}
+                            >
+                              {t("extensions.usePath")}
+                            </button>
+                          </div>
+                          {manualError[tool.id] && (
+                            <p role="alert" className="text-destructive">
+                              {manualError[tool.id]}
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+              <p className="mb-2 mt-4 border-t border-border/50 pt-3 text-[11px] font-semibold text-muted-foreground">
+                {t("extensions.languageServer")}
+              </p>
+              <div className="mb-3 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
+                {candidates.map((tool) => (
+                  <span key={tool.id} className="inline-flex items-center gap-1">
+                    {pathsOf(tool).length ? (
+                      <Check aria-hidden className="size-3 text-green-500" />
+                    ) : (
+                      <X aria-hidden className="size-3 text-red-500" />
+                    )}
+                    {tool.label}
+                  </span>
                 ))}
               </div>
-              <div className="mt-4 space-y-2 border-t border-border/50 pt-3">
-                {candidates.map((tool) => (
-                  <div
-                    key={tool.id}
-                    className="flex min-w-0 items-start justify-between gap-3 text-[11px]"
-                  >
-                    <span className="shrink-0 font-medium text-foreground">{tool.label}</span>
-                    <span
-                      title={tool.available ? tool.path : tool.error}
-                      className="min-w-0 truncate text-right text-muted-foreground"
-                    >
-                      {tool.available
-                        ? tool.path || tool.version || t("extensions.toolReady")
-                        : tool.error || t("extensions.missingTool")}
-                    </span>
-                  </div>
-                ))}
+              <div className="space-y-3">
+                {choices.map(({ language, available, selected }) => {
+                  const options = [...available]
+                  if (
+                    selected &&
+                    !options.some(
+                      (choice) =>
+                        choice.tool.id === selected.tool.id && choice.path === selected.path,
+                    )
+                  )
+                    options.unshift(selected)
+                  const value = selected ? JSON.stringify([selected.tool.id, selected.path]) : ""
+                  const server =
+                    manualTool[language] ??
+                    preferences.lspServers[language] ??
+                    candidates.find((tool) => tool.languages?.includes(language))?.id ??
+                    ""
+                  return (
+                    <div key={language} className="space-y-2 text-xs">
+                      <div className="flex items-center gap-2">
+                        {selected ? (
+                          <Check aria-hidden className="size-4 shrink-0 text-green-500" />
+                        ) : (
+                          <X aria-hidden className="size-4 shrink-0 text-red-500" />
+                        )}
+                        <span className="w-12 shrink-0 font-medium text-foreground">
+                          {language === "cpp" ? "C/C++" : language.toUpperCase()}
+                        </span>
+                        {options.length > 1 ? (
+                          <select
+                            aria-label={`${language} ${t("extensions.languageServer")}`}
+                            className="min-w-0 flex-1 rounded-lg border border-input bg-background px-2.5 py-1.5 text-xs text-foreground"
+                            value={value}
+                            onChange={(event) => {
+                              const [id, path] = JSON.parse(event.target.value) as [string, string]
+                              const servers = { ...preferences.lspServers, [language]: id }
+                              if (language === "cpp") servers.c = id
+                              update({
+                                lspServers: servers,
+                                lspPaths: { ...preferences.lspPaths, [id]: path },
+                              })
+                            }}
+                          >
+                            {!selected && (
+                              <option value="" disabled>
+                                {t("extensions.selectVersion")}
+                              </option>
+                            )}
+                            {options.map((choice) => (
+                              <option
+                                key={`${choice.tool.id}:${choice.path}`}
+                                value={JSON.stringify([choice.tool.id, choice.path])}
+                              >
+                                {choice.tool.label} · {choice.version ?? choice.path}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <span
+                            className="min-w-0 flex-1 truncate text-muted-foreground"
+                            title={selected?.path}
+                          >
+                            {selected
+                              ? `${selected.tool.label} · ${selected.version ?? selected.path}`
+                              : ""}
+                          </span>
+                        )}
+                        <button
+                          type="button"
+                          className="shrink-0 text-primary hover:underline"
+                          onClick={() =>
+                            setManualOpen((previous) => ({
+                              ...previous,
+                              [language]: !previous[language],
+                            }))
+                          }
+                        >
+                          {t("extensions.manualPath")}
+                        </button>
+                      </div>
+                      {selected && (
+                        <p
+                          className="truncate pl-6 text-[11px] text-muted-foreground"
+                          title={selected.path}
+                        >
+                          {selected.path}
+                        </p>
+                      )}
+                      {(manualOpen[language] || !selected) && (
+                        <div className="space-y-2 pl-6">
+                          {candidates.filter((tool) => tool.languages?.includes(language)).length >
+                            1 && (
+                            <select
+                              aria-label={`${language} ${t("extensions.languageServer")}`}
+                              className="rounded-lg border border-input bg-background px-2 py-1.5"
+                              value={server}
+                              onChange={(event) =>
+                                setManualTool((previous) => ({
+                                  ...previous,
+                                  [language]: event.target.value,
+                                }))
+                              }
+                            >
+                              {candidates
+                                .filter((tool) => tool.languages?.includes(language))
+                                .map((tool) => (
+                                  <option key={tool.id} value={tool.id}>
+                                    {tool.label}
+                                  </option>
+                                ))}
+                            </select>
+                          )}
+                          <div className="flex gap-2">
+                            <input
+                              aria-label={`${language} ${t("extensions.manualPath")}`}
+                              className="min-w-0 flex-1 rounded-lg border border-input bg-background px-2.5 py-1.5 text-foreground"
+                              placeholder={t("extensions.pathPlaceholder")}
+                              value={manual[language] ?? ""}
+                              onChange={(event) =>
+                                setManual((previous) => ({
+                                  ...previous,
+                                  [language]: event.target.value,
+                                }))
+                              }
+                              onKeyDown={(event) => {
+                                if (event.key === "Enter") void saveManual(language, server)
+                              }}
+                            />
+                            <button
+                              type="button"
+                              className="rounded-lg bg-primary px-3 py-1.5 text-primary-foreground"
+                              onClick={() => void saveManual(language, server)}
+                            >
+                              {t("extensions.usePath")}
+                            </button>
+                          </div>
+                          {manualError[language] && (
+                            <p role="alert" className="text-destructive">
+                              {manualError[language]}
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
               </div>
               {scope === "project" && root && (
                 <div className="mt-4 flex items-center justify-between gap-3 border-t border-border/50 pt-3 text-[11px] text-muted-foreground">

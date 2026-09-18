@@ -25,6 +25,12 @@ const zhHK: Messages = {
   "extensions.starting": "正在啟動",
   "extensions.startFailed": "啟動失敗",
   "extensions.configure": "設定{name}",
+  "extensions.manualPath": "手動輸入路徑",
+  "extensions.pathPlaceholder": "執行檔的絕對路徑",
+  "extensions.usePath": "使用",
+  "extensions.selectVersion": "選擇版本",
+  "extensions.toolchain": "工具鏈",
+  "extensions.partial": "部分可用",
 
   "chat.statsRunning": "運行中",
   "chat.statsComplete": "已完成",

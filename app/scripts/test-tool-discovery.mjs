@@ -1,14 +1,21 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { mkdtemp, mkdir, writeFile, rm } from "node:fs/promises"
+import { mkdtemp, mkdir, writeFile, rm, symlink } from "node:fs/promises"
 import path from "node:path"
-import { tmpdir } from "node:os"
+import { homedir, tmpdir } from "node:os"
 import {
   detectTool,
   executableName,
   environmentInfo,
   probeVersion,
   pythonEnvironment,
+  toolCandidates,
+  probeLanguageServerPath,
+  validateLanguageServerPath,
+  probeCandidates,
+  compareVersions,
+  probeToolPath,
+  toolDirectories,
 } from "../server/tool-config.mjs"
 import { build } from "esbuild"
 import { pathToFileURL } from "node:url"
@@ -33,6 +40,110 @@ test("tool discovery handles spaces, executable suffix, override priority and di
     process.env.ENVOI_TEX_BIN = override
     assert.equal(detectTool("envoi-test-tool"), path.join(override, name))
     assert.equal(environmentInfo().arch, process.arch)
+  } finally {
+    process.env = saved
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test("language servers expose distinct installations and validate a chosen executable", async () => {
+  if (process.platform === "win32") return
+  const root = await mkdtemp(path.join(tmpdir(), "envoi-lsp-choices-"))
+  const saved = { ...process.env }
+  try {
+    const first = path.join(root, "first")
+    const second = path.join(root, "second")
+    await mkdir(first)
+    await mkdir(second)
+    const script = '#!/bin/sh\necho "clangd version 99.1"\n'
+    const selected = path.join(second, "clangd")
+    await writeFile(path.join(first, "clangd"), '#!/bin/sh\necho "clangd version 18.2"\n', {
+      mode: 0o755,
+    })
+    await writeFile(selected, script, { mode: 0o755 })
+    process.env.PATH = `${first}${path.delimiter}${second}${path.delimiter}/bin`
+    delete process.env.ENVOI_TEX_BIN
+    delete process.env.PAPERDESK_TEX_BIN
+    assert.deepEqual(toolCandidates("clangd").slice(0, 2), [path.join(first, "clangd"), selected])
+    await writeFile(path.join(first, "envoi-version-probe"), '#!/bin/sh\necho "tool 18.2"\n', {
+      mode: 0o755,
+    })
+    await writeFile(path.join(second, "envoi-version-probe"), '#!/bin/sh\necho "tool 99.1"\n', {
+      mode: 0o755,
+    })
+    assert.deepEqual(
+      (await probeCandidates("envoi-version-probe")).map((candidate) => candidate.path),
+      [path.join(second, "envoi-version-probe"), path.join(first, "envoi-version-probe")],
+    )
+    assert(compareVersions("clangd version 19.10", "clangd version 19.9") > 0)
+    assert.deepEqual(await probeLanguageServerPath("clangd", selected), {
+      path: selected,
+      version: "clangd version 99.1",
+    })
+    assert.equal(validateLanguageServerPath("clangd", selected), selected)
+    const versioned = path.join(second, "clangd-99")
+    await writeFile(versioned, script, { mode: 0o755 })
+    await rm(selected)
+    await symlink(versioned, selected)
+    assert.equal(validateLanguageServerPath("clangd", selected), selected)
+    assert.equal(validateLanguageServerPath("clangd", versioned), versioned)
+    assert(
+      (await probeCandidates("clangd")).some(
+        (candidate) => candidate.path === versioned || candidate.path === selected,
+      ),
+    )
+    assert.throws(() => validateLanguageServerPath("ccls", selected), /does not match/)
+    assert.throws(() => validateLanguageServerPath("clangd", "clangd --stdio"), /Invalid/)
+  } finally {
+    process.env = saved
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test("manual toolchain selection requires its companion executable", async () => {
+  if (process.platform === "win32") return
+  const root = await mkdtemp(path.join(tmpdir(), "envoi-toolchain-choice-"))
+  try {
+    const gcc = path.join(root, "gcc-19")
+    await writeFile(gcc, '#!/bin/sh\necho "gcc 19.2"\n', { mode: 0o755 })
+    await assert.rejects(probeToolPath("gcc", gcc), /companion/)
+    await writeFile(path.join(root, "g++-19"), '#!/bin/sh\necho "g++ 19.2"\n', { mode: 0o755 })
+    assert.equal((await probeToolPath("gcc", gcc)).version, "gcc 19.2")
+    const python = path.join(root, "python3.14")
+    await writeFile(python, '#!/bin/sh\necho "Python 3.14.0"\n', { mode: 0o755 })
+    assert.equal((await probeToolPath("python", python)).version, "Python 3.14.0")
+    const savedPath = process.env.PATH
+    try {
+      process.env.PATH = `${root}${path.delimiter}/bin`
+      assert(toolCandidates("python").includes(python))
+    } finally {
+      process.env.PATH = savedPath
+    }
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test("macOS discovery includes the standard Rust installation directory", () => {
+  if (process.platform === "darwin")
+    assert(toolDirectories().includes(path.join(homedir(), ".cargo", "bin")))
+})
+
+test("a rustup proxy without the rust-analyzer component is unavailable", async () => {
+  if (process.platform === "win32") return
+  const root = await mkdtemp(path.join(tmpdir(), "envoi-rust-proxy-"))
+  const saved = { ...process.env }
+  try {
+    const proxy = path.join(root, "rust-analyzer")
+    await writeFile(proxy, '#!/bin/sh\necho "error: Unknown binary rust-analyzer" >&2\nexit 1\n', {
+      mode: 0o755,
+    })
+    process.env.PATH = `${root}${path.delimiter}/bin`
+    assert.equal(
+      (await probeCandidates("rust-analyzer")).some((candidate) => candidate.path === proxy),
+      false,
+    )
+    await assert.rejects(probeLanguageServerPath("rustAnalyzer", proxy), /not installed/)
   } finally {
     process.env = saved
     await rm(root, { recursive: true, force: true })

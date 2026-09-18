@@ -42,7 +42,7 @@ async function dispatch(message) {
     const environment =
       typeof options.root === "string" && options.root ? pythonEnvironment(options.root) : undefined
     return {
-      ...(await toolInfo({ refresh: !!options.refresh })),
+      ...(await toolInfo({ refresh: !!options.refresh, root: options.root })),
       latex: runtimeInfo({ trusted: true }),
       projectPython: options.root ? { available: !!environment, path: environment ?? "" } : null,
     }

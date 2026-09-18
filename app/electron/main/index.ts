@@ -23,6 +23,8 @@ import {
   toolDirectories,
   paperSearchConfig,
   configurePaperSearch,
+  probeLanguageServerPath,
+  probeToolPath,
 } from "../../server/tool-config.mjs"
 import { app, BrowserWindow, dialog, ipcMain, Menu, protocol, session, shell } from "electron"
 import { randomBytes } from "node:crypto"
@@ -285,6 +287,7 @@ function registerIpc(): void {
       text: string,
       token: string,
       preferredServer?: string,
+      preferredPath?: string,
     ) => {
       root = await requireBoundRoot(root)
       if (activeRoots.get(event.sender.id) !== root) throw Error("Project is not active")
@@ -293,7 +296,15 @@ function registerIpc(): void {
       safePathParts(file)
       if (typeof token !== "string" || !/^[0-9a-f-]{36}$/i.test(token))
         throw Error("Invalid editor token")
-      return lspService.open(event.sender.id, root, file, text, token, preferredServer)
+      return lspService.open(
+        event.sender.id,
+        root,
+        file,
+        text,
+        token,
+        preferredServer,
+        preferredPath,
+      )
     },
   )
   handle("envoi:lsp-change", async (event, root: string, file: string, text: string) => {
@@ -601,7 +612,16 @@ function registerIpc(): void {
   )
   handle("envoi:tools", async (event, options?: { refresh?: boolean; root?: string }) => {
     await requireToolContext(event)
-    return toolsBackend.call("tools", [options])
+    const root = options?.root ? await requireBoundRoot(options.root) : undefined
+    return toolsBackend.call("tools", [{ refresh: options?.refresh, root }])
+  })
+  handle("envoi:probe-lsp-path", async (event, id: string, value: string) => {
+    await requireToolContext(event)
+    return probeLanguageServerPath(id, value)
+  })
+  handle("envoi:probe-tool-path", async (event, id: string, value: string) => {
+    await requireToolContext(event)
+    return probeToolPath(id, value)
   })
   handle("envoi:paper-search-config", () => paperSearchConfig())
   handle("envoi:configure-paper-search", (_event, input: unknown) => configurePaperSearch(input))

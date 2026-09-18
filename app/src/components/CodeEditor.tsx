@@ -252,7 +252,14 @@ export function CodeEditor({
     if (root && enabled) {
       publishLspStatus({ state: "starting", pluginId, root })
       void envoi()
-        .lspOpen(root, path, source, token, preferences.lspServers[lspLanguageForPath(path) ?? ""])
+        .lspOpen(
+          root,
+          path,
+          source,
+          token,
+          preferences.lspServers[lspLanguageForPath(path) ?? ""],
+          preferences.lspPaths[preferences.lspServers[lspLanguageForPath(path) ?? ""]],
+        )
         .then((result) => {
           if (!alive) {
             void envoi().lspClose(root, path, token)

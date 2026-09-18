@@ -1,7 +1,11 @@
-import { existsSync, realpathSync, statSync } from "node:fs"
+import { existsSync, realpathSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
-import { detectTool, pythonEnvironment } from "../../server/tool-config.mjs"
+import {
+  probeCandidates,
+  probeLanguageServerPath,
+  pythonEnvironment,
+} from "../../server/tool-config.mjs"
 import { lspServersByLanguage, toolCatalog } from "../../server/tool-registry.mjs"
 import { pluginForLanguage, pluginLanguageForPath } from "../../server/plugin-registry.mjs"
 import { PluginHost } from "../../server/plugin-host.mjs"
@@ -35,7 +39,8 @@ function uriKey(uri) {
     return null
   }
 }
-function executable(root, language, preferredServer) {
+const discovered = new Map()
+async function executable(root, language, preferredServer, preferredPath) {
   const preferred = preferredServer
     ? toolCatalog.find(
         (tool) =>
@@ -43,20 +48,29 @@ function executable(root, language, preferredServer) {
       )
     : undefined
   if (preferredServer && !preferred) return undefined
+  if (preferredPath && preferred) {
+    try {
+      const selected = await probeLanguageServerPath(preferred.id, preferredPath)
+      return {
+        command: selected.path,
+        args: preferred.args ?? [],
+        name: preferred.binary,
+      }
+    } catch {
+      return undefined
+    }
+  }
   const candidates = preferred
     ? [[preferred.binary, ...(preferred.args ?? [])]]
     : (servers[language] ?? [])
   for (const [name, ...args] of candidates) {
-    const local =
-      language === "python" && pythonEnvironment(root)
-        ? path.join(
-            pythonEnvironment(root),
-            process.platform === "win32" ? "Scripts" : "bin",
-            process.platform === "win32" ? `${name}.exe` : name,
-          )
-        : ""
-    const command =
-      local && existsSync(local) && statSync(local).isFile() ? local : detectTool(name)
+    const key = `${root}\0${name}\0${process.env.PATH ?? ""}`
+    let detected = discovered.get(key)
+    if (!detected) {
+      detected = probeCandidates(name, language === "python" ? root : undefined)
+      discovered.set(key, detected)
+    }
+    const command = (await detected)[0]?.path
     if (command) return { command, args, name }
   }
 }
@@ -80,7 +94,7 @@ export class LspService {
   key(owner, root, language) {
     return `${owner}\0${root}\0${language}`
   }
-  async open(owner, root, file, text, token, preferredServer) {
+  async open(owner, root, file, text, token, preferredServer, preferredPath) {
     const language = lspLanguage(file)
     if (!language) return { available: false, error: "No language server for this file" }
     if (typeof text !== "string" || Buffer.byteLength(text) > 5_000_000)
@@ -89,7 +103,7 @@ export class LspService {
     const existing = existsSync(target) ? realpathSync(target) : realpathSync(path.dirname(target))
     if (!within(path.resolve(root), target) || !within(realpathSync(root), existing))
       throw Error("Invalid source path")
-    const spec = this.resolve(root, language, preferredServer)
+    const spec = await this.resolve(root, language, preferredServer, preferredPath)
     if (!spec) return { available: false, error: `No ${language} language server found` }
     const key = this.key(owner, root, language)
     const pluginId = pluginForLanguage(language)?.id
