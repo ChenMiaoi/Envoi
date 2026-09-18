@@ -4,6 +4,7 @@
  */
 export const zhCN = {
   "settings.category.extensions": "扩展",
+  "extensions.retry": "重启语言服务",
   "extensions.cpp.name": "C/C++",
   "extensions.cpp.description": "C 和 C++ 补全、诊断与跳转",
   "extensions.python.name": "Python",

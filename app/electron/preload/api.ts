@@ -102,6 +102,9 @@ export interface EnvoiBridge {
     }[]
     tool: string
   }>
+  onLspStatus(
+    cb: (event: { root: string; path: string; token: string; state: "failed" }) => void,
+  ): () => void
   onLspDiagnostics(
     cb: (event: { root: string; path?: string; diagnostics: unknown[] }) => void,
   ): () => void

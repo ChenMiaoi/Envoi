@@ -2,6 +2,7 @@
 import type { Messages } from "./zh-CN"
 const en: Messages = {
   "settings.category.extensions": "Extensions",
+  "extensions.retry": "Restart language service",
   "extensions.cpp.name": "C/C++",
   "extensions.cpp.description": "Completion, diagnostics and navigation for C and C++",
   "extensions.python.name": "Python",

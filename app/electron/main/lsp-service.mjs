@@ -109,13 +109,19 @@ function position(text, offset) {
 }
 
 export class LspService {
-  constructor(publish = () => {}, resolve = executable, managedDirectory) {
+  constructor(
+    publish = () => {},
+    resolve = executable,
+    managedDirectory,
+    publishStatus = () => {},
+  ) {
     this.sessions = new Map()
     this.opening = new Set()
     this.preferences = {}
     this.preferencesRevision = -1
     this.plugins = new PluginHost()
     this.publish = publish
+    this.publishStatus = publishStatus
     this.resolve = (root, language, preferredServer, preferredPath) =>
       resolve(
         root,
@@ -195,6 +201,15 @@ export class LspService {
           },
           () => {
             if (this.sessions.get(key) === session) {
+              for (const doc of session.docs.values()) {
+                this.publish(owner, { root, path: doc.path, diagnostics: [] })
+                this.publishStatus(owner, {
+                  root,
+                  path: doc.path,
+                  token: doc.token,
+                  state: "failed",
+                })
+              }
               this.sessions.delete(key)
               if (pluginId) void this.plugins.deactivate(pluginId, key)
             }

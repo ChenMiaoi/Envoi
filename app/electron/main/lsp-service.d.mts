@@ -16,6 +16,10 @@ export class LspService {
       | undefined
       | Promise<{ command: string; args: string[]; name: string } | undefined>,
     managedDirectory?: string | (() => string),
+    publishStatus?: (
+      owner: number,
+      event: { root: string; path: string; token: string; state: "failed" },
+    ) => void,
   )
   configurePreferences(value: unknown, revision: number): void
   open(

@@ -56,6 +56,14 @@ const bridge: EnvoiBridge = {
   installTool: (id) => invoke("envoi:install-tool", id),
   languageTool: (root, path, text, kind, selectedPath) =>
     invoke("envoi:language-tool", root, path, text, kind, selectedPath),
+  onLspStatus: (cb) => {
+    const listener = (
+      _event: unknown,
+      payload: { root: string; path: string; token: string; state: "failed" },
+    ) => cb(payload)
+    ipcRenderer.on("envoi:lsp-status", listener)
+    return () => ipcRenderer.removeListener("envoi:lsp-status", listener)
+  },
   onLspDiagnostics: (cb) => {
     const listener = (
       _event: unknown,

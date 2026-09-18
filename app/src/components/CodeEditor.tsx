@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef } from "react"
+import { useLayoutEffect, useRef, useState } from "react"
 import { EditorState, Compartment } from "@codemirror/state"
 import {
   EditorView,
@@ -151,6 +151,8 @@ export function CodeEditor({
   ariaLabel: string
   jumpTo?: { path: string; position: LspPosition; id: string }
 }) {
+  const [attempt, setAttempt] = useState(0)
+  const [failed, setFailed] = useState(false)
   const host = useRef<HTMLDivElement>(null)
   const view = useRef<EditorView>(null)
   const settings = useRef(new Compartment())
@@ -179,6 +181,7 @@ export function CodeEditor({
   useLayoutEffect(() => {
     if (!host.current) return
     let alive = true
+    let terminated = false
     const token = crypto.randomUUID()
     const query = (method: string, at: number, text: string) =>
       root && ready.current
@@ -380,6 +383,18 @@ export function CodeEditor({
           )
         })
       : () => {}
+    const offStatus = root
+      ? envoi().onLspStatus?.((event) => {
+          if (!alive || event.root !== root || event.path !== path || event.token !== token) return
+          terminated = true
+          ready.current = false
+          lspIssues.current = []
+          clearLspDiagnostics(path)
+          showIssues(editor)
+          setFailed(true)
+          publishLspStatus({ state: "unavailable", reason: "failed", pluginId, root })
+        })
+      : undefined
     if (root && enabled) {
       publishLspStatus({ state: "starting", pluginId, root })
       void envoi()
@@ -396,6 +411,7 @@ export function CodeEditor({
             void envoi().lspClose(root, path, token)
             return
           }
+          if (terminated) return
           server.current = result.server ?? "LSP"
           ready.current = result.available
           publishLspStatus(
@@ -465,7 +481,10 @@ export function CodeEditor({
             void envoi().lspChange(root, path, editor.state.doc.toString())
         })
         .catch(() => {
-          if (alive) publishLspStatus({ state: "unavailable", reason: "failed", pluginId, root })
+          if (alive) {
+            setFailed(true)
+            publishLspStatus({ state: "unavailable", reason: "failed", pluginId, root })
+          }
         })
     }
     const language = LanguageDescription.matchFilename(languages, path)
@@ -484,13 +503,14 @@ export function CodeEditor({
       clearToolDiagnostics(path)
       queuedLint.current = null
       off()
+      offStatus?.()
       editor.destroy()
       view.current = null
       if (root) void envoi().lspClose(root, path, token)
     }
     // An editor instance lives for one file; ReaderView keys it by file ID.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [attempt])
   useLayoutEffect(() => {
     const editor = view.current
     if (!editor || !jumpTo || jumpTo.path !== path) return
@@ -590,9 +610,21 @@ export function CodeEditor({
         ),
       ]),
     })
-  }, [readOnly, preferences])
+  }, [readOnly, preferences, attempt])
   return (
     <div className="flex h-full min-h-0 flex-col">
+      {failed && enabled && (
+        <button
+          data-testid="lsp-retry"
+          className="shrink-0 border-b px-3 py-1 text-left text-xs"
+          onClick={() => {
+            setFailed(false)
+            setAttempt((value) => value + 1)
+          }}
+        >
+          {t("extensions.retry")}
+        </button>
+      )}
       <div ref={host} className="min-h-0 flex-1" />
     </div>
   )

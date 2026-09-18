@@ -208,3 +208,34 @@ test("persisted extension preferences stop disabled sessions and retain workspac
     await rm(root, { recursive: true, force: true })
   }
 })
+
+test("unexpected server exit clears diagnostics and publishes token-scoped failure", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "envoi-lsp-exit-"))
+  const fixture = fileURLToPath(new URL("./fixtures/lsp-fixture.mjs", import.meta.url))
+  const diagnostics = [],
+    status = []
+  const service = new LspService(
+    (owner, event) => diagnostics.push({ owner, ...event }),
+    () => ({ command: process.execPath, args: [fixture], name: "fixture" }),
+    undefined,
+    (owner, event) => status.push({ owner, ...event }),
+  )
+  try {
+    await writeFile(path.join(root, "main.py"), "x")
+    await service.open(1, root, "main.py", "x", "first")
+    await service.open(2, root, "main.py", "x", "other")
+    const child = service.sessions.get(service.key(1, root, "python")).process
+    const exited = once(child, "exit")
+    child.kill()
+    await exited
+    assert.deepEqual(status, [{ owner: 1, root, path: "main.py", token: "first", state: "failed" }])
+    assert.deepEqual(diagnostics.filter((event) => event.owner === 1).at(-1).diagnostics, [])
+    assert.equal(service.sessions.size, 1)
+    assert.equal((await service.open(1, root, "main.py", "x", "retry")).available, true)
+    assert.notEqual(service.sessions.get(service.key(1, root, "python")).process, child)
+  } finally {
+    service.dispose(1)
+    service.dispose(2)
+    await rm(root, { recursive: true, force: true })
+  }
+})

@@ -1,5 +1,6 @@
 import { _electron } from "playwright"
 import { createRequire } from "node:module"
+import { pathToFileURL } from "node:url"
 import { mkdtemp, mkdir, writeFile, readFile, rm, realpath, copyFile } from "node:fs/promises"
 import { execFileSync } from "node:child_process"
 import { tmpdir } from "node:os"
@@ -47,6 +48,16 @@ try {
   await writeFile(path.join(root, "main.cpp"), "int main() { return 0; }\n")
   await writeFile(path.join(root, "Cargo.toml"), "[package]\nname = 'demo'\n")
   await seedFixtureTrust(path.join(temp, "data"), temp)
+  const managed = path.join(temp, "profile/language-servers/pyright")
+  await mkdir(path.join(managed, "1.0.0"), { recursive: true })
+  await writeFile(
+    path.join(managed, "current.json"),
+    JSON.stringify({ id: "pyright", version: "1.0.0", binary: "langserver.index.js" }),
+  )
+  await writeFile(
+    path.join(managed, "1.0.0/langserver.index.js"),
+    `require("node:fs").writeFileSync(${JSON.stringify(path.join(temp, "lsp.pid"))}, String(process.pid)); import(${JSON.stringify(pathToFileURL(path.resolve("scripts/fixtures/lsp-fixture.mjs")).href)});`,
+  )
   app = await _electron.launch({
     executablePath: createRequire(import.meta.url)("electron"),
     args: [path.resolve("."), "--user-data-dir=" + path.join(temp, "profile")],
@@ -66,6 +77,21 @@ try {
   }
   const editor = page.getByRole("textbox", { name: "文本源码编辑器" })
   await page.getByRole("button", { name: "hello.py", exact: true }).click()
+  await page.locator(".cm-lintRange-info").first().waitFor()
+  await editor.fill("value = 42\n")
+  const crashedPid = Number(await readFile(path.join(temp, "lsp.pid"), "utf8"))
+  process.kill(crashedPid)
+  await page.getByTestId("lsp-retry").waitFor()
+  assert.equal(await page.locator(".cm-lintRange-info").count(), 0)
+  assert((await editor.innerText()).includes("value = 42"))
+  await page.getByTestId("lsp-retry").click()
+  await page.locator(".cm-lintRange-info").first().waitFor()
+  assert((await editor.innerText()).includes("value = 42"))
+  assert.notEqual(Number(await readFile(path.join(temp, "lsp.pid"), "utf8")), crashedPid)
+  await editor.fill("value = 1\n")
+  console.log(
+    "PASS: language server crash clears diagnostics, exposes retry and preserves the draft",
+  )
   const tooltipTheme = await page.evaluate(() => {
     const host = document.querySelector('[aria-label="文本源码编辑器"]').closest(".cm-editor")
     const tooltip = document.createElement("div")
@@ -108,7 +134,7 @@ try {
   await page.getByRole("link", { name: "阅读", exact: true }).first().click()
   await page.getByRole("button", { name: "hello.py", exact: true }).click()
   await page.getByRole("button", { name: "打开问题列表" }).waitFor()
-  await page.waitForFunction(() => document.querySelectorAll(".cm-lintRange").length > 0)
+  await page.waitForFunction(() => document.querySelectorAll(".cm-lintRange-warning").length > 0)
   assert.match(await page.getByRole("button", { name: "打开问题列表" }).textContent(), /Python01/)
   await page.getByRole("button", { name: "打开问题列表" }).click()
   assert.match(await page.getByRole("dialog").textContent(), /W001: example warning/)

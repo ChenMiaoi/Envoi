@@ -250,6 +250,11 @@ const lspService = new LspService(
   },
   undefined,
   managedLspDirectory,
+  (owner, payload) => {
+    for (const window of BrowserWindow.getAllWindows())
+      if (window.webContents.id === owner && !window.webContents.isDestroyed())
+        window.webContents.send("envoi:lsp-status", payload)
+  },
 )
 async function requireToolContext(event: Electron.IpcMainInvokeEvent) {
   const root = activeRoots.get(event.sender.id)
