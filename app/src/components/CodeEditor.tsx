@@ -76,11 +76,8 @@ export function CodeEditor({
   const ready = useRef(false)
   const server = useRef("LSP")
   const { preferences } = usePreferences()
-  const enabled = pluginEnabled(
-    preferences,
-    root,
-    pluginForLanguage(lspLanguageForPath(path)) ?? "",
-  )
+  const pluginId = pluginForLanguage(lspLanguageForPath(path))
+  const enabled = pluginEnabled(preferences, root, pluginId ?? "")
   callbacks.current = { onChange, onNavigate }
 
   useLayoutEffect(() => {
@@ -252,7 +249,8 @@ export function CodeEditor({
           )
         })
       : () => {}
-    if (root && enabled)
+    if (root && enabled) {
+      publishLspStatus({ state: "starting", pluginId, root })
       void envoi()
         .lspOpen(root, path, source, token, preferences.lspServers[lspLanguageForPath(path) ?? ""])
         .then((result) => {
@@ -264,17 +262,18 @@ export function CodeEditor({
           ready.current = result.available
           publishLspStatus(
             result.available
-              ? { state: "ready", server: result.server ?? "LSP" }
+              ? { state: "ready", server: result.server ?? "LSP", pluginId, root }
               : result.error === "No language server for this file"
                 ? null
-                : { state: "unavailable" },
+                : { state: "unavailable", reason: "missing", pluginId, root },
           )
           if (result.available && editor.state.doc.toString() !== source)
             void envoi().lspChange(root, path, editor.state.doc.toString())
         })
         .catch(() => {
-          if (alive) publishLspStatus({ state: "unavailable" })
+          if (alive) publishLspStatus({ state: "unavailable", reason: "failed", pluginId, root })
         })
+    }
     const language = LanguageDescription.matchFilename(languages, path)
     if (language)
       void language

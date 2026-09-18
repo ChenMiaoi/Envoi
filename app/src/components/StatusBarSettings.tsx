@@ -249,7 +249,11 @@ export function LspStatusControl({ status, path }: { status: LspStatus; path: st
           <span
             className={`inline-block size-1.5 rounded-full ${status?.state === "ready" ? "bg-primary shadow-[0_0_6px_hsl(var(--primary)/0.9)]" : "bg-warning"}`}
           />
-          {status?.state === "ready" ? status.server : t("app.statusbar.lspUnavailable")}
+          {status?.state === "ready"
+            ? status.server
+            : status?.state === "starting"
+              ? t("extensions.starting")
+              : t("app.statusbar.lspUnavailable")}
         </button>
       </PopoverTrigger>
       <PopoverContent side="top" sideOffset={10} className="w-64 p-2">

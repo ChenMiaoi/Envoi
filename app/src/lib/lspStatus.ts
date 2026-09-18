@@ -2,7 +2,11 @@ import { useSyncExternalStore } from "react"
 
 // 当前代码编辑器（CodeEditor，随 ReaderView 活动文件挂载）发布其 LSP 状态，状态栏订阅。
 // null 表示打开的文件没有对应语言服务；"unavailable" 表示有服务器但启动失败。
-export type LspStatus = { state: "ready"; server: string } | { state: "unavailable" } | null
+export type LspStatus =
+  | { state: "starting"; pluginId?: string; root?: string }
+  | { state: "ready"; server: string; pluginId?: string; root?: string }
+  | { state: "unavailable"; reason?: "missing" | "failed"; pluginId?: string; root?: string }
+  | null
 
 let current: LspStatus = null
 const listeners = new Set<() => void>()

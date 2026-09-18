@@ -22,6 +22,8 @@ const en: Messages = {
   "extensions.autoDetect": "Auto detect",
   "extensions.toolSettings": "Tool settings",
   "extensions.logs": "Diagnostic logs",
+  "extensions.starting": "Starting",
+  "extensions.startFailed": "Failed to start",
 
   "chat.statsRunning": "Running",
   "chat.statsComplete": "Completed",

@@ -22,6 +22,8 @@ const zhHK: Messages = {
   "extensions.autoDetect": "自動偵測",
   "extensions.toolSettings": "工具設定",
   "extensions.logs": "診斷日誌",
+  "extensions.starting": "正在啟動",
+  "extensions.startFailed": "啟動失敗",
 
   "chat.statsRunning": "運行中",
   "chat.statsComplete": "已完成",

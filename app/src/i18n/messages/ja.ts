@@ -22,6 +22,8 @@ const ja: Messages = {
   "extensions.autoDetect": "自動検出",
   "extensions.toolSettings": "ツール設定",
   "extensions.logs": "診断ログ",
+  "extensions.starting": "起動中",
+  "extensions.startFailed": "起動に失敗",
 
   "chat.statsRunning": "実行中",
   "chat.statsComplete": "完了",

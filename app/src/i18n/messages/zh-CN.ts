@@ -24,6 +24,8 @@ export const zhCN = {
   "extensions.autoDetect": "自动检测",
   "extensions.toolSettings": "工具设置",
   "extensions.logs": "诊断日志",
+  "extensions.starting": "正在启动",
+  "extensions.startFailed": "启动失败",
 
   "chat.statsRunning": "运行中",
   "chat.statsComplete": "已完成",

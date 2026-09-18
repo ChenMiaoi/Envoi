@@ -88,19 +88,23 @@ export function ExtensionsSettings({ scope }: { scope: "global" | "project" }) {
         const missingSelection = selected.some(
           (id) => !candidates.find((tool) => tool.id === id)?.available,
         )
-        const running =
-          enabled && lsp?.state === "ready" && candidates.some((tool) => tool.binary === lsp.server)
+        const current =
+          enabled && lsp?.pluginId === id && lsp.root === project.rootPath ? lsp : null
         const status = !enabled
           ? t("extensions.disabled")
-          : running
+          : current?.state === "ready"
             ? t("extensions.running")
-            : !tools
-              ? t("settings.tools.probing")
-              : missingSelection
-                ? t("extensions.missingTool")
-                : candidates.some((tool) => tool.available)
-                  ? t("extensions.toolReady")
-                  : t("extensions.missingTool")
+            : current?.state === "starting"
+              ? t("extensions.starting")
+              : current?.state === "unavailable" && current.reason === "failed"
+                ? t("extensions.startFailed")
+                : !tools
+                  ? t("settings.tools.probing")
+                  : missingSelection
+                    ? t("extensions.missingTool")
+                    : candidates.some((tool) => tool.available)
+                      ? t("extensions.toolReady")
+                      : t("extensions.missingTool")
         return (
           <article key={id} className="rounded-xl border border-border bg-card p-4">
             <div className="flex items-start justify-between gap-4">
