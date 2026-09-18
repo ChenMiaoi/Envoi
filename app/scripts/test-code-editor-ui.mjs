@@ -34,6 +34,29 @@ try {
   }
   const editor = page.getByRole("textbox", { name: "文本源码编辑器" })
   await page.getByRole("button", { name: "hello.py", exact: true }).click()
+  const tooltipTheme = await page.evaluate(() => {
+    const host = document.querySelector('[aria-label="文本源码编辑器"]').closest(".cm-editor")
+    const tooltip = document.createElement("div")
+    tooltip.className = "cm-tooltip"
+    host.append(tooltip)
+    const expected = document.createElement("div")
+    expected.style.backgroundColor = "hsl(var(--popover))"
+    expected.style.color = "hsl(var(--popover-foreground))"
+    host.append(expected)
+    const actualStyle = getComputedStyle(tooltip)
+    const expectedStyle = getComputedStyle(expected)
+    const result = {
+      background: actualStyle.backgroundColor,
+      foreground: actualStyle.color,
+      expectedBackground: expectedStyle.backgroundColor,
+      expectedForeground: expectedStyle.color,
+    }
+    tooltip.remove()
+    expected.remove()
+    return result
+  })
+  assert.equal(tooltipTheme.background, tooltipTheme.expectedBackground)
+  assert.equal(tooltipTheme.foreground, tooltipTheme.expectedForeground)
   assert.equal(await page.getByRole("button", { name: "格式化", exact: true }).count(), 1)
   assert.equal(await page.getByRole("button", { name: "代码检查", exact: true }).count(), 1)
   await editor.click()

@@ -20,7 +20,7 @@ import { codeHighlight } from "@/lib/codeHighlight"
 import { fontCss } from "@/settings/fonts"
 import { usePreferences } from "@/settings/context"
 import { lspLanguageForPath } from "@/lib/lspLanguage"
-import { editorFonts, pluginEnabled } from "@/settings/model"
+import { editorFonts, pluginEnabled, themes } from "@/settings/model"
 import { pluginForLanguage } from "@/settings/pluginCatalog"
 import { useT } from "@/i18n/useT"
 import { completionChanges, type LspPosition, type LspRange } from "@/lib/lspCompletion"
@@ -474,31 +474,45 @@ export function CodeEditor({
       effects: settings.current.reconfigure([
         EditorState.readOnly.of(readOnly),
         EditorView.editable.of(!readOnly),
-        EditorView.theme({
-          "&": {
-            height: "100%",
-            fontFamily: fontCss(preferences.fontFamily, editorFonts),
-            fontSize: `${preferences.fontSize}px`,
-            color: "hsl(var(--foreground))",
+        EditorView.theme(
+          {
+            "&": {
+              height: "100%",
+              fontFamily: fontCss(preferences.fontFamily, editorFonts),
+              fontSize: `${preferences.fontSize}px`,
+              color: "hsl(var(--foreground))",
+            },
+            ".cm-scroller": { overflow: "auto", lineHeight: String(preferences.lineHeight) },
+            ".cm-content": { padding: "16px", tabSize: String(preferences.tabSize) },
+            "&.cm-focused": { outline: "none" },
+            ".cm-cursor": { borderLeftColor: "hsl(var(--primary))" },
+            ".cm-selectionBackground, &.cm-focused .cm-selectionBackground": {
+              background: "hsl(var(--primary) / .2)",
+            },
+            ".cm-gutters": {
+              background: "transparent",
+              color: "hsl(var(--muted-foreground) / .55)",
+              border: "none",
+            },
+            ".cm-activeLine": { background: "hsl(var(--foreground) / .045)" },
+            ".cm-activeLineGutter": {
+              background: "transparent",
+              color: "hsl(var(--foreground))",
+            },
+            ".cm-tooltip": {
+              backgroundColor: "hsl(var(--popover))",
+              color: "hsl(var(--popover-foreground))",
+              border: "1px solid hsl(var(--border))",
+              borderRadius: "6px",
+              boxShadow: "0 8px 24px hsl(0 0% 0% / .2)",
+            },
+            ".cm-tooltip-autocomplete ul li[aria-selected]": {
+              backgroundColor: "hsl(var(--accent))",
+              color: "hsl(var(--accent-foreground))",
+            },
           },
-          ".cm-scroller": { overflow: "auto", lineHeight: String(preferences.lineHeight) },
-          ".cm-content": { padding: "16px", tabSize: String(preferences.tabSize) },
-          "&.cm-focused": { outline: "none" },
-          ".cm-cursor": { borderLeftColor: "hsl(var(--primary))" },
-          ".cm-selectionBackground, &.cm-focused .cm-selectionBackground": {
-            background: "hsl(var(--primary) / .2)",
-          },
-          ".cm-gutters": {
-            background: "transparent",
-            color: "hsl(var(--muted-foreground) / .55)",
-            border: "none",
-          },
-          ".cm-activeLine": { background: "hsl(var(--foreground) / .045)" },
-          ".cm-activeLineGutter": {
-            background: "transparent",
-            color: "hsl(var(--foreground))",
-          },
-        }),
+          { dark: themes[preferences.theme].mode === "dark" },
+        ),
       ]),
     })
   }, [readOnly, preferences])
