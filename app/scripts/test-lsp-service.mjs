@@ -164,3 +164,47 @@ test("closing pending documents and disposing owners cancels late activation", a
     await rm(root, { recursive: true, force: true })
   }
 })
+
+test("persisted extension preferences stop disabled sessions and retain workspace overrides", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "envoi-lsp-disable-"))
+  const fixture = fileURLToPath(new URL("./fixtures/lsp-fixture.mjs", import.meta.url))
+  const service = new LspService(
+    () => {},
+    () => ({ command: process.execPath, args: [fixture], name: "fixture" }),
+  )
+  try {
+    await writeFile(path.join(root, "main.py"), "x")
+    await writeFile(path.join(root, "main.cpp"), "x")
+    await service.open(1, root, "main.py", "x", "py")
+    await service.open(1, root, "main.cpp", "x", "cpp")
+    const python = service.sessions.get(service.key(1, root, "python")).process
+    service.configurePreferences({ pluginStates: { "envoi.python": false } }, 2)
+    assert(python.killed)
+    assert.equal(service.sessions.size, 1)
+    assert.equal((await service.open(1, root, "main.py", "x", "denied")).available, false)
+    service.configurePreferences({}, 1)
+    assert.equal((await service.open(1, root, "main.py", "x", "stale")).available, false)
+    service.configurePreferences(
+      {
+        pluginStates: { "envoi.python": false },
+        pluginWorkspaces: { [root]: { "envoi.python": true } },
+      },
+      3,
+    )
+    assert.equal((await service.open(1, root, "main.py", "x", "override")).available, true)
+    const restarted = service.sessions.get(service.key(1, root, "python")).process
+    assert.notEqual(restarted, python)
+    service.configurePreferences(
+      {
+        pluginStates: { "envoi.python": true },
+        pluginWorkspaces: { [root]: { "envoi.python": false } },
+      },
+      4,
+    )
+    assert(restarted.killed)
+    assert.equal(service.sessions.size, 1)
+  } finally {
+    service.dispose(1)
+    await rm(root, { recursive: true, force: true })
+  }
+})

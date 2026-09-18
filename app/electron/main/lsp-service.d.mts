@@ -17,6 +17,7 @@ export class LspService {
       | Promise<{ command: string; args: string[]; name: string } | undefined>,
     managedDirectory?: string | (() => string),
   )
+  configurePreferences(value: unknown, revision: number): void
   open(
     owner: number,
     root: string,

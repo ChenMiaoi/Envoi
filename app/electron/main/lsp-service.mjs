@@ -112,6 +112,8 @@ export class LspService {
   constructor(publish = () => {}, resolve = executable, managedDirectory) {
     this.sessions = new Map()
     this.opening = new Set()
+    this.preferences = {}
+    this.preferencesRevision = -1
     this.plugins = new PluginHost()
     this.publish = publish
     this.resolve = (root, language, preferredServer, preferredPath) =>
@@ -123,11 +125,36 @@ export class LspService {
         typeof managedDirectory === "function" ? managedDirectory() : managedDirectory,
       )
   }
+  enabled(root, language) {
+    const id = pluginForLanguage(language)?.id
+    return (
+      !id ||
+      (this.preferences.pluginWorkspaces?.[root]?.[id] ??
+        this.preferences.pluginStates?.[id] ??
+        true) !== false
+    )
+  }
+  configurePreferences(value, revision) {
+    if (!Number.isSafeInteger(revision) || revision < this.preferencesRevision) return
+    this.preferences = value ?? {}
+    this.preferencesRevision = revision
+    for (const pending of this.opening)
+      if (!this.enabled(pending.root, pending.language)) pending.cancelled = true
+    for (const [key, session] of this.sessions) {
+      if (this.enabled(session.root, session.language)) continue
+      this.sessions.delete(key)
+      session.stop()
+      const id = pluginForLanguage(session.language)?.id
+      if (id) void this.plugins.deactivate(id, key)
+    }
+  }
   key(owner, root, language) {
     return `${owner}\0${root}\0${language}`
   }
   async open(owner, root, file, text, token, preferredServer, preferredPath) {
     const language = lspLanguage(file)
+    if (!this.enabled(root, language))
+      return { available: false, error: "Language extension is disabled" }
     if (!language) return { available: false, error: "No language server for this file" }
     if (typeof text !== "string" || Buffer.byteLength(text) > 5_000_000)
       throw Error("Source file exceeds the language server limit")

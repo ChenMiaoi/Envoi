@@ -304,6 +304,12 @@ function registerIpc(): void {
       preferredServer?: string,
       preferredPath?: string,
     ) => {
+      const preferences = (await dataStore({
+        store: "preferences",
+        key: "default",
+        action: "get",
+      })) as { body: { value?: unknown; revision?: number } | null }
+      lspService.configurePreferences(preferences.body?.value, preferences.body?.revision ?? 0)
       root = await requireBoundRoot(root)
       if (activeRoots.get(event.sender.id) !== root) throw Error("Project is not active")
       if (typeof file !== "string" || !lspLanguage(file))
@@ -758,21 +764,27 @@ function registerIpc(): void {
   )
   handle(
     "envoi:data-put",
-    (
+    async (
       _event,
       name: string,
       value: unknown,
       key?: string,
       opts?: { migrate?: boolean; expectedRevision?: number },
-    ) =>
-      store({
+    ) => {
+      const result = await store({
         store: name,
         key: key ?? "default",
         action: "put",
         value,
         migrate: opts?.migrate,
         expectedRevision: opts?.expectedRevision,
-      }),
+      })
+      if (name === "preferences" && (key ?? "default") === "default") {
+        const saved = result as { value: unknown; revision: number }
+        lspService.configurePreferences(saved.value, saved.revision)
+      }
+      return result
+    },
   )
 
   handle("envoi:agent-status", () => agentBackend.call("agentStatus"))

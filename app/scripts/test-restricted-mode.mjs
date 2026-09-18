@@ -145,6 +145,49 @@ try {
     root,
   )
   assert.equal(opened.available, true)
+  const disabledPid = Number(await readFile(path.join(temp, "lsp.pid"), "utf8"))
+  await page.evaluate(async () => {
+    const current = await window.envoi.dataGet("preferences")
+    await window.envoi.dataPut(
+      "preferences",
+      { ...current.value, pluginStates: { "envoi.python": false } },
+      "default",
+      { expectedRevision: current.revision },
+    )
+  })
+  const disabledOpen = await page.evaluate(
+    (root) => window.envoi.lspOpen(root, "main.py", "x", crypto.randomUUID(), "pyright"),
+    root,
+  )
+  assert.equal(disabledOpen.available, false)
+  let disabledAlive = true
+  for (let attempt = 0; attempt < 100 && disabledAlive; attempt++) {
+    try {
+      process.kill(disabledPid, 0)
+      await new Promise((resolve) => setTimeout(resolve, 20))
+    } catch {
+      disabledAlive = false
+    }
+  }
+  assert.equal(disabledAlive, false, "Disabling an extension must terminate its process")
+  await page.evaluate(async () => {
+    const current = await window.envoi.dataGet("preferences")
+    await window.envoi.dataPut("preferences", { ...current.value, pluginStates: {} }, "default", {
+      expectedRevision: current.revision,
+    })
+  })
+  assert.equal(
+    (
+      await page.evaluate(
+        (root) => window.envoi.lspOpen(root, "main.py", "x", crypto.randomUUID(), "pyright"),
+        root,
+      )
+    ).available,
+    true,
+  )
+  console.log(
+    "PASS: persisted extension disable stops its process and re-enable starts a fresh session",
+  )
   const lspPid = Number(await readFile(path.join(temp, "lsp.pid"), "utf8"))
   assert.doesNotThrow(() => process.kill(lspPid, 0))
   await page.evaluate(() => window.dispatchEvent(new Event("envoi:show-trust")))
