@@ -1,5 +1,9 @@
 appId: com.envoi.app
 productName: Envoi
+publish:
+  provider: github
+  owner: ChenMiaoi
+  repo: Envoi
 asar: true
 directories:
   output: release
@@ -25,6 +29,7 @@ extraResources:
       - "!**/.paperdesk{,/**}"
 
 win:
+  artifactName: Envoi.Setup.${version}.${ext}
   target:
     - nsis
 nsis:

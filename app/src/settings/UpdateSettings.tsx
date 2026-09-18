@@ -13,15 +13,25 @@ export function UpdateSettings() {
   >("idle")
   const [latestVersion, setLatestVersion] = useState<string>()
   const [downloadAvailable, setDownloadAvailable] = useState(false)
+  const [restartAvailable, setRestartAvailable] = useState(false)
   const [downloaded, setDownloaded] = useState(false)
   const [busy, setBusy] = useState(false)
   const [downloading, setDownloading] = useState(false)
   useEffect(() => {
     let active = true
     void Promise.resolve()
-      .then(() => envoi().appVersion())
-      .then((value) => {
-        if (active) setVersion(value)
+      .then(() => Promise.all([envoi().appVersion(), envoi().updateState()]))
+      .then(([value, update]) => {
+        if (!active) return
+        setVersion(value)
+        if (update.downloaded && update.latestVersion) {
+          setChannel(update.channel ?? "stable")
+          setStatus("available")
+          setLatestVersion(update.latestVersion)
+          setDownloadAvailable(true)
+          setRestartAvailable(update.restartAvailable)
+          setDownloaded(true)
+        }
       })
       .catch((error) => {
         if (active) notify(ipcError(error).message, "error", "app-version")
@@ -30,16 +40,24 @@ export function UpdateSettings() {
       active = false
     }
   }, [])
-  async function run(action: "check" | "download" | "open" = "check") {
+  async function run(action: "check" | "download" | "open" | "restart" = "check") {
     setBusy(true)
     setDownloading(action === "download")
     try {
-      if (action === "open") {
+      if (action === "restart") {
+        await envoi().restartUpdate()
+      } else if (action === "open") {
         await envoi().openDownloadedUpdate()
       } else if (action === "download") {
         const result = await envoi().downloadUpdate()
         setDownloaded(true)
-        notify(`${t("settings.update.downloaded")} ${result.path}`, "success", "app-update")
+        notify(
+          result.restartAvailable
+            ? t("settings.update.readyToRestart")
+            : `${t("settings.update.downloaded")} ${result.path}`,
+          "success",
+          "app-update",
+        )
       } else {
         setStatus("idle")
         setDownloadAvailable(false)
@@ -49,6 +67,7 @@ export function UpdateSettings() {
         setStatus(result.status)
         setLatestVersion(result.latestVersion)
         setDownloadAvailable(result.downloadAvailable)
+        setRestartAvailable(result.restartAvailable)
         notify(
           result.status === "unpublished"
             ? t("settings.update.noPreview")
@@ -88,6 +107,7 @@ export function UpdateSettings() {
               setStatus("idle")
               setLatestVersion(undefined)
               setDownloadAvailable(false)
+              setRestartAvailable(false)
               setDownloaded(false)
             }}
           >
@@ -100,7 +120,7 @@ export function UpdateSettings() {
           {status === "available" && downloadAvailable && (
             <span className="text-xs text-muted-foreground">v{latestVersion}</span>
           )}
-          {status === "available" && downloadAvailable && (
+          {status === "available" && downloadAvailable && !downloaded && (
             <button
               className={button + " bg-primary text-primary-foreground"}
               disabled={busy}
@@ -116,8 +136,12 @@ export function UpdateSettings() {
             </button>
           )}
           {downloaded && (
-            <button className={button} disabled={busy} onClick={() => void run("open")}>
-              {t("settings.update.openInstaller")}
+            <button
+              className={button + " bg-primary text-primary-foreground"}
+              disabled={busy}
+              onClick={() => void run(restartAvailable ? "restart" : "open")}
+            >
+              {t(restartAvailable ? "settings.update.restart" : "settings.update.openInstaller")}
             </button>
           )}
         </div>

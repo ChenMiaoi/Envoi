@@ -63,6 +63,18 @@ test("release checks select only a verified installer for this system", async ()
   assert.equal(mac.status, "available")
   assert.equal(mac.installer?.name, "Envoi-0.4.1-arm64.dmg")
   assert.equal(mac.downloadAvailable, true)
+  assert.equal(mac.restartAvailable, false)
+  const windows = await checkUpdate(
+    "0.4.0",
+    request({ ...release, assets: [...release.assets, { name: "latest.yml" }] }),
+    { platform: "win32", arch: "x64" },
+  )
+  assert.equal(windows.restartAvailable, true)
+  assert.equal(
+    (await checkUpdate("0.4.0", request(release), { platform: "win32", arch: "x64" }))
+      .restartAvailable,
+    false,
+  )
   assert.equal(releaseInstaller(release, "win32", "x64")?.name, "Envoi.Setup.0.4.1.exe")
   assert.equal(releaseInstaller(release, "darwin", "x64"), null)
   assert.equal(releaseInstaller(release, "linux", "x64"), null)

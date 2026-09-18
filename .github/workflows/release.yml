@@ -77,7 +77,9 @@ jobs:
             os: windows-latest
             package_command: npm run package:win
             artifact_name: envoi-windows
-            artifact_path: app/release/*.exe
+            artifact_path: |
+              app/release/*.exe
+              app/release/*.yml
           - platform: macOS
             os: macos-latest
             package_command: npm run package:mac

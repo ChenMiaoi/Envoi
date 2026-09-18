@@ -106,6 +106,8 @@ const en: Messages = {
   "settings.update.download": "Download update",
   "settings.update.downloadPreview": "Download pre-release",
   "settings.update.openInstaller": "Open installer",
+  "settings.update.restart": "Restart to update",
+  "settings.update.readyToRestart": "Update downloaded. Restart the app to install it.",
   "settings.update.downloading": "Downloading…",
   "settings.update.downloaded": "Update downloaded to:",
   "settings.update.noInstaller":

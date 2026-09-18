@@ -86,6 +86,29 @@ try {
   await page.getByRole("button", { name: "下载预发布版", exact: true }).click()
   await page.getByRole("button", { name: "打开安装包", exact: true }).waitFor()
   await page.getByRole("button", { name: "打开安装包", exact: true }).click()
+  await instance.evaluate(({ ipcMain }) => {
+    ipcMain.removeHandler("envoi:check-update")
+    ipcMain.handle("envoi:check-update", () => ({
+      currentVersion: "0.4.1",
+      latestVersion: "0.4.2",
+      status: "available",
+      downloadAvailable: true,
+      restartAvailable: true,
+    }))
+    ipcMain.removeHandler("envoi:download-update")
+    ipcMain.handle("envoi:download-update", () => ({ restartAvailable: true }))
+    ipcMain.removeHandler("envoi:restart-update")
+    ipcMain.handle("envoi:restart-update", () => {
+      globalThis.updateRestartRequested = true
+    })
+  })
+  await page.getByRole("combobox", { name: "更新渠道" }).selectOption("stable")
+  await page.getByRole("button", { name: "检查更新", exact: true }).click()
+  await page.getByRole("button", { name: "下载更新", exact: true }).click()
+  await page.getByRole("button", { name: "重启更新", exact: true }).waitFor()
+  assert.equal(await page.getByRole("button", { name: "下载更新", exact: true }).count(), 0)
+  await page.getByRole("button", { name: "重启更新", exact: true }).click()
+  assert.equal(await instance.evaluate(() => globalThis.updateRestartRequested), true)
   // A scroll fixture uses the actual bundled stylesheet and former conflicting class's replacement.
   await page.evaluate(() => {
     const panel = document.createElement("div")

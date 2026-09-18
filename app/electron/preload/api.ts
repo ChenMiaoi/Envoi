@@ -21,9 +21,17 @@ export interface EnvoiBridge {
     status: "inaccessible" | "available" | "current" | "unpublished"
     downloadAvailable: boolean
     prerelease: boolean
+    restartAvailable: boolean
   }>
-  downloadUpdate(): Promise<{ path: string }>
+  downloadUpdate(): Promise<{ path?: string; restartAvailable?: boolean }>
   openDownloadedUpdate(): Promise<void>
+  restartUpdate(): Promise<void>
+  updateState(): Promise<{
+    channel?: "stable" | "preview"
+    latestVersion?: string
+    downloaded: boolean
+    restartAvailable: boolean
+  }>
   library(root: string, input: Record<string, unknown>): Promise<unknown>
   workspaces(root: string, input: Record<string, unknown>): Promise<unknown>
   windowColors(colors: { color: string; symbolColor: string }): Promise<void>

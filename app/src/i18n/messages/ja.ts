@@ -110,6 +110,9 @@ const ja: Messages = {
   "settings.update.download": "更新をダウンロード",
   "settings.update.downloadPreview": "プレリリースをダウンロード",
   "settings.update.openInstaller": "インストーラーを開く",
+  "settings.update.restart": "再起動して更新",
+  "settings.update.readyToRestart":
+    "更新をダウンロードしました。アプリを再起動するとインストールされます。",
   "settings.update.downloading": "ダウンロード中…",
   "settings.update.downloaded": "更新をダウンロードしました。保存先:",
   "settings.update.noInstaller":

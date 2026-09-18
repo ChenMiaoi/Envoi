@@ -101,6 +101,8 @@ export const zhCN = {
   "settings.update.download": "下载更新",
   "settings.update.downloadPreview": "下载预发布版",
   "settings.update.openInstaller": "打开安装包",
+  "settings.update.restart": "重启更新",
+  "settings.update.readyToRestart": "更新已下载，重启应用即可安装。",
   "settings.update.downloading": "正在下载…",
   "settings.update.downloaded": "更新已下载，文件位置：",
   "settings.update.noInstaller": "发现新版本，但没有适用于当前系统的可验证安装包。",

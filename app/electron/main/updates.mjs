@@ -103,12 +103,17 @@ export async function checkUpdate(currentVersion, request = fetch, target = {}) 
     ? newerPreviewVersion(release.tag_name, currentVersion)
     : newerVersion(release.tag_name, currentVersion)
   const installer = available ? releaseInstaller(release, target.platform, target.arch) : null
+  const restartAvailable =
+    !!installer &&
+    (target.platform ?? process.platform) === "win32" &&
+    release.assets?.some((asset) => asset.name === (preview ? "rc.yml" : "latest.yml"))
   return {
     currentVersion,
     latestVersion: release.tag_name.slice(1),
     status: available ? "available" : "current",
     prerelease: preview,
     downloadAvailable: !!installer,
+    restartAvailable,
     installer,
   }
 }

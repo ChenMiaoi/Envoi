@@ -98,6 +98,8 @@ const zhTW: Messages = {
   "settings.update.download": "下載更新",
   "settings.update.downloadPreview": "下載預先發行版",
   "settings.update.openInstaller": "開啟安裝程式",
+  "settings.update.restart": "重新啟動並更新",
+  "settings.update.readyToRestart": "更新已下載，重新啟動應用程式即可安裝。",
   "settings.update.downloading": "正在下載…",
   "settings.update.downloaded": "更新已下載，檔案位置：",
   "settings.update.noInstaller": "發現新版本，但沒有適用於目前系統的可驗證安裝程式。",
