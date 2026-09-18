@@ -1,9 +1,15 @@
 import assert from "node:assert/strict"
-import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises"
+import { createHash } from "node:crypto"
+import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import test from "node:test"
-import { installAsset, installedServer } from "../electron/main/lsp-installer.mjs"
+import * as tar from "tar"
+import {
+  installAsset,
+  installedServer,
+  installLanguageServer,
+} from "../electron/main/lsp-installer.mjs"
 
 test("selects only matching official release assets for supported systems", () => {
   assert.equal(installAsset("clangd", "freebsd", "x64"), null)
@@ -41,6 +47,43 @@ test("managed server lookup accepts only installed files inside its version dire
     )
     assert.equal(await installedServer(directory, "python"), null)
   } finally {
+    await rm(directory, { recursive: true, force: true })
+  }
+})
+
+test("Pyright installation requests npm metadata as JSON and verifies its archive", async () => {
+  const directory = await mkdtemp(path.join(tmpdir(), "envoi-pyright-install-test-"))
+  const previousFetch = globalThis.fetch
+  try {
+    const packageDirectory = path.join(directory, "fixture", "package", "dist")
+    await mkdir(packageDirectory, { recursive: true })
+    await writeFile(path.join(packageDirectory, "langserver.index.js"), "// test server\n")
+    const archive = path.join(directory, "pyright.tgz")
+    await tar.c({ gzip: true, cwd: path.join(directory, "fixture"), file: archive }, ["package"])
+    const bytes = await readFile(archive)
+    const integrity = `sha512-${createHash("sha512").update(bytes).digest("base64")}`
+    const tarball = "https://registry.npmjs.org/pyright/-/pyright-1.2.3.tgz"
+    const requests = []
+    globalThis.fetch = async (url, options = {}) => {
+      requests.push({ url, accept: options.headers?.Accept })
+      if (url === "https://registry.npmjs.org/pyright/latest") {
+        if (options.headers?.Accept !== "application/json")
+          return new Response(null, { status: 406 })
+        return Response.json({ version: "1.2.3", dist: { tarball, integrity } })
+      }
+      assert.equal(url, tarball)
+      return new Response(bytes)
+    }
+
+    const installed = await installLanguageServer(path.join(directory, "servers"), "python")
+    assert.equal(installed?.version, "1.2.3")
+    assert.deepEqual(requests, [
+      { url: "https://registry.npmjs.org/pyright/latest", accept: "application/json" },
+      { url: tarball, accept: undefined },
+    ])
+    assert.equal(await readFile(installed.path, "utf8"), "// test server\n")
+  } finally {
+    globalThis.fetch = previousFetch
     await rm(directory, { recursive: true, force: true })
   }
 })

@@ -58,9 +58,9 @@ export function installAsset(id, platform = process.platform, arch = process.arc
   return null
 }
 
-async function json(url) {
+async function json(url, accept = "application/vnd.github+json") {
   const response = await fetch(url, {
-    headers: { Accept: "application/vnd.github+json", "User-Agent": "Envoi" },
+    headers: { Accept: accept, "User-Agent": "Envoi" },
     signal: AbortSignal.timeout(30_000),
   })
   if (!response.ok) throw Error(`Download metadata unavailable (${response.status})`)
@@ -69,7 +69,7 @@ async function json(url) {
 
 async function release(id) {
   if (id === "pyright") {
-    const metadata = await json("https://registry.npmjs.org/pyright/latest")
+    const metadata = await json("https://registry.npmjs.org/pyright/latest", "application/json")
     const url = metadata.dist?.tarball
     if (!/^https:\/\/registry\.npmjs\.org\/pyright\/-\/pyright-[\w.-]+\.tgz$/.test(url))
       throw Error("Invalid Pyright package URL")
