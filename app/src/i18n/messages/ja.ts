@@ -2,6 +2,7 @@
 import type { Messages } from "./zh-CN"
 const ja: Messages = {
   "settings.category.extensions": "拡張機能",
+  "extensions.loadFailed": "拡張機能 {id} を読み込めませんでした。他の拡張機能は利用できます。",
   "extensions.retry": "言語サービスを再起動",
   "extensions.cpp.name": "C/C++",
   "extensions.cpp.description": "C/C++ の補完、診断、移動",

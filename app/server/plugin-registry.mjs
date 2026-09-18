@@ -79,8 +79,27 @@ export function registerPlugins(manifests) {
   return manifests
 }
 
+// Validate each plugin against only the previously accepted contributions.
+export function loadPlugins(manifests) {
+  const plugins = [],
+    errors = []
+  for (const manifest of manifests) {
+    try {
+      registerPlugins([...plugins, manifest])
+      plugins.push(manifest)
+    } catch (error) {
+      errors.push({
+        id: String(manifest?.id ?? "unknown"),
+        message: String(error.message ?? error),
+      })
+    }
+  }
+  return { plugins, errors }
+}
 // Fixed official list. No arbitrary directory is scanned or executed.
-export const builtinPlugins = registerPlugins([cpp, python, rust])
+const loaded = loadPlugins([cpp, python, rust])
+export const builtinPlugins = loaded.plugins
+export const pluginLoadErrors = loaded.errors
 
 export function pluginForLanguage(language) {
   return builtinPlugins.find((plugin) =>
@@ -90,7 +109,7 @@ export function pluginForLanguage(language) {
 
 export function pluginLanguageForPath(file) {
   const name = file.split(/[\\/]/).at(-1) ?? ""
-  if (/\.[CH]$/.test(name)) return "cpp"
+  if (/\.[CH]$/.test(name) && pluginForLanguage("cpp")) return "cpp"
   const extension = name.toLowerCase().match(/\.[^.]+$/)?.[0]
   for (const plugin of builtinPlugins)
     for (const language of plugin.contributes.languages ?? [])

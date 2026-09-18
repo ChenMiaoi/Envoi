@@ -2,7 +2,12 @@ import cpp from "../../plugins/cpp/manifest.json"
 import python from "../../plugins/python/manifest.json"
 import rust from "../../plugins/rust/manifest.json"
 
-export const languagePlugins = [cpp, python, rust]
+import { loadPlugins } from "../../server/plugin-registry.mjs"
+export const { plugins: languagePlugins, errors: pluginLoadErrors } = loadPlugins([
+  cpp,
+  python,
+  rust,
+])
 
 export function pluginForLanguage(language?: string) {
   return languagePlugins.find((plugin) =>
@@ -12,7 +17,7 @@ export function pluginForLanguage(language?: string) {
 
 export function pluginLanguageForPath(file: string) {
   const name = file.split(/[\\/]/).at(-1) ?? ""
-  if (/\.[CH]$/.test(name)) return "cpp"
+  if (/\.[CH]$/.test(name) && pluginForLanguage("cpp")) return "cpp"
   const extension = name.toLowerCase().match(/\.[^.]+$/)?.[0]
   for (const plugin of languagePlugins)
     for (const language of plugin.contributes.languages)

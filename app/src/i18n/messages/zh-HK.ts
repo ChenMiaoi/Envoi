@@ -2,6 +2,7 @@
 import type { Messages } from "./zh-CN"
 const zhHK: Messages = {
   "settings.category.extensions": "擴充功能",
+  "extensions.loadFailed": "擴充功能 {id} 載入失敗，其他擴充功能仍可使用。",
   "extensions.retry": "重新啟動語言服務",
   "extensions.cpp.name": "C/C++",
   "extensions.cpp.description": "C 與 C++ 補全、診斷與跳轉",

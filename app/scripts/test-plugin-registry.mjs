@@ -49,3 +49,22 @@ test("registration rejects incompatible and colliding contributions", () => {
   other.contributes.tools[0].id = manifest.contributes.tools[0].id
   assert.throws(() => registerPlugins([manifest, other]), /Duplicate or invalid tools/)
 })
+
+test("a rejected plugin cannot abort or reserve contributions for later plugins", async () => {
+  const { loadPlugins } = await import("../server/plugin-registry.mjs")
+  const invalid = structuredClone(builtinPlugins[0])
+  invalid.apiVersion = 999
+  const loaded = loadPlugins([invalid, builtinPlugins[1], builtinPlugins[2]])
+  assert.deepEqual(
+    loaded.plugins.map((plugin) => plugin.id),
+    ["envoi.python", "envoi.rust"],
+  )
+  assert.equal(loaded.errors[0].id, "envoi.cpp")
+  const partial = structuredClone(builtinPlugins[1])
+  partial.id = "envoi.invalid"
+  partial.contributes.tools.push({ id: builtinPlugins[0].contributes.tools[0].id })
+  const recovered = loadPlugins([builtinPlugins[0], partial, builtinPlugins[1], builtinPlugins[2]])
+  assert.deepEqual(recovered.plugins, builtinPlugins)
+  assert.equal(recovered.errors.length, 1)
+  assert.equal(loadPlugins([null, { id: "bad" }]).plugins.length, 0)
+})

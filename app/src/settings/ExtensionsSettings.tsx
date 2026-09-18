@@ -18,7 +18,7 @@ import { useProject } from "@/project/context"
 import { useT } from "@/i18n/useT"
 import type { MessageKey } from "@/i18n/runtime"
 import { usePreferences } from "./context"
-import { languagePlugins } from "./pluginCatalog"
+import { languagePlugins, pluginLoadErrors } from "./pluginCatalog"
 import { pluginEnabled, type Preferences } from "./model"
 
 type Tool = {
@@ -362,6 +362,15 @@ export function ExtensionsSettings({ scope }: { scope: "global" | "project" }) {
           {t("settings.tools.refresh")}
         </button>
       </div>
+      {pluginLoadErrors.map((failure) => (
+        <p
+          key={failure.id}
+          role="alert"
+          className="rounded-lg border border-destructive/30 px-3 py-2 text-xs text-destructive"
+        >
+          {t("extensions.loadFailed", { id: failure.id })}
+        </p>
+      ))}
       {error && (
         <p
           role="alert"
