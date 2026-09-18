@@ -1,11 +1,14 @@
 const limit = 100_000_000
-export async function downloadPaper(input, request = fetch) {
+export async function downloadPaper(input, request = fetch, { signal: cancellation } = {}) {
   let url = new URL(String(input))
-  const signal = AbortSignal.timeout(30000)
+  const timeout = AbortSignal.timeout(30000)
+  const signal = cancellation ? AbortSignal.any([timeout, cancellation]) : timeout
   for (let redirect = 0; redirect <= 5; redirect++) {
+    signal.throwIfAborted()
     if (url.protocol !== "https:" || url.username || url.password)
       throw Error("请输入不含账号密码的 HTTPS PDF 链接")
     const response = await request(url, { redirect: "manual", signal })
+    signal.throwIfAborted()
     if (response.status >= 300 && response.status < 400 && response.headers.get("location")) {
       await response.body?.cancel()
       url = new URL(response.headers.get("location"), url)
@@ -23,6 +26,7 @@ export async function downloadPaper(input, request = fetch) {
     let size = 0
     if (!response.body) throw Error("下载内容为空")
     for await (const chunk of response.body) {
+      signal.throwIfAborted()
       size += chunk.length
       if (size > limit) throw Error("PDF 超过 100 MB")
       chunks.push(chunk)

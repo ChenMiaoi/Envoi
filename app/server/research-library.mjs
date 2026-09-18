@@ -44,8 +44,9 @@ function atomic(file, text) {
   writeFileSync(temp, text)
   renameSync(temp, file)
 }
-export async function libraryRequest(root, input) {
+export async function libraryRequest(root, input, isCurrent = () => true) {
   root = await researchRoot(root)
+  if (!isCurrent()) throw Error("Paper download cancelled")
   const folder = safeDirectory(root, ".envoi/library")
   const db = new DatabaseSync(safeFile(path.join(folder, "library.sqlite")))
   db.exec("PRAGMA busy_timeout=5000; PRAGMA foreign_keys=ON;")

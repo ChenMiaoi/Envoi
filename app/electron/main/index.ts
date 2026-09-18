@@ -464,8 +464,11 @@ function registerIpc(): void {
   handle("envoi:paper-browse", async (event, root: string) => {
     root = await requireBoundRoot(root)
     await requireBoundRoot(await researchRoot(root))
-    browseRoots.set(event.sender.id, root)
-    event.sender.once("destroyed", () => browseRoots.delete(event.sender.id))
+    if (activeRoots.get(event.sender.id) !== root) throw Error("Project is not active")
+    if (browseRoots.get(event.sender.id)?.root !== root) {
+      cancelPaperBrowse(event.sender.id)
+      browseRoots.set(event.sender.id, { root, controller: new AbortController() })
+    }
     return { ok: true }
   })
   handle(
@@ -540,6 +543,7 @@ function registerIpc(): void {
     })
     bindRoot(root)
     projectRoots.set(project.id, root)
+    if (activeRoots.get(event.sender.id) !== root) cancelPaperBrowse(event.sender.id)
     activeRoots.set(event.sender.id, root)
     return { ok: true, project: { id: project.id, path: root, name: project.name } }
   })
@@ -583,8 +587,11 @@ function registerIpc(): void {
           request.cancelled = true
       }
     }
-    for (const window of BrowserWindow.getAllWindows())
+    for (const window of BrowserWindow.getAllWindows()) {
       for (const candidate of affected) lspService.dispose(window.webContents.id, candidate)
+      const binding = browseRoots.get(window.webContents.id)
+      if (binding && affected.includes(binding.root)) cancelPaperBrowse(window.webContents.id)
+    }
     await Promise.all(
       affected.flatMap((candidate) =>
         backends.map((backend) => backend.cancel(undefined, candidate)),
@@ -815,6 +822,7 @@ function registerIpc(): void {
   handle("envoi:close-project", async (event, root: string) => {
     const owner = event.sender.id
     lspService.dispose(owner)
+    cancelPaperBrowse(owner)
     activeRoots.delete(owner)
     watchGenerations.set(owner, (watchGenerations.get(owner) ?? 0) + 1)
     watchers.get(owner)?.()
@@ -1042,19 +1050,52 @@ function registerIpc(): void {
 }
 
 // ── 内置论文浏览：独立持久会话（persist:paperbrowse），PDF 下载直接入库 ──
-const browseRoots = new Map<number, string>()
+const browseRoots = new Map<number, { root: string; controller: AbortController }>()
+function cancelPaperBrowse(owner: number): void {
+  browseRoots.get(owner)?.controller.abort()
+  browseRoots.delete(owner)
+}
 function setupPaperBrowse(): void {
   const browse = session.fromPartition("persist:paperbrowse")
-  const owner = () => BrowserWindow.getAllWindows()[0]
-  const notify = (payload: { title?: string; error?: string }) =>
-    owner()?.webContents.send("envoi:browse-imported", payload)
+  const origin = (contents: Electron.WebContents) => {
+    const owner = contents.hostWebContents ?? contents
+    const binding = browseRoots.get(owner.id)
+    if (!binding || activeRoots.get(owner.id) !== binding.root) return undefined
+    return {
+      owner,
+      binding,
+      current: () =>
+        !owner.isDestroyed() &&
+        !contents.isDestroyed() &&
+        browseRoots.get(owner.id) === binding &&
+        activeRoots.get(owner.id) === binding.root &&
+        !binding.controller.signal.aborted,
+    }
+  }
+  type Origin = NonNullable<ReturnType<typeof origin>>
+  const notify = (source: Origin, payload: { title?: string; error?: string }) => {
+    if (source.current()) source.owner.send("envoi:browse-imported", payload)
+  }
+  const importFile = async (source: Origin, name: string, base64: string) => {
+    if (!source.current()) return
+    const root = await requireBoundRoot(source.binding.root)
+    await requireBoundRoot(await researchRoot(root))
+    if (!source.current()) return
+    await libraryRequest(
+      root,
+      {
+        action: "import",
+        papers: [{ title: pdfName(name), attachment: { $blob: base64 } }],
+      },
+      source.current,
+    )
+    notify(source, { title: name })
+  }
   const pdfName = (name: string) =>
     name
       .replace(/\.pdf$/i, "")
       .replace(/[_-]+/g, " ")
       .trim() || "网页下载论文"
-  // Electron 内置 PDF 查看器会渲染导航到的 PDF（不触发 will-download）；
-  // 在导航层拦截 .pdf 链接直接入库，其余强制下载走 will-download。
   const pdfUrl = (url: string) => /^https:\/\/[^\s]+\.pdf([?#].*)?$/i.test(url)
   app.on("web-contents-created", (_event, contents) => {
     if (contents.session !== browse) return
@@ -1063,42 +1104,38 @@ function setupPaperBrowse(): void {
       return { action: "deny" }
     })
     contents.on("will-navigate", (event, url) => {
-      if (!pdfUrl(url) || !browseRoots.get(owner()?.webContents.id ?? -1)) return
+      const source = origin(contents)
+      if (!pdfUrl(url) || !source) return
       event.preventDefault()
-      void downloadPaper(url)
-        .then(async (file) => {
-          await libraryRequest(browseRoots.get(owner()!.webContents.id)!, {
-            action: "import",
-            papers: [{ title: pdfName(file.name), attachment: { $blob: file.base64 } }],
-          })
-          notify({ title: file.name })
-        })
-        .catch((error: Error) => notify({ error: error.message }))
+      void downloadPaper(url, fetch, { signal: source.binding.controller.signal })
+        .then((file) => importFile(source, file.name, file.base64))
+        .catch((error: Error) => notify(source, { error: error.message }))
     })
   })
-  browse.on("will-download", (_event, item) => {
+  browse.on("will-download", (_event, item, contents) => {
     const name = item.getFilename() || "paper.pdf"
     if (item.getMimeType() !== "application/pdf" && !/\.pdf$/i.test(name)) return
-    const window = owner()
-    const root = window ? browseRoots.get(window.webContents.id) : undefined
-    if (!window || !root) return // 未绑定论文库时走系统默认保存
+    const source = origin(contents)
+    if (!source) {
+      item.cancel()
+      return
+    }
     const savePath = path.join(app.getPath("temp"), `envoi-browse-${randomUUID()}.pdf`)
+    const cancel = () => item.cancel()
+    source.binding.controller.signal.addEventListener("abort", cancel, { once: true })
     item.setSavePath(savePath)
     item.once("done", (_done, state) => {
       void (async () => {
         try {
-          if (state !== "completed") return
+          if (state !== "completed" || !source.current()) return
           const bytes = await readFile(savePath)
           if (!bytes.subarray(0, 1024).includes(Buffer.from("%PDF-")))
             throw Error("下载内容不是 PDF")
-          await libraryRequest(root, {
-            action: "import",
-            papers: [{ title: pdfName(name), attachment: { $blob: bytes.toString("base64") } }],
-          })
-          notify({ title: name })
+          await importFile(source, name, bytes.toString("base64"))
         } catch (error) {
-          notify({ error: (error as Error).message })
+          notify(source, { error: (error as Error).message })
         } finally {
+          source.binding.controller.signal.removeEventListener("abort", cancel)
           await rm(savePath, { force: true }).catch(() => {})
         }
       })()
@@ -1139,6 +1176,7 @@ function createWindow(): void {
   )
   const owner = window.webContents.id
   window.webContents.once("destroyed", () => {
+    cancelPaperBrowse(owner)
     lspService.dispose(owner)
     watchers.get(owner)?.()
     watchers.delete(owner)
