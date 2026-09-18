@@ -40,6 +40,7 @@ export const zhCN = {
   "extensions.toolchain": "工具链",
   "extensions.format": "格式化",
   "extensions.lint": "代码检查",
+  "extensions.lintCount": "发现 {count} 个问题",
   "extensions.partial": "部分可用",
 
   "chat.statsRunning": "运行中",

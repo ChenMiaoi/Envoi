@@ -34,6 +34,8 @@ try {
   }
   const editor = page.getByRole("textbox", { name: "文本源码编辑器" })
   await page.getByRole("button", { name: "hello.py", exact: true }).click()
+  assert.equal(await page.getByRole("button", { name: "格式化", exact: true }).count(), 1)
+  assert.equal(await page.getByRole("button", { name: "代码检查", exact: true }).count(), 1)
   await editor.click()
   await editor.press("Control+End")
   await editor.press("Enter")
@@ -68,6 +70,7 @@ try {
   )
   await page.getByRole("link", { name: "阅读", exact: true }).first().click()
   await page.getByRole("button", { name: "main.cpp", exact: true }).click()
+  assert.equal(await page.getByRole("button", { name: "格式化", exact: true }).count(), 0)
   await editor.click()
   await editor.press("Control+End")
   await editor.press("Enter")

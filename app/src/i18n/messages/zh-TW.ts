@@ -38,6 +38,7 @@ const zhTW: Messages = {
   "extensions.toolchain": "工具鏈",
   "extensions.format": "格式化",
   "extensions.lint": "程式碼檢查",
+  "extensions.lintCount": "發現 {count} 個問題",
   "extensions.partial": "部分可用",
 
   "chat.statsRunning": "執行中",

@@ -142,7 +142,7 @@ export function validateToolPath(id, value) {
     !path.isAbsolute(value) ||
     /[\u0000-\u001f]/u.test(value)
   )
-    throw Error("Invalid language server path")
+    throw Error("Invalid tool path")
   const actual =
     process.platform === "win32" ? path.basename(value).toLowerCase() : path.basename(value)
   const expected = executableName(tool.binary ?? tool.binaries?.[0])
@@ -150,9 +150,9 @@ export function validateToolPath(id, value) {
   const pattern = new RegExp(
     `^${base.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?:-\\d+(?:\\.\\d+)*${base === "python" ? "|3(?:\\.\\d+)?" : ""})?${process.platform === "win32" ? "\\.exe" : ""}$`,
   )
-  if (!pattern.test(actual)) throw Error("Selected executable does not match the language server")
+  if (!pattern.test(actual)) throw Error("Selected executable does not match the tool")
   accessSync(value, constants.X_OK)
-  if (!statSync(value).isFile()) throw Error("Invalid language server executable")
+  if (!statSync(value).isFile()) throw Error("Invalid tool executable")
   return value
 }
 export function validateLanguageServerPath(id, value) {
@@ -210,7 +210,10 @@ export async function probeToolPath(id, value) {
   const resolved = validateToolPath(id, value)
   const tool = toolCatalog.find((entry) => entry.id === id)
   if (!hasCompanions(tool, resolved)) throw Error("Toolchain companion executable is missing")
-  return { path: resolved, version: await executableVersion(resolved) }
+  const version = await executableVersion(resolved)
+  if (["rustfmt", "clippy"].includes(id) && !version)
+    throw Error("The selected Rust component is not installed")
+  return { path: resolved, version }
 }
 // 项目级 Python 环境：以 pyvenv.cfg 为凭据识别项目根下的 .venv/venv 目录。
 // LSP 启动（lsp-service）与设置页展示（backend tools）共用这一份实现。

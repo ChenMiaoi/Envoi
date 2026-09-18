@@ -38,6 +38,7 @@ const en: Messages = {
   "extensions.toolchain": "Toolchain",
   "extensions.format": "Format",
   "extensions.lint": "Lint",
+  "extensions.lintCount": "Found {count} issues",
   "extensions.partial": "Partially available",
 
   "chat.statsRunning": "Running",

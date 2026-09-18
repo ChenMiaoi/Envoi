@@ -39,6 +39,7 @@ import { atomicProjectWrite, saveProjectFiles } from "./file-service.mjs"
 import { copyIntoProject } from "./file-transfer.mjs"
 import { LspService, lspLanguage } from "./lsp-service.mjs"
 import { installLanguageServer, installedServer } from "./lsp-installer.mjs"
+import { runLanguageTool } from "./language-tools.mjs"
 
 import { createWorkspaceTrust } from "./workspace-trust.mjs"
 // Desktop launchers may omit installed tools from PATH; share discovery with workers and AI.
@@ -637,6 +638,22 @@ function registerIpc(): void {
     if (!installed) throw Error("Language server installation failed")
     return { id: installed.id, path: installed.path, version: installed.version }
   })
+  handle(
+    "envoi:language-tool",
+    async (
+      event,
+      root: string,
+      file: string,
+      text: string,
+      kind: string,
+      selectedPath?: string,
+    ) => {
+      root = await requireBoundRoot(root)
+      if (activeRoots.get(event.sender.id) !== root) throw Error("Project is not active")
+      safePathParts(file)
+      return runLanguageTool(root, file, text, kind, selectedPath)
+    },
+  )
   handle("envoi:probe-lsp-path", async (event, id: string, value: string) => {
     await requireToolContext(event)
     return probeLanguageServerPath(id, value)

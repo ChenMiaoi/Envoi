@@ -38,6 +38,7 @@ const ja: Messages = {
   "extensions.toolchain": "ツールチェーン",
   "extensions.format": "フォーマット",
   "extensions.lint": "Lint",
+  "extensions.lintCount": "{count} 件の問題が見つかりました",
   "extensions.partial": "一部のみ利用可能",
 
   "chat.statsRunning": "実行中",

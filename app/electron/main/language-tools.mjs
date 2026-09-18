@@ -1,0 +1,198 @@
+import { spawn } from "node:child_process"
+import { readFile, realpath } from "node:fs/promises"
+import path from "node:path"
+import { pluginLanguageForPath } from "../../server/plugin-registry.mjs"
+import { toolCatalog } from "../../server/tool-registry.mjs"
+import { probeCandidates, validateToolPath } from "../../server/tool-config.mjs"
+
+const maxSourceBytes = 5_000_000
+const maxOutputBytes = 3_000_000
+
+async function nearestProjectFile(root, file, name) {
+  let directory = path.dirname(file)
+  while (inside(root, directory)) {
+    try {
+      return { directory, text: await readFile(path.join(directory, name), "utf8") }
+    } catch {
+      /* Keep searching toward the workspace root */
+    }
+    directory = path.dirname(directory)
+  }
+  try {
+    return { directory: root, text: await readFile(path.join(root, name), "utf8") }
+  } catch {
+    return null
+  }
+}
+
+function inside(root, file) {
+  const relative = path.relative(root, file)
+  return (
+    relative &&
+    relative !== ".." &&
+    !relative.startsWith(`..${path.sep}`) &&
+    !path.isAbsolute(relative)
+  )
+}
+
+async function execute(command, args, input, cwd, timeout = 30_000) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, args, { cwd, windowsHide: true, stdio: ["pipe", "pipe", "pipe"] })
+    let stdout = ""
+    let stderr = ""
+    let settled = false
+    const timer = setTimeout(() => fail(Error("Language tool timed out")), timeout)
+    const fail = (error) => {
+      if (settled) return
+      settled = true
+      clearTimeout(timer)
+      child.kill()
+      reject(error)
+    }
+    const collect = (target) => (chunk) => {
+      if (
+        Buffer.byteLength(stdout) + Buffer.byteLength(stderr) + Buffer.byteLength(chunk) >
+        maxOutputBytes
+      )
+        return fail(Error("Language tool output is too large"))
+      if (target === "stdout") stdout += chunk
+      else stderr += chunk
+    }
+    child.stdout.setEncoding("utf8")
+    child.stderr.setEncoding("utf8")
+    child.stdout.on("data", collect("stdout"))
+    child.stderr.on("data", collect("stderr"))
+    child.on("error", fail)
+    child.on("close", (code) => {
+      if (settled) return
+      settled = true
+      clearTimeout(timer)
+      resolve({ code, stdout, stderr })
+    })
+    child.stdin.on("error", () => {})
+    child.stdin.end(input)
+  })
+}
+
+function ruffDiagnostics(output) {
+  const entries = JSON.parse(output || "[]")
+  if (!Array.isArray(entries)) throw Error("Invalid Ruff diagnostics")
+  return entries.map((item) => ({
+    line: item.location?.row ?? 1,
+    column: item.location?.column ?? 1,
+    message: `${item.code}: ${item.message}`,
+    severity: "warning",
+    source: "Ruff",
+  }))
+}
+
+function clangDiagnostics(output) {
+  return output.split(/\r?\n/).flatMap((line) => {
+    const match = line.match(/^(.+?):(\d+):(\d+): (warning|error): (.+?)(?: \[([^\]]+)\])?$/)
+    return match
+      ? [
+          {
+            line: Number(match[2]),
+            column: Number(match[3]),
+            message: match[5],
+            severity: match[4],
+            source: match[6] ?? "clang-tidy",
+          },
+        ]
+      : []
+  })
+}
+
+function clippyDiagnostics(output, root, file) {
+  return output.split(/\r?\n/).flatMap((line) => {
+    let entry
+    try {
+      entry = JSON.parse(line)
+    } catch {
+      return []
+    }
+    if (entry.reason !== "compiler-message") return []
+    const message = entry.message
+    if (!["warning", "error"].includes(message?.level)) return []
+    const span = message.spans?.find(
+      (item) => item.is_primary && path.resolve(root, item.file_name) === file,
+    )
+    return span
+      ? [
+          {
+            line: span.line_start,
+            column: span.column_start,
+            message: message.message,
+            severity: message.level,
+            source: message.code?.code ?? "Clippy",
+          },
+        ]
+      : []
+  })
+}
+
+export async function runLanguageTool(root, file, text, kind, selectedPath) {
+  root = await realpath(root)
+  const language = pluginLanguageForPath(file)
+  if (
+    !language ||
+    !["format", "lint"].includes(kind) ||
+    typeof text !== "string" ||
+    Buffer.byteLength(text) > maxSourceBytes
+  )
+    throw Error("Unsupported language tool request")
+  const group = language === "c" ? "cpp" : language
+  const tool = toolCatalog.find((entry) => entry.group === group && entry.kind === kind)
+  if (!tool) throw Error("Language tool is unavailable")
+  const absolute = path.resolve(root, file)
+  if (!inside(root, absolute)) throw Error("File is outside the project")
+  const command = selectedPath
+    ? validateToolPath(tool.id, selectedPath)
+    : (await probeCandidates(tool.binary, group === "python" ? root : undefined))[0]?.path
+  if (!command) throw Error(`${tool.label} is not installed`)
+  let args
+  let input = text
+  let cwd = root
+  if (kind === "format") {
+    if (tool.id === "clangFormat") args = [`--assume-filename=${absolute}`]
+    else if (tool.id === "ruffFormat") args = ["format", "--stdin-filename", absolute, "-"]
+    else {
+      let edition = "2021"
+      const cargo = await nearestProjectFile(root, absolute, "Cargo.toml")
+      edition = cargo?.text.match(/^edition\s*=\s*["'](2015|2018|2021|2024)["']/m)?.[1] ?? edition
+      args = ["--emit", "stdout", "--edition", edition]
+    }
+  } else if (tool.id === "ruffLint")
+    args = ["check", "--output-format", "json", "--stdin-filename", absolute, "-"]
+  else {
+    const actual = await realpath(absolute)
+    if (!inside(root, actual) || (await readFile(actual, "utf8")) !== text)
+      throw Error("Save the file before running this checker")
+    input = ""
+    if (tool.id === "clippy") {
+      const cargo = await nearestProjectFile(root, absolute, "Cargo.toml")
+      if (!cargo) throw Error("Cargo.toml was not found for this Rust file")
+      cwd = cargo.directory
+    }
+    args =
+      tool.id === "clangTidy"
+        ? [absolute, "--quiet"]
+        : ["clippy", "--message-format=json", "--quiet"]
+  }
+  const result = await execute(command, args, input, cwd, tool.id === "clippy" ? 120_000 : 30_000)
+  if (kind === "format") {
+    if (result.code !== 0) throw Error(result.stderr.trim() || `${tool.label} failed`)
+    return { text: result.stdout, tool: tool.label }
+  }
+  if (tool.id === "ruffLint") {
+    if (![0, 1].includes(result.code)) throw Error(result.stderr.trim() || "Ruff failed")
+    return { diagnostics: ruffDiagnostics(result.stdout), tool: tool.label }
+  }
+  const diagnostics =
+    tool.id === "clangTidy"
+      ? clangDiagnostics(result.stdout + "\n" + result.stderr)
+      : clippyDiagnostics(result.stdout, cwd, absolute)
+  if (result.code !== 0 && !diagnostics.length)
+    throw Error(result.stderr.trim() || `${tool.label} failed`)
+  return { diagnostics, tool: tool.label }
+}

@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef } from "react"
+import { useLayoutEffect, useRef, useState } from "react"
 import { EditorState, Compartment } from "@codemirror/state"
 import {
   EditorView,
@@ -45,6 +45,12 @@ const lspDownloads: Record<string, { name: string; url: string }> = {
   rust: { name: "rust-analyzer", url: "https://rust-analyzer.github.io/book/vs_code.html" },
 }
 const promptedLsp = new Set<string>()
+const languageToolIds: Record<string, { format: string; lint: string }> = {
+  c: { format: "clangFormat", lint: "clangTidy" },
+  cpp: { format: "clangFormat", lint: "clangTidy" },
+  python: { format: "ruffFormat", lint: "ruffLint" },
+  rust: { format: "rustfmt", lint: "clippy" },
+}
 
 function offset(view: EditorView, point: LspPosition) {
   if (!point || point.line < 0 || point.line >= view.state.doc.lines) return null
@@ -87,12 +93,77 @@ export function CodeEditor({
   const external = useRef(false)
   const ready = useRef(false)
   const server = useRef("LSP")
+  const lspIssues = useRef<Diagnostic[]>([])
+  const toolIssues = useRef<Diagnostic[]>([])
+  const [busyTool, setBusyTool] = useState<"format" | "lint" | null>(null)
   const { preferences, update } = usePreferences()
   const { t } = useT()
   const lspLanguage = lspLanguageForPath(path)
   const pluginId = pluginForLanguage(lspLanguage)
   const enabled = pluginEnabled(preferences, root, pluginId ?? "")
   callbacks.current = { onChange, onNavigate }
+
+  function showIssues(editor: EditorView) {
+    const unique = new Map<string, Diagnostic>()
+    for (const issue of [...lspIssues.current, ...toolIssues.current])
+      unique.set(`${issue.from}:${issue.to}:${issue.message}`, issue)
+    editor.dispatch(setDiagnostics(editor.state, [...unique.values()]))
+  }
+
+  async function runTool(kind: "format" | "lint") {
+    const editor = view.current
+    if (!editor || !root || !enabled || !lspLanguage || readOnly) return
+    const snapshot = editor.state.doc.toString()
+    const id = languageToolIds[lspLanguage]?.[kind]
+    if (!id) return
+    setBusyTool(kind)
+    try {
+      const result = await envoi().languageTool(
+        root,
+        path,
+        snapshot,
+        kind,
+        preferences.toolPaths[id],
+      )
+      if (view.current !== editor || editor.state.doc.toString() !== snapshot) return
+      if (kind === "format") {
+        if (typeof result.text === "string" && result.text !== snapshot) {
+          let from = 0
+          while (from < snapshot.length && snapshot[from] === result.text[from]) from++
+          let to = snapshot.length
+          let end = result.text.length
+          while (to > from && end > from && snapshot[to - 1] === result.text[end - 1]) {
+            to--
+            end--
+          }
+          editor.dispatch({
+            changes: { from, to, insert: result.text.slice(from, end) },
+          })
+        }
+      } else {
+        toolIssues.current = (result.diagnostics ?? []).flatMap((issue): Diagnostic[] => {
+          const from = offset(editor, { line: issue.line - 1, character: issue.column - 1 })
+          return from === null
+            ? []
+            : [
+                {
+                  from,
+                  to: Math.min(from + 1, editor.state.doc.length),
+                  message: issue.message,
+                  severity: issue.severity === "error" ? "error" : "warning",
+                  source: issue.source,
+                },
+              ]
+        })
+        showIssues(editor)
+        toast.info(t("extensions.lintCount", { count: toolIssues.current.length }))
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : String(error))
+    } finally {
+      setBusyTool(null)
+    }
+  }
 
   useLayoutEffect(() => {
     if (!host.current) return
@@ -206,8 +277,18 @@ export function CodeEditor({
             spellcheck: "false",
           }),
           EditorView.updateListener.of((update) => {
-            if (update.docChanged && !external.current)
-              callbacks.current.onChange(update.state.doc.toString())
+            if (update.docChanged) {
+              lspIssues.current = lspIssues.current.map((issue) => ({
+                ...issue,
+                from: update.changes.mapPos(issue.from),
+                to: update.changes.mapPos(issue.to),
+              }))
+              toolIssues.current = []
+              if (!external.current) callbacks.current.onChange(update.state.doc.toString())
+              queueMicrotask(() => {
+                if (view.current === update.view) showIssues(update.view)
+              })
+            }
           }),
           settings.current.of([]),
           editorLanguage.of([]),
@@ -242,7 +323,8 @@ export function CodeEditor({
                   },
                 ]
           })
-          editor.dispatch(setDiagnostics(editor.state, diagnostics))
+          lspIssues.current = diagnostics
+          showIssues(editor)
           publishLspDiagnostics(
             path,
             server.current,
@@ -415,7 +497,31 @@ export function CodeEditor({
       ]),
     })
   }, [readOnly, preferences])
-  return <div ref={host} className="h-full" />
+  return (
+    <div className="flex h-full min-h-0 flex-col">
+      {root && enabled && languageToolIds[lspLanguage ?? ""] && (
+        <div className="flex shrink-0 justify-end gap-1 border-b border-border/60 px-2 py-1">
+          <button
+            type="button"
+            disabled={readOnly || busyTool !== null}
+            onClick={() => void runTool("format")}
+            className="rounded px-2 py-0.5 text-xs text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-50"
+          >
+            {t("extensions.format")}
+          </button>
+          <button
+            type="button"
+            disabled={readOnly || busyTool !== null}
+            onClick={() => void runTool("lint")}
+            className="rounded px-2 py-0.5 text-xs text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-50"
+          >
+            {t("extensions.lint")}
+          </button>
+        </div>
+      )}
+      <div ref={host} className="min-h-0 flex-1" />
+    </div>
+  )
 }
 
 const editorLanguage = new Compartment()
