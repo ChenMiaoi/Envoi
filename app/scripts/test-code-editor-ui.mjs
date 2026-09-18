@@ -47,7 +47,11 @@ try {
   assert.match(await readFile(path.join(root, "hello.py"), "utf8"), /answer = value \+ 1/)
   await page.getByRole("link", { name: "设置", exact: true }).first().click()
   await page.getByRole("link", { name: "扩展", exact: true }).click()
-  const cpp = page.locator("article").filter({ hasText: "envoi.cpp" })
+  const cpp = page.getByTestId("extension-cpp")
+  assert.equal(await cpp.getByRole("combobox").count(), 0)
+  await cpp.locator("button[aria-expanded]").click()
+  assert.equal(await cpp.getByRole("combobox").count(), 2)
+  await cpp.locator("button[aria-expanded]").click()
   await cpp.getByRole("checkbox").uncheck()
   await page.waitForFunction(
     () =>

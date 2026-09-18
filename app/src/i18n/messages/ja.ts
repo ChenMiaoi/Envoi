@@ -24,6 +24,7 @@ const ja: Messages = {
   "extensions.logs": "診断ログ",
   "extensions.starting": "起動中",
   "extensions.startFailed": "起動に失敗",
+  "extensions.configure": "{name}を設定",
 
   "chat.statsRunning": "実行中",
   "chat.statsComplete": "完了",

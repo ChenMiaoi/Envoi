@@ -24,6 +24,7 @@ const zhTW: Messages = {
   "extensions.logs": "診斷日誌",
   "extensions.starting": "正在啟動",
   "extensions.startFailed": "啟動失敗",
+  "extensions.configure": "設定{name}",
 
   "chat.statsRunning": "執行中",
   "chat.statsComplete": "已完成",

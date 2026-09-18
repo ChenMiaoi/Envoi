@@ -26,6 +26,7 @@ export const zhCN = {
   "extensions.logs": "诊断日志",
   "extensions.starting": "正在启动",
   "extensions.startFailed": "启动失败",
+  "extensions.configure": "配置{name}",
 
   "chat.statsRunning": "运行中",
   "chat.statsComplete": "已完成",

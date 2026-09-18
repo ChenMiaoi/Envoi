@@ -24,6 +24,7 @@ const en: Messages = {
   "extensions.logs": "Diagnostic logs",
   "extensions.starting": "Starting",
   "extensions.startFailed": "Failed to start",
+  "extensions.configure": "Configure {name}",
 
   "chat.statsRunning": "Running",
   "chat.statsComplete": "Completed",
