@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process"
-import { readFile, realpath } from "node:fs/promises"
+import { cp, lstat, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises"
+import { tmpdir } from "node:os"
 import path from "node:path"
 import { pluginLanguageForPath } from "../../server/plugin-registry.mjs"
 import { toolCatalog } from "../../server/tool-registry.mjs"
@@ -7,6 +8,42 @@ import { probeCandidates, validateToolPath } from "../../server/tool-config.mjs"
 
 const maxSourceBytes = 5_000_000
 const maxOutputBytes = 3_000_000
+const maxSnapshotBytes = 50_000_000
+const maxSnapshotFiles = 2_000
+const ignoredSnapshotDirectories = new Set([
+  ".git",
+  ".envoi",
+  ".venv",
+  "node_modules",
+  "target",
+  "build",
+  "dist",
+])
+
+async function snapshotWorkspace(root, file, text, directory) {
+  const workspace = path.join(directory, "workspace")
+  let bytes = 0
+  let files = 0
+  await cp(root, workspace, {
+    recursive: true,
+    filter: async (source) => {
+      if (source === root) return true
+      const info = await lstat(source)
+      if (info.isSymbolicLink()) return false
+      if (info.isDirectory()) return !ignoredSnapshotDirectories.has(path.basename(source))
+      if (!info.isFile()) return false
+      bytes += info.size
+      files++
+      if (bytes > maxSnapshotBytes || files > maxSnapshotFiles)
+        throw Error("Rust project is too large for live Clippy checks")
+      return true
+    },
+  })
+  const relative = path.relative(root, file)
+  const snapshot = path.join(workspace, relative)
+  await writeFile(snapshot, text)
+  return { workspace, snapshot }
+}
 
 async function nearestProjectFile(root, file, name) {
   let directory = path.dirname(file)
@@ -153,6 +190,7 @@ export async function runLanguageTool(root, file, text, kind, selectedPath) {
   let args
   let input = text
   let cwd = root
+  let temporary
   if (kind === "format") {
     if (tool.id === "clangFormat") args = [`--assume-filename=${absolute}`]
     else if (tool.id === "ruffFormat") args = ["format", "--stdin-filename", absolute, "-"]
@@ -166,20 +204,48 @@ export async function runLanguageTool(root, file, text, kind, selectedPath) {
     args = ["check", "--output-format", "json", "--stdin-filename", absolute, "-"]
   else {
     const actual = await realpath(absolute)
-    if (!inside(root, actual) || (await readFile(actual, "utf8")) !== text)
-      throw Error("Save the file before running this checker")
+    if (!inside(root, actual)) throw Error("File is outside the project")
     input = ""
     if (tool.id === "clippy") {
       const cargo = await nearestProjectFile(root, absolute, "Cargo.toml")
       if (!cargo) throw Error("Cargo.toml was not found for this Rust file")
-      cwd = cargo.directory
+      temporary = await mkdtemp(path.join(tmpdir(), "envoi-live-lint-"))
+      try {
+        const copy = await snapshotWorkspace(root, absolute, text, temporary)
+        cwd = path.join(copy.workspace, path.relative(root, cargo.directory))
+        file = copy.snapshot
+      } catch (error) {
+        await rm(temporary, { recursive: true, force: true })
+        throw error
+      }
+    } else {
+      temporary = await mkdtemp(path.join(tmpdir(), "envoi-live-lint-"))
+      try {
+        const snapshot = path.join(temporary, path.basename(absolute))
+        await writeFile(snapshot, text)
+        const overlay = path.join(temporary, "overlay.json")
+        await writeFile(
+          overlay,
+          JSON.stringify({
+            version: 0,
+            "use-external-names": false,
+            roots: [{ name: absolute, type: "file", "external-contents": snapshot }],
+          }),
+        )
+        args = [absolute, "--quiet", `--vfsoverlay=${overlay}`]
+      } catch (error) {
+        await rm(temporary, { recursive: true, force: true })
+        throw error
+      }
     }
-    args =
-      tool.id === "clangTidy"
-        ? [absolute, "--quiet"]
-        : ["clippy", "--message-format=json", "--quiet"]
+    if (tool.id === "clippy") args = ["clippy", "--message-format=json", "--quiet", "--offline"]
   }
-  const result = await execute(command, args, input, cwd, tool.id === "clippy" ? 120_000 : 30_000)
+  let result
+  try {
+    result = await execute(command, args, input, cwd, tool.id === "clippy" ? 120_000 : 30_000)
+  } finally {
+    if (temporary) await rm(temporary, { recursive: true, force: true })
+  }
   if (kind === "format") {
     if (result.code !== 0) throw Error(result.stderr.trim() || `${tool.label} failed`)
     return { text: result.stdout, tool: tool.label }
@@ -191,7 +257,7 @@ export async function runLanguageTool(root, file, text, kind, selectedPath) {
   const diagnostics =
     tool.id === "clangTidy"
       ? clangDiagnostics(result.stdout + "\n" + result.stderr)
-      : clippyDiagnostics(result.stdout, cwd, absolute)
+      : clippyDiagnostics(result.stdout, cwd, file)
   if (result.code !== 0 && !diagnostics.length)
     throw Error(result.stderr.trim() || `${tool.label} failed`)
   return { diagnostics, tool: tool.label }

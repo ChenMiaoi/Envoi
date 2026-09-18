@@ -1,5 +1,5 @@
 import assert from "node:assert/strict"
-import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises"
+import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import test from "node:test"
@@ -31,21 +31,19 @@ test("language tools format unsaved text and return lint diagnostics", async (co
   }
 })
 
-test("file based checkers require the saved source", async (context) => {
+test("clang-tidy checks unsaved text through a virtual filesystem overlay", async (context) => {
   if (process.platform === "win32") return context.skip("Executable fixture uses POSIX scripts")
   const root = await mkdtemp(path.join(tmpdir(), "envoi-language-tools-"))
   try {
     const tidy = path.join(root, "clang-tidy")
-    await writeFile(tidy, '#!/bin/sh\necho "$1:1:5: warning: example warning [sample-check]"\n', {
-      mode: 0o755,
-    })
+    await writeFile(
+      tidy,
+      '#!/usr/bin/env node\nconst fs = require("node:fs"); const source = process.argv[2]; const arg = process.argv.find(value => value.startsWith("--vfsoverlay=")); if (!arg) process.exit(2); const overlay = JSON.parse(fs.readFileSync(arg.slice(13), "utf8")); if (overlay["use-external-names"] !== false || overlay.roots[0].name !== source || !fs.readFileSync(overlay.roots[0]["external-contents"], "utf8").includes("int y;")) process.exit(2); console.log(`${source}:1:5: warning: example warning [sample-check]`);\n',
+      { mode: 0o755 },
+    )
     await mkdir(path.join(root, "src"))
     await writeFile(path.join(root, "src", "main.cpp"), "int x;\n")
-    await assert.rejects(
-      runLanguageTool(root, "src/main.cpp", "int y;\n", "lint", tidy),
-      /Save the file/,
-    )
-    const result = await runLanguageTool(root, "src/main.cpp", "int x;\n", "lint", tidy)
+    const result = await runLanguageTool(root, "src/main.cpp", "int y;\n", "lint", tidy)
     assert.deepEqual(result.diagnostics, [
       {
         line: 1,
@@ -55,6 +53,7 @@ test("file based checkers require the saved source", async (context) => {
         source: "sample-check",
       },
     ])
+    assert.equal(await readFile(path.join(root, "src/main.cpp"), "utf8"), "int x;\n")
   } finally {
     await rm(root, { recursive: true, force: true })
   }
@@ -70,7 +69,7 @@ test("Clippy diagnostics map back to the selected Rust file", async (context) =>
       '[package]\nname="example"\nversion="0.1.0"\n',
     )
     const source = "fn main() { let unused = 1; }\n"
-    await writeFile(path.join(root, "crate", "src", "main.rs"), source)
+    await writeFile(path.join(root, "crate", "src", "main.rs"), "fn main() {}\n")
     const clippy = path.join(root, "cargo-clippy")
     const message = JSON.stringify({
       reason: "compiler-message",
@@ -83,7 +82,7 @@ test("Clippy diagnostics map back to the selected Rust file", async (context) =>
     })
     await writeFile(
       clippy,
-      `#!/bin/sh\n[ "$1" = clippy ] || exit 2\nprintf '%s\\n' '${message}'\n`,
+      `#!/bin/sh\n[ "$1" = clippy ] || exit 2\ngrep -q 'let unused = 1' src/main.rs || exit 2\nprintf '%s\\n' '${message}'\n`,
       { mode: 0o755 },
     )
     const result = await runLanguageTool(root, "crate/src/main.rs", source, "lint", clippy)
@@ -96,6 +95,10 @@ test("Clippy diagnostics map back to the selected Rust file", async (context) =>
         source: "unused_variables",
       },
     ])
+    assert.equal(
+      await readFile(path.join(root, "crate", "src", "main.rs"), "utf8"),
+      "fn main() {}\n",
+    )
   } finally {
     await rm(root, { recursive: true, force: true })
   }

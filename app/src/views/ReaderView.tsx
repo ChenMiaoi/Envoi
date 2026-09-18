@@ -542,7 +542,6 @@ export function ReaderView({
                   root={project.rootPath}
                   path={activeData.path}
                   source={activeData.text}
-                  saved={activeData.saved}
                   readOnly={busy || readOnly}
                   onChange={(text) => edit(active.id, text)}
                   ariaLabel={t("reader.textEditorAria")}

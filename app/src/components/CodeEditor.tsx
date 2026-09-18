@@ -73,11 +73,28 @@ function textContent(value: unknown): string {
   return ""
 }
 
+function drainLint(
+  queued: { current: (() => Promise<void>) | null },
+  running: { current: boolean },
+) {
+  if (running.current) return
+  running.current = true
+  void (async () => {
+    while (queued.current) {
+      const job = queued.current
+      queued.current = null
+      await job()
+    }
+  })().finally(() => {
+    running.current = false
+    if (queued.current) drainLint(queued, running)
+  })
+}
+
 export function CodeEditor({
   root,
   path,
   source,
-  saved,
   readOnly,
   onChange,
   onNavigate,
@@ -87,7 +104,6 @@ export function CodeEditor({
   root?: string
   path: string
   source: string
-  saved?: string
   readOnly: boolean
   onChange: (text: string) => void
   onNavigate: (path: string, position: LspPosition) => void
@@ -103,6 +119,8 @@ export function CodeEditor({
   const server = useRef("LSP")
   const lspIssues = useRef<Diagnostic[]>([])
   const toolIssues = useRef<Diagnostic[]>([])
+  const queuedLint = useRef<(() => Promise<void>) | null>(null)
+  const lintRunning = useRef(false)
   const { preferences, update } = usePreferences()
   const { t } = useT()
   const lspLanguage = lspLanguageForPath(path)
@@ -394,6 +412,7 @@ export function CodeEditor({
       publishLspStatus(null)
       clearLspDiagnostics(path)
       clearToolDiagnostics(path)
+      queuedLint.current = null
       off()
       editor.destroy()
       view.current = null
@@ -429,14 +448,19 @@ export function CodeEditor({
     toolIssues.current = []
     clearToolDiagnostics(path)
     if (editor) showIssues(editor)
-    if (!editor || !root || !enabled || !id || readOnly || (id !== "ruffLint" && source !== saved))
-      return
+    if (!editor || !root || !enabled || !id || readOnly) return
     let cancelled = false
     const timer = setTimeout(
       () => {
-        void envoi()
-          .languageTool(root, path, source, "lint", preferences.toolPaths[id])
-          .then((result) => {
+        queuedLint.current = async () => {
+          try {
+            const result = await envoi().languageTool(
+              root,
+              path,
+              source,
+              "lint",
+              preferences.toolPaths[id],
+            )
             if (cancelled || view.current !== editor || editor.state.doc.toString() !== source)
               return
             const issues = result.diagnostics ?? []
@@ -465,18 +489,19 @@ export function CodeEditor({
                 column: issue.column,
               })),
             )
-          })
-          .catch(() => {
+          } catch {
             if (!cancelled) clearToolDiagnostics(path)
-          })
+          }
+        }
+        drainLint(queuedLint, lintRunning)
       },
-      id === "ruffLint" ? 350 : 100,
+      id === "ruffLint" ? 350 : id === "clippy" ? 1_200 : 600,
     )
     return () => {
       cancelled = true
       clearTimeout(timer)
     }
-  }, [root, path, source, saved, enabled, readOnly, lspLanguage, preferences.toolPaths])
+  }, [root, path, source, enabled, readOnly, lspLanguage, preferences.toolPaths])
   useLayoutEffect(() => {
     view.current?.dispatch({
       effects: settings.current.reconfigure([

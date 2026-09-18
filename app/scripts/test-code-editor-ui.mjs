@@ -10,12 +10,18 @@ import { seedFixtureTrust } from "./fixture-trust.mjs"
 const temp = await realpath(await mkdtemp(path.join(tmpdir(), "envoi-code-editor-")))
 const root = path.join(temp, "project")
 const ruff = path.join(temp, "ruff")
+const tidy = path.join(temp, "clang-tidy")
 let app
 try {
   await mkdir(root)
   await writeFile(
     ruff,
     '#!/bin/sh\nif [ "$1" = "--version" ]; then echo "ruff 0.9.0"; elif [ "$1" = "format" ]; then sed "s/answer = value + 1/answer = value + 2/"; else printf \'[{"code":"W001","message":"example warning","location":{"row":1,"column":1}}]\'; exit 1; fi\n',
+    { mode: 0o755 },
+  )
+  await writeFile(
+    tidy,
+    '#!/usr/bin/env node\nconst fs = require("node:fs"); if (process.argv.includes("--version")) { console.log("clang-tidy version 20"); process.exit(0); } const source = process.argv[2]; const arg = process.argv.find(value => value.startsWith("--vfsoverlay=")); const overlay = JSON.parse(fs.readFileSync(arg.slice(13), "utf8")); if (fs.readFileSync(overlay.roots[0]["external-contents"], "utf8").includes("unsaved_warning")) console.log(`${source}:1:1: warning: live C++ warning [live-check]`);\n',
     { mode: 0o755 },
   )
   await writeFile(path.join(root, "hello.py"), "value = 1\n")
@@ -118,6 +124,27 @@ try {
   )
   assert.equal(await cpp.getByRole("button", { name: "手动输入路径" }).count(), 5)
   assert.match(await cpp.textContent(), /语言服务器.*格式化.*代码检查/)
+  const tidyInput = cpp.getByRole("textbox", { name: "clang-tidy 手动输入路径" })
+  await tidyInput.fill(tidy)
+  await tidyInput.locator("..").getByRole("button", { name: "使用" }).click()
+  await page.waitForFunction(
+    (tidy) =>
+      JSON.parse(localStorage.getItem("envoi.preferences.v1") ?? "{}").toolPaths?.clangTidy ===
+      tidy,
+    tidy,
+  )
+  await page.getByRole("link", { name: "阅读", exact: true }).first().click()
+  await page.getByRole("button", { name: "main.cpp", exact: true }).click()
+  await editor.click()
+  await editor.press("Control+End")
+  await editor.press("Enter")
+  await editor.type("// unsaved_warning")
+  await page.waitForFunction(() =>
+    document.querySelector('[aria-label="打开问题列表"]')?.textContent?.includes("C++01"),
+  )
+  assert.doesNotMatch(await readFile(path.join(root, "main.cpp"), "utf8"), /unsaved_warning/)
+  await page.getByRole("link", { name: "设置", exact: true }).first().click()
+  await page.getByRole("link", { name: "扩展", exact: true }).click()
   await cpp.locator("button[aria-expanded]").click()
   await cpp.getByRole("checkbox").uncheck()
   await page.waitForFunction(
