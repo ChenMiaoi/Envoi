@@ -1,4 +1,3 @@
-import { spawn } from "node:child_process"
 import { existsSync, realpathSync, statSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
@@ -6,6 +5,7 @@ import { detectTool, pythonEnvironment } from "../../server/tool-config.mjs"
 import { lspServersByLanguage, toolCatalog } from "../../server/tool-registry.mjs"
 import { pluginForLanguage, pluginLanguageForPath } from "../../server/plugin-registry.mjs"
 import { PluginHost } from "../../server/plugin-host.mjs"
+import { createLocalWorkspaceEnvironment } from "./workspace-environment.mjs"
 
 // 服务器回退链由 tool-registry.mjs 的目录派生：kind 为 lsp 的条目按目录顺序排优先级。
 const servers = lspServersByLanguage()
@@ -203,6 +203,7 @@ class Session {
   constructor(spec, root, language, publish, onExit) {
     this.spec = spec
     this.root = root
+    this.environment = createLocalWorkspaceEnvironment(root)
     this.language = language
     this.publish = publish
     this.onExit = onExit
@@ -213,7 +214,7 @@ class Session {
   }
   async start() {
     const venv = this.language === "python" ? pythonEnvironment(this.root) : undefined
-    this.process = spawn(this.spec.command, this.spec.args, {
+    this.process = this.environment.process.spawn(this.spec.command, this.spec.args, {
       cwd: this.root,
       windowsHide: true,
       stdio: ["pipe", "pipe", "ignore"],
