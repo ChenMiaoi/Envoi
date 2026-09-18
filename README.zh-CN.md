@@ -38,6 +38,7 @@ Envoi 希望把这些过程放回论文身边：**主工作区保留论文，独
 
 - **LaTeX 工作台**：章节大纲、参考文献与素材面板，配合 PDFLaTeX / XeLaTeX 编译及 PDF 预览。
 - **多格式阅读与编辑**：PDF、图片、Markdown、CSV / TSV 和源代码，沿用项目原本的目录结构。
+- **代码编辑**：C/C++、Python 和 Rust 的补全、定义跳转、格式化与诊断；支持的语言工具可在「设置 → 扩展」中按需安装。
 - **项目文献库**：导入 PDF / BibTeX，整理文献与笔记，保留笔记历史和阅读位置。
 - **可选 AI 助手**：在项目与文献上下文中讨论、阅读和协助修改。使用前配置自己的模型服务；调用外部模型时，相关上下文会发送给所选服务商。
 
@@ -78,7 +79,7 @@ Envoi 直接使用本地项目文件。基础阅读与手工编辑可以在限�
 | 实时 LaTeX 检查    | ChkTeX（可选）                                              |
 | 使用 AI 助手       | 在设置中配置受支持的模型服务                                |
 
-应用会检测本机工具；缺失时给出提示，不会自动安装。macOS 安装包目前未签名和公证。详细说明见 [桌面使用与信任模式](docs/DESKTOP.md)。
+应用会检测本机工具并提示缺失项。「设置 → 扩展」支持用户主动安装部分语言服务器、格式化与检查工具，具体取决于平台及所需包管理器；TeX 和 Git 仍需单独安装。macOS 安装包目前未签名和公证。详细说明见 [桌面使用与信任模式](docs/DESKTOP.md)。
 
 ## 从源码运行
 
@@ -95,17 +96,18 @@ npm run dev
 <details>
 <summary><strong>开发命令与目录结构</strong></summary>
 
-| 命令                   | 用途                             |
-| :--------------------- | :------------------------------- |
-| `npm run build`        | 类型检查与构建                   |
-| `npm run lint`         | 静态检查                         |
-| `npm test`             | 核心逻辑测试                     |
-| `npm run ci:check`     | 与 CI 等价的完整检查             |
-| `npm run test:desktop` | 桌面交互回归，先运行构建         |
-| `npm run test:local`   | 本机 TeX、Git、ChkTeX 等工具检查 |
-| `npm run test:ai`      | AI 集成与数据迁移检查            |
-| `npm run package:win`  | 构建 Windows 安装包              |
-| `npm run package:mac`  | 构建 macOS 安装包                |
+| 命令                   | 用途                                 |
+| :--------------------- | :----------------------------------- |
+| `npm run build`        | 类型检查与构建                       |
+| `npm run lint`         | 静态检查                             |
+| `npm test`             | 核心逻辑测试                         |
+| `npm run check:local`  | 提交前检查，复用未变更内容的成功结果 |
+| `npm run ci:check`     | 与 CI 等价的完整检查                 |
+| `npm run test:desktop` | 桌面交互回归，先运行构建             |
+| `npm run test:local`   | 本机 TeX、Git、ChkTeX 等工具检查     |
+| `npm run test:ai`      | AI 集成与数据迁移检查                |
+| `npm run package:win`  | 构建 Windows 安装包                  |
+| `npm run package:mac`  | 构建 macOS 安装包                    |
 
 ```text
 app/

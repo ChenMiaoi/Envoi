@@ -38,6 +38,7 @@ Envoi keeps that work close to the paper: **the main workspace holds the paper, 
 
 - **LaTeX workbench**: chapter outline, references, and assets alongside PDFLaTeX / XeLaTeX compilation and PDF preview.
 - **Multi-format reading and editing**: PDF, images, Markdown, CSV / TSV, and source code in the project's existing directory structure.
+- **Code editing**: C/C++, Python, and Rust completion, definition navigation, formatting, and diagnostics, with supported language tools installable from Settings → Extensions.
 - **Project literature library**: import PDFs / BibTeX, organize papers and notes, and preserve note history and reading positions.
 - **Optional AI assistant**: discuss, read, and revise within project and paper context. Configure your own model service first; context is sent to the selected provider when an external model is called.
 
@@ -78,7 +79,7 @@ Prepare the following tools as needed:
 | Run live LaTeX checks                   | ChkTeX (optional)                                                            |
 | Use the AI assistant                    | A supported model service configured in Settings                             |
 
-The app detects local tools and reports missing ones; it does not install them automatically. The macOS package is currently unsigned and not notarized. See [Desktop use and trust mode](docs/DESKTOP.md) for details.
+The app detects local tools and reports missing ones. Settings → Extensions offers user-initiated installation for supported language servers, formatters, and linters; availability depends on the platform and required package managers. TeX and Git remain separately installed. The macOS package is currently unsigned and not notarized. See [Desktop use and trust mode](docs/DESKTOP.md) for details.
 
 ## Run from source
 
@@ -95,17 +96,18 @@ The first `dev` or `build` run installs the dependencies under `app/` automatica
 <details>
 <summary><strong>Development commands and layout</strong></summary>
 
-| Command                | Purpose                                            |
-| :--------------------- | :------------------------------------------------- |
-| `npm run build`        | Type checking and build                            |
-| `npm run lint`         | Static checks                                      |
-| `npm test`             | Core logic tests                                   |
-| `npm run ci:check`     | Full CI-equivalent validation                      |
-| `npm run test:desktop` | Desktop interaction regression tests after a build |
-| `npm run test:local`   | Local TeX, Git, ChkTeX, and related tool checks    |
-| `npm run test:ai`      | AI integration and data migration checks           |
-| `npm run package:win`  | Build the Windows installer                        |
-| `npm run package:mac`  | Build the macOS installer                          |
+| Command                | Purpose                                                    |
+| :--------------------- | :--------------------------------------------------------- |
+| `npm run build`        | Type checking and build                                    |
+| `npm run lint`         | Static checks                                              |
+| `npm test`             | Core logic tests                                           |
+| `npm run check:local`  | Pre-commit checks with unchanged successful results reused |
+| `npm run ci:check`     | Full CI-equivalent validation                              |
+| `npm run test:desktop` | Desktop interaction regression tests after a build         |
+| `npm run test:local`   | Local TeX, Git, ChkTeX, and related tool checks            |
+| `npm run test:ai`      | AI integration and data migration checks                   |
+| `npm run package:win`  | Build the Windows installer                                |
+| `npm run package:mac`  | Build the macOS installer                                  |
 
 ```text
 app/
