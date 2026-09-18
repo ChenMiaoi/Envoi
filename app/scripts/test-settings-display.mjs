@@ -21,6 +21,21 @@ try {
     location.hash = "/settings/global/general"
   })
   await page.getByRole("button", { name: "检查更新", exact: true }).waitFor()
+  await page.setViewportSize({ width: 1100, height: 600 })
+  const settingsPanel = page.locator(".settings-scroll-pane")
+  const scrollState = await settingsPanel.evaluate((node) => ({
+    overflow: getComputedStyle(node).overflowY,
+    clientHeight: node.clientHeight,
+    scrollHeight: node.scrollHeight,
+  }))
+  assert.equal(scrollState.overflow, "auto")
+  assert(scrollState.scrollHeight > scrollState.clientHeight)
+  await settingsPanel.hover()
+  await page.mouse.wheel(0, 500)
+  await page.waitForFunction(() => document.querySelector(".settings-scroll-pane")?.scrollTop > 0)
+  await settingsPanel.evaluate((node) => {
+    node.scrollTop = 0
+  })
   await instance.evaluate(({ ipcMain }) => {
     ipcMain.removeHandler("envoi:check-update")
     ipcMain.handle("envoi:check-update", () => ({

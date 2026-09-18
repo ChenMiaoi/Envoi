@@ -387,7 +387,7 @@ export function SettingsView() {
             </NavLink>
           ))}
         </nav>
-        <div className="workspace-pane min-w-0 flex-1 overflow-auto bg-background p-7">
+        <div className="workspace-pane settings-scroll-pane min-w-0 flex-1 bg-background p-7">
           <div className="mx-auto max-w-3xl">
             <h2 className="mb-3 text-base font-medium">{t(settingCategories[category])}</h2>
             {error && <Notification message={error} kind="error" />}
