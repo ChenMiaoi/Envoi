@@ -377,6 +377,61 @@ export function dirtyFiles(project: PaperProject) {
   return project.files.filter((file) => file.text !== undefined && file.text !== file.saved)
 }
 
+export function renameProjectPath(project: PaperProject, from: string, to: string): PaperProject {
+  if (from === to) return project
+  const moved = (value: string) => value === from || value.startsWith(from + "/")
+  const replace = (value: string) => (moved(value) ? to + value.slice(from.length) : value)
+  const rootId = replace(project.rootId)
+  return {
+    ...project,
+    rootId,
+    lint: undefined,
+    diagnostics: undefined,
+    compiled: undefined,
+    compileStatus: undefined,
+    compileLog: undefined,
+    directories: project.directories.map(replace),
+    files: project.files.map((file) => {
+      if (moved(file.path)) {
+        const path = replace(file.path)
+        return { ...file, id: replace(file.id), path, kind: fileKind(path), url: undefined }
+      }
+      if (
+        rootId !== project.rootId &&
+        [projectConfigPath, legacyProjectConfigPath, "paperdesk.json"].includes(file.path) &&
+        file.text !== undefined
+      ) {
+        try {
+          const metadata = JSON.parse(file.text)
+          if (typeof metadata.main === "string" && moved(metadata.main))
+            return {
+              ...file,
+              text: JSON.stringify({ ...metadata, main: replace(metadata.main) }, null, 2) + "\n",
+            }
+        } catch {
+          // Preserve incomplete configuration drafts for the user to finish editing.
+        }
+      }
+      return file
+    }),
+  }
+}
+
+export function removeProjectPath(project: PaperProject, path: string): PaperProject {
+  const removed = (value: string) => value === path || value.startsWith(path + "/")
+  return {
+    ...project,
+    rootId: removed(project.rootId) ? "" : project.rootId,
+    files: project.files.filter((file) => !removed(file.path)),
+    directories: project.directories.filter((directory) => !removed(directory)),
+    compiled: undefined,
+    diagnostics: undefined,
+    lint: undefined,
+    compileStatus: undefined,
+    compileLog: undefined,
+  }
+}
+
 // Preserve the current draft and its original disk baseline when external edits arrive.
 export function mergeDiskProject(current: PaperProject, disk: PaperProject): PaperProject {
   if (current.rootPath !== disk.rootPath) return current
@@ -396,7 +451,8 @@ export function mergeDiskProject(current: PaperProject, disk: PaperProject): Pap
         file.path === previous.path &&
         file.text === previous.text &&
         file.saved === previous.saved &&
-        (file.text !== undefined || file.version === previous.version)
+        (file.text !== undefined ||
+          (file.version === previous.version && file.url === previous.url))
       )
     })
   if (

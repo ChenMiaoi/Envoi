@@ -4,6 +4,44 @@ import { mkdtemp, mkdir, readFile, rm, symlink, writeFile } from "node:fs/promis
 import os from "node:os"
 import path from "node:path"
 import { copyIntoProject } from "../electron/main/file-transfer.mjs"
+import {
+  renameProjectFile,
+  removeProjectFile,
+  saveProjectFiles,
+} from "../electron/main/file-service.mjs"
+
+test("rename preserves existing destinations and deletion handles directories without following links", async () => {
+  const temp = await mkdtemp(path.join(os.tmpdir(), "envoi-file-actions-"))
+  try {
+    await writeFile(path.join(temp, "a.md"), "source")
+    await writeFile(path.join(temp, "b.md"), "destination")
+    await assert.rejects(renameProjectFile(temp, "a.md", "b.md"), /目标已存在/)
+    assert.equal(await readFile(path.join(temp, "a.md"), "utf8"), "source")
+    assert.equal(await readFile(path.join(temp, "b.md"), "utf8"), "destination")
+    await renameProjectFile(temp, "a.md", "a.md")
+    await renameProjectFile(temp, "a.md", "c.md")
+    assert.deepEqual(
+      await saveProjectFiles(temp, [{ path: "c.md", expectedText: "source", text: "draft" }]),
+      { saved: ["c.md"] },
+    )
+    await mkdir(path.join(temp, "empty"))
+    await removeProjectFile(temp, "empty")
+    await mkdir(path.join(temp, "nested", "child"), { recursive: true })
+    await writeFile(path.join(temp, "nested", "child", "note.md"), "note")
+    await mkdir(path.join(temp, "outside"))
+    await writeFile(path.join(temp, "outside", "keep.md"), "keep")
+    await symlink(path.join(temp, "outside"), path.join(temp, "nested", "linked"), "junction")
+    await removeProjectFile(temp, "nested")
+    assert.equal(await readFile(path.join(temp, "outside", "keep.md"), "utf8"), "keep")
+    await assert.rejects(removeProjectFile(temp, "../outside"), /无效/)
+    await assert.rejects(renameProjectFile(temp, "c.md", "../escape"), /无效/)
+    await assert.rejects(readFile(path.join(temp, "nested", "child", "note.md")), {
+      code: "ENOENT",
+    })
+  } finally {
+    await rm(temp, { recursive: true, force: true })
+  }
+})
 
 test("copies files and directories without overwriting or following links", async () => {
   const temp = await mkdtemp(path.join(os.tmpdir(), "envoi-transfer-"))

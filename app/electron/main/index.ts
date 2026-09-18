@@ -29,14 +29,19 @@ import {
 } from "../../server/tool-config.mjs"
 import { app, BrowserWindow, dialog, ipcMain, Menu, protocol, session, shell } from "electron"
 import { randomBytes } from "node:crypto"
-import { mkdir, readdir, readFile, writeFile, stat, realpath, rename, rm } from "node:fs/promises"
+import { mkdir, readdir, readFile, writeFile, stat, realpath, rm } from "node:fs/promises"
 import path from "node:path"
 
 import type { CompileInput } from "../../server/compiler.mjs"
 import { dataStore, registerProject, dataDir } from "../../server/local-data.mjs"
 import { watchProjectDirectory } from "./project-watch.mjs"
 import { BackendHost } from "./backend-host"
-import { atomicProjectWrite, saveProjectFiles } from "./file-service.mjs"
+import {
+  atomicProjectWrite,
+  saveProjectFiles,
+  renameProjectFile,
+  removeProjectFile,
+} from "./file-service.mjs"
 import { copyIntoProject } from "./file-transfer.mjs"
 import { LspService, lspLanguage } from "./lsp-service.mjs"
 import { installLanguageServer, installedServer, lspInstallable } from "./lsp-installer.mjs"
@@ -934,12 +939,15 @@ function registerIpc(): void {
     await mkdir(await resolveInside(await requireOpenRoot(root), relPath), { recursive: true })
   })
   handle("envoi:fs-remove", async (_event, root: string, relPath: string) => {
-    const target = await resolveInside(await requireOpenRoot(root), relPath)
-    await rm(target)
+    const base = await requireOpenRoot(root)
+    await resolveInside(base, relPath)
+    await removeProjectFile(base, relPath)
   })
   handle("envoi:fs-rename", async (_event, root: string, from: string, to: string) => {
     const base = await requireOpenRoot(root)
-    await rename(await resolveInside(base, from), await resolveInside(base, to))
+    await resolveInside(base, from)
+    await resolveInside(base, to)
+    await renameProjectFile(base, from, to)
   })
   handle("envoi:fs-copy", async (_event, root: string, from: string, to: string) => {
     const base = await requireOpenRoot(root)

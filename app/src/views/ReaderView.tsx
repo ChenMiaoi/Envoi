@@ -34,7 +34,13 @@ import { cn } from "@/lib/utils"
 import { fileIconUrl } from "@/lib/fileIcons"
 import { type FileNode } from "@/data/workspace"
 import { useProject } from "@/project/context"
-import { createTextFile, fileKind, projectTree } from "@/lib/projectFiles"
+import {
+  createTextFile,
+  fileKind,
+  projectTree,
+  renameProjectPath,
+  removeProjectPath,
+} from "@/lib/projectFiles"
 import { TexCompilePreview } from "@/components/TexCompilePreview"
 import { FileTree, type TreeMenuAction } from "@/components/FileTree"
 import { ChatPanel } from "@/components/ChatPanel"
@@ -86,7 +92,7 @@ export function ReaderView({
   codeTarget?: { path: string; position: { line: number; character: number }; id: string }
 }) {
   const { preferences } = usePreferences()
-  const { project, edit, busy, setMessage } = useProject()
+  const { project, edit, busy, saving, setBusy, setProject, setMessage } = useProject()
   const navigate = useNavigate()
   const [importing, setImporting] = useState(false)
   const [readOnlyFiles, setReadOnlyFiles] = useState<string[]>([])
@@ -217,13 +223,17 @@ export function ReaderView({
     setTreeAction({ action, node })
   }
   const runTreeAction = async () => {
-    if (!treeAction || !project.rootPath) return
+    if (!treeAction || !project.rootPath || busy || saving) return
     const { action, node } = treeAction,
       path = treePath(node),
       rootPath = project.rootPath
+    setBusy(true)
     try {
       if (action === "delete") {
         await envoi().fsRemove(rootPath, path)
+        setProject((current) =>
+          current.id === project.id ? removeProjectPath(current, path) : current,
+        )
         const rest = openFiles.filter((f) => f.id !== path && !f.id.startsWith(path + "/"))
         onOpenFiles(rest)
         if (activeId && (activeId === path || activeId.startsWith(path + "/")) && rest.length)
@@ -247,11 +257,26 @@ export function ReaderView({
         } else if (action === "new-folder") {
           await envoi().fsMkdir(rootPath, target)
         } else {
+          if (
+            target !== path &&
+            (project.files.some(
+              (file) => file.path === target || file.path.startsWith(target + "/"),
+            ) ||
+              project.directories.includes(target))
+          )
+            throw Error(t("project.fileExists", { path: target }))
           await envoi().fsRename(rootPath, path, target)
+          setProject((current) =>
+            current.id === project.id ? renameProjectPath(current, path, target) : current,
+          )
+          const remap = (id: string) =>
+            id === path || id.startsWith(path + "/") ? target + id.slice(path.length) : id
+          setPinned((ids) => ids.map(remap))
+          setReadOnlyFiles((ids) => ids.map(remap))
           onOpenFiles(
             openFiles.map((f) =>
               f.id === path
-                ? { ...f, id: target, name }
+                ? { ...f, id: target, name, kind: fileKind(target) }
                 : f.id.startsWith(path + "/")
                   ? { ...f, id: target + f.id.slice(path.length) }
                   : f,
@@ -264,6 +289,8 @@ export function ReaderView({
       setTreeAction(null)
     } catch (error) {
       setMessage((error as Error).message)
+    } finally {
+      setBusy(false)
     }
   }
 

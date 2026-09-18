@@ -1,4 +1,4 @@
-import { mkdir, open, readFile, rename, rm, realpath, stat } from "node:fs/promises"
+import { mkdir, open, readFile, rename, rm, realpath, stat, lstat } from "node:fs/promises"
 import path from "node:path"
 import { randomUUID } from "node:crypto"
 
@@ -22,6 +22,22 @@ export function withProjectFiles(root, operation) {
   return current.finally(() => {
     if (queues.get(root) === current) queues.delete(root)
   })
+}
+export async function renameProjectFile(root, from, to) {
+  return withProjectFiles(root, async () => {
+    const source = projectPath(root, from),
+      target = projectPath(root, to)
+    if (source === target) return
+    const existing = await lstat(target).catch((error) => {
+      if (error.code !== "ENOENT") throw error
+      return null
+    })
+    if (existing) throw Error("目标已存在，未重命名。")
+    await rename(source, target)
+  })
+}
+export async function removeProjectFile(root, relative) {
+  return withProjectFiles(root, () => rm(projectPath(root, relative), { recursive: true }))
 }
 async function destination(root, relative) {
   const target = projectPath(root, relative)

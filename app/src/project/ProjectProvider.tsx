@@ -79,7 +79,16 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       running = true
       pending = false
       try {
+        const paths = latest.current.files.map((file) => file.path).join("\0")
         const disk = await readProject(root)
+        if (
+          activity.current.busy ||
+          activity.current.saving ||
+          paths !== latest.current.files.map((file) => file.path).join("\0")
+        ) {
+          pending = true
+          return
+        }
         if (!disposed && !closing.current) setProject((current) => mergeDiskProject(current, disk))
       } catch (error) {
         if (!disposed) setMessage((error as Error).message)

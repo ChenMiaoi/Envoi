@@ -14,6 +14,9 @@ import {
   readProject,
   safePath,
   saveProject,
+  renameProjectPath,
+  removeProjectPath,
+  mergeDiskProject,
 } from "../src/lib/projectFiles"
 class MemoryFile {
   kind = "file" as const
@@ -73,6 +76,56 @@ class MemoryDirectory {
     return mountDirectory(this)
   }
 }
+test("renaming a directory keeps drafts saveable and persists the relocated main file", async () => {
+  const root = new MemoryDirectory("rename"),
+    source = new MemoryDirectory("source")
+  source.children.set("main.tex", new MemoryFile("main.tex", "original"))
+  source.children.set("notes.md", new MemoryFile("notes.md", "notes"))
+  root.children.set("source", source)
+  const config = new MemoryDirectory(".envoi")
+  config.children.set(
+    "project.json",
+    new MemoryFile("project.json", JSON.stringify({ main: "source/main.tex" })),
+  )
+  root.children.set(".envoi", config)
+  const initial = await readProject(root.asHandle())
+  initial.files.find((file) => file.path === "source/main.tex")!.text = "unsaved"
+  root.children.delete("source")
+  root.children.set("renamed", source)
+  const renamed = renameProjectPath(initial, "source", "renamed")
+  const project = mergeDiskProject(renamed, await readProject(initial.rootPath!))
+  assert.equal(project.rootId, "renamed/main.tex")
+  assert(!project.files.some((file) => file.path.startsWith("source/")))
+  assert.equal(project.files.find((file) => file.path === "renamed/main.tex")?.text, "unsaved")
+  await saveProject(project, () => {})
+  const reopened = await readProject(initial.rootPath!)
+  assert.equal(reopened.rootId, "renamed/main.tex")
+  assert.equal(reopened.files.find((file) => file.path === "renamed/main.tex")?.text, "unsaved")
+  const deleted = removeProjectPath(project, "renamed")
+  assert.equal(deleted.rootId, "")
+  assert(!deleted.files.some((file) => file.path.startsWith("renamed/")))
+  assert(!deleted.directories.includes("renamed"))
+})
+
+test("renamed binary assets regain their new URLs after disk refresh", () => {
+  const project = {
+    id: "asset",
+    name: "asset",
+    rootPath: "/asset",
+    rootId: "",
+    directories: [],
+    files: [
+      { id: "a.pdf", path: "a.pdf", kind: "pdf" as const, version: "1", url: "envoi://a.pdf" },
+    ],
+  }
+  const renamed = renameProjectPath(project, "a.pdf", "b.pdf")
+  const disk = {
+    ...renamed,
+    files: renamed.files.map((file) => ({ ...file, url: "envoi://b.pdf" })),
+  }
+  assert.equal(mergeDiskProject(renamed, disk).files[0].url, "envoi://b.pdf")
+})
+
 test("safe paths reject traversal, absolute paths and empty components", () => {
   for (const path of ["../x.tex", "/x.tex", "chapters//x.tex", "a/../b", "a\\b", ""])
     assert.throws(() => safePath(path))
