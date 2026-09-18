@@ -118,3 +118,50 @@ test("library import publishes files, migrates old storage and follows PDF conte
       (await request(root, { action: "list" })).warnings.some((w) => w.includes("不是有效 PDF")),
     )
   }))
+
+test("failed batches roll back published PDFs, snapshots and notes before retry", async () =>
+  temporary(async (root) => {
+    const paper = {
+      id: "first",
+      title: "Original title",
+      author: "Original author",
+      notes: "Original notes",
+      attachment: { $blob: pdf.toString("base64") },
+    }
+    await assert.rejects(
+      request(root, { action: "import", restore: true, papers: [paper, { title: null }] }),
+      /无效文献标题/,
+    )
+    for (const dir of ["papers", ".envoi/library/attachments", ".envoi/library/notes"])
+      assert.deepEqual(await readdir(path.join(root, dir)), [])
+    assert.deepEqual((await request(root, { action: "list" })).papers, [])
+    await request(root, { action: "import", restore: true, papers: [paper] })
+    const restored = await request(root, { action: "get", paperId: "first" })
+    assert.equal(restored.author, paper.author)
+    assert.equal(restored.note.text, paper.notes)
+    const before = await request(root, { action: "export" })
+    const dirs = ["papers", ".envoi/library/attachments", ".envoi/library/notes"]
+    await mkdir(path.join(root, ".envoi/library/notes/blocked.md"))
+    const entries = await Promise.all(dirs.map((dir) => readdir(path.join(root, dir))))
+    await assert.rejects(
+      request(root, {
+        action: "import",
+        restore: true,
+        papers: [
+          {
+            ...paper,
+            id: "next",
+            title: "Next",
+            attachment: { $blob: Buffer.concat([pdf, Buffer.from("next")]).toString("base64") },
+          },
+          {
+            ...paper,
+            id: "blocked",
+            attachment: { $blob: Buffer.concat([pdf, Buffer.from("blocked")]).toString("base64") },
+          },
+        ],
+      }),
+    )
+    assert.deepEqual(await Promise.all(dirs.map((dir) => readdir(path.join(root, dir)))), entries)
+    assert.deepEqual(await request(root, { action: "export" }), before)
+  }))

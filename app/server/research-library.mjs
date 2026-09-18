@@ -8,6 +8,7 @@ import {
   existsSync,
   realpathSync,
   lstatSync,
+  unlinkSync,
 } from "node:fs"
 import { realpath } from "node:fs/promises"
 import { randomUUID, createHash } from "node:crypto"
@@ -41,8 +42,12 @@ function safeFile(file) {
 function atomic(file, text) {
   safeFile(file)
   const temp = file + "." + randomUUID() + ".tmp"
-  writeFileSync(temp, text)
-  renameSync(temp, file)
+  try {
+    writeFileSync(temp, text)
+    renameSync(temp, file)
+  } finally {
+    if (existsSync(temp)) unlinkSync(temp)
+  }
 }
 export async function libraryRequest(root, input, isCurrent = () => true) {
   root = await researchRoot(root)
@@ -93,9 +98,40 @@ export async function libraryRequest(root, input, isCurrent = () => true) {
     }
     return { text, revision: p.notes_revision }
   }
+  // Keep undo information until SQLite commits. Never overwrite an external edit during recovery.
+  const undo = []
+  const write = (file, value) => {
+    const before = existsSync(safeFile(file)) ? readFileSync(file) : null
+    const after = Buffer.from(value)
+    atomic(file, after)
+    undo.push(() => {
+      if (!existsSync(safeFile(file)) || !readFileSync(file).equals(after))
+        throw Error(`Library rollback conflict: ${file}`)
+      if (before === null) unlinkSync(file)
+      else atomic(file, before)
+    })
+  }
+  const move = (from, to) => {
+    const bytes = readFileSync(safeFile(from))
+    renameSync(from, to)
+    undo.push(() => {
+      if (existsSync(from) || !readFileSync(safeFile(to)).equals(bytes))
+        throw Error(`Library rollback conflict: ${from}`)
+      renameSync(to, from)
+    })
+  }
   try {
     db.exec("BEGIN IMMEDIATE")
-    const files = paperFiles({ root, db, attachments, notes, safeDirectory, safeFile, atomic })
+    const files = paperFiles({
+      root,
+      db,
+      attachments,
+      notes,
+      safeDirectory,
+      safeFile,
+      atomic: write,
+      move,
+    })
     const warnings = files.sync()
     let result
     if (input.action === "list")
@@ -161,7 +197,7 @@ export async function libraryRequest(root, input, isCurrent = () => true) {
             }
             continue
           }
-          atomic(path.join(attachments, attachment + ".pdf"), bytes)
+          write(path.join(attachments, attachment + ".pdf"), bytes)
         }
         const paperId = input.restore && paper.id ? id(paper.id) : randomUUID()
         if (db.prepare("SELECT id FROM papers WHERE id=?").get(paperId)) continue
@@ -179,7 +215,7 @@ export async function libraryRequest(root, input, isCurrent = () => true) {
           created: Date.now(),
         }
         const text = String(paper.notes ?? "")
-        atomic(path.join(notes, paperId + ".md"), text)
+        write(path.join(notes, paperId + ".md"), text)
         db.prepare("INSERT INTO papers VALUES (?,?,?,?,?)").run(
           paperId,
           JSON.stringify(metadata),
@@ -263,7 +299,7 @@ export async function libraryRequest(root, input, isCurrent = () => true) {
         throw Error("无效 PDF")
       files.remove(p)
       const attachment = hash(bytes)
-      atomic(path.join(attachments, attachment + ".pdf"), bytes)
+      write(path.join(attachments, attachment + ".pdf"), bytes)
       const metadata = {
         ...JSON.parse(p.metadata),
         attachmentName: String(input.name ?? "paper.pdf"),
@@ -312,7 +348,7 @@ export async function libraryRequest(root, input, isCurrent = () => true) {
           input.actor === "ai" ? "ai" : "user",
           Date.now(),
         )
-        atomic(path.join(notes, p.id + ".md"), input.text)
+        write(path.join(notes, p.id + ".md"), input.text)
         db.prepare("UPDATE papers SET notes_revision=?,notes_hash=? WHERE id=?").run(
           revision,
           hash(input.text),
@@ -426,7 +462,21 @@ export async function libraryRequest(root, input, isCurrent = () => true) {
     db.exec("COMMIT")
     return result
   } catch (error) {
-    db.exec("ROLLBACK")
+    const errors = [error]
+    try {
+      db.exec("ROLLBACK")
+    } catch (rollbackError) {
+      errors.push(rollbackError)
+    }
+    for (const restore of undo.reverse()) {
+      try {
+        restore()
+      } catch (rollbackError) {
+        errors.push(rollbackError)
+      }
+    }
+    if (errors.length > 1)
+      throw new AggregateError(errors, "Library transaction rollback failed", { cause: error })
     throw error
   } finally {
     db.close()

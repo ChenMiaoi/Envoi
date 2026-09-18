@@ -4,7 +4,16 @@ import path from "node:path"
 const digest = (bytes) => createHash("sha256").update(bytes).digest("hex")
 
 // papers/ is the editable filesystem view. Hash-addressed attachments are recovery snapshots.
-export function paperFiles({ root, db, attachments, notes, safeDirectory, safeFile, atomic }) {
+export function paperFiles({
+  root,
+  db,
+  attachments,
+  notes,
+  safeDirectory,
+  safeFile,
+  atomic,
+  move = renameSync,
+}) {
   const directory = safeDirectory(root, "papers")
   db.exec(
     "CREATE TABLE IF NOT EXISTS paper_files(paper TEXT PRIMARY KEY,path TEXT NOT NULL,hash TEXT NOT NULL,visible INTEGER NOT NULL DEFAULT 1,mtime REAL,size INTEGER)",
@@ -61,7 +70,7 @@ export function paperFiles({ root, db, attachments, notes, safeDirectory, safeFi
     const file = path.join(root, current.path)
     if (existsSync(file)) {
       const trash = safeDirectory(root, `papers/.trash/${randomUUID()}`)
-      renameSync(safeFile(file), path.join(trash, path.basename(file)))
+      move(safeFile(file), path.join(trash, path.basename(file)))
     }
     db.prepare("UPDATE paper_files SET visible=0 WHERE paper=?").run(paper.id)
     return true
