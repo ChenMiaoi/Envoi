@@ -801,10 +801,10 @@ const ja: Messages = {
   "compile.logHint": "コンパイルログはまだありません。",
   "compile.neverCompiled": "この論文はまだコンパイルされていません",
   "compile.noLocation": "信頼できるソース位置なし · ログを表示",
-  "compile.openProblemsAria": "コンパイル問題一覧を開く",
+  "compile.openProblemsAria": "問題一覧を開く",
   "compile.problemsDesc":
     "{label}。コンパイルは論文全体、ChkTeX は現在のファイルのみをチェックします。",
-  "compile.problemsTitle": "論文のコンパイル問題",
+  "compile.problemsTitle": "問題",
   "compile.runCurrent": "現在の本文をコンパイル",
   "compile.showLog": "今回のログを表示",
   "compile.sourceCompile": "コンパイル",

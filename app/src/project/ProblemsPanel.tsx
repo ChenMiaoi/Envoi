@@ -3,7 +3,8 @@ import { useT } from "@/i18n/useT"
 import { CircleAlert, TriangleAlert } from "lucide-react"
 import { useProject } from "./context"
 import { projectSignature } from "@/lib/compileClient"
-import { useLspDiagnostics } from "@/lib/lspStatus"
+import { useLspDiagnostics, useToolDiagnostics } from "@/lib/lspStatus"
+import { lspLanguageForPath } from "@/lib/lspLanguage"
 import { diagnosticLocation, safeDiagnosticText, parseDiagnostics } from "@/lib/diagnostics"
 import type { SourceLocation } from "@/lib/paperSources"
 import {
@@ -17,9 +18,13 @@ export type ProblemTarget = SourceLocation & { severity: "error" | "warning"; id
 export function ProblemsPanel({
   onNavigate,
   onCodeNavigate,
+  activePath,
+  mode,
 }: {
   onNavigate: (target: ProblemTarget) => void
   onCodeNavigate: (path: string, position: { line: number; character: number }) => void
+  activePath?: string
+  mode: "reader" | "writer"
 }) {
   const { t } = useT()
   const { project } = useProject()
@@ -47,9 +52,10 @@ export function ProblemsPanel({
       )
     : []
   const lsp = useLspDiagnostics()
-  const lspItems = [...lsp].flatMap(([path, file]) =>
+  const tools = useToolDiagnostics()
+  const lspItems = [...lsp, ...tools].flatMap(([path, file]) =>
     file.items.map((item, index) => ({
-      id: `lsp:${path}:${index}`,
+      id: `code:${path}:${file.server}:${index}`,
       severity: item.severity,
       message: item.message,
       path,
@@ -59,11 +65,25 @@ export function ProblemsPanel({
       server: file.server,
     })),
   )
-  const items = [...compiledItems, ...lintItems, ...lspItems],
+  const visibleItems =
+    mode === "reader"
+      ? lspItems.filter((item) => item.path === activePath)
+      : [...compiledItems, ...lintItems]
+  const items = visibleItems.filter(
+      (item, index, all) =>
+        all.findIndex(
+          (candidate) =>
+            candidate.path === item.path &&
+            candidate.line === item.line &&
+            candidate.column === item.column &&
+            candidate.message === item.message &&
+            candidate.severity === item.severity,
+        ) === index,
+    ),
     errors = items.filter((i) => i.severity === "error").length,
     warnings = items.length - errors
   const stale = diagnostics && diagnostics.signature !== projectSignature(project)
-  const label = project.compileStatus?.startsWith(t("compile.compiling"))
+  const compileLabel = project.compileStatus?.startsWith(t("compile.compiling"))
     ? t("compile.compilingStale")
     : project.compileStatus === t("compile.cancelled") ||
         project.compileStatus === t("compile.interrupted")
@@ -82,36 +102,46 @@ export function ProblemsPanel({
     const key = item.path ?? t("compile.globalGroup")
     groups.set(key, [...(groups.get(key) ?? []), item])
   }
+  const language = lspLanguageForPath(activePath ?? "")
+  const contextLabel =
+    mode === "writer"
+      ? "LaTeX"
+      : ({ c: "C", cpp: "C++", python: "Python", rust: "Rust" }[language ?? ""] ??
+        (activePath?.split(".").at(-1)?.toUpperCase() || "—"))
+  const hasResults = mode === "reader" || !!diagnostics || !!lint
   return (
     <>
       <button
         className="flex items-center gap-1 hover:text-foreground"
         aria-label={t("compile.openProblemsAria")}
-        title={label}
+        title={mode === "reader" ? activePath : compileLabel}
         onClick={() => setOpen(true)}
       >
+        <span className="font-medium text-foreground">{contextLabel}</span>
         <CircleAlert className={`h-3 w-3 ${errors ? "text-danger" : ""}`} />
-        {diagnostics || lint || lspItems.length ? errors : "—"}
+        {hasResults ? errors : "—"}
         <TriangleAlert className={`ml-1 h-3 w-3 ${warnings ? "text-warning" : ""}`} />
-        {diagnostics || lint || lspItems.length ? warnings : "—"}
+        {hasResults ? warnings : "—"}
       </button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>{t("compile.problemsTitle")}</DialogTitle>
             <DialogDescription>
-              {t("compile.problemsDesc", {
-                label: label + (stale ? t("compile.staleSuffix") : ""),
-              })}
+              {mode === "reader"
+                ? activePath
+                : t("compile.problemsDesc", {
+                    label: compileLabel + (stale ? t("compile.staleSuffix") : ""),
+                  })}
             </DialogDescription>
           </DialogHeader>
-          {diagnostics?.timestamp && (
+          {mode === "writer" && diagnostics?.timestamp && (
             <p className="text-[10px] text-muted-foreground">
               {diagnostics.engine} · {new Date(diagnostics.timestamp).toLocaleString()} ·{" "}
               {t("compile.keptRecord")}
             </p>
           )}
-          {lint && (
+          {mode === "writer" && lint && (
             <p className="text-xs text-muted-foreground">
               {t("compile.lintPrefix")} ·{" "}
               {lint.status === "disabled"
@@ -128,11 +158,13 @@ export function ProblemsPanel({
           <div className="max-h-[55vh] overflow-auto">
             {!items.length ? (
               <p className="p-5 text-center text-xs text-muted-foreground">
-                {!diagnostics
-                  ? t(lsp.size ? "compile.emptyNone" : "compile.emptyNever")
-                  : diagnostics.status === "cancelled"
-                    ? t("compile.emptyCancelled")
-                    : t("compile.emptyNone")}
+                {mode === "reader"
+                  ? t("compile.emptyNone")
+                  : !diagnostics
+                    ? t("compile.emptyNever")
+                    : diagnostics.status === "cancelled"
+                      ? t("compile.emptyCancelled")
+                      : t("compile.emptyNone")}
               </p>
             ) : (
               [...groups].map(([path, entries]) => (
@@ -190,12 +222,12 @@ export function ProblemsPanel({
               ))
             )}
           </div>
-          {diagnostics && (
+          {mode === "writer" && diagnostics && (
             <button onClick={() => setLogOpen(!logOpen)} className="text-left text-xs text-primary">
               {logOpen ? t("compile.hideLog") : t("compile.showLog")}
             </button>
           )}
-          {logOpen && diagnostics && (
+          {mode === "writer" && logOpen && diagnostics && (
             <pre className="max-h-40 overflow-auto whitespace-pre-wrap break-all rounded bg-background p-3 text-[10px] text-muted-foreground">
               {safeDiagnosticText(diagnostics.log)}
             </pre>

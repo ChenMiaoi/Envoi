@@ -4,13 +4,20 @@ import { mkdtemp, mkdir, writeFile, readFile, rm, realpath } from "node:fs/promi
 import { tmpdir } from "node:os"
 import path from "node:path"
 import assert from "node:assert/strict"
+import { setTimeout as delay } from "node:timers/promises"
 import { seedFixtureTrust } from "./fixture-trust.mjs"
 
 const temp = await realpath(await mkdtemp(path.join(tmpdir(), "envoi-code-editor-")))
 const root = path.join(temp, "project")
+const ruff = path.join(temp, "ruff")
 let app
 try {
   await mkdir(root)
+  await writeFile(
+    ruff,
+    '#!/bin/sh\nif [ "$1" = "--version" ]; then echo "ruff 0.9.0"; elif [ "$1" = "format" ]; then sed "s/answer = value + 1/answer = value + 2/"; else printf \'[{"code":"W001","message":"example warning","location":{"row":1,"column":1}}]\'; exit 1; fi\n',
+    { mode: 0o755 },
+  )
   await writeFile(path.join(root, "hello.py"), "value = 1\n")
   await writeFile(path.join(root, "main.cpp"), "int main() { return 0; }\n")
   await writeFile(path.join(root, "Cargo.toml"), "[package]\nname = 'demo'\n")
@@ -57,19 +64,47 @@ try {
   })
   assert.equal(tooltipTheme.background, tooltipTheme.expectedBackground)
   assert.equal(tooltipTheme.foreground, tooltipTheme.expectedForeground)
-  assert.equal(await page.getByRole("button", { name: "格式化", exact: true }).count(), 1)
-  assert.equal(await page.getByRole("button", { name: "代码检查", exact: true }).count(), 1)
+  assert.equal(await page.getByRole("button", { name: "格式化", exact: true }).count(), 0)
+  assert.equal(await page.getByRole("button", { name: "代码检查", exact: true }).count(), 0)
+  await page.getByRole("link", { name: "设置", exact: true }).first().click()
+  await page.getByRole("link", { name: "扩展", exact: true }).click()
+  const python = page.getByTestId("extension-python")
+  await python.locator("button[aria-expanded]").click()
+  for (let index = 0; index < 2; index++) {
+    const input = python.getByRole("textbox", { name: "Ruff 手动输入路径" }).first()
+    await input.fill(ruff)
+    await input.locator("..").getByRole("button", { name: "使用" }).click()
+    await page.waitForFunction(
+      ({ ruff, id }) =>
+        JSON.parse(localStorage.getItem("envoi.preferences.v1") ?? "{}").toolPaths?.[id] === ruff,
+      { ruff, id: index === 0 ? "ruffFormat" : "ruffLint" },
+    )
+  }
+  await page.getByRole("link", { name: "阅读", exact: true }).first().click()
+  await page.getByRole("button", { name: "hello.py", exact: true }).click()
+  await page.getByRole("button", { name: "打开问题列表" }).waitFor()
+  await page.waitForFunction(() => document.querySelectorAll(".cm-lintRange").length > 0)
+  assert.match(await page.getByRole("button", { name: "打开问题列表" }).textContent(), /Python01/)
+  await page.getByRole("button", { name: "打开问题列表" }).click()
+  assert.match(await page.getByRole("dialog").textContent(), /W001: example warning/)
+  await page.keyboard.press("Escape")
   await editor.click()
   await editor.press("Control+End")
   await editor.press("Enter")
   await editor.type("answer = value + 1")
   await editor.press("Control+s")
-  await page.waitForFunction(
-    async (root) =>
-      (await window.envoi.fsRead(root, "hello.py")).text.includes("answer = value + 1"),
-    root,
+  let saved = ""
+  for (let attempt = 0; attempt < 60; attempt++) {
+    saved = await readFile(path.join(root, "hello.py"), "utf8")
+    if (saved.includes("answer = value + 2")) break
+    await delay(100)
+  }
+  assert.match(saved, /answer = value \+ 2/)
+  await page.waitForFunction(() =>
+    document
+      .querySelector('[aria-label="文本源码编辑器"]')
+      ?.textContent?.includes("answer = value + 2"),
   )
-  assert.match(await readFile(path.join(root, "hello.py"), "utf8"), /answer = value \+ 1/)
   await page.getByRole("link", { name: "设置", exact: true }).first().click()
   await page.getByRole("link", { name: "扩展", exact: true }).click()
   const cpp = page.getByTestId("extension-cpp")
@@ -93,6 +128,7 @@ try {
   )
   await page.getByRole("link", { name: "阅读", exact: true }).first().click()
   await page.getByRole("button", { name: "main.cpp", exact: true }).click()
+  assert.match(await page.getByRole("button", { name: "打开问题列表" }).textContent(), /C\+\+00/)
   assert.equal(await page.getByRole("button", { name: "格式化", exact: true }).count(), 0)
   await editor.click()
   await editor.press("Control+End")
@@ -105,6 +141,12 @@ try {
         "still editable without language service",
       ),
     root,
+  )
+  await page.getByRole("button", { name: "hello.py", exact: true }).click()
+  assert.match(await page.getByRole("button", { name: "打开问题列表" }).textContent(), /Python/)
+  await page.getByRole("link", { name: "写作", exact: true }).first().click()
+  await page.waitForFunction(() =>
+    document.querySelector('[aria-label="打开问题列表"]')?.textContent?.includes("LaTeX"),
   )
   assert.deepEqual(errors, [])
   console.log("PASS code editor preserves edits with a language plugin disabled")

@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState } from "react"
+import { useLayoutEffect, useRef } from "react"
 import { EditorState, Compartment } from "@codemirror/state"
 import {
   EditorView,
@@ -15,7 +15,13 @@ import { autocompletion, type Completion, type CompletionContext } from "@codemi
 import { lintGutter, setDiagnostics, type Diagnostic } from "@codemirror/lint"
 import { toast } from "sonner"
 import { envoi } from "@/lib/desktop"
-import { clearLspDiagnostics, publishLspDiagnostics, publishLspStatus } from "@/lib/lspStatus"
+import {
+  clearLspDiagnostics,
+  clearToolDiagnostics,
+  publishLspDiagnostics,
+  publishLspStatus,
+  publishToolDiagnostics,
+} from "@/lib/lspStatus"
 import { codeHighlight } from "@/lib/codeHighlight"
 import { fontCss } from "@/settings/fonts"
 import { usePreferences } from "@/settings/context"
@@ -45,11 +51,11 @@ const lspDownloads: Record<string, { name: string; url: string }> = {
   rust: { name: "rust-analyzer", url: "https://rust-analyzer.github.io/book/vs_code.html" },
 }
 const promptedLsp = new Set<string>()
-const languageToolIds: Record<string, { format: string; lint: string }> = {
-  c: { format: "clangFormat", lint: "clangTidy" },
-  cpp: { format: "clangFormat", lint: "clangTidy" },
-  python: { format: "ruffFormat", lint: "ruffLint" },
-  rust: { format: "rustfmt", lint: "clippy" },
+const linters: Record<string, string> = {
+  c: "clangTidy",
+  cpp: "clangTidy",
+  python: "ruffLint",
+  rust: "clippy",
 }
 
 function offset(view: EditorView, point: LspPosition) {
@@ -71,6 +77,7 @@ export function CodeEditor({
   root,
   path,
   source,
+  saved,
   readOnly,
   onChange,
   onNavigate,
@@ -80,6 +87,7 @@ export function CodeEditor({
   root?: string
   path: string
   source: string
+  saved?: string
   readOnly: boolean
   onChange: (text: string) => void
   onNavigate: (path: string, position: LspPosition) => void
@@ -95,7 +103,6 @@ export function CodeEditor({
   const server = useRef("LSP")
   const lspIssues = useRef<Diagnostic[]>([])
   const toolIssues = useRef<Diagnostic[]>([])
-  const [busyTool, setBusyTool] = useState<"format" | "lint" | null>(null)
   const { preferences, update } = usePreferences()
   const { t } = useT()
   const lspLanguage = lspLanguageForPath(path)
@@ -108,61 +115,6 @@ export function CodeEditor({
     for (const issue of [...lspIssues.current, ...toolIssues.current])
       unique.set(`${issue.from}:${issue.to}:${issue.message}`, issue)
     editor.dispatch(setDiagnostics(editor.state, [...unique.values()]))
-  }
-
-  async function runTool(kind: "format" | "lint") {
-    const editor = view.current
-    if (!editor || !root || !enabled || !lspLanguage || readOnly) return
-    const snapshot = editor.state.doc.toString()
-    const id = languageToolIds[lspLanguage]?.[kind]
-    if (!id) return
-    setBusyTool(kind)
-    try {
-      const result = await envoi().languageTool(
-        root,
-        path,
-        snapshot,
-        kind,
-        preferences.toolPaths[id],
-      )
-      if (view.current !== editor || editor.state.doc.toString() !== snapshot) return
-      if (kind === "format") {
-        if (typeof result.text === "string" && result.text !== snapshot) {
-          let from = 0
-          while (from < snapshot.length && snapshot[from] === result.text[from]) from++
-          let to = snapshot.length
-          let end = result.text.length
-          while (to > from && end > from && snapshot[to - 1] === result.text[end - 1]) {
-            to--
-            end--
-          }
-          editor.dispatch({
-            changes: { from, to, insert: result.text.slice(from, end) },
-          })
-        }
-      } else {
-        toolIssues.current = (result.diagnostics ?? []).flatMap((issue): Diagnostic[] => {
-          const from = offset(editor, { line: issue.line - 1, character: issue.column - 1 })
-          return from === null
-            ? []
-            : [
-                {
-                  from,
-                  to: Math.min(from + 1, editor.state.doc.length),
-                  message: issue.message,
-                  severity: issue.severity === "error" ? "error" : "warning",
-                  source: issue.source,
-                },
-              ]
-        })
-        showIssues(editor)
-        toast.info(t("extensions.lintCount", { count: toolIssues.current.length }))
-      }
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : String(error))
-    } finally {
-      setBusyTool(null)
-    }
   }
 
   useLayoutEffect(() => {
@@ -284,6 +236,7 @@ export function CodeEditor({
                 to: update.changes.mapPos(issue.to),
               }))
               toolIssues.current = []
+              clearToolDiagnostics(path)
               if (!external.current) callbacks.current.onChange(update.state.doc.toString())
               queueMicrotask(() => {
                 if (view.current === update.view) showIssues(update.view)
@@ -440,6 +393,7 @@ export function CodeEditor({
       ready.current = false
       publishLspStatus(null)
       clearLspDiagnostics(path)
+      clearToolDiagnostics(path)
       off()
       editor.destroy()
       view.current = null
@@ -469,6 +423,60 @@ export function CodeEditor({
         .lspChange(root, path, source)
         .catch(() => {})
   }, [root, path, source])
+  useLayoutEffect(() => {
+    const editor = view.current
+    const id = linters[lspLanguage ?? ""]
+    toolIssues.current = []
+    clearToolDiagnostics(path)
+    if (editor) showIssues(editor)
+    if (!editor || !root || !enabled || !id || readOnly || (id !== "ruffLint" && source !== saved))
+      return
+    let cancelled = false
+    const timer = setTimeout(
+      () => {
+        void envoi()
+          .languageTool(root, path, source, "lint", preferences.toolPaths[id])
+          .then((result) => {
+            if (cancelled || view.current !== editor || editor.state.doc.toString() !== source)
+              return
+            const issues = result.diagnostics ?? []
+            toolIssues.current = issues.flatMap((issue): Diagnostic[] => {
+              const from = offset(editor, { line: issue.line - 1, character: issue.column - 1 })
+              return from === null
+                ? []
+                : [
+                    {
+                      from,
+                      to: Math.min(from + 1, editor.state.doc.length),
+                      message: issue.message,
+                      severity: issue.severity === "error" ? "error" : "warning",
+                      source: issue.source,
+                    },
+                  ]
+            })
+            showIssues(editor)
+            publishToolDiagnostics(
+              path,
+              result.tool,
+              issues.map((issue) => ({
+                severity: issue.severity === "error" ? "error" : "warning",
+                message: issue.message,
+                line: issue.line,
+                column: issue.column,
+              })),
+            )
+          })
+          .catch(() => {
+            if (!cancelled) clearToolDiagnostics(path)
+          })
+      },
+      id === "ruffLint" ? 350 : 100,
+    )
+    return () => {
+      cancelled = true
+      clearTimeout(timer)
+    }
+  }, [root, path, source, saved, enabled, readOnly, lspLanguage, preferences.toolPaths])
   useLayoutEffect(() => {
     view.current?.dispatch({
       effects: settings.current.reconfigure([
@@ -518,26 +526,6 @@ export function CodeEditor({
   }, [readOnly, preferences])
   return (
     <div className="flex h-full min-h-0 flex-col">
-      {root && enabled && languageToolIds[lspLanguage ?? ""] && (
-        <div className="flex shrink-0 justify-end gap-1 border-b border-border/60 px-2 py-1">
-          <button
-            type="button"
-            disabled={readOnly || busyTool !== null}
-            onClick={() => void runTool("format")}
-            className="rounded px-2 py-0.5 text-xs text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-50"
-          >
-            {t("extensions.format")}
-          </button>
-          <button
-            type="button"
-            disabled={readOnly || busyTool !== null}
-            onClick={() => void runTool("lint")}
-            className="rounded px-2 py-0.5 text-xs text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-50"
-          >
-            {t("extensions.lint")}
-          </button>
-        </div>
-      )}
       <div ref={host} className="min-h-0 flex-1" />
     </div>
   )

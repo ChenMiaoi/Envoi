@@ -378,8 +378,10 @@ function ProjectApp() {
           <div className="pointer-events-auto scrollbar-none flex h-7 max-w-full items-center gap-3 overflow-x-auto rounded-full border border-white/[0.08] bg-card/40 px-4 shadow-[0_8px_32px_-12px_rgba(0,0,0,0.5)] backdrop-blur-xl backdrop-saturate-150 tabular-nums">
             {project.id !== "empty" && <ProjectTrust />}
             {project.id !== "empty" && <GitStatusPanel />}
-            {project.id !== "empty" && (
+            {project.id !== "empty" && (view === "reader" || view === "writer") && (
               <ProblemsPanel
+                mode={view === "reader" ? "reader" : "writer"}
+                activePath={project.files.find((file) => file.id === activeId)?.path}
                 onNavigate={(target) => {
                   setProblemTarget(target)
                   setView("writer")

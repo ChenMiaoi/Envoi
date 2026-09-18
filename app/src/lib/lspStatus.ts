@@ -27,6 +27,7 @@ export interface LspFileDiagnostics {
   items: LspProblem[]
 }
 let diagnostics = new Map<string, LspFileDiagnostics>()
+let toolDiagnostics = new Map<string, LspFileDiagnostics>()
 const emit = () => {
   for (const listener of listeners) listener()
 }
@@ -39,6 +40,25 @@ export function clearLspDiagnostics(path: string) {
   diagnostics = new Map(diagnostics)
   diagnostics.delete(path)
   emit()
+}
+export function publishToolDiagnostics(path: string, tool: string, items: LspProblem[]) {
+  toolDiagnostics = new Map(toolDiagnostics).set(path, { server: tool, items })
+  emit()
+}
+export function clearToolDiagnostics(path: string) {
+  if (!toolDiagnostics.has(path)) return
+  toolDiagnostics = new Map(toolDiagnostics)
+  toolDiagnostics.delete(path)
+  emit()
+}
+export function useToolDiagnostics() {
+  return useSyncExternalStore(
+    (listener) => {
+      listeners.add(listener)
+      return () => listeners.delete(listener)
+    },
+    () => toolDiagnostics,
+  )
 }
 export function useLspDiagnostics() {
   return useSyncExternalStore(

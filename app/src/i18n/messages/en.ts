@@ -781,10 +781,10 @@ const en: Messages = {
   "compile.logHint": "No compilation log yet.",
   "compile.neverCompiled": "This paper has not been compiled yet",
   "compile.noLocation": "No reliable source location · view log",
-  "compile.openProblemsAria": "Open compile problems list",
+  "compile.openProblemsAria": "Open problems list",
   "compile.problemsDesc":
     "{label}. Compilation covers the main paper; ChkTeX checks only the current file.",
-  "compile.problemsTitle": "Paper compile problems",
+  "compile.problemsTitle": "Problems",
   "compile.runCurrent": "Compile current document",
   "compile.showLog": "View this log",
   "compile.sourceCompile": "Compile",
