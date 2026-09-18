@@ -111,6 +111,7 @@ function position(text, offset) {
 export class LspService {
   constructor(publish = () => {}, resolve = executable, managedDirectory) {
     this.sessions = new Map()
+    this.opening = new Set()
     this.plugins = new PluginHost()
     this.publish = publish
     this.resolve = (root, language, preferredServer, preferredPath) =>
@@ -134,67 +135,98 @@ export class LspService {
     const existing = existsSync(target) ? realpathSync(target) : realpathSync(path.dirname(target))
     if (!within(path.resolve(root), target) || !within(realpathSync(root), existing))
       throw Error("Invalid source path")
-    const spec = await this.resolve(root, language, preferredServer, preferredPath)
-    if (!spec) return { available: false, error: `No ${language} language server found` }
-    const key = this.key(owner, root, language)
-    const pluginId = pluginForLanguage(language)?.id
-    let session = this.sessions.get(key)
-    if (session && (session.spec.name !== spec.name || session.spec.command !== spec.command)) {
-      session.docs.clear()
-      session.stop()
-      this.sessions.delete(key)
-      if (pluginId) void this.plugins.deactivate(pluginId, key)
-      session = undefined
-    }
-    if (!session) {
-      session = new Session(
-        spec,
-        root,
-        language,
-        (uri, diagnostics, version) => {
-          const key = uriKey(uri)
-          const doc = [...session.docs.values()].find((item) => item.uriKey === key)
-          if (doc && (version === undefined || version === doc.version))
-            this.publish(owner, { root, path: doc.path, diagnostics })
-        },
-        () => {
-          if (this.sessions.get(key) === session) {
-            this.sessions.delete(key)
-            if (pluginId) void this.plugins.deactivate(pluginId, key)
-          }
-        },
-      )
-      this.sessions.set(key, session)
-      session.ready = pluginId
-        ? this.plugins.activate(pluginId, key, async (context) => {
-            context.add(() => session.stop())
-            await session.start()
-          })
-        : session.start()
-    }
+    for (const pending of this.opening)
+      if (pending.owner === owner && pending.root === root && pending.file === file)
+        pending.cancelled = true
+    const request = { owner, root, file, token, language, cancelled: false }
+    this.opening.add(request)
     try {
-      await session.ready
-    } catch (error) {
-      if (this.sessions.get(key) === session) {
-        this.sessions.delete(key)
+      const spec = await this.resolve(root, language, preferredServer, preferredPath)
+      if (request.cancelled)
+        return { available: false, error: "Language server activation cancelled" }
+      if (!spec) return { available: false, error: `No ${language} language server found` }
+      const key = this.key(owner, root, language)
+      const pluginId = pluginForLanguage(language)?.id
+      let session = this.sessions.get(key)
+      if (session && (session.spec.name !== spec.name || session.spec.command !== spec.command)) {
+        session.docs.clear()
         session.stop()
+        this.sessions.delete(key)
+        if (pluginId) void this.plugins.deactivate(pluginId, key)
+        session = undefined
       }
-      throw error
+      if (!session) {
+        session = new Session(
+          spec,
+          root,
+          language,
+          (uri, diagnostics, version) => {
+            const key = uriKey(uri)
+            const doc = [...session.docs.values()].find((item) => item.uriKey === key)
+            if (doc && (version === undefined || version === doc.version))
+              this.publish(owner, { root, path: doc.path, diagnostics })
+          },
+          () => {
+            if (this.sessions.get(key) === session) {
+              this.sessions.delete(key)
+              if (pluginId) void this.plugins.deactivate(pluginId, key)
+            }
+          },
+        )
+        this.sessions.set(key, session)
+        session.ready = pluginId
+          ? this.plugins.activate(pluginId, key, async (context) => {
+              context.add(() => session.stop())
+              await session.start()
+            })
+          : session.start()
+      }
+      try {
+        await session.ready
+      } catch (error) {
+        if (this.sessions.get(key) === session) {
+          this.sessions.delete(key)
+          session.stop()
+        }
+        throw error
+      }
+      if (request.cancelled || this.sessions.get(key) !== session) {
+        if (
+          this.sessions.get(key) === session &&
+          !session.docs.size &&
+          ![...this.opening].some(
+            (other) =>
+              other !== request &&
+              !other.cancelled &&
+              other.owner === owner &&
+              other.root === root &&
+              other.language === language,
+          )
+        ) {
+          session.stop()
+          this.sessions.delete(key)
+          if (pluginId) void this.plugins.deactivate(pluginId, key)
+        }
+        return { available: false, error: "Language server activation cancelled" }
+      }
+      const uri = pathToFileURL(target).href
+      const previous = session.docs.get(file)
+      if (previous) session.notify("textDocument/didClose", { textDocument: { uri } })
+      session.docs.set(file, { path: file, uri, uriKey: uriKey(uri), text, version: 1, token })
+      session.notify("textDocument/didOpen", {
+        textDocument: {
+          uri,
+          languageId: language === "make" ? "makefile" : language,
+          version: 1,
+          text,
+        },
+      })
+      return { available: true, server: spec.name }
+    } finally {
+      this.opening.delete(request)
     }
-    const uri = pathToFileURL(target).href
-    const previous = session.docs.get(file)
-    if (previous) session.notify("textDocument/didClose", { textDocument: { uri } })
-    session.docs.set(file, { path: file, uri, uriKey: uriKey(uri), text, version: 1, token })
-    session.notify("textDocument/didOpen", {
-      textDocument: {
-        uri,
-        languageId: language === "make" ? "makefile" : language,
-        version: 1,
-        text,
-      },
-    })
-    return { available: true, server: spec.name }
   }
+
   change(owner, root, file, text) {
     const session = this.sessions.get(this.key(owner, root, lspLanguage(file)))
     const doc = session?.docs.get(file)
@@ -227,6 +259,14 @@ export class LspService {
       .filter(Boolean)
   }
   close(owner, root, file, token) {
+    for (const pending of this.opening)
+      if (
+        pending.owner === owner &&
+        pending.root === root &&
+        pending.file === file &&
+        pending.token === token
+      )
+        pending.cancelled = true
     const key = this.key(owner, root, lspLanguage(file))
     const session = this.sessions.get(key)
     const doc = session?.docs.get(file)
@@ -241,6 +281,8 @@ export class LspService {
     }
   }
   dispose(owner, root) {
+    for (const pending of this.opening)
+      if (pending.owner === owner && (!root || pending.root === root)) pending.cancelled = true
     for (const [key, session] of this.sessions)
       if (key.startsWith(`${owner}\0`) && (!root || key.startsWith(`${owner}\0${root}\0`))) {
         session.stop()

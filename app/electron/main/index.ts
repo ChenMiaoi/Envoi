@@ -543,7 +543,10 @@ function registerIpc(): void {
     })
     bindRoot(root)
     projectRoots.set(project.id, root)
-    if (activeRoots.get(event.sender.id) !== root) cancelPaperBrowse(event.sender.id)
+    if (activeRoots.get(event.sender.id) !== root) {
+      cancelPaperBrowse(event.sender.id)
+      lspService.dispose(event.sender.id)
+    }
     activeRoots.set(event.sender.id, root)
     return { ok: true, project: { id: project.id, path: root, name: project.name } }
   })

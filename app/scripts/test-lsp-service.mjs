@@ -120,3 +120,47 @@ test("changing the preferred language server replaces the active session", async
     await rm(root, { recursive: true, force: true })
   }
 })
+
+test("closing pending documents and disposing owners cancels late activation", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "envoi-lsp-pending-"))
+  const resolvers = []
+  const fixture = fileURLToPath(new URL("./fixtures/lsp-fixture.mjs", import.meta.url))
+  const spec = { command: process.execPath, args: [fixture], name: "fixture" }
+  const service = new LspService(
+    () => {},
+    () => new Promise((resolve) => resolvers.push(resolve)),
+  )
+  try {
+    await writeFile(path.join(root, "main.py"), "x")
+    const closed = service.open(1, root, "main.py", "x", "closed")
+    const other = service.open(2, root, "main.py", "x", "other")
+    service.dispose(1, root)
+    resolvers.shift()(spec)
+    resolvers.shift()(spec)
+    assert.equal((await closed).available, false)
+    assert.equal((await other).available, true)
+    assert.equal(service.sessions.size, 1)
+    const cancelled = service.open(1, root, "main.py", "x", "cancelled")
+    service.close(1, root, "main.py", "cancelled")
+    resolvers.shift()(spec)
+    assert.equal((await cancelled).available, false)
+    const retry = service.open(1, root, "main.py", "x", "retry")
+    resolvers.shift()(spec)
+    assert.equal((await retry).available, true)
+    assert.equal(service.sessions.size, 2)
+    const initializing = service.open(3, root, "main.py", "x", "initializing")
+    const rejected = assert.rejects(initializing, /stopped|cancelled/)
+    resolvers.shift()(spec)
+    await new Promise((resolve) => setImmediate(resolve))
+    const child = service.sessions.get(service.key(3, root, "python")).process
+    service.dispose(3)
+    await rejected
+    assert.equal(service.sessions.has(service.key(3, root, "python")), false)
+    assert(child.killed)
+    assert.equal(service.opening.size, 0)
+  } finally {
+    service.dispose(1)
+    service.dispose(2)
+    await rm(root, { recursive: true, force: true })
+  }
+})
