@@ -38,6 +38,7 @@ import { BackendHost } from "./backend-host"
 import { atomicProjectWrite, saveProjectFiles } from "./file-service.mjs"
 import { copyIntoProject } from "./file-transfer.mjs"
 import { LspService, lspLanguage } from "./lsp-service.mjs"
+import { installLanguageServer, installedServer } from "./lsp-installer.mjs"
 
 import { createWorkspaceTrust } from "./workspace-trust.mjs"
 // Desktop launchers may omit installed tools from PATH; share discovery with workers and AI.
@@ -231,11 +232,16 @@ const watchers = new Map<number, () => void>()
 const watchGenerations = new Map<number, number>()
 const projectRoots = new Map<string, string>()
 const activeRoots = new Map<number, string>()
-const lspService = new LspService((owner: number, payload: unknown) => {
-  for (const window of BrowserWindow.getAllWindows())
-    if (window.webContents.id === owner && !window.webContents.isDestroyed())
-      window.webContents.send("envoi:lsp-diagnostics", payload)
-})
+const managedLspDirectory = () => path.join(app.getPath("userData"), "language-servers")
+const lspService = new LspService(
+  (owner: number, payload: unknown) => {
+    for (const window of BrowserWindow.getAllWindows())
+      if (window.webContents.id === owner && !window.webContents.isDestroyed())
+        window.webContents.send("envoi:lsp-diagnostics", payload)
+  },
+  undefined,
+  managedLspDirectory,
+)
 async function requireToolContext(event: Electron.IpcMainInvokeEvent) {
   const root = activeRoots.get(event.sender.id)
   if (root) await workspaceTrust.requireTrust(root)
@@ -613,7 +619,23 @@ function registerIpc(): void {
   handle("envoi:tools", async (event, options?: { refresh?: boolean; root?: string }) => {
     await requireToolContext(event)
     const root = options?.root ? await requireBoundRoot(options.root) : undefined
-    return toolsBackend.call("tools", [{ refresh: options?.refresh, root }])
+    const info = (await toolsBackend.call("tools", [{ refresh: options?.refresh, root }])) as {
+      groups?: Record<string, { id: string; available: boolean; path?: string; version?: string }[]>
+    }
+    for (const language of ["cpp", "python", "rust"]) {
+      const installed = await installedServer(managedLspDirectory(), language)
+      const group = info.groups?.[language]
+      const row = group?.find((entry) => entry.id === installed?.id)
+      if (row && installed)
+        Object.assign(row, { available: true, path: installed.path, version: installed.version })
+    }
+    return info
+  })
+  handle("envoi:install-lsp", async (event, language: string) => {
+    if (!activeRoots.has(event.sender.id)) throw Error("Project is not active")
+    const installed = await installLanguageServer(managedLspDirectory(), language)
+    if (!installed) throw Error("Language server installation failed")
+    return { id: installed.id, path: installed.path, version: installed.version }
   })
   handle("envoi:probe-lsp-path", async (event, id: string, value: string) => {
     await requireToolContext(event)

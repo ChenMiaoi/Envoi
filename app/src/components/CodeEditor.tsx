@@ -87,7 +87,7 @@ export function CodeEditor({
   const external = useRef(false)
   const ready = useRef(false)
   const server = useRef("LSP")
-  const { preferences } = usePreferences()
+  const { preferences, update } = usePreferences()
   const { t } = useT()
   const lspLanguage = lspLanguageForPath(path)
   const pluginId = pluginForLanguage(lspLanguage)
@@ -295,8 +295,40 @@ export function CodeEditor({
               toast.info(t("extensions.installPrompt", { name: download.name }), {
                 duration: 12000,
                 action: {
-                  label: t("extensions.downloadPage"),
-                  onClick: () => window.open(download.url, "_blank", "noopener,noreferrer"),
+                  label: t("extensions.installAction"),
+                  onClick: () => {
+                    const notification = toast.loading(
+                      t("extensions.installing", { name: download.name }),
+                    )
+                    void envoi()
+                      .installLsp(lspLanguage)
+                      .then((installed) => {
+                        toast.success(t("extensions.installed", { name: download.name }), {
+                          id: notification,
+                        })
+                        const lspServers = { ...preferences.lspServers }
+                        if (installed.id === "clangd") {
+                          lspServers.c = installed.id
+                          lspServers.cpp = installed.id
+                        } else lspServers[lspLanguage] = installed.id
+                        update({
+                          lspServers,
+                          lspPaths: { ...preferences.lspPaths, [installed.id]: "" },
+                        })
+                      })
+                      .catch((error) => {
+                        promptedLsp.delete(promptKey)
+                        toast.error(t("extensions.installFailed", { name: download.name }), {
+                          id: notification,
+                          description: error instanceof Error ? error.message : String(error),
+                          action: {
+                            label: t("extensions.downloadPage"),
+                            onClick: () =>
+                              window.open(download.url, "_blank", "noopener,noreferrer"),
+                          },
+                        })
+                      })
+                  },
                 },
               })
             }

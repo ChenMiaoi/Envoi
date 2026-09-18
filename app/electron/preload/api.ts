@@ -83,6 +83,7 @@ export interface EnvoiBridge {
     text: string,
   ): Promise<unknown>
   lspClose(root: string, path: string, token: string): Promise<void>
+  installLsp(language: string): Promise<{ id: string; path: string; version: string }>
   onLspDiagnostics(
     cb: (event: { root: string; path?: string; diagnostics: unknown[] }) => void,
   ): () => void

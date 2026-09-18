@@ -10,6 +10,7 @@ import { lspServersByLanguage, toolCatalog } from "../../server/tool-registry.mj
 import { pluginForLanguage, pluginLanguageForPath } from "../../server/plugin-registry.mjs"
 import { PluginHost } from "../../server/plugin-host.mjs"
 import { createLocalWorkspaceEnvironment } from "./workspace-environment.mjs"
+import { installedServer } from "./lsp-installer.mjs"
 
 // 服务器回退链由 tool-registry.mjs 的目录派生：kind 为 lsp 的条目按目录顺序排优先级。
 const servers = lspServersByLanguage()
@@ -40,7 +41,11 @@ function uriKey(uri) {
   }
 }
 const discovered = new Map()
-async function executable(root, language, preferredServer, preferredPath) {
+async function executable(root, language, preferredServer, preferredPath, managedDirectory) {
+  if (managedDirectory && !preferredPath) {
+    const managed = await installedServer(managedDirectory, language, preferredServer)
+    if (managed) return managed
+  }
   const preferred = preferredServer
     ? toolCatalog.find(
         (tool) =>
@@ -102,11 +107,18 @@ function position(text, offset) {
 }
 
 export class LspService {
-  constructor(publish = () => {}, resolve = executable) {
+  constructor(publish = () => {}, resolve = executable, managedDirectory) {
     this.sessions = new Map()
     this.plugins = new PluginHost()
     this.publish = publish
-    this.resolve = resolve
+    this.resolve = (root, language, preferredServer, preferredPath) =>
+      resolve(
+        root,
+        language,
+        preferredServer,
+        preferredPath,
+        typeof managedDirectory === "function" ? managedDirectory() : managedDirectory,
+      )
   }
   key(owner, root, language) {
     return `${owner}\0${root}\0${language}`
@@ -259,6 +271,7 @@ class Session {
       env: {
         ...process.env,
         ...(process.platform === "win32" ? { PYTHONIOENCODING: "utf-8" } : {}),
+        ...(this.spec.env ?? {}),
         ...(venv
           ? {
               VIRTUAL_ENV: venv,

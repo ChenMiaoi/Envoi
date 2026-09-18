@@ -10,10 +10,12 @@ export class LspService {
       language: string,
       preferredServer?: string,
       preferredPath?: string,
+      managedDirectory?: string,
     ) =>
       | { command: string; args: string[]; name: string }
       | undefined
       | Promise<{ command: string; args: string[]; name: string } | undefined>,
+    managedDirectory?: string | (() => string),
   )
   open(
     owner: number,
