@@ -392,6 +392,45 @@ try {
   await page.getByRole("button", { name: /^Folder-added/ }).waitFor({ state: "hidden" })
   await assert.rejects(readFile(movedPdf), { code: "ENOENT" })
 
+  await page.getByTestId("library-mode-browse").click()
+  await page.evaluate(() =>
+    document.querySelector("webview").dispatchEvent(
+      Object.assign(new Event("did-fail-load"), {
+        errorCode: -300,
+        errorDescription: "ERR_BLOCKED_BY_RESPONSE",
+      }),
+    ),
+  )
+  for (const [language, address, back, blocked] of [
+    ["en", "Web address", "Back", "This site does not allow embedded browsing"],
+    ["ja", "ウェブアドレス", "戻る", "このサイトはアプリ内で表示できません"],
+    ["zh-TW", "瀏覽地址", "後退", "該站點不允許在應用內嵌顯示"],
+    ["zh-HK", "瀏覽地址", "後退", "該站點不允許在應用內嵌顯示"],
+    ["zh-CN", "浏览地址", "后退", "该站点不允许在应用内嵌显示"],
+  ]) {
+    await page.evaluate(async (language) => {
+      const current = await window.envoi.dataGet("preferences")
+      await window.envoi.dataPut("preferences", { ...current.value, language }, "default", {
+        expectedRevision: current.revision,
+      })
+      window.dispatchEvent(new StorageEvent("storage", { key: "envoi.preferences.v1" }))
+    }, language)
+    await page.getByTestId("library-mode-browse").click()
+    await page.getByTestId("paper-browse").getByText(blocked, { exact: true }).waitFor()
+    await page
+      .getByTestId("paper-browse")
+      .getByRole("textbox", { name: address, exact: true })
+      .waitFor()
+    assert.equal(
+      await page
+        .getByTestId("paper-browse")
+        .getByRole("button", { name: back, exact: true })
+        .count(),
+      1,
+    )
+  }
+  console.log("PASS: library browser controls switch across all five languages")
+
   assert.deepEqual(errors, [])
   console.log(
     "PASS: project library IPC, three panes, independent notes, autosave on switching, restart and history restore",

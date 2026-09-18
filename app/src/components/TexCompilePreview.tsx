@@ -719,7 +719,7 @@ export function TexCompilePreview({
             className="flex items-center gap-1.5"
           >
             <input
-              aria-label="论文页码"
+              aria-label={t("preview.pageNumber")}
               type="number"
               min={1}
               max={pages.length}
@@ -732,7 +732,7 @@ export function TexCompilePreview({
             <span className="tabular-nums">/ {pages.length}</span>
             <button
               type="submit"
-              title="跳转"
+              title={t("preview.go")}
               className="flex h-6.5 w-6.5 items-center justify-center rounded-md transition-colors hover:bg-white/[0.06] hover:text-foreground"
             >
               <CornerDownLeft className="h-3 w-3" />
@@ -740,7 +740,7 @@ export function TexCompilePreview({
           </form>
           <div className="relative ml-auto">
             <select
-              aria-label="PDF 缩放"
+              aria-label={t("preview.zoom")}
               className="h-6.5 appearance-none rounded-md border border-input/60 bg-background/40 pl-2 pr-6 transition-colors hover:border-primary/40 focus:border-primary/60 focus:outline-none"
               value={zoom}
               onChange={(event) => {
@@ -748,7 +748,7 @@ export function TexCompilePreview({
                 setZoom(Number(event.target.value))
               }}
             >
-              <option value={1}>适合宽度</option>
+              <option value={1}>{t("preview.fitWidth")}</option>
               <option value={1.25}>125%</option>
               <option value={1.5}>150%</option>
               <option value={2}>200%</option>

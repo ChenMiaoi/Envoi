@@ -229,7 +229,7 @@ function PaperWorkspace({
       const target =
         project.files.find((f) => names.includes(f.path)) ??
         project.files.find((f) => f.kind === "bib")
-      if (!target) throw Error("项目中没有 BibTeX 文件")
+      if (!target) throw Error(t("library.noBibFile"))
       const bib = paper.bib ?? synthesizeBib(paper, paper.citationKey || citationKeyFor(paper))
       const key = bibtexKey(bib) ?? paper.citationKey
       if (key && target.text?.includes("{" + key + ",")) {
@@ -252,7 +252,12 @@ function PaperWorkspace({
     const abort = new AbortController()
     controller.current = abort
     let record: AgentRecord = {
-      ...(chat ?? { id: "pending", name: "论文阅读", status: "running", messages: [] }),
+      ...(chat ?? {
+        id: "pending",
+        name: t("research.readingNotes"),
+        status: "running",
+        messages: [],
+      }),
       messages: [
         ...(chat?.messages ?? []),
         { id: crypto.randomUUID(), role: "user", text: message },
@@ -298,7 +303,7 @@ function PaperWorkspace({
     }
   }
   if (!detail)
-    return <div className="workspace-pane h-full p-6 text-sm">{error || "正在打开文献…"}</div>
+    return <div className="workspace-pane h-full p-6 text-sm">{error || t("research.opening")}</div>
   return (
     <Group orientation="horizontal">
       <Panel defaultSize="65%" minSize="25%" className="workspace-pane">
@@ -325,36 +330,36 @@ function PaperWorkspace({
               <div className="mt-1 truncate text-[11px] leading-3.5 text-muted-foreground">
                 {[paper.author, paper.venue, paper.year, paper.citationKey]
                   .filter(Boolean)
-                  .join(" · ") || "元数据待补全"}
+                  .join(" · ") || t("research.metadataPending")}
               </div>
             </div>
             <button className={headerPrimary} title={t("library.citeToProject")} onClick={cite}>
-              引用到项目
+              {t("research.cite")}
             </button>
             <button
               className={headerGhost}
               disabled={busy}
-              title="PDF 移入 papers/.trash，保留阅读记录"
+              title={t("research.trashHint")}
               onClick={async () => {
                 try {
                   await flush()
                   if (blocked.current) return
                   await call("remove")
-                  notify(`已移出论文库：${paper.title}（PDF 已移至 papers/.trash）`, "info")
+                  notify(t("research.removed", { title: paper.title }), "info")
                   onChanged()
                 } catch (e) {
                   notice(e)
                 }
               }}
             >
-              移出论文库
+              {t("library.remove")}
             </button>
             <button
               className={headerGhost}
               disabled={busy}
               onClick={() => attachmentInput.current?.click()}
             >
-              {file ? "替换 PDF" : "补充 PDF"}
+              {file ? t("research.replace") : t("research.attach")}
             </button>
             <input
               ref={attachmentInput}
@@ -374,7 +379,7 @@ function PaperWorkspace({
                     setDetail(await call<PaperDetail>("get"))
                     setPdfText("")
                     onChanged()
-                    notify(`已更新 PDF 附件：${next.name}`, "success")
+                    notify(t("research.attachmentUpdated", { name: next.name }), "success")
                   } catch (error) {
                     setError((error as Error).message)
                   }
@@ -388,12 +393,12 @@ function PaperWorkspace({
                   const page = selectionPage.current
                   edit(
                     draft.current +
-                      `\n\n> ${selection}\n\n[原文第 ${page} 页](envoi-paper:${paper.id}/${paper.attachmentHash}/${page})\n`,
+                      `\n\n> ${selection}\n\n[${t("research.sourcePage", { page })}](envoi-paper:${paper.id}/${paper.attachmentHash}/${page})\n`,
                   )
-                  notify(`已摘录选段到笔记（第 ${page} 页）`, "success")
+                  notify(t("research.excerptSaved", { page }), "success")
                 }}
               >
-                摘录到笔记
+                {t("research.excerpt")}
               </button>
             )}
           </div>
@@ -412,7 +417,7 @@ function PaperWorkspace({
               />
             ) : (
               <div className="flex h-full flex-col items-center justify-center gap-2 px-8 text-center text-sm text-muted-foreground">
-                <p>{paper.attachmentHash ? "正在加载 PDF…" : "这篇文献还没有 PDF 附件。"}</p>
+                <p>{paper.attachmentHash ? t("research.loadingPdf") : t("research.missingPdf")}</p>
               </div>
             )}
           </div>
@@ -426,9 +431,13 @@ function PaperWorkspace({
         >
           <div className="flex min-h-0 flex-1 flex-col">
             <header className="flex shrink-0 items-center gap-2 px-5 pb-3 pt-5">
-              <h2 className="text-sm font-medium">阅读笔记</h2>
+              <h2 className="text-sm font-medium">{t("research.readingNotes")}</h2>
               <span className="text-[10px] text-muted-foreground/70" aria-live="polite">
-                {saving ? "保存中…" : draft.current === saved.current ? "已保存" : "待保存"}
+                {saving
+                  ? t("research.saving")
+                  : draft.current === saved.current
+                    ? t("research.saved")
+                    : t("research.unsaved")}
               </span>
               <button
                 className="ml-auto rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground"
@@ -437,7 +446,7 @@ function PaperWorkspace({
                   void call<typeof history>("history").then(setHistory).catch(notice)
                 }}
               >
-                修改历史
+                {t("research.history")}
               </button>
             </header>
             {detail.drafts?.map((d) => (
@@ -450,7 +459,7 @@ function PaperWorkspace({
                     edit(d.text)
                   }}
                 >
-                  查看并合并
+                  {t("research.merge")}
                 </button>
                 <button
                   onClick={() => {
@@ -463,22 +472,25 @@ function PaperWorkspace({
                     )
                   }}
                 >
-                  移除草稿
+                  {t("research.dismissDraft")}
                 </button>
               </div>
             ))}
             <div className="shrink-0 px-5 pb-3">
               <details className="relative inline-block text-xs">
                 <summary className="cursor-pointer list-none rounded-full border border-border/60 bg-secondary/40 px-2.5 py-1 text-muted-foreground hover:bg-secondary">
-                  {paper.collection || "添加研究用途"} <span className="ml-1 opacity-50">⌄</span>
+                  {paper.collection || t("research.addPurpose")}{" "}
+                  <span className="ml-1 opacity-50">⌄</span>
                 </summary>
                 <div className="absolute left-0 top-full z-20 mt-2 w-56 rounded-lg border border-border bg-popover p-3 shadow-lg">
-                  <label className="mb-2 block text-xs text-muted-foreground">研究用途</label>
+                  <label className="mb-2 block text-xs text-muted-foreground">
+                    {t("research.purpose")}
+                  </label>
                   <input
-                    aria-label="研究用途"
+                    aria-label={t("research.purpose")}
                     className={field + " w-full"}
                     defaultValue={paper.collection}
-                    placeholder="相关工作 / 方法与基线 / 背景"
+                    placeholder={t("research.purposeHint")}
                     onBlur={(e) => {
                       void call("metadata", { patch: { collection: e.target.value } })
                         .then(onChanged)
@@ -499,7 +511,7 @@ function PaperWorkspace({
                       setShowHistory(false)
                     }}
                   >
-                    恢复版本 {h.revision} · {h.actor}
+                    {t("research.restoreRevision", { revision: h.revision, actor: h.actor })}
                   </button>
                 ))}
               </div>
@@ -511,7 +523,7 @@ function PaperWorkspace({
                 readOnly={false}
                 path={`.envoi/library/notes/${paper.id}.md`}
                 files={project.files}
-                ariaLabel="论文阅读笔记"
+                ariaLabel={t("research.notesAria")}
                 onSource={(url) => {
                   const expected = `envoi-paper:${paper.id}/${paper.attachmentHash}/`
                   if (url.startsWith(expected)) {
@@ -523,7 +535,7 @@ function PaperWorkspace({
             </div>{" "}
             {conflict && (
               <div role="alert" className="border-t p-3 text-xs">
-                <p>笔记有新的修改。你的内容已保留，请合并后保存。</p>
+                <p>{t("research.noteConflict")}</p>
                 <pre className="max-h-24 overflow-auto whitespace-pre-wrap">{conflict.text}</pre>
                 <button
                   className={field}
@@ -546,7 +558,7 @@ function PaperWorkspace({
                     setConflict(undefined)
                   }}
                 >
-                  使用最新内容
+                  {t("research.useLatest")}
                 </button>
               </div>
             )}
@@ -554,8 +566,10 @@ function PaperWorkspace({
           <div className="shrink-0 pb-1 pt-3">
             <div className="flex items-center gap-2 px-5 pb-2 text-[11px] text-muted-foreground">
               <span className="h-1 w-1 rounded-full bg-primary/60" />
-              <span>论文助手</span>
-              <span className="ml-auto text-[10px] opacity-70">当前论文 · 阅读笔记</span>
+              <span>{t("research.assistant")}</span>
+              <span className="ml-auto text-[10px] opacity-70">
+                {t("research.assistantContext")}
+              </span>
             </div>
             <ChatPanel
               compact
@@ -568,7 +582,7 @@ function PaperWorkspace({
                 select: selectChat,
                 list: listChats,
               }}
-              placeholder="讨论这篇论文，或让 AI 整理笔记…"
+              placeholder={t("research.assistantPlaceholder")}
               conversation={{
                 record: chat ?? null,
                 busy,
@@ -691,7 +705,7 @@ export function LibraryView() {
       if (files.length === 1 && files[0].name.endsWith(".json")) {
         const archive = JSON.parse(await files[0].text())
         if (archive.version !== 1 || !Array.isArray(archive.papers))
-          throw Error("不是论文库导出文件")
+          throw Error(t("research.invalidExport"))
         await researchLibrary(root, { action: "import", papers: archive.papers, restore: true })
         await load()
         return
@@ -727,19 +741,21 @@ export function LibraryView() {
         </div>
       </div>
     )
-  const groups = [...new Set(index?.papers.map((p) => p.collection || "未分类") ?? [])]
+  const groups = [
+    ...new Set(index?.papers.map((p) => p.collection || t("research.uncategorized")) ?? []),
+  ]
   return (
     <div className="flex h-full min-h-0 flex-col gap-3 p-1.5" data-testid="research-library">
       <header className="workspace-pane flex h-11 shrink-0 items-center gap-3 px-4 text-xs">
         <nav
-          aria-label="论文库视图"
+          aria-label={t("research.views")}
           className="flex rounded-lg border border-border/70 bg-secondary/50 p-0.5"
         >
           {(
             [
-              ["library", "论文库"],
-              ["search", "在线搜索"],
-              ["browse", "网页浏览"],
+              ["library", t("research.library")],
+              ["search", t("research.search")],
+              ["browse", t("research.browse")],
             ] as const
           ).map(([id, label]) => (
             <button
@@ -759,7 +775,9 @@ export function LibraryView() {
             </button>
           ))}
         </nav>
-        <span className="mr-auto text-muted-foreground">{index?.papers.length ?? 0} 篇</span>
+        <span className="mr-auto text-muted-foreground">
+          {t("library.paperCount", { n: index?.papers.length ?? 0 })}
+        </span>
         <button
           className="rounded-md px-2 py-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:opacity-50"
           disabled={busy}
@@ -779,12 +797,12 @@ export function LibraryView() {
           disabled={busy}
           onClick={() => void importPapers(true)}
         >
-          从旧论文库导入
+          {t("research.legacyImport")}
         </button>
         <button
           className="rounded-md px-2 py-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:opacity-50"
           disabled={busy}
-          title="导出当前研究的全部文献、PDF 附件、笔记与会话"
+          title={t("research.exportHint")}
           onClick={async () => {
             setBusy(true)
             setExportNotice("")
@@ -792,7 +810,7 @@ export function LibraryView() {
               const result = await researchLibrary<{ saved: boolean; path?: string }>(root, {
                 action: "export-file",
               })
-              if (result.saved) setExportNotice(`已导出当前研究的全部资料：${result.path}`)
+              if (result.saved) setExportNotice(t("research.exported", { path: result.path ?? "" }))
             } catch (error) {
               notice(error)
             } finally {
@@ -800,7 +818,7 @@ export function LibraryView() {
             }
           }}
         >
-          导出全部资料…
+          {t("research.exportAll")}
         </button>
         <input
           ref={input}
@@ -820,7 +838,7 @@ export function LibraryView() {
           className="workspace-pane shrink-0 px-4 py-2 text-xs text-muted-foreground"
           title={index?.papersDirectory}
         >
-          当前关联主工作区的 papers/。
+          {t("research.sharedPapers")}
         </p>
       )}
       {!!index?.warnings?.length && (
@@ -843,7 +861,7 @@ export function LibraryView() {
               const source = sourceUrl.trim()
               if (/^(?:https?:\/\/(?:dx\.)?doi\.org\/)?10\.\d{4,9}\//i.test(source)) {
                 const found = await lookupPaperIdentifier(source)
-                if (!found) throw Error("未找到文献信息，请核对 DOI")
+                if (!found) throw Error(t("research.metadataMissing"))
                 await researchLibrary(root, {
                   action: "import",
                   papers: [
@@ -889,14 +907,14 @@ export function LibraryView() {
           }}
         >
           <input
-            aria-label="PDF URL 或 DOI"
-            placeholder="https://…/paper.pdf 或 10.…（DOI 只导入文献信息）"
+            aria-label={t("research.urlAria")}
+            placeholder={t("research.urlHint")}
             className="min-w-64 flex-1 rounded border bg-background px-2 py-1"
             value={sourceUrl}
             onChange={(event) => setSourceUrl(event.target.value)}
           />
           <button disabled={busy || !sourceUrl.trim()} type="submit">
-            {busy ? "正在导入…" : "导入链接"}
+            {busy ? t("research.importing") : t("research.importLink")}
           </button>
         </form>
       )}
@@ -923,9 +941,9 @@ export function LibraryView() {
                 <nav className="flex h-full flex-col bg-card">
                   <div className="flex h-9 shrink-0 items-center border-b border-border px-2">
                     <input
-                      aria-label="搜索研究论文"
+                      aria-label={t("research.searchAria")}
                       className={field + " h-7 w-full"}
-                      placeholder="搜索标题、作者、标签…"
+                      placeholder={t("research.searchPlaceholder")}
                       value={query}
                       onChange={(e) => setQuery(e.target.value)}
                     />
@@ -939,7 +957,7 @@ export function LibraryView() {
                         {index?.papers
                           .filter(
                             (p) =>
-                              (p.collection || "未分类") === group &&
+                              (p.collection || t("research.uncategorized")) === group &&
                               [p.title, p.author, ...p.tags]
                                 .join(" ")
                                 .toLowerCase()
@@ -953,7 +971,8 @@ export function LibraryView() {
                             >
                               {p.title}
                               <span className="mt-1 block text-[10px] text-muted-foreground">
-                                {p.year || "年份待核对"} · {p.attachmentPath ?? "无附件"}
+                                {p.year || t("research.yearPending")} ·{" "}
+                                {p.attachmentPath ?? t("library.noAttachmentShort")}
                               </span>
                             </button>
                           ))}
@@ -985,13 +1004,11 @@ export function LibraryView() {
                 {!selected && (
                   <div className="workspace-pane flex h-full flex-col items-center justify-center gap-2 px-10 text-center text-sm text-muted-foreground">
                     {index?.papers.length ? (
-                      <p>从左侧选择一篇文献。</p>
+                      <p>{t("research.select")}</p>
                     ) : (
                       <>
-                        <p className="text-base text-foreground">论文库还是空的</p>
-                        <p className="text-xs leading-6">
-                          从「在线搜索」或「网页浏览」添加第一篇文献。
-                        </p>
+                        <p className="text-base text-foreground">{t("research.empty")}</p>
+                        <p className="text-xs leading-6">{t("research.emptyHint")}</p>
                       </>
                     )}
                   </div>

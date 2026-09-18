@@ -1,3 +1,4 @@
+import { libraryMessage } from "./libraryMessages"
 import { envoi } from "./desktop"
 import type { LibraryPaper } from "./paperLibrary"
 import type { AgentRecord } from "./agentClient"
@@ -19,5 +20,19 @@ export interface LibraryIndex {
   selected?: string
 }
 export function researchLibrary<T>(root: string, input: Record<string, unknown>) {
-  return envoi().library(root, input) as Promise<T>
+  return envoi()
+    .library(root, input)
+    .then((result) => {
+      if (
+        result &&
+        typeof result === "object" &&
+        "warnings" in result &&
+        Array.isArray(result.warnings)
+      )
+        return { ...result, warnings: result.warnings.map(libraryMessage) } as T
+      return result as T
+    })
+    .catch((error) => {
+      throw new Error(libraryMessage(error))
+    })
 }

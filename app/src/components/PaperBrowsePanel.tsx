@@ -1,4 +1,7 @@
 import { useEffect, useRef, useState } from "react"
+import { useT } from "@/i18n/useT"
+import { translate } from "@/i18n/runtime"
+import { libraryMessage } from "@/lib/libraryMessages"
 import { envoi } from "@/lib/desktop"
 import { notify, notifyLoading } from "@/lib/notifications"
 import { researchLibrary, type ResearchPaper } from "@/lib/researchLibrary"
@@ -25,22 +28,26 @@ export function PaperBrowsePanel({
   papers: ResearchPaper[]
   initialUrl?: string
 }) {
+  const { t } = useT()
   const guest = useRef<WebviewTag | null>(null)
   const [address, setAddress] = useState(initialUrl),
     [current, setCurrent] = useState(initialUrl),
     [loading, setLoading] = useState(true),
-    [failed, setFailed] = useState(""),
+    [failed, setFailed] = useState<{ blocked: boolean; detail: string | number } | null>(null),
     [saving, setSaving] = useState(false),
     [canNav, setCanNav] = useState({ back: false, forward: false })
   const identifiers = extractIdentifiers(current)
   useEffect(() => {
     void envoi()
       .bindPaperBrowse(root)
-      .catch((error) => notify(`网页浏览绑定失败：${(error as Error).message}`, "error"))
+      .catch((error) =>
+        notify(translate("browse.bindFailed", { message: libraryMessage(error) }), "error"),
+      )
     return envoi().onBrowseImported((event) => {
-      if (event.error) notify(`下载入库失败：${event.error}`, "error")
+      if (event.error)
+        notify(translate("browse.importFailed", { message: libraryMessage(event.error) }), "error")
       else {
-        notify(`已下载并加入论文库：${event.title}`, "success")
+        notify(translate("browse.imported", { title: event.title ?? "" }), "success")
         window.dispatchEvent(new CustomEvent("envoi:library-updated"))
       }
     })
@@ -52,7 +59,7 @@ export function PaperBrowsePanel({
       const url = view.getURL()
       setCurrent(url)
       setAddress(url)
-      setFailed("")
+      setFailed(null)
       setCanNav({ back: view.canGoBack(), forward: view.canGoForward() })
     }
     view.addEventListener("did-navigate", navigated)
@@ -62,11 +69,11 @@ export function PaperBrowsePanel({
     view.addEventListener("did-fail-load", (event) => {
       if (event.errorCode === -3) return // 主动中止（跳转新地址）不算失败
       setLoading(false)
-      setFailed(
-        event.errorCode === -300 || event.errorDescription?.includes("ERR_BLOCKED_BY_RESPONSE")
-          ? "该站点不允许在应用内嵌显示"
-          : `页面加载失败：${event.errorDescription || event.errorCode}`,
-      )
+      setFailed({
+        blocked:
+          event.errorCode === -300 || !!event.errorDescription?.includes("ERR_BLOCKED_BY_RESPONSE"),
+        detail: event.errorDescription || event.errorCode,
+      })
     })
   }, [])
   const go = (value: string) => {
@@ -79,7 +86,7 @@ export function PaperBrowsePanel({
     setSaving(true)
     try {
       const found = await lookupPaperIdentifier(id)
-      if (!found) throw Error("未能从页面标识获取文献信息")
+      if (!found) throw Error(t("browse.metadataMissing"))
       await researchLibrary(root, {
         action: "import",
         papers: [
@@ -100,10 +107,10 @@ export function PaperBrowsePanel({
           },
         ],
       })
-      notify(`已保存到论文库：${found.fields.title ?? id}（未包含 PDF）`, "warning")
+      notify(t("browse.saved", { title: found.fields.title ?? id }), "warning")
       window.dispatchEvent(new CustomEvent("envoi:library-updated"))
     } catch (error) {
-      notify(`保存失败：${(error as Error).message}`, "error")
+      notify(t("browse.saveFailed", { message: libraryMessage(error) }), "error")
     } finally {
       setSaving(false)
     }
@@ -116,7 +123,7 @@ export function PaperBrowsePanel({
   const fetchPdf = async () => {
     if (!pdfTarget || saving) return
     setSaving(true)
-    notifyLoading("正在下载 PDF…", "browse-pdf-fetch")
+    notifyLoading(t("browse.downloading"), "browse-pdf-fetch")
     try {
       const file = await researchLibrary<{ name: string; base64: string }>(root, {
         action: "download-pdf",
@@ -135,9 +142,9 @@ export function PaperBrowsePanel({
           base64: file.base64,
           name: file.name,
         })
-        notify(`已为《${existing.title}》补充 PDF 附件`, "success", "browse-pdf-fetch")
+        notify(t("browse.attached", { title: existing.title }), "success", "browse-pdf-fetch")
       } else if (existing) {
-        notify(`论文库已包含该文献及其 PDF：${existing.title}`, "info", "browse-pdf-fetch")
+        notify(t("browse.duplicate", { title: existing.title }), "info", "browse-pdf-fetch")
       } else {
         const title =
           found?.fields.title ??
@@ -145,7 +152,7 @@ export function PaperBrowsePanel({
             .replace(/\.pdf$/i, "")
             .replace(/[_-]+/g, " ")
             .trim() ??
-          "网页下载论文"
+          t("browse.defaultTitle")
         await researchLibrary(root, {
           action: "import",
           papers: [
@@ -168,11 +175,15 @@ export function PaperBrowsePanel({
             },
           ],
         })
-        notify(`已下载并加入论文库：${title}`, "success", "browse-pdf-fetch")
+        notify(t("browse.imported", { title }), "success", "browse-pdf-fetch")
       }
       window.dispatchEvent(new CustomEvent("envoi:library-updated"))
     } catch (error) {
-      notify(`下载失败：${(error as Error).message}`, "error", "browse-pdf-fetch")
+      notify(
+        t("browse.downloadFailed", { message: libraryMessage(error) }),
+        "error",
+        "browse-pdf-fetch",
+      )
     } finally {
       setSaving(false)
     }
@@ -183,8 +194,8 @@ export function PaperBrowsePanel({
         <button
           className={iconButton}
           disabled={!canNav.back}
-          title="后退"
-          aria-label="后退"
+          title={t("browse.back")}
+          aria-label={t("browse.back")}
           onClick={() => guest.current?.goBack()}
         >
           ←
@@ -192,16 +203,16 @@ export function PaperBrowsePanel({
         <button
           className={iconButton}
           disabled={!canNav.forward}
-          title="前进"
-          aria-label="前进"
+          title={t("browse.forward")}
+          aria-label={t("browse.forward")}
           onClick={() => guest.current?.goForward()}
         >
           →
         </button>
         <button
           className={iconButton}
-          title="刷新"
-          aria-label="刷新"
+          title={t("browse.refresh")}
+          aria-label={t("browse.refresh")}
           onClick={() => guest.current?.reload()}
         >
           {loading ? (
@@ -218,7 +229,7 @@ export function PaperBrowsePanel({
           }}
         >
           <input
-            aria-label="浏览地址"
+            aria-label={t("browse.address")}
             className="h-8 w-full rounded-lg border border-border/70 bg-background px-3 text-xs outline-none transition-colors placeholder:text-muted-foreground/60 focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
             value={address}
             onChange={(event) => setAddress(event.target.value)}
@@ -231,7 +242,7 @@ export function PaperBrowsePanel({
             title={identifiers.doi ?? identifiers.arxiv}
             onClick={() => void savePaper()}
           >
-            {saving ? "正在保存…" : "保存到论文库"}
+            {saving ? t("browse.saving") : t("browse.save")}
           </button>
         )}
         {pdfTarget && (
@@ -241,7 +252,7 @@ export function PaperBrowsePanel({
             title={pdfTarget}
             onClick={() => void fetchPdf()}
           >
-            {saving ? "处理中…" : "获取 PDF 入库"}
+            {saving ? t("browse.processing") : t("browse.fetch")}
           </button>
         )}
         <a
@@ -250,7 +261,7 @@ export function PaperBrowsePanel({
           target="_blank"
           rel="noreferrer"
         >
-          外部打开 ↗
+          {t("browse.external")}
         </a>
       </div>
       <div className="flex shrink-0 flex-wrap items-center gap-1.5 border-b border-border/60 px-3 py-2">
@@ -262,14 +273,14 @@ export function PaperBrowsePanel({
                 ? "border-primary/40 bg-primary/10 text-primary"
                 : "border-border/60 text-muted-foreground hover:border-border hover:bg-secondary hover:text-foreground"
             }`}
-            title={bookmark.external ? "该站点可能不允许应用内嵌显示" : undefined}
+            title={bookmark.external ? t("browse.mayBlock") : undefined}
             onClick={() => go(bookmark.url)}
           >
             {bookmark.name}
           </button>
         ))}
         <span className="ml-auto text-[10px] text-muted-foreground/70">
-          页面中的 PDF 下载会直接进入当前论文库
+          {t("browse.downloadHint")}
         </span>
       </div>
       <div className="relative min-h-0 flex-1">
@@ -282,14 +293,18 @@ export function PaperBrowsePanel({
         />
         {failed && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-background">
-            <p className="text-sm text-muted-foreground">{failed}</p>
+            <p className="text-sm text-muted-foreground">
+              {failed.blocked
+                ? t("browse.blocked")
+                : t("browse.loadFailed", { message: failed.detail })}
+            </p>
             <a
               className="rounded-lg bg-primary px-4 py-2 text-xs font-medium text-primary-foreground"
               href={current}
               target="_blank"
               rel="noreferrer"
             >
-              在外部浏览器打开 ↗
+              {t("browse.externalBrowser")}
             </a>
           </div>
         )}

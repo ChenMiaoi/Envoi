@@ -145,3 +145,43 @@ test("custom typography values remain independent and reject invalid persisted r
   assert.equal(invalid.lineHeight, 1.75)
   assert.equal(invalid.previewLineHeight, 1.85)
 })
+
+test("browser and library messages translate all supported locales and retain error details", async () => {
+  const { dictionaries, setCurrentLocale, translate } = await import("../src/i18n/runtime")
+  const { libraryMessage } = await import("../src/lib/libraryMessages")
+  try {
+    for (const locale of Object.keys(dictionaries) as (keyof typeof dictionaries)[]) {
+      setCurrentLocale(locale)
+      assert.equal(
+        libraryMessage(new Error("Error invoking remote method 'envoi:library': Error: 无效 PDF")),
+        translate("library.error.invalidPdf"),
+      )
+      assert.equal(
+        libraryMessage("PDF 下载失败：HTTP 403"),
+        translate("library.error.http", { detail: 403 }),
+      )
+      assert.equal(
+        libraryMessage("已跳过链接：papers/link.pdf"),
+        translate("library.error.skippedLink", { detail: "papers/link.pdf" }),
+      )
+      assert(translate("browse.imported", { title: "Example" }).includes("Example"))
+      assert(translate("chat.fileContext", { label: "file", text: "draft" }).includes("\n"))
+      if (locale === "en") {
+        assert.equal(translate("browse.save"), "Save to library")
+        assert.equal(translate("preview.fitWidth"), "Fit width")
+      }
+    }
+    assert.equal(libraryMessage("EACCES: read-only disk"), "EACCES: read-only disk")
+    assert.equal(libraryMessage("constructor"), "constructor")
+  } finally {
+    setCurrentLocale("zh-CN")
+  }
+})
+
+test("traditional dictionaries are reproducible from their source and overrides", async () => {
+  const { execFileSync } = await import("node:child_process")
+  const result = execFileSync(process.execPath, ["scripts/i18n-traditional.mjs", "--check"], {
+    encoding: "utf8",
+  })
+  assert.match(result, /Traditional dictionaries match/)
+})
