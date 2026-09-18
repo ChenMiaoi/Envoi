@@ -1,6 +1,7 @@
 import { _electron } from "playwright"
 import { createRequire } from "node:module"
-import { mkdtemp, mkdir, writeFile, readFile, rm, realpath } from "node:fs/promises"
+import { mkdtemp, mkdir, writeFile, readFile, rm, realpath, copyFile } from "node:fs/promises"
+import { execFileSync } from "node:child_process"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import assert from "node:assert/strict"
@@ -9,21 +10,39 @@ import { seedFixtureTrust } from "./fixture-trust.mjs"
 
 const temp = await realpath(await mkdtemp(path.join(tmpdir(), "envoi-code-editor-")))
 const root = path.join(temp, "project")
-const ruff = path.join(temp, "ruff")
-const tidy = path.join(temp, "clang-tidy")
+const ruff = path.join(temp, process.platform === "win32" ? "ruff.exe" : "ruff")
+const tidy = path.join(temp, process.platform === "win32" ? "clang-tidy.exe" : "clang-tidy")
 let app
 try {
   await mkdir(root)
-  await writeFile(
-    ruff,
-    '#!/bin/sh\nif [ "$1" = "--version" ]; then echo "ruff 0.9.0"; elif [ "$1" = "format" ]; then sed "s/answer = value + 1/answer = value + 2/"; else printf \'[{"code":"W001","message":"example warning","location":{"row":1,"column":1}}]\'; exit 1; fi\n',
-    { mode: 0o755 },
-  )
-  await writeFile(
-    tidy,
-    '#!/usr/bin/env node\nconst fs = require("node:fs"); if (process.argv.includes("--version")) { console.log("clang-tidy version 20"); process.exit(0); } const source = process.argv[2]; const arg = process.argv.find(value => value.startsWith("--vfsoverlay=")); const overlay = JSON.parse(fs.readFileSync(arg.slice(13), "utf8")); if (fs.readFileSync(overlay.roots[0]["external-contents"], "utf8").includes("unsaved_warning")) console.log(`${source}:1:1: warning: live C++ warning [live-check]`);\n',
-    { mode: 0o755 },
-  )
+  if (process.platform === "win32") {
+    const compiler = path.join(
+      process.env.WINDIR,
+      "Microsoft.NET",
+      "Framework64",
+      "v4.0.30319",
+      "csc.exe",
+    )
+    execFileSync(compiler, [
+      "/nologo",
+      "/target:exe",
+      "/reference:System.Web.Extensions.dll",
+      `/out:${ruff}`,
+      path.resolve("scripts/fixtures/language-tool.cs"),
+    ])
+    await copyFile(ruff, tidy)
+  } else {
+    await writeFile(
+      ruff,
+      '#!/bin/sh\nif [ "$1" = "--version" ]; then echo "ruff 0.9.0"; elif [ "$1" = "format" ]; then sed "s/answer = value + 1/answer = value + 2/"; else printf \'[{"code":"W001","message":"example warning","location":{"row":1,"column":1}}]\'; exit 1; fi\n',
+      { mode: 0o755 },
+    )
+    await writeFile(
+      tidy,
+      '#!/usr/bin/env node\nconst fs = require("node:fs"); if (process.argv.includes("--version")) { console.log("clang-tidy version 20"); process.exit(0); } const source = process.argv[2]; const arg = process.argv.find(value => value.startsWith("--vfsoverlay=")); const overlay = JSON.parse(fs.readFileSync(arg.slice(13), "utf8")); if (fs.readFileSync(overlay.roots[0]["external-contents"], "utf8").includes("unsaved_warning")) console.log(`${source}:1:1: warning: live C++ warning [live-check]`);\n',
+      { mode: 0o755 },
+    )
+  }
   await writeFile(path.join(root, "hello.py"), "value = 1\n")
   await writeFile(path.join(root, "main.cpp"), "int main() { return 0; }\n")
   await writeFile(path.join(root, "Cargo.toml"), "[package]\nname = 'demo'\n")
