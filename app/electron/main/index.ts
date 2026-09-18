@@ -583,6 +583,8 @@ function registerIpc(): void {
           request.cancelled = true
       }
     }
+    for (const window of BrowserWindow.getAllWindows())
+      for (const candidate of affected) lspService.dispose(window.webContents.id, candidate)
     await Promise.all(
       affected.flatMap((candidate) =>
         backends.map((backend) => backend.cancel(undefined, candidate)),

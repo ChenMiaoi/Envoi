@@ -1,5 +1,6 @@
 import { _electron } from "playwright"
 import { createRequire } from "node:module"
+import { pathToFileURL } from "node:url"
 import {
   mkdtemp,
   mkdir,
@@ -23,6 +24,18 @@ await writeFile(path.join(root, "main.tex"), "Original paper")
 await writeFile(path.join(root, "README.md"), "# Readable paper")
 await writeFile(path.join(outside, "secret.txt"), "outside")
 await symlink(outside, path.join(root, "escape"), process.platform === "win32" ? "junction" : "dir")
+const managed = path.join(temp, "profile", "language-servers", "pyright")
+await mkdir(path.join(managed, "1.0.0"), { recursive: true })
+await writeFile(path.join(root, "main.py"), "value = 1")
+await writeFile(
+  path.join(managed, "current.json"),
+  JSON.stringify({ id: "pyright", version: "1.0.0", binary: "langserver.index.js" }),
+)
+await writeFile(
+  path.join(managed, "1.0.0", "langserver.index.js"),
+  `require("node:fs").writeFileSync(${JSON.stringify(path.join(temp, "lsp.pid"))}, String(process.pid));
+import(${JSON.stringify(pathToFileURL(path.resolve("scripts/fixtures/lsp-fixture.mjs")).href)});`,
+)
 let app
 async function launch() {
   app = await _electron.launch({
@@ -62,6 +75,7 @@ try {
     const api = window.envoi,
       binding = await api.bindProject(root, { copy: false })
     const calls = [
+      () => api.lspOpen(root, "main.py", "value = 1", crypto.randomUUID(), "pyright"),
       () => api.gitStatus(root),
       () => api.compile({ rootPath: root, main: "main.tex", engine: "pdflatex", drafts: [] }),
       () => api.lint({ rootPath: root, path: "main.tex", text: "test" }),
@@ -126,6 +140,13 @@ try {
     throw lastError
   }, root)
   assert.equal(trusted.state, "ready")
+  const opened = await page.evaluate(
+    (root) => window.envoi.lspOpen(root, "main.py", "value = 1", crypto.randomUUID(), "pyright"),
+    root,
+  )
+  assert.equal(opened.available, true)
+  const lspPid = Number(await readFile(path.join(temp, "lsp.pid"), "utf8"))
+  assert.doesNotThrow(() => process.kill(lspPid, 0))
   await page.evaluate(() => window.dispatchEvent(new Event("envoi:show-trust")))
   await page.getByRole("dialog").waitFor()
   await page
@@ -137,6 +158,17 @@ try {
     page.evaluate((root) => window.envoi.gitStatus(root), root),
     /限制模式/,
   )
+  let alive = true
+  for (let attempt = 0; attempt < 100 && alive; attempt++) {
+    try {
+      process.kill(lspPid, 0)
+      await new Promise((resolve) => setTimeout(resolve, 20))
+    } catch {
+      alive = false
+    }
+  }
+  assert.equal(alive, false, "Revoking trust must terminate the running language server")
+  console.log("PASS: trust revocation stops an already running language server")
   await stop()
   page = await launch()
   await page.getByRole("button", { name: "限制模式", exact: true }).waitFor()
