@@ -36,6 +36,8 @@ const ja: Messages = {
   "extensions.usePath": "使用",
   "extensions.selectVersion": "バージョンを選択",
   "extensions.toolchain": "ツールチェーン",
+  "extensions.format": "フォーマット",
+  "extensions.lint": "Lint",
   "extensions.partial": "一部のみ利用可能",
 
   "chat.statsRunning": "実行中",

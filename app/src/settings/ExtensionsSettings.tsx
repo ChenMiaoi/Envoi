@@ -225,7 +225,9 @@ export function ExtensionsSettings({ scope }: { scope: "global" | "project" }) {
         const enabled = pluginEnabled(preferences, root, id)
         const groupTools = tools?.groups?.[group] ?? []
         const candidates = groupTools.filter((tool) => tool.kind === "lsp")
-        const toolchains = groupTools.filter((tool) => tool.kind !== "lsp")
+        const toolchains = groupTools.filter(
+          (tool) => !["lsp", "format", "lint"].includes(tool.kind ?? ""),
+        )
         const chainChoices = toolchains.map((tool) => {
           const selectedPath = preferences.toolPaths[tool.id]
           const selected = selectedPath
@@ -253,13 +255,138 @@ export function ExtensionsSettings({ scope }: { scope: "global" | "project" }) {
             : (available.find((choice) => choice.tool.id === server) ?? available[0])
           return { language: entry.id, available, selected }
         })
-        const chainReady = chainChoices.every((choice) => !!choice.selected)
-        const someChainReady = chainChoices.some((choice) => !!choice.selected)
         const lspReady = choices.every((choice) => !!choice.selected)
         const someLspReady = choices.some((choice) => !!choice.selected)
-        const partial = (someChainReady || someLspReady) && !(chainReady && lspReady)
+        const formatChoices = groupTools
+          .filter((tool) => tool.kind === "format")
+          .map((tool) => ({
+            tool,
+            selected: preferences.toolPaths[tool.id]
+              ? (pathsOf(tool).find(
+                  (candidate) => candidate.path === preferences.toolPaths[tool.id],
+                ) ?? verifiedTools[tool.id])
+              : pathsOf(tool)[0],
+          }))
+        const lintChoices = groupTools
+          .filter((tool) => tool.kind === "lint")
+          .map((tool) => ({
+            tool,
+            selected: preferences.toolPaths[tool.id]
+              ? (pathsOf(tool).find(
+                  (candidate) => candidate.path === preferences.toolPaths[tool.id],
+                ) ?? verifiedTools[tool.id])
+              : pathsOf(tool)[0],
+          }))
+        const formatReady = formatChoices.some((choice) => !!choice.selected)
+        const lintReady = lintChoices.some((choice) => !!choice.selected)
+        const capabilities = [lspReady, formatReady, lintReady]
+        const partial = capabilities.some(Boolean) && !capabilities.every(Boolean)
         const open = expanded === id
         const visual = appearance[group]
+        const renderToolRows = (entries: typeof chainChoices) =>
+          entries.map(({ tool, selected }) => {
+            const options = [...pathsOf(tool)]
+            if (selected && !options.some((candidate) => candidate.path === selected.path))
+              options.unshift(selected)
+            return (
+              <div key={tool.id} className="space-y-2 text-xs">
+                <div className="flex items-center gap-2">
+                  {selected ? (
+                    <Check aria-hidden className="size-4 shrink-0 text-green-500" />
+                  ) : (
+                    <X aria-hidden className="size-4 shrink-0 text-red-500" />
+                  )}
+                  <span className="w-24 shrink-0 font-medium text-foreground">{tool.label}</span>
+                  {options.length > 1 ? (
+                    <select
+                      aria-label={`${tool.label} ${t("extensions.selectVersion")}`}
+                      className="min-w-0 flex-1 rounded-lg border border-input bg-background px-2.5 py-1.5 text-xs text-foreground"
+                      value={selected?.path ?? ""}
+                      onChange={(event) =>
+                        update({
+                          toolPaths: {
+                            ...preferences.toolPaths,
+                            [tool.id]: event.target.value,
+                          },
+                        })
+                      }
+                    >
+                      {!selected && (
+                        <option value="" disabled>
+                          {t("extensions.selectVersion")}
+                        </option>
+                      )}
+                      {options.map((candidate) => (
+                        <option key={candidate.path} value={candidate.path}>
+                          {candidate.version ?? candidate.path}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <span
+                      className="min-w-0 flex-1 truncate text-muted-foreground"
+                      title={selected?.path}
+                    >
+                      {selected?.version ?? ""}
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    className="shrink-0 text-primary hover:underline"
+                    onClick={() =>
+                      setManualOpen((previous) => ({
+                        ...previous,
+                        [tool.id]: !previous[tool.id],
+                      }))
+                    }
+                  >
+                    {t("extensions.manualPath")}
+                  </button>
+                </div>
+                {selected && (
+                  <p
+                    className="truncate pl-6 text-[11px] text-muted-foreground"
+                    title={selected.path}
+                  >
+                    {selected.path}
+                  </p>
+                )}
+                {(manualOpen[tool.id] || !selected) && (
+                  <div className="space-y-2 pl-6">
+                    <div className="flex gap-2">
+                      <input
+                        aria-label={`${tool.label} ${t("extensions.manualPath")}`}
+                        className="min-w-0 flex-1 rounded-lg border border-input bg-background px-2.5 py-1.5 text-foreground"
+                        placeholder={t("extensions.pathPlaceholder")}
+                        value={manual[tool.id] ?? ""}
+                        onChange={(event) =>
+                          setManual((previous) => ({
+                            ...previous,
+                            [tool.id]: event.target.value,
+                          }))
+                        }
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter") void saveToolManual(tool.id)
+                        }}
+                      />
+                      <button
+                        type="button"
+                        className="rounded-lg bg-primary px-3 py-1.5 text-primary-foreground"
+                        onClick={() => void saveToolManual(tool.id)}
+                      >
+                        {t("extensions.usePath")}
+                      </button>
+                    </div>
+                    {manualError[tool.id] && (
+                      <p role="alert" className="text-destructive">
+                        {manualError[tool.id]}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            )
+          })
         return (
           <article
             key={id}
@@ -295,16 +422,6 @@ export function ExtensionsSettings({ scope }: { scope: "global" | "project" }) {
                     {tools ? (
                       <>
                         <span className="inline-flex items-center gap-1">
-                          {chainReady ? (
-                            <Check aria-hidden className="size-3 text-green-500" />
-                          ) : someChainReady ? (
-                            <AlertTriangle aria-hidden className="size-3 text-amber-500" />
-                          ) : (
-                            <X aria-hidden className="size-3 text-red-500" />
-                          )}
-                          {t("extensions.toolchain")}
-                        </span>
-                        <span className="inline-flex items-center gap-1">
                           {lspReady ? (
                             <Check aria-hidden className="size-3 text-green-500" />
                           ) : someLspReady ? (
@@ -313,6 +430,22 @@ export function ExtensionsSettings({ scope }: { scope: "global" | "project" }) {
                             <X aria-hidden className="size-3 text-red-500" />
                           )}
                           {t("extensions.languageServer")}
+                        </span>
+                        <span className="inline-flex items-center gap-1">
+                          {formatReady ? (
+                            <Check aria-hidden className="size-3 text-green-500" />
+                          ) : (
+                            <X aria-hidden className="size-3 text-red-500" />
+                          )}
+                          {t("extensions.format")}
+                        </span>
+                        <span className="inline-flex items-center gap-1">
+                          {lintReady ? (
+                            <Check aria-hidden className="size-3 text-green-500" />
+                          ) : (
+                            <X aria-hidden className="size-3 text-red-500" />
+                          )}
+                          {t("extensions.lint")}
                         </span>
                       </>
                     ) : (
@@ -347,115 +480,17 @@ export function ExtensionsSettings({ scope }: { scope: "global" | "project" }) {
               className="border-t border-border/60 bg-background/30 px-4 pb-4 pt-4"
             >
               <p className="mb-2 text-[11px] font-semibold text-muted-foreground">
+                {t("extensions.format")}
+              </p>
+              <div className="space-y-2">{renderToolRows(formatChoices)}</div>
+              <p className="mb-2 mt-4 border-t border-border/50 pt-3 text-[11px] font-semibold text-muted-foreground">
+                {t("extensions.lint")}
+              </p>
+              <div className="space-y-2">{renderToolRows(lintChoices)}</div>
+              <p className="mb-2 mt-4 border-t border-border/50 pt-3 text-[11px] font-semibold text-muted-foreground">
                 {t("extensions.toolchain")}
               </p>
-              <div className="space-y-2">
-                {chainChoices.map(({ tool, selected }) => {
-                  const options = [...pathsOf(tool)]
-                  if (selected && !options.some((candidate) => candidate.path === selected.path))
-                    options.unshift(selected)
-                  return (
-                    <div key={tool.id} className="space-y-2 text-xs">
-                      <div className="flex items-center gap-2">
-                        {selected ? (
-                          <Check aria-hidden className="size-4 shrink-0 text-green-500" />
-                        ) : (
-                          <X aria-hidden className="size-4 shrink-0 text-red-500" />
-                        )}
-                        <span className="w-24 shrink-0 font-medium text-foreground">
-                          {tool.label}
-                        </span>
-                        {options.length > 1 ? (
-                          <select
-                            aria-label={`${tool.label} ${t("extensions.selectVersion")}`}
-                            className="min-w-0 flex-1 rounded-lg border border-input bg-background px-2.5 py-1.5 text-xs text-foreground"
-                            value={selected?.path ?? ""}
-                            onChange={(event) =>
-                              update({
-                                toolPaths: {
-                                  ...preferences.toolPaths,
-                                  [tool.id]: event.target.value,
-                                },
-                              })
-                            }
-                          >
-                            {!selected && (
-                              <option value="" disabled>
-                                {t("extensions.selectVersion")}
-                              </option>
-                            )}
-                            {options.map((candidate) => (
-                              <option key={candidate.path} value={candidate.path}>
-                                {candidate.version ?? candidate.path}
-                              </option>
-                            ))}
-                          </select>
-                        ) : (
-                          <span
-                            className="min-w-0 flex-1 truncate text-muted-foreground"
-                            title={selected?.path}
-                          >
-                            {selected?.version ?? ""}
-                          </span>
-                        )}
-                        <button
-                          type="button"
-                          className="shrink-0 text-primary hover:underline"
-                          onClick={() =>
-                            setManualOpen((previous) => ({
-                              ...previous,
-                              [tool.id]: !previous[tool.id],
-                            }))
-                          }
-                        >
-                          {t("extensions.manualPath")}
-                        </button>
-                      </div>
-                      {selected && (
-                        <p
-                          className="truncate pl-6 text-[11px] text-muted-foreground"
-                          title={selected.path}
-                        >
-                          {selected.path}
-                        </p>
-                      )}
-                      {(manualOpen[tool.id] || !selected) && (
-                        <div className="space-y-2 pl-6">
-                          <div className="flex gap-2">
-                            <input
-                              aria-label={`${tool.label} ${t("extensions.manualPath")}`}
-                              className="min-w-0 flex-1 rounded-lg border border-input bg-background px-2.5 py-1.5 text-foreground"
-                              placeholder={t("extensions.pathPlaceholder")}
-                              value={manual[tool.id] ?? ""}
-                              onChange={(event) =>
-                                setManual((previous) => ({
-                                  ...previous,
-                                  [tool.id]: event.target.value,
-                                }))
-                              }
-                              onKeyDown={(event) => {
-                                if (event.key === "Enter") void saveToolManual(tool.id)
-                              }}
-                            />
-                            <button
-                              type="button"
-                              className="rounded-lg bg-primary px-3 py-1.5 text-primary-foreground"
-                              onClick={() => void saveToolManual(tool.id)}
-                            >
-                              {t("extensions.usePath")}
-                            </button>
-                          </div>
-                          {manualError[tool.id] && (
-                            <p role="alert" className="text-destructive">
-                              {manualError[tool.id]}
-                            </p>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
+              <div className="space-y-2">{renderToolRows(chainChoices)}</div>
               <p className="mb-2 mt-4 border-t border-border/50 pt-3 text-[11px] font-semibold text-muted-foreground">
                 {t("extensions.languageServer")}
               </p>

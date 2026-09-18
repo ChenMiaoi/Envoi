@@ -56,6 +56,22 @@
         "kind": "lsp",
         "languages": ["python"],
         "probe": "presence"
+      },
+      {
+        "id": "ruffFormat",
+        "binary": "ruff",
+        "label": "Ruff",
+        "group": "python",
+        "kind": "format",
+        "probe": "version"
+      },
+      {
+        "id": "ruffLint",
+        "binary": "ruff",
+        "label": "Ruff",
+        "group": "python",
+        "kind": "lint",
+        "probe": "version"
       }
     ]
   }

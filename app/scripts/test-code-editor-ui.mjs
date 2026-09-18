@@ -54,9 +54,10 @@ try {
     () =>
       [...document.querySelectorAll('[data-testid="extension-cpp"] button')].filter((button) =>
         button.textContent?.includes("手动输入路径"),
-      ).length === 3,
+      ).length === 5,
   )
-  assert.equal(await cpp.getByRole("button", { name: "手动输入路径" }).count(), 3)
+  assert.equal(await cpp.getByRole("button", { name: "手动输入路径" }).count(), 5)
+  assert.match(await cpp.textContent(), /语言服务器.*格式化.*代码检查/)
   await cpp.locator("button[aria-expanded]").click()
   await cpp.getByRole("checkbox").uncheck()
   await page.waitForFunction(

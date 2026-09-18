@@ -36,6 +36,8 @@ const en: Messages = {
   "extensions.usePath": "Use",
   "extensions.selectVersion": "Select version",
   "extensions.toolchain": "Toolchain",
+  "extensions.format": "Format",
+  "extensions.lint": "Lint",
   "extensions.partial": "Partially available",
 
   "chat.statsRunning": "Running",

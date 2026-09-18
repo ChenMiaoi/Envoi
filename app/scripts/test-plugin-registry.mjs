@@ -28,6 +28,13 @@ test("official language plugins preserve existing tools and fallback order", () 
   ])
   assert.deepEqual(lspServersByLanguage().rust, [["rust-analyzer"]])
   assert.deepEqual(lspServersByLanguage().meson, [["mesonlsp", "--lsp"]])
+  for (const group of ["cpp", "python", "rust"]) {
+    const tools = toolCatalog.filter((tool) => tool.group === group)
+    assert(tools.some((tool) => tool.kind === "format"))
+    assert(tools.some((tool) => tool.kind === "lint"))
+  }
+  assert.equal(toolCatalog.find((tool) => tool.id === "ruffFormat")?.binary, "ruff")
+  assert.equal(toolCatalog.find((tool) => tool.id === "ruffLint")?.binary, "ruff")
 })
 
 test("registration rejects incompatible and colliding contributions", () => {

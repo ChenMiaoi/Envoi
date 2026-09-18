@@ -38,6 +38,8 @@ export const zhCN = {
   "extensions.usePath": "使用",
   "extensions.selectVersion": "选择版本",
   "extensions.toolchain": "工具链",
+  "extensions.format": "格式化",
+  "extensions.lint": "代码检查",
   "extensions.partial": "部分可用",
 
   "chat.statsRunning": "运行中",

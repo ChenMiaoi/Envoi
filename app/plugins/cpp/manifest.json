@@ -49,6 +49,22 @@
         "kind": "lsp",
         "languages": ["c", "cpp"],
         "probe": "presence"
+      },
+      {
+        "id": "clangFormat",
+        "binary": "clang-format",
+        "label": "clang-format",
+        "group": "cpp",
+        "kind": "format",
+        "probe": "version"
+      },
+      {
+        "id": "clangTidy",
+        "binary": "clang-tidy",
+        "label": "clang-tidy",
+        "group": "cpp",
+        "kind": "lint",
+        "probe": "version"
       }
     ]
   }

@@ -36,6 +36,22 @@
         "kind": "lsp",
         "languages": ["rust"],
         "probe": "presence"
+      },
+      {
+        "id": "rustfmt",
+        "binary": "rustfmt",
+        "label": "rustfmt",
+        "group": "rust",
+        "kind": "format",
+        "probe": "version"
+      },
+      {
+        "id": "clippy",
+        "binary": "cargo-clippy",
+        "label": "Clippy",
+        "group": "rust",
+        "kind": "lint",
+        "probe": "version"
       }
     ]
   }

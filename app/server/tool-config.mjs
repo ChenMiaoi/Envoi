@@ -193,7 +193,10 @@ export async function probeCandidates(name, root) {
     })),
   )
   return candidates
-    .filter((candidate) => name !== "rust-analyzer" || candidate.version)
+    .filter(
+      (candidate) =>
+        !["rust-analyzer", "rustfmt", "cargo-clippy"].includes(name) || candidate.version,
+    )
     .sort((a, b) => compareVersions(b.version, a.version))
 }
 export async function probeLanguageServerPath(id, value) {
