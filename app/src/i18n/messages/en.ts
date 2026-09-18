@@ -13,6 +13,8 @@ const en: Messages = {
   "extensions.disabled": "Disabled",
   "extensions.running": "Running",
   "extensions.missingTool": "Language server missing",
+  "extensions.installPrompt": "{name} language server was not found. Get it now?",
+  "extensions.downloadPage": "Open download page",
   "extensions.toolReady": "Tool detected",
   "extensions.enabled": "Enabled",
   "extensions.inherited": "Inherits global setting",

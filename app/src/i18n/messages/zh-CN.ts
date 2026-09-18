@@ -15,6 +15,8 @@ export const zhCN = {
   "extensions.disabled": "已停用",
   "extensions.running": "运行中",
   "extensions.missingTool": "缺少语言服务器",
+  "extensions.installPrompt": "未找到{name}语言服务器。要获取它吗？",
+  "extensions.downloadPage": "打开下载页面",
   "extensions.toolReady": "已检测到工具",
   "extensions.enabled": "启用",
   "extensions.inherited": "继承全局设置",

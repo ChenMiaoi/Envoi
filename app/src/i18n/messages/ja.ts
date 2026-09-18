@@ -13,6 +13,8 @@ const ja: Messages = {
   "extensions.disabled": "無効",
   "extensions.running": "実行中",
   "extensions.missingTool": "言語サーバーがありません",
+  "extensions.installPrompt": "{name} 言語サーバーが見つかりません。入手しますか？",
+  "extensions.downloadPage": "ダウンロードページを開く",
   "extensions.toolReady": "ツールを検出",
   "extensions.enabled": "有効",
   "extensions.inherited": "全体設定を継承",

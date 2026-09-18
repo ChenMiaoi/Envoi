@@ -13,6 +13,8 @@ const zhHK: Messages = {
   "extensions.disabled": "已停用",
   "extensions.running": "運行中",
   "extensions.missingTool": "缺少語言伺服器",
+  "extensions.installPrompt": "搵唔到{name}語言伺服器。要下載嗎？",
+  "extensions.downloadPage": "開啟下載頁面",
   "extensions.toolReady": "已偵測到工具",
   "extensions.enabled": "啟用",
   "extensions.inherited": "繼承全域設定",

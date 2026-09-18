@@ -71,6 +71,7 @@ async function executable(root, language, preferredServer, preferredPath) {
       discovered.set(key, detected)
     }
     const command = (await detected)[0]?.path
+    if (!command) discovered.delete(key)
     if (command) return { command, args, name }
   }
 }

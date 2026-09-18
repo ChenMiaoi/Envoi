@@ -13,6 +13,7 @@ import { LanguageDescription, syntaxHighlighting } from "@codemirror/language"
 import { languages } from "@codemirror/language-data"
 import { autocompletion, type Completion, type CompletionContext } from "@codemirror/autocomplete"
 import { lintGutter, setDiagnostics, type Diagnostic } from "@codemirror/lint"
+import { toast } from "sonner"
 import { envoi } from "@/lib/desktop"
 import { clearLspDiagnostics, publishLspDiagnostics, publishLspStatus } from "@/lib/lspStatus"
 import { codeHighlight } from "@/lib/codeHighlight"
@@ -21,6 +22,7 @@ import { usePreferences } from "@/settings/context"
 import { lspLanguageForPath } from "@/lib/lspLanguage"
 import { editorFonts, pluginEnabled } from "@/settings/model"
 import { pluginForLanguage } from "@/settings/pluginCatalog"
+import { useT } from "@/i18n/useT"
 
 type LspPosition = { line: number; character: number }
 type LspRange = { start: LspPosition; end: LspPosition }
@@ -34,6 +36,14 @@ type LspCompletion = {
   insertText?: string
   textEdit?: { range: LspRange; newText: string }
 }
+
+const lspDownloads: Record<string, { name: string; url: string }> = {
+  c: { name: "clangd", url: "https://clangd.llvm.org/installation" },
+  cpp: { name: "clangd", url: "https://clangd.llvm.org/installation" },
+  python: { name: "Pyright", url: "https://github.com/microsoft/pyright#command-line" },
+  rust: { name: "rust-analyzer", url: "https://rust-analyzer.github.io/book/vs_code.html" },
+}
+const promptedLsp = new Set<string>()
 
 function offset(view: EditorView, point: LspPosition) {
   if (!point || point.line < 0 || point.line >= view.state.doc.lines) return null
@@ -77,7 +87,9 @@ export function CodeEditor({
   const ready = useRef(false)
   const server = useRef("LSP")
   const { preferences } = usePreferences()
-  const pluginId = pluginForLanguage(lspLanguageForPath(path))
+  const { t } = useT()
+  const lspLanguage = lspLanguageForPath(path)
+  const pluginId = pluginForLanguage(lspLanguage)
   const enabled = pluginEnabled(preferences, root, pluginId ?? "")
   callbacks.current = { onChange, onNavigate }
 
@@ -267,6 +279,25 @@ export function CodeEditor({
                 ? null
                 : { state: "unavailable", reason: "missing", pluginId, root },
           )
+          if (
+            !result.available &&
+            result.error === `No ${lspLanguage} language server found` &&
+            root &&
+            lspLanguage
+          ) {
+            const download = lspDownloads[lspLanguage]
+            const promptKey = `${root}\0${pluginId ?? lspLanguage}`
+            if (download && !promptedLsp.has(promptKey)) {
+              promptedLsp.add(promptKey)
+              toast.info(t("extensions.installPrompt", { name: download.name }), {
+                duration: 12000,
+                action: {
+                  label: t("extensions.downloadPage"),
+                  onClick: () => window.open(download.url, "_blank", "noopener,noreferrer"),
+                },
+              })
+            }
+          }
           if (result.available && editor.state.doc.toString() !== source)
             void envoi().lspChange(root, path, editor.state.doc.toString())
         })
