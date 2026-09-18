@@ -4,9 +4,15 @@ Use Node.js 24+ and install dependencies with `npm run setup` from the root. The
 
 Run `npm run dev` to launch the Electron desktop application. The desktop shell and preload bridge live in `app/electron/`. Application code stays in `app/src/`; fixed local tool adapters are in `app/server/`. Tests and developer utilities stay beside that application in `app/tests/` and `app/scripts/`.
 
+During development, run `npm run check:local` before committing. It reuses successful check results for unchanged inputs for up to 24 hours, including across commits. A cold run executes the entire check suite. Documentation-only changes rerun formatting; changes under `app/tests/` rerun formatting, lint and unit tests. Other inputs conservatively invalidate every step. New, deleted and untracked (non-ignored) files are included. Results live under ignored `app/tmp/`; deleting the cache causes a cold run.
+
+Dependency installation is reused when the lockfile, package manifest, Node version and platform match. A changed installation lock or missing direct dependency causes reinstallation. `npm run setup` always performs a clean install. Build results are reused only while generated output contents match. Failed or interrupted validation does not publish reusable results, and modifying source during a run requires another check.
+
+Use `npm run check:local -- --force` to rerun every check. Run `npm run ci:check` after changing external tools (such as TeX or Git), system configuration, or the validation workflow: local caching cannot detect every external change or manual modification inside `node_modules`. CI always executes all check steps without reusing test results. Each executed step reports its duration.
+
 Before sharing a change:
 
-1. Run `npm test` and `npm run build`.
+1. Run `npm run ci:check` for formatting, lint, build and all standard test groups.
 2. For desktop changes, run `npm run test:desktop` after building; this uses temporary projects and data without showing test windows. The commit gate runs `test:desktop:quick`; the complete suite runs nightly and on manual CI dispatch. Use `npm run test:desktop:visible` for screenshot and PDF scrolling checks. For local tool changes, run `npm run test:local` on Windows or macOS.
 3. For example changes, run `npm run demo:build` followed by `npm run test:demo`. Inspect the resulting PDF visually.
 4. Keep generated compilation caches under the example’s ignored `build/`. Update both example source and bundled snapshot when changing the demonstration.

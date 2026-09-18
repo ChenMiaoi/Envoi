@@ -8,7 +8,7 @@
     "node": ">=24"
   },
   "scripts": {
-    "setup": "npm --prefix app ci",
+    "setup": "node scripts/ensure-app-deps.mjs --force",
     "predev": "node scripts/ensure-app-deps.mjs",
     "dev": "npm --prefix app run dev",
     "prebuild": "node scripts/ensure-app-deps.mjs",
@@ -30,6 +30,8 @@
     "test:desktop:quick": "npm --prefix app run test:desktop:quick",
     "test:desktop:visible": "npm --prefix app run test:desktop:visible",
     "demo:git": "node app/scripts/init-demo-git.mjs",
-    "package:win": "npm --prefix app run package:win"
+    "package:win": "npm --prefix app run package:win",
+    "check:local": "node scripts/ci-check.mjs --local",
+    "test:workflow": "node --test scripts/test-check-workflow.mjs"
   }
 }

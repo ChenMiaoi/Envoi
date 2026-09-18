@@ -1,64 +1,114 @@
 import { spawnSync } from "node:child_process"
-import process from "node:process"
+import { mkdir, readFile, writeFile, rm } from "node:fs/promises"
+import { fileURLToPath } from "node:url"
+import path from "node:path"
+import { ensureAppDeps } from "./ensure-app-deps.mjs"
+import { artifactKey, canReuse, digest, sourceSnapshot, stepKey } from "./check-cache.mjs"
 
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
 const npm = process.platform === "win32" ? "npm.cmd" : "npm"
+const local = process.argv.includes("--local") && !process.env.CI
+const force = process.argv.includes("--force")
+const started = Date.now()
+const cachePath = path.join(root, "app/tmp/check-results.json")
 const env = {
   ...process.env,
   CI: "1",
   npm_config_registry: "https://registry.npmjs.org",
   npm_config_replace_registry_host: "always",
 }
-const spawnOptions = {
-  env,
-  shell: process.platform === "win32",
-}
 const steps = [
-  ["Install locked dependencies", ["run", "setup"]],
-  ["Check formatting", ["run", "format:check"]],
-  ["Lint", ["run", "lint"]],
-  ["Build", ["run", "build"]],
-  ["Run tests", ["test"]],
-  ["Run AI tests", ["run", "test:ai"]],
-  ["Run local integration tests", ["run", "test:local"]],
+  ["workflow", "Check validation workflow", ["run", "test:workflow"]],
+  ["format", "Check formatting", ["run", "format:check"]],
+  ["lint", "Lint", ["run", "lint"]],
+  ["build", "Build", ["run", "build"]],
+  ["unit", "Run tests", ["test"]],
+  ["ai", "Run AI tests", ["run", "test:ai"]],
+  ["local", "Run local integration tests", ["run", "test:local"]],
 ]
-
-if (["darwin", "win32"].includes(process.platform))
+if (["darwin", "win32"].includes(process.platform)) {
   steps.push([
+    "desktop",
     "Run desktop tests",
     ["run", process.env.ENVOI_DESKTOP_TEST_FULL === "1" ? "test:desktop" : "test:desktop:quick"],
   ])
+}
 
-function reportEnvironment() {
-  console.error("CI environment:")
-  console.error(`- platform: ${process.platform} ${process.arch}`)
-  console.error(`- node: ${process.version}`)
-  console.error(
-    `- npm: ${spawnSync(npm, ["--version"], { ...spawnOptions, encoding: "utf8" }).stdout?.trim()}`,
+try {
+  console.log(
+    `${local ? "Local" : "Full CI"} checks: ${process.platform} ${process.arch}, Node ${process.version}`,
   )
-  console.error(`- CI: ${env.CI}`)
-  const git = spawnSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" })
-  if (git.status === 0) console.error(`- commit: ${git.stdout.trim()}`)
-  const registry = spawnSync(npm, ["config", "get", "registry"], {
-    ...spawnOptions,
-    encoding: "utf8",
-  })
-  if (registry.status === 0) console.error(`- npm registry: ${registry.stdout.trim()}`)
-}
-
-reportEnvironment()
-for (const [name, args] of steps) {
-  console.log(`\n==> ${name}: ${npm} ${args.join(" ")}`)
-  const result = spawnSync(npm, args, { ...spawnOptions, stdio: "inherit" })
-  if (result.error) {
-    console.error(`Failed to start ${npm}: ${result.error.message}`)
-    reportEnvironment()
-    process.exit(1)
+  const installStarted = Date.now()
+  const generation = await ensureAppDeps()
+  console.log(`Dependencies ready (${((Date.now() - installStarted) / 1000).toFixed(1)}s)`)
+  const context = {
+    generation,
+    node: process.version,
+    platform: process.platform,
+    arch: process.arch,
+    environment: digest(
+      JSON.stringify(
+        Object.entries(env)
+          .filter(([key]) =>
+            /^(PATH|HOME|USERPROFILE|LANG|LC_|ENVOI_|PAPERDESK_|TEX|ELECTRON_|DISPLAY)/.test(key),
+          )
+          .sort(),
+      ),
+    ),
   }
-  if (result.status !== 0) {
-    console.error(`Step failed: ${name} (exit ${result.status ?? "unknown"})`)
-    reportEnvironment()
-    process.exit(result.status ?? 1)
+  let previous = {}
+  try {
+    const cached = JSON.parse(await readFile(cachePath, "utf8"))
+    if (cached && typeof cached === "object" && !Array.isArray(cached)) previous = cached
+  } catch {
+    /* A missing/corrupt cache is a cold run. */
   }
+  // Publish only a completely successful run; a failed/interrupted run leaves no reusable results.
+  await rm(cachePath, { force: true })
+  const snapshot = await sourceSnapshot(root)
+  const next = {}
+  let artifacts = await artifactKey(root)
+  let rebuilt = false
+  for (const [id, name, args] of steps) {
+    const key = stepKey(snapshot, id, { ...context, args })
+    const outputValid =
+      id !== "build" || (artifacts !== null && artifacts === previous[id]?.artifacts)
+    if (
+      local &&
+      !force &&
+      canReuse(previous[id], key) &&
+      outputValid &&
+      !(id === "desktop" && rebuilt)
+    ) {
+      console.log(`\n==> ${name}: reused successful result (unchanged inputs)`)
+      next[id] = previous[id]
+      continue
+    }
+    console.log(`\n==> ${name}: ${npm} ${args.join(" ")}`)
+    const stepStarted = Date.now()
+    const result = spawnSync(npm, args, {
+      cwd: root,
+      env,
+      shell: process.platform === "win32",
+      stdio: "inherit",
+    })
+    if (result.error) throw result.error
+    if (result.status !== 0) throw new Error(`${name} failed (exit ${result.status ?? "unknown"})`)
+    console.log(`${name} passed (${((Date.now() - stepStarted) / 1000).toFixed(1)}s)`)
+    if (id === "build") {
+      rebuilt = true
+      artifacts = await artifactKey(root)
+    }
+    next[id] = { key, passedAt: Date.now(), ...(id === "build" ? { artifacts } : {}) }
+  }
+  if (digest(JSON.stringify(snapshot)) !== digest(JSON.stringify(await sourceSnapshot(root)))) {
+    throw new Error("Source files changed during validation; rerun checks on the final contents")
+  }
+  await mkdir(path.dirname(cachePath), { recursive: true })
+  await writeFile(cachePath, JSON.stringify(next, null, 2))
+  console.log(`\n${local ? "Local" : "CI"} checks passed.`)
+  console.log(`Total: ${((Date.now() - started) / 1000).toFixed(1)}s`)
+} catch (error) {
+  console.error(error.message)
+  process.exitCode = 1
 }
-
-console.log("\nCI checks passed.")

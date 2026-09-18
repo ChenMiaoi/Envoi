@@ -21,7 +21,9 @@ These rules apply to every commit in this repository.
 
 ## Required validation
 
-- Before every commit, run `npm run ci:check` from the repository root.
-- A commit is not ready until `npm run ci:check` exits successfully with `CI checks passed.`.
+- Before every commit, run `npm run check:local` from the repository root; it must exit successfully with `Local checks passed.` (or `CI checks passed.` in CI).
+- Local checks may reuse successful results for unchanged inputs for up to 24 hours. Commit-only changes do not require repeating the full suite.
+- Run `npm run ci:check` before sharing changes and after changing the validation workflow or external tools/environment. This always runs all check steps and must finish with `CI checks passed.`.
+- Use `npm run check:local -- --force` to rerun all steps without cached results, and `npm run setup` to recreate dependencies when diagnosing installation problems.
 - Do not bypass or weaken the local check to make a commit pass.
 - If the check fails, fix the failure or report the blocker; do not commit the unvalidated change.
