@@ -8,6 +8,27 @@ import {
 } from "../src/lib/projectManagement"
 import { emptyProject } from "../src/lib/initialProject"
 import { installDesktopFixture } from "./desktopFixture"
+test("switching with discard clears cached drafts, while normal switching preserves them", async () => {
+  installDesktopFixture()
+  const { saveOutgoingSession, restoreProjectSession, saveSession } =
+    await import("../src/lib/projectSession")
+  const project = {
+    ...emptyProject(),
+    id: "switch-test",
+    files: [
+      { id: "notes.md", path: "notes.md", kind: "markdown" as const, text: "draft", saved: "disk" },
+      { id: "new.md", path: "new.md", kind: "markdown" as const, text: "new draft" },
+    ],
+  }
+  const fresh = { ...project, files: [{ ...project.files[0], text: "disk" }] }
+  await saveOutgoingSession(project, false)
+  assert.equal((await restoreProjectSession(fresh)).files[0].text, "draft")
+  await saveOutgoingSession(project, true)
+  await saveSession({ ...emptyProject(), id: "other-project" })
+  const reopened = await restoreProjectSession(fresh)
+  assert.equal(reopened.files[0].text, "disk")
+  assert.equal(reopened.files.length, 1)
+})
 test("closing keeps unsaved-work and busy-operation guards", () => {
   const dirty = {
     ...emptyProject(),

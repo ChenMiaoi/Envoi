@@ -50,7 +50,7 @@ export function saveSession(project: PaperProject): Promise<void> {
   }
   return promise
 }
-export async function closeProjectSession(project: PaperProject, discard: boolean) {
+export async function saveOutgoingSession(project: PaperProject, discard: boolean) {
   // Clear discarded buffers in the per-project cache before recording the empty workspace.
   // Otherwise reopening the same project restores the supposedly discarded edits.
   if (project.id !== "empty")
@@ -64,6 +64,9 @@ export async function closeProjectSession(project: PaperProject, discard: boolea
           }
         : project,
     )
+}
+export async function closeProjectSession(project: PaperProject, discard: boolean) {
+  await saveOutgoingSession(project, discard)
   await saveSession(emptyProject())
 }
 async function writeSession(project: PaperProject) {

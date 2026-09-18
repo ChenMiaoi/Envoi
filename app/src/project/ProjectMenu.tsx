@@ -1,7 +1,7 @@
 import { useProjectTrust } from "./useProjectTrust"
 import { openDirectory } from "@/lib/desktop"
 import { Notification } from "@/components/Notification"
-import { restoreProjectSession } from "@/lib/projectSession"
+import { restoreProjectSession, saveOutgoingSession } from "@/lib/projectSession"
 import { bindProject } from "@/lib/agentClient"
 import { ProjectManagement } from "./ProjectManagement"
 import { BrandMark } from "@/components/BrandMark"
@@ -48,6 +48,7 @@ export function ProjectMenu() {
     saveAll,
     saving,
     project,
+    getProject,
     setProject,
     navigationBusy: busy,
     busy: taskBusy,
@@ -173,11 +174,13 @@ export function ProjectMenu() {
     [busy, saving, setBusy, setMessage],
   )
   const activate = useCallback(
-    async (rootPath: string) => {
+    async (rootPath: string, discard = false) => {
       const binding = await bindProject(rootPath)
       rootPath = binding.project.path
       window.dispatchEvent(new Event("envoi:connection-updated"))
-      const next = await restoreProjectSession(await readProject(rootPath))
+      const fresh = await readProject(rootPath)
+      await saveOutgoingSession(getProject(), discard)
+      const next = await restoreProjectSession(fresh)
       let remembered = true
       try {
         await rememberProject(rootPath)
@@ -187,7 +190,7 @@ export function ProjectMenu() {
       setProject(next)
       setMessage(remembered ? "" : t("project.openedNoRecent", { name: next.name }))
     },
-    [setProject, setMessage, t],
+    [getProject, setProject, setMessage, t],
   )
   useEffect(() => {
     const create = () => {
@@ -636,7 +639,7 @@ export function ProjectMenu() {
                         ? await createPaper(location, name.trim(), template, enableGit)
                         : location
                     setMode(null)
-                    await activate(rootPath)
+                    await activate(rootPath, discard)
                     if (mode === "new" && enableGit) {
                       try {
                         const state = await envoi().projectTrust(await openDirectory(rootPath))
