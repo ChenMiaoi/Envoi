@@ -1,4 +1,5 @@
 import "./references.test"
+import "./lspCompletion.test"
 import "./projects.test"
 import "./permissions.test"
 import "./outline.test"

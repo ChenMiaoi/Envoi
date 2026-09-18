@@ -23,9 +23,8 @@ import { lspLanguageForPath } from "@/lib/lspLanguage"
 import { editorFonts, pluginEnabled } from "@/settings/model"
 import { pluginForLanguage } from "@/settings/pluginCatalog"
 import { useT } from "@/i18n/useT"
+import { completionChanges, type LspPosition, type LspRange } from "@/lib/lspCompletion"
 
-type LspPosition = { line: number; character: number }
-type LspRange = { start: LspPosition; end: LspPosition }
 type LspDiagnostic = { range: LspRange; message: string; severity?: number; source?: string }
 type LspCompletion = {
   label: string
@@ -34,7 +33,9 @@ type LspCompletion = {
   detail?: string
   documentation?: string | { value: string }
   insertText?: string
-  textEdit?: { range: LspRange; newText: string }
+  textEdit?:
+    { range: LspRange; newText: string } | { insert: LspRange; replace: LspRange; newText: string }
+  additionalTextEdits?: { range: LspRange; newText: string }[]
 }
 
 const lspDownloads: Record<string, { name: string; url: string }> = {
@@ -103,6 +104,15 @@ export function CodeEditor({
             .lspQuery(root, path, method, at, text)
             .catch(() => null)
         : Promise.resolve(null)
+    const goToDefinition = (editor: EditorView, at: number) => {
+      if (!ready.current) return false
+      void query("textDocument/definition", at, editor.state.doc.toString()).then((result) => {
+        const location = Array.isArray(result) ? result[0] : null
+        if (location?.path && location?.position)
+          callbacks.current.onNavigate(location.path, location.position)
+      })
+      return true
+    }
     const complete = async (context: CompletionContext) => {
       const word = context.matchBefore(/[\w]*/)
       if (
@@ -128,16 +138,8 @@ export function CodeEditor({
           detail: item.detail,
           info: documentation(item.documentation),
           apply: (editor, _completion, from, to) => {
-            const edit = item.textEdit
-            const start = edit?.range ? offset(editor, edit.range.start) : null
-            const end = edit?.range ? offset(editor, edit.range.end) : null
-            editor.dispatch({
-              changes: {
-                from: start ?? from,
-                to: end ?? to,
-                insert: edit?.newText ?? item.insertText ?? item.label,
-              },
-            })
+            const changes = completionChanges(editor.state.doc, item, from, to)
+            if (changes.length) editor.dispatch({ changes })
           },
         }))
       return options.length ? { from: word?.from ?? context.pos, options } : null
@@ -150,7 +152,15 @@ export function CodeEditor({
           lineNumbers(),
           EditorView.lineWrapping,
           history(),
-          keymap.of([indentWithTab, ...defaultKeymap, ...historyKeymap]),
+          keymap.of([
+            {
+              key: "F12",
+              run: (editor) => goToDefinition(editor, editor.state.selection.main.head),
+            },
+            indentWithTab,
+            ...defaultKeymap,
+            ...historyKeymap,
+          ]),
           autocompletion({ override: [complete] }),
           lintGutter(),
           highlightActiveLine(),
@@ -188,14 +198,7 @@ export function CodeEditor({
               const at = editor.posAtCoords({ x: event.clientX, y: event.clientY })
               if (at === null) return false
               event.preventDefault()
-              void query("textDocument/definition", at, editor.state.doc.toString()).then(
-                (result) => {
-                  const location = Array.isArray(result) ? result[0] : null
-                  if (location?.path && location?.position)
-                    callbacks.current.onNavigate(location.path, location.position)
-                },
-              )
-              return true
+              return goToDefinition(editor, at)
             },
           }),
           EditorView.contentAttributes.of({
