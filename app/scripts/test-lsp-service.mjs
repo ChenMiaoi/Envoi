@@ -44,9 +44,14 @@ test("LSP opens source, updates drafts, returns completions and stops sessions",
       await service.query(3, root, "main.py", "textDocument/completion", 8, "hello\nworld"),
       [{ label: "1:2" }],
     )
-    assert.equal(
-      await service.query(3, root, "main.py", "textDocument/completion", 8, "stale"),
-      null,
+    assert.deepEqual(
+      await service.query(3, root, "main.py", "textDocument/completion", 8, "new text"),
+      [{ label: "0:8" }],
+    )
+    assert.equal(service.sessions.values().next().value.docs.get("main.py").text, "new text")
+    assert.deepEqual(
+      await service.query(3, root, "main.py", "textDocument/definition", 1, "new text"),
+      [{ path: "main.py", position: { line: 0, character: 0 } }],
     )
     await assert.rejects(
       service.open(3, root, "../outside.py", "x", "invalid"),

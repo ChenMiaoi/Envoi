@@ -37,5 +37,12 @@ process.stdin.on("data", (chunk) => {
         id: value.id,
         result: [{ label: `${value.params.position.line}:${value.params.position.character}` }],
       })
+    if (value.method === "textDocument/definition")
+      send({
+        id: value.id,
+        result: [
+          { uri: value.params.textDocument.uri, range: { start: { line: 0, character: 0 } } },
+        ],
+      })
   }
 })

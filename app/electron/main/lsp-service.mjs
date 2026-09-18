@@ -78,6 +78,22 @@ function within(root, file) {
   const relative = path.relative(root, file)
   return relative !== ".." && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative)
 }
+function localDefinition(root, location) {
+  try {
+    const target = fileURLToPath(location?.targetUri ?? location?.uri)
+    const canonicalRoot = realpathSync(root)
+    const canonicalTarget = realpathSync(target)
+    if (!within(canonicalRoot, canonicalTarget)) return null
+    const position = location?.targetSelectionRange?.start ?? location?.range?.start
+    if (!Number.isInteger(position?.line) || !Number.isInteger(position?.character)) return null
+    return {
+      path: path.relative(canonicalRoot, canonicalTarget).split(path.sep).join("/"),
+      position,
+    }
+  } catch {
+    return null
+  }
+}
 function position(text, offset) {
   const prefix = text.slice(0, Math.max(0, Math.min(offset, text.length)))
   const lines = prefix.split("\n")
@@ -182,11 +198,18 @@ export class LspService {
       return null
     const session = this.sessions.get(this.key(owner, root, lspLanguage(file)))
     const doc = session?.docs.get(file)
-    if (!doc || typeof text !== "string" || text !== doc.text) return null
-    return session.request(method, {
+    if (!doc || typeof text !== "string" || Buffer.byteLength(text) > 5_000_000) return null
+    // Editor updates and feature requests travel over separate IPC calls. A request can
+    // arrive first, so synchronize its snapshot before asking the server to analyze it.
+    if (text !== doc.text) this.change(owner, root, file, text)
+    const result = await session.request(method, {
       textDocument: { uri: doc.uri },
       position: position(text, offset),
     })
+    if (method !== "textDocument/definition") return result
+    return (Array.isArray(result) ? result : [result])
+      .map((location) => localDefinition(root, location))
+      .filter(Boolean)
   }
   close(owner, root, file, token) {
     const key = this.key(owner, root, lspLanguage(file))

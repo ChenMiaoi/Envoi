@@ -27,6 +27,7 @@ type LspRange = { start: LspPosition; end: LspPosition }
 type LspDiagnostic = { range: LspRange; message: string; severity?: number; source?: string }
 type LspCompletion = {
   label: string
+  filterText?: string
   kind?: number
   detail?: string
   documentation?: string | { value: string }
@@ -111,6 +112,7 @@ export function CodeEditor({
         .filter((item) => typeof item.label === "string")
         .map((item) => ({
           label: item.label,
+          filterText: item.filterText,
           detail: item.detail,
           info: documentation(item.documentation),
           apply: (editor, _completion, from, to) => {
@@ -176,18 +178,9 @@ export function CodeEditor({
               event.preventDefault()
               void query("textDocument/definition", at, editor.state.doc.toString()).then(
                 (result) => {
-                  const location = Array.isArray(result) ? result[0] : result
-                  const uri = location?.uri ?? location?.targetUri
-                  if (!root || typeof uri !== "string" || !uri.startsWith("file:")) return
-                  const target = decodeURIComponent(new URL(uri).pathname)
-                    .replace(/^\/([A-Za-z]:)/, "$1")
-                    .replaceAll("\\", "/")
-                  const base = root.replaceAll("\\", "/").replace(/\/$/, "")
-                  if (target.toLowerCase().startsWith(`${base.toLowerCase()}/`)) {
-                    const position = location?.targetSelectionRange?.start ?? location?.range?.start
-                    if (position)
-                      callbacks.current.onNavigate(target.slice(base.length + 1), position)
-                  }
+                  const location = Array.isArray(result) ? result[0] : null
+                  if (location?.path && location?.position)
+                    callbacks.current.onNavigate(location.path, location.position)
                 },
               )
               return true
