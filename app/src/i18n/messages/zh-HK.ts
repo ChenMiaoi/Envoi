@@ -19,6 +19,7 @@ const zhHK: Messages = {
   "extensions.installing": "正在安裝{name}…",
   "extensions.installed": "{name}已安裝",
   "extensions.installFailed": "{name}安裝失敗",
+  "extensions.restartToInstall": "請完全結束並重新開啟 Envoi，然後重試安裝。",
   "extensions.toolReady": "已偵測到工具",
   "extensions.enabled": "啟用",
   "extensions.inherited": "繼承全域設定",

@@ -382,8 +382,13 @@ export function CodeEditor({
                     const notification = toast.loading(
                       t("extensions.installing", { name: download.name }),
                     )
-                    void envoi()
-                      .installLsp(lspLanguage)
+                    void Promise.resolve()
+                      .then(() => {
+                        const bridge = envoi()
+                        if (typeof bridge.installLsp !== "function")
+                          throw Error(t("extensions.restartToInstall"))
+                        return bridge.installLsp(lspLanguage)
+                      })
                       .then((installed) => {
                         toast.success(t("extensions.installed", { name: download.name }), {
                           id: notification,

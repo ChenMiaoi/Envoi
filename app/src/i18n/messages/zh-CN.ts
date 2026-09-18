@@ -21,6 +21,7 @@ export const zhCN = {
   "extensions.installing": "正在安装{name}…",
   "extensions.installed": "{name}已安装",
   "extensions.installFailed": "{name}安装失败",
+  "extensions.restartToInstall": "请完全退出并重新打开 Envoi，然后重试安装。",
   "extensions.toolReady": "已检测到工具",
   "extensions.enabled": "启用",
   "extensions.inherited": "继承全局设置",

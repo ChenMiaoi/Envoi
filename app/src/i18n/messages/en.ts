@@ -19,6 +19,7 @@ const en: Messages = {
   "extensions.installing": "Installing {name}…",
   "extensions.installed": "{name} installed",
   "extensions.installFailed": "Could not install {name}",
+  "extensions.restartToInstall": "Quit and reopen Envoi, then try installing again.",
   "extensions.toolReady": "Tool detected",
   "extensions.enabled": "Enabled",
   "extensions.inherited": "Inherits global setting",

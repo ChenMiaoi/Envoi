@@ -19,6 +19,8 @@ const ja: Messages = {
   "extensions.installing": "{name} をインストール中…",
   "extensions.installed": "{name} をインストールしました",
   "extensions.installFailed": "{name} をインストールできませんでした",
+  "extensions.restartToInstall":
+    "Envoi を完全に終了して再起動し、もう一度インストールしてください。",
   "extensions.toolReady": "ツールを検出",
   "extensions.enabled": "有効",
   "extensions.inherited": "全体設定を継承",
