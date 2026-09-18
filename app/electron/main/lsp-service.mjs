@@ -42,9 +42,11 @@ function uriKey(uri) {
 }
 const discovered = new Map()
 async function executable(root, language, preferredServer, preferredPath, managedDirectory) {
-  if (managedDirectory && !preferredPath) {
+  if (managedDirectory) {
     const managed = await installedServer(managedDirectory, language, preferredServer)
-    if (managed) return managed
+    // 面板会把托管安装的路径写回偏好;该路径指向托管目录时仍按托管安装启动
+    // (Pyright 需以 node 运行 langserver.index.js,逐字校验会误判为不匹配)。
+    if (managed && (!preferredPath || managed.path === preferredPath)) return managed
   }
   const preferred = preferredServer
     ? toolCatalog.find(
