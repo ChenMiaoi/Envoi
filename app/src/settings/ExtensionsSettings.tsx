@@ -1,13 +1,24 @@
 import { useCallback, useEffect, useState } from "react"
 import { Link } from "react-router"
-import { AlertTriangle, Check, ChevronDown, RefreshCw, X } from "lucide-react"
+import {
+  AlertTriangle,
+  Check,
+  ChevronDown,
+  RefreshCw,
+  Server,
+  ShieldCheck,
+  Sparkles,
+  Wrench,
+  X,
+  type LucideIcon,
+} from "lucide-react"
 import { envoi } from "@/lib/desktop"
 import { useProject } from "@/project/context"
 import { useT } from "@/i18n/useT"
 import type { MessageKey } from "@/i18n/runtime"
 import { usePreferences } from "./context"
 import { languagePlugins } from "./pluginCatalog"
-import { pluginEnabled } from "./model"
+import { pluginEnabled, type Preferences } from "./model"
 
 type Tool = {
   id: string
@@ -36,6 +47,52 @@ const appearance: Record<string, { mark: string; color: string }> = {
   rust: { mark: "Rs", color: "bg-orange-500/10 text-orange-400 ring-orange-400/20" },
 }
 
+function StatusPill({ state, label }: { state: "ok" | "partial" | "off"; label: string }) {
+  const tone =
+    state === "ok"
+      ? "bg-green-500/10 text-green-600 ring-green-500/25 dark:text-green-400"
+      : state === "partial"
+        ? "bg-amber-500/10 text-amber-600 ring-amber-500/25 dark:text-amber-400"
+        : "bg-muted/60 text-muted-foreground ring-border/70"
+  const dot =
+    state === "ok"
+      ? "bg-green-500"
+      : state === "partial"
+        ? "bg-amber-500"
+        : "bg-muted-foreground/40"
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 ring-inset ${tone}`}
+    >
+      <span aria-hidden className={`size-1.5 rounded-full ${dot}`} />
+      {label}
+    </span>
+  )
+}
+
+function SectionTitle({
+  icon: Icon,
+  title,
+  ready,
+  total,
+}: {
+  icon: LucideIcon
+  title: string
+  ready: number
+  total: number
+}) {
+  return (
+    <div className="flex items-center gap-2">
+      <Icon aria-hidden className="size-3.5 text-muted-foreground" />
+      <span className="text-[11px] font-semibold text-muted-foreground">{title}</span>
+      <span className="rounded-full bg-muted/60 px-1.5 py-px text-[10px] tabular-nums text-muted-foreground">
+        {ready}/{total}
+      </span>
+      <span aria-hidden className="h-px flex-1 bg-border/50" />
+    </div>
+  )
+}
+
 export function ExtensionsSettings({ scope }: { scope: "global" | "project" }) {
   const { t } = useT()
   const { project } = useProject()
@@ -43,7 +100,7 @@ export function ExtensionsSettings({ scope }: { scope: "global" | "project" }) {
   const [tools, setTools] = useState<ToolInfo | null>(null)
   const [error, setError] = useState("")
   const [refreshing, setRefreshing] = useState(false)
-  const [expanded, setExpanded] = useState<string | null>(null)
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({})
   const [manual, setManual] = useState<Record<string, string>>({})
   const [manualTool, setManualTool] = useState<Record<string, string>>({})
   const [manualOpen, setManualOpen] = useState<Record<string, boolean>>({})
@@ -52,6 +109,8 @@ export function ExtensionsSettings({ scope }: { scope: "global" | "project" }) {
   const [verifiedTools, setVerifiedTools] = useState<
     Record<string, { path: string; version?: string }>
   >({})
+  const [lspProbed, setLspProbed] = useState(false)
+  const [toolsProbed, setToolsProbed] = useState(false)
   const root = scope === "project" ? project.rootPath : undefined
   const load = useCallback(
     async (refresh: boolean) => {
@@ -101,6 +160,7 @@ export function ExtensionsSettings({ scope }: { scope: "global" | "project" }) {
     if (changed) update({ lspServers: next })
   }, [tools, preferences.lspServers, preferences.lspPaths, update])
   useEffect(() => {
+    setLspProbed(false)
     let cancelled = false
     void Promise.all(
       Object.entries(preferences.lspPaths).map(async ([id, selected]) => {
@@ -111,21 +171,23 @@ export function ExtensionsSettings({ scope }: { scope: "global" | "project" }) {
         }
       }),
     ).then((entries) => {
-      if (!cancelled)
-        setVerified(
-          Object.fromEntries(
-            entries.filter(
-              (entry): entry is readonly [string, { path: string; version?: string }] =>
-                entry[1] !== null,
-            ),
+      if (cancelled) return
+      setVerified(
+        Object.fromEntries(
+          entries.filter(
+            (entry): entry is readonly [string, { path: string; version?: string }] =>
+              entry[1] !== null,
           ),
-        )
+        ),
+      )
+      setLspProbed(true)
     })
     return () => {
       cancelled = true
     }
   }, [preferences.lspPaths])
   useEffect(() => {
+    setToolsProbed(false)
     let cancelled = false
     void Promise.all(
       Object.entries(preferences.toolPaths).map(async ([id, selected]) => {
@@ -136,20 +198,56 @@ export function ExtensionsSettings({ scope }: { scope: "global" | "project" }) {
         }
       }),
     ).then((entries) => {
-      if (!cancelled)
-        setVerifiedTools(
-          Object.fromEntries(
-            entries.filter(
-              (entry): entry is readonly [string, { path: string; version?: string }] =>
-                entry[1] !== null,
-            ),
+      if (cancelled) return
+      setVerifiedTools(
+        Object.fromEntries(
+          entries.filter(
+            (entry): entry is readonly [string, { path: string; version?: string }] =>
+              entry[1] !== null,
           ),
-        )
+        ),
+      )
+      setToolsProbed(true)
     })
     return () => {
       cancelled = true
     }
   }, [preferences.toolPaths])
+
+  // 路径记忆：探测成功后把选中路径写入偏好；已记住且仍可执行的路径优先于每次重新探测，
+  // 仅当保存的路径失效且探测到新候选时才自动纠正，找不到时保留原路径并由界面提示。
+  useEffect(() => {
+    if (!tools || scope !== "global" || !lspProbed || !toolsProbed) return
+    const lspPatch: Record<string, string> = {}
+    const toolPatch: Record<string, string> = {}
+    for (const list of Object.values(tools.groups ?? {}))
+      for (const tool of list) {
+        const candidates = pathsOf(tool)
+        if (!candidates.length) continue
+        const stored = (tool.kind === "lsp" ? preferences.lspPaths : preferences.toolPaths)[tool.id]
+        if (
+          stored &&
+          (candidates.some((candidate) => candidate.path === stored) ||
+            (tool.kind === "lsp" ? verified : verifiedTools)[tool.id])
+        )
+          continue
+        ;(tool.kind === "lsp" ? lspPatch : toolPatch)[tool.id] = candidates[0].path
+      }
+    const patch: Partial<Preferences> = {}
+    if (Object.keys(lspPatch).length) patch.lspPaths = { ...preferences.lspPaths, ...lspPatch }
+    if (Object.keys(toolPatch).length) patch.toolPaths = { ...preferences.toolPaths, ...toolPatch }
+    if (Object.keys(patch).length) update(patch)
+  }, [
+    tools,
+    scope,
+    lspProbed,
+    toolsProbed,
+    verified,
+    verifiedTools,
+    preferences.lspPaths,
+    preferences.toolPaths,
+    update,
+  ])
 
   async function saveManual(language: string, server: string) {
     try {
@@ -193,11 +291,16 @@ export function ExtensionsSettings({ scope }: { scope: "global" | "project" }) {
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between gap-3 px-1 text-xs text-muted-foreground">
-        <span>{t("extensions.localEnvironment")}</span>
+      <div className="flex items-center justify-between gap-3 px-1">
+        <div className="min-w-0">
+          <p className="text-xs font-medium text-foreground">{t("extensions.localEnvironment")}</p>
+          <p className="mt-0.5 text-[11px] text-muted-foreground">
+            {t("extensions.localEnvironmentHint")}
+          </p>
+        </div>
         <button
           type="button"
-          className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-50"
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-border/70 px-2.5 py-1.5 text-[11px] text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground disabled:opacity-50"
           disabled={refreshing}
           onClick={() => void load(true)}
         >
@@ -281,26 +384,38 @@ export function ExtensionsSettings({ scope }: { scope: "global" | "project" }) {
         const lintReady = lintChoices.some((choice) => !!choice.selected)
         const capabilities = [lspReady, formatReady, lintReady]
         const partial = capabilities.some(Boolean) && !capabilities.every(Boolean)
-        const open = expanded === id
+        const open = !!expanded[id]
         const visual = appearance[group]
         const renderToolRows = (entries: typeof chainChoices) =>
           entries.map(({ tool, selected }) => {
             const options = [...pathsOf(tool)]
             if (selected && !options.some((candidate) => candidate.path === selected.path))
               options.unshift(selected)
+            const remembered = preferences.toolPaths[tool.id]
+            const stale = !!remembered && !selected
             return (
-              <div key={tool.id} className="space-y-2 text-xs">
-                <div className="flex items-center gap-2">
-                  {selected ? (
-                    <Check aria-hidden className="size-4 shrink-0 text-green-500" />
-                  ) : (
-                    <X aria-hidden className="size-4 shrink-0 text-red-500" />
-                  )}
+              <div
+                key={tool.id}
+                className="rounded-xl border border-border/60 bg-background/60 px-3 py-2.5 text-xs"
+              >
+                <div className="flex items-center gap-2.5">
+                  <span
+                    aria-hidden
+                    className={`flex size-6 shrink-0 items-center justify-center rounded-full ${
+                      selected ? "bg-green-500/10 text-green-500" : "bg-red-500/10 text-red-500"
+                    }`}
+                  >
+                    {selected ? (
+                      <Check aria-hidden className="size-3.5" />
+                    ) : (
+                      <X aria-hidden className="size-3.5" />
+                    )}
+                  </span>
                   <span className="w-24 shrink-0 font-medium text-foreground">{tool.label}</span>
                   {options.length > 1 ? (
                     <select
                       aria-label={`${tool.label} ${t("extensions.selectVersion")}`}
-                      className="min-w-0 flex-1 rounded-lg border border-input bg-background px-2.5 py-1.5 text-xs text-foreground"
+                      className="min-w-0 flex-1 rounded-lg border border-input bg-background px-2.5 py-1.5 text-xs text-foreground focus:border-primary/50 focus:outline-none"
                       value={selected?.path ?? ""}
                       onChange={(event) =>
                         update({
@@ -322,17 +437,21 @@ export function ExtensionsSettings({ scope }: { scope: "global" | "project" }) {
                         </option>
                       ))}
                     </select>
-                  ) : (
+                  ) : selected ? (
                     <span
                       className="min-w-0 flex-1 truncate text-muted-foreground"
-                      title={selected?.path}
+                      title={selected.path}
                     >
-                      {selected?.version ?? ""}
+                      {selected.version ?? ""}
+                    </span>
+                  ) : (
+                    <span className="min-w-0 flex-1">
+                      <StatusPill state="off" label={t("extensions.notFound")} />
                     </span>
                   )}
                   <button
                     type="button"
-                    className="shrink-0 text-primary hover:underline"
+                    className="shrink-0 rounded-md border border-border/70 px-2 py-1 text-[11px] text-muted-foreground transition-colors hover:border-primary/40 hover:text-primary"
                     onClick={() =>
                       setManualOpen((previous) => ({
                         ...previous,
@@ -345,18 +464,26 @@ export function ExtensionsSettings({ scope }: { scope: "global" | "project" }) {
                 </div>
                 {selected && (
                   <p
-                    className="truncate pl-6 text-[11px] text-muted-foreground"
+                    className="mt-1.5 truncate pl-9 font-mono text-[11px] text-muted-foreground/80"
                     title={selected.path}
                   >
                     {selected.path}
                   </p>
                 )}
+                {stale && (
+                  <p className="mt-1.5 truncate pl-9 text-[11px] text-amber-600 dark:text-amber-400">
+                    {t("extensions.pathUnavailable")}：
+                    <span className="font-mono" title={remembered}>
+                      {remembered}
+                    </span>
+                  </p>
+                )}
                 {(manualOpen[tool.id] || !selected) && (
-                  <div className="space-y-2 pl-6">
+                  <div className="mt-2 space-y-2 pl-9">
                     <div className="flex gap-2">
                       <input
                         aria-label={`${tool.label} ${t("extensions.manualPath")}`}
-                        className="min-w-0 flex-1 rounded-lg border border-input bg-background px-2.5 py-1.5 text-foreground"
+                        className="min-w-0 flex-1 rounded-lg border border-input bg-background px-2.5 py-1.5 text-foreground focus:border-primary/50 focus:outline-none"
                         placeholder={t("extensions.pathPlaceholder")}
                         value={manual[tool.id] ?? ""}
                         onChange={(event) =>
@@ -371,7 +498,7 @@ export function ExtensionsSettings({ scope }: { scope: "global" | "project" }) {
                       />
                       <button
                         type="button"
-                        className="rounded-lg bg-primary px-3 py-1.5 text-primary-foreground"
+                        className="rounded-lg bg-primary px-3 py-1.5 text-primary-foreground transition-opacity hover:opacity-90"
                         onClick={() => void saveToolManual(tool.id)}
                       >
                         {t("extensions.usePath")}
@@ -391,7 +518,7 @@ export function ExtensionsSettings({ scope }: { scope: "global" | "project" }) {
           <article
             key={id}
             data-testid={`extension-${group}`}
-            className={`overflow-hidden rounded-2xl border bg-card/80 transition-colors ${open ? "border-primary/30" : "border-border/70 hover:border-border"}`}
+            className={`overflow-hidden rounded-2xl border bg-card/80 shadow-sm transition-colors ${open ? "border-primary/30" : "border-border/70 hover:border-border"}`}
           >
             <div className="flex min-h-20 items-center gap-3 px-4 py-3">
               <span
@@ -405,7 +532,7 @@ export function ExtensionsSettings({ scope }: { scope: "global" | "project" }) {
                 aria-label={t("extensions.configure", { name: title })}
                 aria-expanded={open}
                 aria-controls={`extension-details-${group}`}
-                onClick={() => setExpanded(open ? null : id)}
+                onClick={() => setExpanded((previous) => ({ ...previous, [id]: !open }))}
                 className="flex min-w-0 flex-1 items-center justify-between gap-3 rounded-lg py-1 text-left focus-visible:outline-2 focus-visible:outline-primary"
               >
                 <span className="min-w-0">
@@ -417,39 +544,29 @@ export function ExtensionsSettings({ scope }: { scope: "global" | "project" }) {
                         className="size-3.5 text-amber-500"
                       />
                     )}
+                    {!enabled && (
+                      <span className="rounded-full bg-muted/60 px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                        {t("extensions.disabled")}
+                      </span>
+                    )}
                   </span>
-                  <span className="mt-1 flex items-center gap-3 text-[11px] text-muted-foreground">
+                  <span className="mt-1.5 flex flex-wrap items-center gap-1.5">
                     {tools ? (
                       <>
-                        <span className="inline-flex items-center gap-1">
-                          {lspReady ? (
-                            <Check aria-hidden className="size-3 text-green-500" />
-                          ) : someLspReady ? (
-                            <AlertTriangle aria-hidden className="size-3 text-amber-500" />
-                          ) : (
-                            <X aria-hidden className="size-3 text-red-500" />
-                          )}
-                          {t("extensions.languageServer")}
-                        </span>
-                        <span className="inline-flex items-center gap-1">
-                          {formatReady ? (
-                            <Check aria-hidden className="size-3 text-green-500" />
-                          ) : (
-                            <X aria-hidden className="size-3 text-red-500" />
-                          )}
-                          {t("extensions.format")}
-                        </span>
-                        <span className="inline-flex items-center gap-1">
-                          {lintReady ? (
-                            <Check aria-hidden className="size-3 text-green-500" />
-                          ) : (
-                            <X aria-hidden className="size-3 text-red-500" />
-                          )}
-                          {t("extensions.lint")}
-                        </span>
+                        <StatusPill
+                          state={lspReady ? "ok" : someLspReady ? "partial" : "off"}
+                          label={t("extensions.languageServer")}
+                        />
+                        <StatusPill
+                          state={formatReady ? "ok" : "off"}
+                          label={t("extensions.format")}
+                        />
+                        <StatusPill state={lintReady ? "ok" : "off"} label={t("extensions.lint")} />
                       </>
                     ) : (
-                      t("settings.tools.probing")
+                      <span className="text-[11px] text-muted-foreground">
+                        {t("settings.tools.probing")}
+                      </span>
                     )}
                   </span>
                 </span>
@@ -477,184 +594,234 @@ export function ExtensionsSettings({ scope }: { scope: "global" | "project" }) {
             <div
               id={`extension-details-${group}`}
               hidden={!open}
-              className="border-t border-border/60 bg-background/30 px-4 pb-4 pt-4"
+              className="space-y-4 border-t border-border/60 bg-background/30 px-4 py-4"
             >
-              <p className="mb-2 text-[11px] font-semibold text-muted-foreground">
-                {t("extensions.format")}
-              </p>
-              <div className="space-y-2">{renderToolRows(formatChoices)}</div>
-              <p className="mb-2 mt-4 border-t border-border/50 pt-3 text-[11px] font-semibold text-muted-foreground">
-                {t("extensions.lint")}
-              </p>
-              <div className="space-y-2">{renderToolRows(lintChoices)}</div>
-              <p className="mb-2 mt-4 border-t border-border/50 pt-3 text-[11px] font-semibold text-muted-foreground">
-                {t("extensions.toolchain")}
-              </p>
-              <div className="space-y-2">{renderToolRows(chainChoices)}</div>
-              <p className="mb-2 mt-4 border-t border-border/50 pt-3 text-[11px] font-semibold text-muted-foreground">
-                {t("extensions.languageServer")}
-              </p>
-              <div className="mb-3 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
-                {candidates.map((tool) => (
-                  <span key={tool.id} className="inline-flex items-center gap-1">
-                    {pathsOf(tool).length ? (
-                      <Check aria-hidden className="size-3 text-green-500" />
-                    ) : (
-                      <X aria-hidden className="size-3 text-red-500" />
-                    )}
-                    {tool.label}
-                  </span>
-                ))}
-              </div>
-              <div className="space-y-3">
-                {choices.map(({ language, available, selected }) => {
-                  const options = [...available]
-                  if (
-                    selected &&
-                    !options.some(
-                      (choice) =>
-                        choice.tool.id === selected.tool.id && choice.path === selected.path,
+              <section className="space-y-2">
+                <SectionTitle
+                  icon={Server}
+                  title={t("extensions.languageServer")}
+                  ready={choices.filter((choice) => !!choice.selected).length}
+                  total={choices.length}
+                />
+                <div className="flex flex-wrap gap-1.5">
+                  {candidates.map((tool) => (
+                    <StatusPill
+                      key={tool.id}
+                      state={pathsOf(tool).length ? "ok" : "off"}
+                      label={tool.label}
+                    />
+                  ))}
+                </div>
+                <div className="space-y-2">
+                  {choices.map(({ language, available, selected }) => {
+                    const options = [...available]
+                    if (
+                      selected &&
+                      !options.some(
+                        (choice) =>
+                          choice.tool.id === selected.tool.id && choice.path === selected.path,
+                      )
                     )
-                  )
-                    options.unshift(selected)
-                  const value = selected ? JSON.stringify([selected.tool.id, selected.path]) : ""
-                  const server =
-                    manualTool[language] ??
-                    preferences.lspServers[language] ??
-                    candidates.find((tool) => tool.languages?.includes(language))?.id ??
-                    ""
-                  return (
-                    <div key={language} className="space-y-2 text-xs">
-                      <div className="flex items-center gap-2">
-                        {selected ? (
-                          <Check aria-hidden className="size-4 shrink-0 text-green-500" />
-                        ) : (
-                          <X aria-hidden className="size-4 shrink-0 text-red-500" />
-                        )}
-                        <span className="w-12 shrink-0 font-medium text-foreground">
-                          {language === "cpp" ? "C/C++" : language.toUpperCase()}
-                        </span>
-                        {options.length > 1 ? (
-                          <select
-                            aria-label={`${language} ${t("extensions.languageServer")}`}
-                            className="min-w-0 flex-1 rounded-lg border border-input bg-background px-2.5 py-1.5 text-xs text-foreground"
-                            value={value}
-                            onChange={(event) => {
-                              const [id, path] = JSON.parse(event.target.value) as [string, string]
-                              const servers = { ...preferences.lspServers, [language]: id }
-                              if (language === "cpp") servers.c = id
-                              update({
-                                lspServers: servers,
-                                lspPaths: { ...preferences.lspPaths, [id]: path },
-                              })
-                            }}
-                          >
-                            {!selected && (
-                              <option value="" disabled>
-                                {t("extensions.selectVersion")}
-                              </option>
-                            )}
-                            {options.map((choice) => (
-                              <option
-                                key={`${choice.tool.id}:${choice.path}`}
-                                value={JSON.stringify([choice.tool.id, choice.path])}
-                              >
-                                {choice.tool.label} · {choice.version ?? choice.path}
-                              </option>
-                            ))}
-                          </select>
-                        ) : (
+                      options.unshift(selected)
+                    const value = selected ? JSON.stringify([selected.tool.id, selected.path]) : ""
+                    const server =
+                      manualTool[language] ??
+                      preferences.lspServers[language] ??
+                      candidates.find((tool) => tool.languages?.includes(language))?.id ??
+                      ""
+                    const remembered = server ? preferences.lspPaths[server] : undefined
+                    const stale = !!remembered && !selected
+                    return (
+                      <div
+                        key={language}
+                        className="rounded-xl border border-border/60 bg-background/60 px-3 py-2.5 text-xs"
+                      >
+                        <div className="flex items-center gap-2.5">
                           <span
-                            className="min-w-0 flex-1 truncate text-muted-foreground"
-                            title={selected?.path}
+                            aria-hidden
+                            className={`flex size-6 shrink-0 items-center justify-center rounded-full ${
+                              selected
+                                ? "bg-green-500/10 text-green-500"
+                                : "bg-red-500/10 text-red-500"
+                            }`}
                           >
-                            {selected
-                              ? `${selected.tool.label} · ${selected.version ?? selected.path}`
-                              : ""}
+                            {selected ? (
+                              <Check aria-hidden className="size-3.5" />
+                            ) : (
+                              <X aria-hidden className="size-3.5" />
+                            )}
                           </span>
-                        )}
-                        <button
-                          type="button"
-                          className="shrink-0 text-primary hover:underline"
-                          onClick={() =>
-                            setManualOpen((previous) => ({
-                              ...previous,
-                              [language]: !previous[language],
-                            }))
-                          }
-                        >
-                          {t("extensions.manualPath")}
-                        </button>
-                      </div>
-                      {selected && (
-                        <p
-                          className="truncate pl-6 text-[11px] text-muted-foreground"
-                          title={selected.path}
-                        >
-                          {selected.path}
-                        </p>
-                      )}
-                      {(manualOpen[language] || !selected) && (
-                        <div className="space-y-2 pl-6">
-                          {candidates.filter((tool) => tool.languages?.includes(language)).length >
-                            1 && (
+                          <span className="w-24 shrink-0 font-medium text-foreground">
+                            {language === "cpp" ? "C/C++" : language.toUpperCase()}
+                          </span>
+                          {options.length > 1 ? (
                             <select
                               aria-label={`${language} ${t("extensions.languageServer")}`}
-                              className="rounded-lg border border-input bg-background px-2 py-1.5"
-                              value={server}
-                              onChange={(event) =>
-                                setManualTool((previous) => ({
-                                  ...previous,
-                                  [language]: event.target.value,
-                                }))
-                              }
-                            >
-                              {candidates
-                                .filter((tool) => tool.languages?.includes(language))
-                                .map((tool) => (
-                                  <option key={tool.id} value={tool.id}>
-                                    {tool.label}
-                                  </option>
-                                ))}
-                            </select>
-                          )}
-                          <div className="flex gap-2">
-                            <input
-                              aria-label={`${language} ${t("extensions.manualPath")}`}
-                              className="min-w-0 flex-1 rounded-lg border border-input bg-background px-2.5 py-1.5 text-foreground"
-                              placeholder={t("extensions.pathPlaceholder")}
-                              value={manual[language] ?? ""}
-                              onChange={(event) =>
-                                setManual((previous) => ({
-                                  ...previous,
-                                  [language]: event.target.value,
-                                }))
-                              }
-                              onKeyDown={(event) => {
-                                if (event.key === "Enter") void saveManual(language, server)
+                              className="min-w-0 flex-1 rounded-lg border border-input bg-background px-2.5 py-1.5 text-xs text-foreground focus:border-primary/50 focus:outline-none"
+                              value={value}
+                              onChange={(event) => {
+                                const [id, path] = JSON.parse(event.target.value) as [
+                                  string,
+                                  string,
+                                ]
+                                const servers = { ...preferences.lspServers, [language]: id }
+                                if (language === "cpp") servers.c = id
+                                update({
+                                  lspServers: servers,
+                                  lspPaths: { ...preferences.lspPaths, [id]: path },
+                                })
                               }}
-                            />
-                            <button
-                              type="button"
-                              className="rounded-lg bg-primary px-3 py-1.5 text-primary-foreground"
-                              onClick={() => void saveManual(language, server)}
                             >
-                              {t("extensions.usePath")}
-                            </button>
-                          </div>
-                          {manualError[language] && (
-                            <p role="alert" className="text-destructive">
-                              {manualError[language]}
-                            </p>
+                              {!selected && (
+                                <option value="" disabled>
+                                  {t("extensions.selectVersion")}
+                                </option>
+                              )}
+                              {options.map((choice) => (
+                                <option
+                                  key={`${choice.tool.id}:${choice.path}`}
+                                  value={JSON.stringify([choice.tool.id, choice.path])}
+                                >
+                                  {choice.tool.label} · {choice.version ?? choice.path}
+                                </option>
+                              ))}
+                            </select>
+                          ) : selected ? (
+                            <span
+                              className="min-w-0 flex-1 truncate text-muted-foreground"
+                              title={selected.path}
+                            >
+                              {`${selected.tool.label} · ${selected.version ?? selected.path}`}
+                            </span>
+                          ) : (
+                            <span className="min-w-0 flex-1">
+                              <StatusPill state="off" label={t("extensions.notFound")} />
+                            </span>
                           )}
+                          <button
+                            type="button"
+                            className="shrink-0 rounded-md border border-border/70 px-2 py-1 text-[11px] text-muted-foreground transition-colors hover:border-primary/40 hover:text-primary"
+                            onClick={() =>
+                              setManualOpen((previous) => ({
+                                ...previous,
+                                [language]: !previous[language],
+                              }))
+                            }
+                          >
+                            {t("extensions.manualPath")}
+                          </button>
                         </div>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
+                        {selected && (
+                          <p
+                            className="mt-1.5 truncate pl-9 font-mono text-[11px] text-muted-foreground/80"
+                            title={selected.path}
+                          >
+                            {selected.path}
+                          </p>
+                        )}
+                        {stale && (
+                          <p className="mt-1.5 truncate pl-9 text-[11px] text-amber-600 dark:text-amber-400">
+                            {t("extensions.pathUnavailable")}：
+                            <span className="font-mono" title={remembered}>
+                              {remembered}
+                            </span>
+                          </p>
+                        )}
+                        {(manualOpen[language] || !selected) && (
+                          <div className="mt-2 space-y-2 pl-9">
+                            {candidates.filter((tool) => tool.languages?.includes(language))
+                              .length > 1 && (
+                              <select
+                                aria-label={`${language} ${t("extensions.languageServer")}`}
+                                className="rounded-lg border border-input bg-background px-2 py-1.5 focus:border-primary/50 focus:outline-none"
+                                value={server}
+                                onChange={(event) =>
+                                  setManualTool((previous) => ({
+                                    ...previous,
+                                    [language]: event.target.value,
+                                  }))
+                                }
+                              >
+                                {candidates
+                                  .filter((tool) => tool.languages?.includes(language))
+                                  .map((tool) => (
+                                    <option key={tool.id} value={tool.id}>
+                                      {tool.label}
+                                    </option>
+                                  ))}
+                              </select>
+                            )}
+                            <div className="flex gap-2">
+                              <input
+                                aria-label={`${language} ${t("extensions.manualPath")}`}
+                                className="min-w-0 flex-1 rounded-lg border border-input bg-background px-2.5 py-1.5 text-foreground focus:border-primary/50 focus:outline-none"
+                                placeholder={t("extensions.pathPlaceholder")}
+                                value={manual[language] ?? ""}
+                                onChange={(event) =>
+                                  setManual((previous) => ({
+                                    ...previous,
+                                    [language]: event.target.value,
+                                  }))
+                                }
+                                onKeyDown={(event) => {
+                                  if (event.key === "Enter") void saveManual(language, server)
+                                }}
+                              />
+                              <button
+                                type="button"
+                                className="rounded-lg bg-primary px-3 py-1.5 text-primary-foreground transition-opacity hover:opacity-90"
+                                onClick={() => void saveManual(language, server)}
+                              >
+                                {t("extensions.usePath")}
+                              </button>
+                            </div>
+                            {manualError[language] && (
+                              <p role="alert" className="text-destructive">
+                                {manualError[language]}
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              </section>
+              {formatChoices.length > 0 && (
+                <section className="space-y-2">
+                  <SectionTitle
+                    icon={Sparkles}
+                    title={t("extensions.format")}
+                    ready={formatChoices.filter((choice) => !!choice.selected).length}
+                    total={formatChoices.length}
+                  />
+                  <div className="space-y-2">{renderToolRows(formatChoices)}</div>
+                </section>
+              )}
+              {lintChoices.length > 0 && (
+                <section className="space-y-2">
+                  <SectionTitle
+                    icon={ShieldCheck}
+                    title={t("extensions.lint")}
+                    ready={lintChoices.filter((choice) => !!choice.selected).length}
+                    total={lintChoices.length}
+                  />
+                  <div className="space-y-2">{renderToolRows(lintChoices)}</div>
+                </section>
+              )}
+              {toolchains.length > 0 && (
+                <section className="space-y-2">
+                  <SectionTitle
+                    icon={Wrench}
+                    title={t("extensions.toolchain")}
+                    ready={chainChoices.filter((choice) => !!choice.selected).length}
+                    total={chainChoices.length}
+                  />
+                  <div className="space-y-2">{renderToolRows(chainChoices)}</div>
+                </section>
+              )}
               {scope === "project" && root && (
-                <div className="mt-4 flex items-center justify-between gap-3 border-t border-border/50 pt-3 text-[11px] text-muted-foreground">
+                <div className="flex items-center justify-between gap-3 border-t border-border/50 pt-3 text-[11px] text-muted-foreground">
                   <span>
                     {preferences.pluginWorkspaces[root]?.[id] === undefined
                       ? t("extensions.inherited")
@@ -677,8 +844,8 @@ export function ExtensionsSettings({ scope }: { scope: "global" | "project" }) {
                   )}
                 </div>
               )}
-              <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-border/50 pt-3 text-[11px]">
-                <span className="text-muted-foreground">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-border/50 pt-3 text-[11px]">
+                <span className="rounded-full bg-muted/60 px-2 py-0.5 font-mono text-[10px] text-muted-foreground">
                   {id} · v{plugin.version}
                 </span>
                 <Link to="/settings/global/compile" className="text-primary hover:underline">

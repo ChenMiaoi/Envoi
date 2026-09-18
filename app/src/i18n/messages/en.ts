@@ -41,6 +41,10 @@ const en: Messages = {
   "extensions.lint": "Lint",
   "extensions.lintCount": "Found {count} issues",
   "extensions.partial": "Partially available",
+  "extensions.notFound": "Not found",
+  "extensions.pathUnavailable": "Saved path is unavailable",
+  "extensions.localEnvironmentHint":
+    "Detects local language servers and tools, and remembers their paths",
 
   "chat.statsRunning": "Running",
   "chat.statsComplete": "Completed",

@@ -42,6 +42,10 @@ const ja: Messages = {
   "extensions.lint": "Lint",
   "extensions.lintCount": "{count} 件の問題が見つかりました",
   "extensions.partial": "一部のみ利用可能",
+  "extensions.notFound": "見つかりません",
+  "extensions.pathUnavailable": "保存されたパスは無効です",
+  "extensions.localEnvironmentHint":
+    "ローカルの言語サーバーとツールを検出し、見つかったパスを記憶します",
 
   "chat.statsRunning": "実行中",
   "chat.statsComplete": "完了",

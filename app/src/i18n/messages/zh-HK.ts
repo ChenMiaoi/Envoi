@@ -41,6 +41,9 @@ const zhHK: Messages = {
   "extensions.lint": "程式碼檢查",
   "extensions.lintCount": "發現 {count} 個問題",
   "extensions.partial": "部分可用",
+  "extensions.notFound": "未找到",
+  "extensions.pathUnavailable": "已儲存的路徑不可用",
+  "extensions.localEnvironmentHint": "自動檢測本機語言伺服器與工具，成功後會記住其路徑",
 
   "chat.statsRunning": "運行中",
   "chat.statsComplete": "已完成",

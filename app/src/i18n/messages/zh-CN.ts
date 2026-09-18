@@ -43,6 +43,9 @@ export const zhCN = {
   "extensions.lint": "代码检查",
   "extensions.lintCount": "发现 {count} 个问题",
   "extensions.partial": "部分可用",
+  "extensions.notFound": "未找到",
+  "extensions.pathUnavailable": "保存的路径不可用",
+  "extensions.localEnvironmentHint": "自动检测本机语言服务器与工具，成功后会记住其路径",
 
   "chat.statsRunning": "运行中",
   "chat.statsComplete": "已完成",
