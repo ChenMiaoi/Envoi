@@ -9,8 +9,18 @@ import {
   installAsset,
   installedServer,
   installLanguageServer,
+  lspInstallable,
 } from "../electron/main/lsp-installer.mjs"
 
+test("language servers report install sources only for supported builds", () => {
+  assert.equal(lspInstallable("pyright", "linux", "arm64"), true)
+  assert.equal(lspInstallable("clangd", "darwin", "arm64"), true)
+  assert.equal(lspInstallable("clangd", "linux", "arm64"), false)
+  assert.equal(lspInstallable("rustAnalyzer", "win32", "x64"), true)
+  assert.equal(lspInstallable("ccls", "darwin", "arm64"), false)
+  assert.equal(lspInstallable("pylsp", "darwin", "arm64"), false)
+  assert.equal(lspInstallable("basedpyright", "darwin", "arm64"), false)
+})
 test("selects only matching official release assets for supported systems", () => {
   assert.equal(installAsset("clangd", "freebsd", "x64"), null)
   assert.equal(installAsset("clangd", "linux", "arm64"), null)

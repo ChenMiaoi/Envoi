@@ -309,6 +309,29 @@ export function ExtensionsSettings({ scope }: { scope: "global" | "project" }) {
     }
   }
 
+  async function installLspFor(language: string) {
+    setInstalling((previous) => ({ ...previous, [language]: true }))
+    try {
+      const result = await envoi().installLsp(language)
+      const servers = { ...preferences.lspServers, [language]: result.id }
+      if (language === "cpp") servers.c = result.id
+      update({
+        lspServers: servers,
+        lspPaths: { ...preferences.lspPaths, [result.id]: result.path },
+      })
+      setVerified((previous) => ({
+        ...previous,
+        [result.id]: { path: result.path, version: result.version },
+      }))
+      setManualError((previous) => ({ ...previous, [language]: "" }))
+      void load(true)
+    } catch (cause) {
+      setManualError((previous) => ({ ...previous, [language]: (cause as Error).message }))
+    } finally {
+      setInstalling((previous) => ({ ...previous, [language]: false }))
+    }
+  }
+
   function setEnabled(id: string, enabled: boolean) {
     if (scope === "project" && root) {
       update({
@@ -743,6 +766,23 @@ export function ExtensionsSettings({ scope }: { scope: "global" | "project" }) {
                               <StatusPill state="off" label={t("extensions.notFound")} />
                             </span>
                           )}
+                          {!selected &&
+                            candidates
+                              .filter((tool) => tool.languages?.includes(language))
+                              .some((tool) => tool.installable) && (
+                              <button
+                                type="button"
+                                disabled={!!installing[language]}
+                                aria-busy={!!installing[language]}
+                                className="inline-flex shrink-0 items-center gap-1 rounded-md border border-primary/40 px-2 py-1 text-[11px] text-primary transition-colors hover:bg-primary/10 disabled:opacity-60"
+                                onClick={() => void installLspFor(language)}
+                              >
+                                {installing[language] && (
+                                  <Loader2 aria-hidden className="size-3 animate-spin" />
+                                )}
+                                {t("extensions.installAction")}
+                              </button>
+                            )}
                           <button
                             type="button"
                             className="shrink-0 rounded-md border border-border/70 px-2 py-1 text-[11px] text-muted-foreground transition-colors hover:border-primary/40 hover:text-primary"

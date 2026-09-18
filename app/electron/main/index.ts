@@ -39,7 +39,7 @@ import { BackendHost } from "./backend-host"
 import { atomicProjectWrite, saveProjectFiles } from "./file-service.mjs"
 import { copyIntoProject } from "./file-transfer.mjs"
 import { LspService, lspLanguage } from "./lsp-service.mjs"
-import { installLanguageServer, installedServer } from "./lsp-installer.mjs"
+import { installLanguageServer, installedServer, lspInstallable } from "./lsp-installer.mjs"
 import { installedTool, installTool, toolInstallPlan } from "./tool-installer.mjs"
 import { runLanguageTool } from "./language-tools.mjs"
 
@@ -661,7 +661,10 @@ function registerIpc(): void {
         const installed = await installedTool(managedToolsDirectory(), row.id)
         if (installed) mergeInstalled(row, installed)
         Object.assign(row, {
-          installable: !!toolInstallPlan(row.id, { brew: !!brew, rustup: !!rustup }),
+          installable:
+            (row as { kind?: string }).kind === "lsp"
+              ? lspInstallable(row.id)
+              : !!toolInstallPlan(row.id, { brew: !!brew, rustup: !!rustup }),
         })
       }
     for (const language of ["cpp", "python", "rust"]) {
@@ -673,7 +676,7 @@ function registerIpc(): void {
     return info
   })
   handle("envoi:install-lsp", async (event, language: string) => {
-    if (!activeRoots.has(event.sender.id)) throw Error("Project is not active")
+    await requireToolContext(event)
     const installed = await installLanguageServer(managedLspDirectory(), language)
     if (!installed) throw Error("Language server installation failed")
     return { id: installed.id, path: installed.path, version: installed.version }

@@ -74,6 +74,12 @@ async function release(id) {
   }
 }
 
+// 是否有针对当前平台的官方可验证安装来源（Pyright 基于 Node，全平台可用）。
+export function lspInstallable(id, platform = process.platform, arch = process.arch) {
+  if (id === "pyright") return true
+  return (id === "clangd" || id === "rustAnalyzer") && !!installAsset(id, platform, arch)
+}
+
 async function extract(archive, directory, id, format) {
   if (format === "zip") await unzip(archive, directory)
   else if (format === "tar")
