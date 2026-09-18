@@ -23,13 +23,14 @@ export function ProjectPdfPreview({
     null,
   )
   const [diskSync, setDiskSync] = useState<Uint8Array | null>(null)
+  const diskSyncFile = project.files.find((file) => file.path === "build/main.synctex.gz")?.file
   // 重新打开的项目没有内存态编译结果，从磁盘 build/main.synctex.gz 恢复映射。
   useEffect(() => {
     let live = true
     void (async () => {
       let bytes: Uint8Array | null = null
       try {
-        const file = project.files.find((f) => f.path === "build/main.synctex.gz")?.file
+        const file = diskSyncFile
         if (file) bytes = new Uint8Array(await file.arrayBuffer())
       } catch {
         /* 缺失或不可读时退化为无映射。 */
@@ -39,15 +40,21 @@ export function ProjectPdfPreview({
     return () => {
       live = false
     }
-  }, [project])
+  }, [diskSyncFile])
   useEffect(() => {
     let live = true
-    if (active)
-      void verifyPreview(project, active).then((ok) => {
-        if (live) setVerification({ project, ok })
-      })
+    const timer = setTimeout(
+      () => {
+        if (active)
+          void verifyPreview(project, active).then((ok) => {
+            if (live) setVerification({ project, ok })
+          })
+      },
+      active?.id === "compiled" ? 0 : 150,
+    )
     return () => {
       live = false
+      clearTimeout(timer)
     }
   }, [project, active])
   const syncReady = !active ? false : verification?.project === project ? verification.ok : null

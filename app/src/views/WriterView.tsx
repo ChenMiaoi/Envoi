@@ -83,7 +83,7 @@ export function WriterView({
     return () => window.removeEventListener("envoi:save", save, true)
   }, [location.pathname, active?.path, trusted])
 
-  useEditorLint(active?.id, active?.path, source)
+  useEditorLint(location.pathname === "/writer" ? active?.id : undefined, active?.path, source)
   const setSource = (text: string) => {
     if (active && !busy) edit(active.id, text)
   }

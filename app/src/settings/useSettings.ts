@@ -1,3 +1,4 @@
+import { useMemo } from "react"
 import { useProject } from "@/project/context"
 import { usePreferences } from "./context"
 import { effectivePreferences, projectConfiguration, type ProjectConfiguration } from "./model"
@@ -5,11 +6,29 @@ import { saveProjectConfiguration } from "./projectSettings"
 import { projectConfigPath, legacyProjectConfigPath } from "@/lib/managementDir"
 import { translate } from "@/i18n/runtime"
 export function useSettings() {
-  const { project, setProject, setMessage, busy, setBusy } = useProject()
+  const { settings, engine, getProject, setProject, setMessage, busy, setBusy } = useProject(
+    (state) => ({
+      settings: state.project.settings,
+      engine: state.project.engine,
+      getProject: state.getProject,
+      setProject: state.setProject,
+      setMessage: state.setMessage,
+      busy: state.busy,
+      setBusy: state.setBusy,
+    }),
+  )
   const { preferences } = usePreferences()
-  const configuration = projectConfiguration(project.settings, project.engine)
-  const save = async (overrides: ProjectConfiguration["overrides"], rootId = project.rootId) => {
+  const configuration = useMemo(() => projectConfiguration(settings, engine), [settings, engine])
+  const effective = useMemo(
+    () => effectivePreferences(preferences, configuration),
+    [preferences, configuration],
+  )
+  const save = async (
+    overrides: ProjectConfiguration["overrides"],
+    rootId = getProject().rootId,
+  ) => {
     if (busy) return
+    const project = getProject()
     const id = project.id
     setBusy(true)
     try {
@@ -47,5 +66,5 @@ export function useSettings() {
       setBusy(false)
     }
   }
-  return { effective: effectivePreferences(preferences, configuration), configuration, save }
+  return { effective, configuration, save }
 }

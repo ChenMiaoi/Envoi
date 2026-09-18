@@ -17,7 +17,11 @@ import { useProject } from "./context"
 
 export function WelcomePage() {
   const { t } = useT(),
-    { busy, saving, setMessage } = useProject()
+    { busy, saving, setMessage } = useProject((state) => ({
+      busy: state.busy,
+      saving: state.saving,
+      setMessage: state.setMessage,
+    }))
   const [recent, setRecent] = useState<RecentProject[]>([]),
     [loading, setLoading] = useState(true),
     [removing, setRemoving] = useState<string>()

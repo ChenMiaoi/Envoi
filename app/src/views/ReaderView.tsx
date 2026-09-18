@@ -1,3 +1,4 @@
+import { sameFileNavigation } from "@/lib/projectPerformance"
 import { usePreferences } from "@/settings/context"
 import { useEffect, useMemo, useState } from "react"
 import {
@@ -107,9 +108,10 @@ export function ReaderView({
     setCodeJump(codeTarget)
   }
   const { t } = useT()
+  const navigationFiles = useProject((state) => state.project.files, sameFileNavigation)
   const fileTree = useMemo(
-    () => projectTree(project.files, project.directories),
-    [project.files, project.directories],
+    () => projectTree(navigationFiles, project.directories),
+    [navigationFiles, project.directories],
   )
   const fileContents = Object.fromEntries(project.files.map((file) => [file.id, file.text]))
   const activeData = [...project.files, ...libraryFiles].find((file) => file.id === activeId)

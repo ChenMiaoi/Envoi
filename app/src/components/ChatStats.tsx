@@ -5,6 +5,8 @@ import { summarizeChatMetrics } from "@/lib/chatStats.mjs"
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover"
 import { useT } from "@/i18n/useT"
 
+const tokenFormat = new Intl.NumberFormat("en", { notation: "compact", maximumFractionDigits: 1 })
+
 export function ChatStats({ record, busy }: { record: AgentRecord | null; busy: boolean }) {
   const { t } = useT()
   const [open, setOpen] = useState(false)
@@ -17,7 +19,7 @@ export function ChatStats({ record, busy }: { record: AgentRecord | null; busy: 
   }, [open, busy])
   const assistants = record?.messages.filter((m) => m.role === "assistant") ?? []
   const selected = scope === "turn" ? assistants.slice(-1) : assistants
-  const metrics = selected.flatMap((m) =>
+  const metrics = (open ? selected : []).flatMap((m) =>
     m.metrics
       ? [
           !busy && !m.metrics.endedAt
@@ -38,10 +40,7 @@ export function ChatStats({ record, busy }: { record: AgentRecord | null; busy: 
       : ms < 60000
         ? `${(ms / 1000).toFixed(1)}s`
         : `${Math.floor(ms / 60000)}m ${Math.floor((ms % 60000) / 1000)}s`
-  const tokens = (n: number | null) =>
-    n == null
-      ? missing
-      : new Intl.NumberFormat("en", { notation: "compact", maximumFractionDigits: 1 }).format(n)
+  const tokens = (n: number | null) => (n == null ? missing : tokenFormat.format(n))
   const rows = [
     [t("chat.statsTurns"), String(selected.length)],
     [t("chat.statsCalls"), metrics.length ? String(stats.calls) : missing],

@@ -137,9 +137,11 @@ export function CompileControls({ hasPdf = false }: { hasPdf?: boolean }) {
               },
         )
       } finally {
+        // Subscribers can react synchronously to the idle state. Release the
+        // request first so a queued save cannot be consumed by the busy guard.
+        request.current = null
         setBusy(false)
         setRunning(false)
-        request.current = null
       }
     },
     [busy, saving, getProject, setProject, setBusy, saveAll, engine, trusted],

@@ -16,7 +16,11 @@ import {
 } from "@/components/ui/dialog"
 export function GitStatusPanel() {
   const { t } = useT()
-  const { project } = useProject()
+  const project = useProject((state) => ({
+    rootPath: state.project.rootPath,
+    name: state.project.name,
+    dirty: dirtyFiles(state.project).length > 0,
+  }))
   const trusted = useProjectTrust(project.rootPath)?.trusted
   const [open, setOpen] = useState(false)
   const { status, message, busy, refresh } = useGitStatus()
@@ -38,8 +42,7 @@ export function GitStatusPanel() {
         : busy
           ? t("git.detecting")
           : t("git.notConnected")
-  const shown =
-    message || (dirtyFiles(project).length ? t("git.diskOnly") : busy ? t("git.detecting") : "")
+  const shown = message || (project.dirty ? t("git.diskOnly") : busy ? t("git.detecting") : "")
   if (!trusted) return null
   return (
     <>

@@ -155,7 +155,7 @@ const toolGroupLabels: Record<ToolGroupId, MessageKey> = {
 const chktexOf = (tools: Tools) => tools.groups?.latex?.find((tool) => tool.id === "chktex")
 function LocalTools() {
   const { t } = useT()
-  const rootPath = useProject().project.rootPath
+  const rootPath = useProject((state) => state.project.rootPath)
   const [tools, setTools] = useState<Tools | null>(null),
     [path, setPath] = useState(""),
     [busy, setBusy] = useState(false)

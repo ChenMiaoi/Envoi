@@ -113,15 +113,17 @@ export function isWritingPath(path: string) {
 }
 export function projectTree(files: ProjectFile[], directories: string[] = []): FileNode[] {
   const roots: FileNode[] = []
+  const folders = new Map<string, FileNode>()
   function folder(parts: string[]) {
     let nodes = roots,
       path = ""
     for (const part of parts) {
       path += (path ? "/" : "") + part
-      let node = nodes.find((item) => item.id === path)
+      let node = folders.get(path)
       if (!node) {
         node = { id: path, name: part, kind: "folder", children: [] }
         nodes.push(node)
+        folders.set(path, node)
       }
       nodes = node.children!
     }
@@ -131,7 +133,7 @@ export function projectTree(files: ProjectFile[], directories: string[] = []): F
   for (const file of files.filter((file) => isWritingPath(file.path))) {
     const parts = file.path.split("/")
     const name = parts.pop()!
-    folder(parts).push({ id: file.id, name, kind: file.kind })
+    folder(parts).push({ id: file.id, name, path: file.path, kind: file.kind })
   }
   return roots
 }

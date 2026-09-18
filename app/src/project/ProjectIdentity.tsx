@@ -6,7 +6,7 @@ import { nativeGet } from "@/lib/localData"
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
 export function ProjectIdentity() {
   const { t } = useT()
-  const { project } = useProject(),
+  const project = useProject((state) => ({ id: state.project.id, name: state.project.name })),
     [location, setLocation] = useState<{ id: string; path: string } | null>(null)
   const empty = project.id === "empty",
     name = empty ? t("project.notOpened") : project.name,

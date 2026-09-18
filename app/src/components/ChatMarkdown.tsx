@@ -1,3 +1,4 @@
+import { memo } from "react"
 import { MarkdownCodeBlock } from "./MarkdownCodeBlock"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
@@ -9,7 +10,7 @@ import "./chat-markdown.css"
 import { rehypeCallouts } from "@/lib/rehypeCallouts"
 import { useT } from "@/i18n/useT"
 
-export function ChatMarkdown({
+export const ChatMarkdown = memo(function ChatMarkdown({
   text,
   onSource,
 }: {
@@ -70,4 +71,4 @@ export function ChatMarkdown({
       </ReactMarkdown>
     </div>
   )
-}
+})

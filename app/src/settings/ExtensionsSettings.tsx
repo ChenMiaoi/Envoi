@@ -98,7 +98,7 @@ function SectionTitle({
 
 export function ExtensionsSettings({ scope }: { scope: "global" | "project" }) {
   const { t } = useT()
-  const { project } = useProject()
+  const project = useProject((state) => ({ rootPath: state.project.rootPath }))
   const { preferences, update } = usePreferences()
   const [tools, setTools] = useState<ToolInfo | null>(null)
   const [error, setError] = useState("")

@@ -25,13 +25,27 @@ async function bytes(file: { text?: string; url?: string; file?: File }) {
   }
   throw Error(translate("preview.missingFile"))
 }
+// Immutable File/ProjectFile objects retain their digest across editor updates.
+// URL-only resources can change outside React, so always re-read those.
+const inputDigests = new WeakMap<object, Promise<string>>()
+async function inputDigest(file: { text?: string; url?: string; file?: File }) {
+  const key = file.text !== undefined ? file : file.file
+  if (!key) return digest(await bytes(file))
+  let pending = inputDigests.get(key)
+  if (!pending) {
+    pending = bytes(file).then(digest)
+    inputDigests.set(key, pending)
+    void pending.catch(() => inputDigests.delete(key))
+  }
+  return pending
+}
 export async function previewManifest(project: PaperProject, pdf: File): Promise<PreviewManifest> {
   const files: Record<string, string> = {}
   for (const file of project.files.filter((f) => snapshotInput(f.path)))
-    files[file.path] = await digest(await bytes(file))
+    files[file.path] = await inputDigest(file)
   return {
     main: project.files.find((f) => f.id === project.rootId)!.path,
-    pdfSha256: await digest(new Uint8Array(await pdf.arrayBuffer())),
+    pdfSha256: await inputDigest({ file: pdf }),
     files,
   }
 }
@@ -49,8 +63,8 @@ export async function verifyPreview(
     const inputs = project.files.filter((f) => snapshotInput(f.path))
     if (inputs.length !== Object.keys(manifest.files).length) return false
     for (const file of inputs)
-      if ((await digest(await bytes(file))) !== manifest.files[file.path]) return false
-    return (await digest(await bytes(pdf))) === manifest.pdfSha256
+      if ((await inputDigest(file)) !== manifest.files[file.path]) return false
+    return (await inputDigest(pdf)) === manifest.pdfSha256
   } catch {
     return false
   }

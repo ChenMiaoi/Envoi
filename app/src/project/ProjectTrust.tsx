@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dialog"
 
 export function ProjectTrust() {
-  const { project } = useProject()
+  const project = useProject((state) => ({ rootPath: state.project.rootPath }))
   const root = project.rootPath
   const state = useProjectTrust(root)
   const { t } = useT()

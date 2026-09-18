@@ -25,6 +25,7 @@ const tests = [
       "scripts/test-updates.mjs",
     ],
   ],
+  ["component performance", ["scripts/test-performance-ui.mjs"]],
   ["numeric settings", ["scripts/test-number-settings.mjs"]],
   ["paper search settings", ["scripts/test-paper-search-settings-ui.mjs"]],
   ["update settings", ["scripts/test-settings-display.mjs"]],
@@ -47,6 +48,7 @@ const tests = [
 ]
 
 const quickTests = new Set([
+  "component performance",
   "node:test fixtures",
   "numeric settings",
   "Git tree",

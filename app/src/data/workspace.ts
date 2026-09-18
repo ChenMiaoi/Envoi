@@ -4,6 +4,7 @@ export type FileKind =
 export interface FileNode {
   id: string
   name: string
+  path?: string
   kind: FileKind
   children?: FileNode[]
 }

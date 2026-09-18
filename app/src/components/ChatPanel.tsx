@@ -32,7 +32,7 @@ export function ChatPanel({
   inputOnly?: boolean
   context?: ChatContext
 }) {
-  const { project } = useProject()
+  const project = useProject((state) => ({ rootPath: state.project.rootPath }))
   const trusted = useProjectTrust(project.rootPath)?.trusted
   const projectAgent = useAgent()
   const agent = { ...projectAgent, ...conversation }

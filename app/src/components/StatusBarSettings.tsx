@@ -40,8 +40,18 @@ function Choice({
 
 export function AiStatusControl() {
   const { t } = useT()
-  const agent = useAgent()
-  const { project, setProject, busy } = useProject()
+  const agent = useAgent((state) => ({
+    status: state.status,
+    config: state.config,
+    busy: state.busy,
+    refresh: state.refresh,
+  }))
+  const { projectId, getProject, setProject, busy } = useProject((state) => ({
+    projectId: state.project.id,
+    getProject: state.getProject,
+    setProject: state.setProject,
+    busy: state.busy,
+  }))
   const [open, setOpen] = useState(false)
   const [status, setStatus] = useState<AgentStatus | null>(null)
   const [saving, setSaving] = useState(false)
@@ -53,6 +63,7 @@ export function AiStatusControl() {
 
   async function save(patch: Partial<AiConfig>, inherit = false) {
     if (saving || busy || agent.busy) return
+    const project = getProject()
     setSaving(true)
     setError("")
     try {
@@ -138,7 +149,7 @@ export function AiStatusControl() {
       <PopoverContent side="top" sideOffset={10} className="w-72 p-2">
         <p className="px-2.5 py-1 text-xs font-medium">{t("common.selectModel")}</p>
         <div className="max-h-56 overflow-y-auto">
-          {project.id !== "empty" && (
+          {projectId !== "empty" && (
             <Choice
               label={t("settings.ai.modelInherited")}
               disabled={saving || busy || agent.busy}
@@ -199,7 +210,7 @@ interface LspTool {
 
 export function LspStatusControl({ status, path }: { status: LspStatus; path: string }) {
   const { t } = useT()
-  const { project } = useProject()
+  const project = useProject((state) => ({ rootPath: state.project.rootPath }))
   const { preferences, update } = usePreferences()
   const [open, setOpen] = useState(false)
   const [tools, setTools] = useState<LspTool[]>([])
@@ -296,11 +307,14 @@ export function LspStatusControl({ status, path }: { status: LspStatus; path: st
 
 export function CompileStatusControl() {
   const { t } = useT()
-  const { project, busy } = useProject()
+  const { projectId, busy } = useProject((state) => ({
+    projectId: state.project.id,
+    busy: state.busy,
+  }))
   const { preferences, update } = usePreferences()
   const { effective, configuration, save } = useSettings()
   const [open, setOpen] = useState(false)
-  const projectOpen = project.id !== "empty"
+  const projectOpen = projectId !== "empty"
   const choose = (engine?: Engine) => {
     if (projectOpen) void save({ ...configuration.overrides, engine })
     else if (engine) update({ engine })

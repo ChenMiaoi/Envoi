@@ -1,7 +1,7 @@
 import { useT } from "@/i18n/useT"
 import { Tooltip, TooltipTrigger, TooltipContent } from "./ui/tooltip"
 import { ModelCatalogInfo } from "./ModelCatalogInfo"
-import { useState, useEffect, useRef, type ReactNode } from "react"
+import { memo, useState, useEffect, useRef, type ReactNode } from "react"
 import { Link } from "react-router"
 import { Check, ChevronDown, Settings2, Building2 } from "lucide-react"
 import { useAgent } from "@/agent/context"
@@ -14,7 +14,7 @@ import { projectConfigPath, legacyProjectConfigPath } from "@/lib/managementDir"
 import { projectConfiguration } from "@/settings/model"
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover"
 
-export function PiModelMenu() {
+export const PiModelMenu = memo(function PiModelMenu() {
   const { t } = useT()
   const levels: Record<string, string> = {
     off: t("common.disabled"),
@@ -25,7 +25,13 @@ export function PiModelMenu() {
     xhigh: t("ai.thinkingXhigh"),
   }
 
-  const agent = useAgent()
+  const agent = useAgent((state) => ({
+    status: state.status,
+    config: state.config,
+    busy: state.busy,
+    ready: state.ready,
+    refresh: state.refresh,
+  }))
   const providerButton = useRef<HTMLButtonElement>(null),
     providerMeasure = useRef<HTMLSpanElement>(null),
     modelMeasure = useRef<HTMLSpanElement>(null),
@@ -49,7 +55,11 @@ export function PiModelMenu() {
     return () => observer.disconnect()
   }, [agent.status, agent.config?.provider, agent.config?.model])
   const [configuring, setConfiguring] = useState<string | null>(null)
-  const { project, setProject, busy } = useProject()
+  const { getProject, setProject, busy } = useProject((state) => ({
+    getProject: state.getProject,
+    setProject: state.setProject,
+    busy: state.busy,
+  }))
   const [open, setOpen] = useState("")
   const [catalogLoading, setCatalogLoading] = useState(false)
   const requested = useRef(""),
@@ -100,6 +110,7 @@ export function PiModelMenu() {
   ])
 
   async function save(patch: Partial<AiConfig>, next = "") {
+    const project = getProject()
     if (disabled || !project.rootPath) return
     setSaving(true)
     setError("")
@@ -358,4 +369,4 @@ export function PiModelMenu() {
       )}
     </>
   )
-}
+})

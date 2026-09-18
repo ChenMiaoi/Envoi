@@ -1,7 +1,6 @@
 import { useGitStatus } from "@/project/gitStatusContext"
-import { useProject } from "@/project/context"
 import { gitDecoration } from "@/lib/gitDecoration"
-import { useState } from "react"
+import { createContext, useContext, useMemo, useState } from "react"
 import {
   ChevronDown,
   ChevronRight,
@@ -43,6 +42,11 @@ const kindColor: Record<string, string> = {
   image: "text-[hsl(var(--hue-violet))]",
 }
 
+const TreeChanges = createContext<{
+  files: Map<string, ReturnType<typeof gitDecoration>>
+  folders: Set<string>
+}>({ files: new Map(), folders: new Set() })
+
 function TreeItem({
   node,
   depth,
@@ -67,19 +71,10 @@ function TreeItem({
   const Icon = isFolder ? (open ? FolderOpen : Folder) : (kindIcon[node.kind] ?? FileText)
   const iconUrl = !isFolder ? fileIconUrl(node.name) : undefined
   const active = node.id === activeId
-  const { status } = useGitStatus()
-  const { project } = useProject()
-  const path = isFolder ? node.id : project.files.find((file) => file.id === node.id)?.path
-  const change = status?.files.find((file) => file.path === path)
-  const decoration = !isFolder && change ? gitDecoration(change) : undefined
-  const changedFolder =
-    isFolder &&
-    status?.files.some(
-      (file) =>
-        node.id === "project-root" ||
-        file.path.startsWith(node.id + "/") ||
-        file.originalPath?.startsWith(node.id + "/"),
-    )
+  const changes = useContext(TreeChanges)
+  const path = node.path ?? node.id
+  const decoration = !isFolder ? changes.files.get(path) : undefined
+  const changedFolder = isFolder && changes.folders.has(node.id)
 
   const row = (
     <button
@@ -236,24 +231,31 @@ export function FileTree({
   onPaste?: (node: FileNode) => void
 }) {
   const { t } = useT()
+  const { status } = useGitStatus()
+  const changes = useMemo(() => {
+    const files = new Map<string, ReturnType<typeof gitDecoration>>()
+    const folders = new Set<string>()
+    for (const file of status?.files ?? []) {
+      files.set(file.path, gitDecoration(file))
+      folders.add("project-root")
+      for (const path of [file.path, file.originalPath]) {
+        if (!path) continue
+        let end = path.lastIndexOf("/")
+        while (end > 0) {
+          folders.add(path.slice(0, end))
+          end = path.lastIndexOf("/", end - 1)
+        }
+      }
+    }
+    return { files, folders }
+  }, [status])
   return (
-    <div className="envoi-scrollbar h-full overflow-y-auto px-1.5 py-2">
-      {rootName ? (
-        <TreeItem
-          key={rootName}
-          node={{ id: "project-root", name: rootName, kind: "folder", children: nodes }}
-          depth={0}
-          activeId={activeId}
-          onOpen={onOpen}
-          onMenu={onMenu}
-          onImport={onImport}
-          onPaste={onPaste}
-        />
-      ) : nodes.length ? (
-        nodes.map((n) => (
+    <TreeChanges.Provider value={changes}>
+      <div className="envoi-scrollbar h-full overflow-y-auto px-1.5 py-2">
+        {rootName ? (
           <TreeItem
-            key={n.id}
-            node={n}
+            key={rootName}
+            node={{ id: "project-root", name: rootName, kind: "folder", children: nodes }}
             depth={0}
             activeId={activeId}
             onOpen={onOpen}
@@ -261,10 +263,23 @@ export function FileTree({
             onImport={onImport}
             onPaste={onPaste}
           />
-        ))
-      ) : (
-        <p className="px-3 py-2 text-xs text-muted-foreground">{t("project.notOpen")}</p>
-      )}
-    </div>
+        ) : nodes.length ? (
+          nodes.map((n) => (
+            <TreeItem
+              key={n.id}
+              node={n}
+              depth={0}
+              activeId={activeId}
+              onOpen={onOpen}
+              onMenu={onMenu}
+              onImport={onImport}
+              onPaste={onPaste}
+            />
+          ))
+        ) : (
+          <p className="px-3 py-2 text-xs text-muted-foreground">{t("project.notOpen")}</p>
+        )}
+      </div>
+    </TreeChanges.Provider>
   )
 }

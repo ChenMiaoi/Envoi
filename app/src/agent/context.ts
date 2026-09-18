@@ -1,3 +1,4 @@
+import { useStoreSelection, type SelectorStore } from "@/lib/selectorStore"
 import { createContext, useContext } from "react"
 import type { AgentStatus, AgentRecord, AiConfig } from "@/lib/agentClient"
 export interface AgentState {
@@ -17,9 +18,12 @@ export interface AgentState {
   stop: () => void
   remove: (id: string) => Promise<void>
 }
-export const AgentContext = createContext<AgentState | null>(null)
-export function useAgent() {
-  const value = useContext(AgentContext)
-  if (!value) throw Error("Agent provider missing")
-  return value
+export const AgentContext = createContext<SelectorStore<AgentState> | null>(null)
+const identity = (state: AgentState) => state
+export function useAgent<S = AgentState>(
+  select: (state: AgentState) => S = identity as (state: AgentState) => S,
+) {
+  const store = useContext(AgentContext)
+  if (!store) throw Error("Agent provider missing")
+  return useStoreSelection(store, select)
 }

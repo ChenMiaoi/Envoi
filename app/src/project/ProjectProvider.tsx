@@ -5,7 +5,8 @@ import { initialProject, emptyProject } from "@/lib/initialProject"
 import { envoi } from "@/lib/desktop"
 import { readProject, mergeDiskProject, dirtyFiles, type PaperProject } from "@/lib/projectFiles"
 import { restoreSession, saveSession, closeProjectSession } from "@/lib/projectSession"
-import { ProjectContext } from "./context"
+import { useProvidedStore } from "@/lib/selectorStore"
+import { ProjectContext, type ProjectState } from "./context"
 import { useT } from "@/i18n/useT"
 import { usePreferences } from "@/settings/context"
 import { pluginEnabled } from "@/settings/model"
@@ -51,7 +52,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   const setAgentBusy = useCallback((id: string, value: boolean) => {
     if (value) agentWriting.current.add(id)
     else agentWriting.current.delete(id)
-    setAgentWrites((current) => ({ ...current, [id]: value }))
+    setAgentWrites((current) => (current[id] === value ? current : { ...current, [id]: value }))
   }, [])
   const projectBusy = busy || !!agentWrites[project.id]
   useEffect(() => {
@@ -212,7 +213,11 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   )
   useEffect(() => {
     const save = (event: Event) => {
-      if (!event.defaultPrevented) void saveAll()
+      // Window-targeted custom events can reach this fallback before a view's
+      // handler. Let every handler claim the event before starting a plain save.
+      queueMicrotask(() => {
+        if (!event.defaultPrevented) void saveAll()
+      })
     }
     window.addEventListener("envoi:save", save)
     return () => window.removeEventListener("envoi:save", save)
@@ -246,14 +251,43 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   }, [project, restored, t])
   useEffect(() => {
     const beforeUnload = (event: BeforeUnloadEvent) => {
-      if (dirtyFiles(project).length) {
+      if (dirtyFiles(latest.current).length) {
         event.preventDefault()
         event.returnValue = ""
       }
     }
     window.addEventListener("beforeunload", beforeUnload)
     return () => window.removeEventListener("beforeunload", beforeUnload)
-  }, [project])
+  }, [])
+  const getProject = useCallback(() => latest.current, [])
+  const edit = useCallback(
+    (id: string, text: string) => {
+      setProject((current) => {
+        const index = current.files.findIndex((file) => file.id === id)
+        if (index < 0 || current.files[index].text === text) return current
+        const files = current.files.slice()
+        files[index] = { ...files[index], text }
+        return { ...current, files }
+      })
+    },
+    [setProject],
+  )
+  const store = useProvidedStore<ProjectState>({
+    getProject,
+    closeProject,
+    saveAll,
+    saving,
+    message,
+    setMessage,
+    project,
+    setProject,
+    busy: projectBusy,
+    agentWriting: Object.values(agentWrites).some(Boolean),
+    navigationBusy: busy,
+    setAgentBusy,
+    setBusy,
+    edit,
+  })
   if (!restored)
     return (
       <div className="flex h-screen items-center justify-center bg-background text-sm text-muted-foreground">
@@ -261,28 +295,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       </div>
     )
   return (
-    <ProjectContext.Provider
-      value={{
-        getProject: () => latest.current,
-        closeProject,
-        saveAll,
-        saving,
-        message,
-        setMessage,
-        project,
-        setProject,
-        busy: projectBusy,
-        agentWriting: Object.values(agentWrites).some(Boolean),
-        navigationBusy: busy,
-        setAgentBusy,
-        setBusy,
-        edit: (id, text) =>
-          setProject((current) => ({
-            ...current,
-            files: current.files.map((file) => (file.id === id ? { ...file, text } : file)),
-          })),
-      }}
-    >
+    <ProjectContext.Provider value={store}>
       {recoverable && (
         <div className="fixed bottom-9 right-3 z-50 flex max-w-lg items-center justify-between gap-3 rounded-lg border border-border bg-card px-4 py-2 text-xs text-muted-foreground shadow-lg">
           <span>{t("project.recoverableFound")}</span>

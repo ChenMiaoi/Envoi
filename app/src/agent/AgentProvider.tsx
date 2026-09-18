@@ -1,8 +1,10 @@
+import { createEventBatch } from "@/lib/eventBatch"
 import { appendChatEvent } from "@/lib/chatActivity.mjs"
 import { useProjectTrust } from "@/project/useProjectTrust"
 import { translate } from "@/i18n/runtime"
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
-import { AgentContext } from "./context"
+import { useProvidedStore } from "@/lib/selectorStore"
+import { AgentContext, type AgentState } from "./context"
 import {
   agentStatus,
   agentRequest,
@@ -34,11 +36,27 @@ const blank: ScopeState = {
   config: null,
 }
 export function AgentProvider({ children }: { children: ReactNode }) {
-  const { project, setProject, setAgentBusy, saveAll, busy: projectBusy } = useProject(),
+  const {
+      id,
+      rootPath,
+      setProject,
+      setAgentBusy,
+      saveAll,
+      getProject,
+      busy: projectBusy,
+    } = useProject((state) => ({
+      id: state.project.id,
+      rootPath: state.project.rootPath,
+      setProject: state.setProject,
+      setAgentBusy: state.setAgentBusy,
+      saveAll: state.saveAll,
+      getProject: state.getProject,
+      busy: state.busy,
+    })),
     [status, setStatus] = useState<AgentStatus | null>(null),
     [scopes, setScopes] = useState<Record<string, ScopeState>>({})
-  const trusted = useProjectTrust(project.rootPath)?.trusted
-  const scope = project.id,
+  const trusted = useProjectTrust(rootPath)?.trusted
+  const scope = id,
     current = scopes[scope] ?? blank,
     controllers = useRef(new Map<string, AbortController>()),
     navigation = useRef(new Set<string>()),
@@ -56,7 +74,7 @@ export function AgentProvider({ children }: { children: ReactNode }) {
   )
   const refresh = useCallback(async () => {
     const id = scope
-    if (project.rootPath && !trusted) {
+    if (rootPath && !trusted) {
       patch(id, { ...blank })
       return
     }
@@ -68,10 +86,10 @@ export function AgentProvider({ children }: { children: ReactNode }) {
         return
       }
       if (id !== "global") {
-        if (!project.rootPath) throw Error(translate("ai.projectNotConnected"))
-        const result = await bindProject(project.rootPath)
+        if (!rootPath) throw Error(translate("ai.projectNotConnected"))
+        const result = await bindProject(rootPath)
         if (result.project.id !== id) {
-          const fresh = await readProject(project.rootPath)
+          const fresh = await readProject(rootPath)
           setProject((current) => (current.id === id ? mergeDrafts(fresh, current) : current))
           return
         }
@@ -101,7 +119,7 @@ export function AgentProvider({ children }: { children: ReactNode }) {
           : (error as Error).message,
       })
     }
-  }, [scope, project.rootPath, setProject, patch, trusted])
+  }, [scope, rootPath, setProject, patch, trusted])
   useEffect(
     () => () => {
       for (const controller of controllers.current.values()) controller.abort()
@@ -158,6 +176,7 @@ export function AgentProvider({ children }: { children: ReactNode }) {
     }
   }
   const send = async (message: string, context?: string) => {
+    const project = getProject()
     const id = scope
     if (!current.ready || current.busy || controllers.current.has(id) || navigation.current.has(id))
       return
@@ -197,6 +216,21 @@ export function AgentProvider({ children }: { children: ReactNode }) {
         ],
       },
     }))
+    const updates = createEventBatch<Parameters<typeof appendChatEvent>[1]>((events) => {
+      patch(id, (state) => ({
+        ...state,
+        record: state.record
+          ? {
+              ...state.record,
+              messages: state.record.messages.map((item, index) =>
+                index === state.record!.messages.length - 1
+                  ? events.reduce((message, event) => appendChatEvent(message, event), item)
+                  : item,
+              ),
+            }
+          : null,
+      }))
+    })
     try {
       for await (const event of agentChat(message, {
         projectId: id,
@@ -218,19 +252,7 @@ export function AgentProvider({ children }: { children: ReactNode }) {
           event.type === "tool" ||
           event.type === "metrics"
         )
-          patch(id, (state) => ({
-            ...state,
-            record: state.record
-              ? {
-                  ...state.record,
-                  messages: state.record.messages.map((item, index) =>
-                    index === state.record!.messages.length - 1
-                      ? appendChatEvent(item, event)
-                      : item,
-                  ),
-                }
-              : null,
-          }))
+          updates.push(event)
         if (event.type === "error") throw Error(event.message)
       }
     } catch (error) {
@@ -238,6 +260,7 @@ export function AgentProvider({ children }: { children: ReactNode }) {
         error: controller.signal.aborted ? translate("ai.taskStopped") : (error as Error).message,
       })
     } finally {
+      updates.finish()
       navigation.current.add(id)
       controllers.current.delete(id)
       if (writes) setAgentBusy(id, false)
@@ -285,26 +308,25 @@ export function AgentProvider({ children }: { children: ReactNode }) {
       patch(scope, { error: (error as Error).message })
     }
   }
+  const store = useProvidedStore<AgentState>({
+    status,
+    scope,
+    record: current.record,
+    sessions: current.sessions,
+    busy: current.busy,
+    navigating,
+    error: current.error,
+    ready: current.ready,
+    config: current.config,
+    refresh,
+    select,
+    newSession,
+    send,
+    stop,
+    remove,
+  })
   return (
-    <AgentContext.Provider
-      value={{
-        status,
-        scope,
-        record: current.record,
-        sessions: current.sessions,
-        busy: current.busy,
-        navigating,
-        error: current.error,
-        ready: current.ready,
-        config: current.config,
-        refresh,
-        select,
-        newSession,
-        send,
-        stop,
-        remove,
-      }}
-    >
+    <AgentContext.Provider value={store}>
       {Object.entries(scopes)
         .filter(([id, state]) => id !== scope && state.busy)
         .map(([id, state]) => (

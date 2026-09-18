@@ -111,8 +111,8 @@ try {
   const open = async (root, prepareNavigation = true) => {
     const expected = await readFile(path.join(root, "main.tex"), "utf8")
     if (prepareNavigation) {
-      await page.evaluate(() => (location.hash = "/settings"))
-      await page.waitForFunction(() => location.hash === "#/settings")
+      await page.evaluate(() => (location.hash = "/settings/global/general"))
+      await page.waitForFunction(() => location.hash === "#/settings/global/general")
     }
     await page.evaluate(
       (root) => window.dispatchEvent(new CustomEvent("envoi:open-recent", { detail: root })),

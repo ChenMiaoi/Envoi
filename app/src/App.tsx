@@ -29,6 +29,7 @@ import type { ProjectFile } from "@/lib/projectFiles"
 import { ProjectProvider } from "@/project/ProjectProvider"
 import { ProjectMenu } from "@/project/ProjectMenu"
 import { useProject } from "@/project/context"
+import { sameFileNavigation } from "@/lib/projectPerformance"
 import { projectTree } from "@/lib/projectFiles"
 import { useLspStatus } from "@/lib/lspStatus"
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react"
@@ -106,7 +107,7 @@ export default function App() {
   )
 }
 function ProjectSession() {
-  const { project } = useProject(),
+  const project = useProject((state) => ({ id: state.project.id })),
     navigate = useNavigate(),
     previous = useRef<string | undefined>(undefined)
   useEffect(() => {
@@ -124,7 +125,19 @@ function ProjectApp() {
   const { t } = useT()
   const { effective } = useSettings()
   const lspStatus = useLspStatus()
-  const { project } = useProject()
+  const project = useProject(
+    (state) => ({
+      id: state.project.id,
+      rootPath: state.project.rootPath,
+      files: state.project.files,
+      directories: state.project.directories,
+    }),
+    (left, right) =>
+      left.id === right.id &&
+      left.rootPath === right.rootPath &&
+      left.directories === right.directories &&
+      sameFileNavigation(left.files, right.files),
+  )
   const trust = useProjectTrust(project.rootPath)
   const fileTree = useMemo(
     () => projectTree(project.files, project.directories),

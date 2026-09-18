@@ -52,7 +52,7 @@ function PaperWorkspace({
   onChanged: () => void
 }) {
   const { t } = useT()
-  const agent = useAgent()
+  const agent = useAgent((state) => ({ busy: state.busy }))
   const { project, edit: editProject } = useProject()
   const [detail, setDetail] = useState<PaperDetail>(),
     [file, setFile] = useState<File>(),
@@ -585,8 +585,7 @@ function PaperWorkspace({
 }
 export function LibraryView() {
   const { t } = useT()
-  const { project } = useProject()
-  const root = project.rootPath
+  const root = useProject((state) => state.project.rootPath)
   const location = useLocation()
   const [index, setIndex] = useState<LibraryIndex>(),
     [selected, setSelected] = useState(""),

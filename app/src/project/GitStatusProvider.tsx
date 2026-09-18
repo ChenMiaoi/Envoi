@@ -1,4 +1,5 @@
-import { useEffect, useState, useCallback, useRef, type ReactNode } from "react"
+import { sameSavedFiles } from "@/lib/projectPerformance"
+import { useEffect, useState, useMemo, useCallback, useRef, type ReactNode } from "react"
 import { useProject } from "./context"
 import { useProjectTrust } from "./useProjectTrust"
 import { GitStatusContext } from "./gitStatusContext"
@@ -6,8 +7,10 @@ import { localGitStatus, type GitStatus } from "@/lib/localGit"
 import { envoi } from "@/lib/desktop"
 
 export function GitStatusProvider({ children }: { children: ReactNode }) {
-  const { project } = useProject()
-  const root = project.rootPath
+  const { root, savedFiles } = useProject(
+    (state) => ({ root: state.project.rootPath, savedFiles: state.project.files }),
+    (left, right) => left.root === right.root && sameSavedFiles(left.savedFiles, right.savedFiles),
+  )
   const trusted = useProjectTrust(root)?.trusted
   const [result, setResult] = useState<{
     root?: string
@@ -38,7 +41,6 @@ export function GitStatusProvider({ children }: { children: ReactNode }) {
   const invalidate = useCallback(() => {
     generation.current++
   }, [])
-  const revision = JSON.stringify(project.files.map((file) => [file.path, file.saved]))
   useEffect(() => {
     if (!root || !trusted) return
     const timer = setTimeout(() => void refresh(), 150)
@@ -46,7 +48,7 @@ export function GitStatusProvider({ children }: { children: ReactNode }) {
       clearTimeout(timer)
       invalidate()
     }
-  }, [refresh, revision, root, trusted, invalidate])
+  }, [refresh, savedFiles, root, trusted, invalidate])
   useEffect(() => {
     if (!root || !trusted) return
     let timer: ReturnType<typeof setTimeout>
@@ -69,16 +71,14 @@ export function GitStatusProvider({ children }: { children: ReactNode }) {
     }
   }, [root, trusted, refresh])
   const visible = trusted && result.root === root
-  return (
-    <GitStatusContext.Provider
-      value={{
-        status: visible ? result.status : null,
-        message: visible ? result.message : "",
-        busy: !!trusted && busy,
-        refresh,
-      }}
-    >
-      {children}
-    </GitStatusContext.Provider>
+  const value = useMemo(
+    () => ({
+      status: visible ? result.status : null,
+      message: visible ? result.message : "",
+      busy: !!trusted && busy,
+      refresh,
+    }),
+    [visible, result, trusted, busy, refresh],
   )
+  return <GitStatusContext.Provider value={value}>{children}</GitStatusContext.Provider>
 }

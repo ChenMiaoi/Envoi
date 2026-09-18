@@ -8,10 +8,17 @@ import { useProject } from "./context"
 export function useEditorLint(fileId: string | undefined, path: string | undefined, text: string) {
   const { effective } = useSettings()
   const rules = JSON.stringify(effective.disabledRules)
-  const { project, setProject } = useProject()
-  const trusted = useProjectTrust(project.rootPath)?.trusted
+  const {
+    rootPath,
+    id: projectId,
+    setProject,
+  } = useProject((state) => ({
+    rootPath: state.project.rootPath,
+    id: state.project.id,
+    setProject: state.setProject,
+  }))
+  const trusted = useProjectTrust(rootPath)?.trusted
   const enabled = effective.lintEnabled && !!trusted
-  const projectId = project.id
   useEffect(() => {
     if (!fileId || !path?.endsWith(".tex")) return
     const controller = new AbortController()
@@ -40,7 +47,7 @@ export function useEditorLint(fileId: string | undefined, path: string | undefin
                 throw Error(translate("lint.serviceNotConnected"))
               })
             const result = await envoi()
-              .lint({ rootPath: project.rootPath, path, text, disabledRules: JSON.parse(rules) })
+              .lint({ rootPath: rootPath, path, text, disabledRules: JSON.parse(rules) })
               .catch((error) => {
                 throw ipcError(error)
               })
@@ -87,5 +94,5 @@ export function useEditorLint(fileId: string | undefined, path: string | undefin
       clearTimeout(timer)
       controller.abort()
     }
-  }, [fileId, path, text, project.rootPath, projectId, setProject, enabled, rules])
+  }, [fileId, path, text, rootPath, projectId, setProject, enabled, rules])
 }

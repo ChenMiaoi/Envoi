@@ -14,3 +14,5 @@ import "./library.test"
 import "./initialProject.test"
 
 import "./projectManagement.test"
+
+import "./performance.test"

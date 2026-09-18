@@ -1,3 +1,4 @@
+import { memo } from "react"
 import { useEffect, useState } from "react"
 import { Brain, Terminal, LoaderCircle, Check, CircleAlert } from "lucide-react"
 import type { AgentMessage, ChatPart } from "@/lib/agentClient"
@@ -5,7 +6,13 @@ import { appendChatEvent } from "@/lib/chatActivity.mjs"
 import { useT } from "@/i18n/useT"
 import { ChatMarkdown } from "./ChatMarkdown"
 
-export function ChatActivity({ message, active }: { message: AgentMessage; active: boolean }) {
+export const ChatActivity = memo(function ChatActivity({
+  message,
+  active,
+}: {
+  message: AgentMessage
+  active: boolean
+}) {
   const { t } = useT()
   const [now, setNow] = useState(() => Date.now())
   const [mounted] = useState(() => Date.now())
@@ -164,7 +171,7 @@ export function ChatActivity({ message, active }: { message: AgentMessage; activ
       )}
     </div>
   )
-}
+})
 
 function stepPreview(text: string) {
   try {

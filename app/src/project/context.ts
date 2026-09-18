@@ -1,4 +1,5 @@
 import { createContext, useContext } from "react"
+import { useStoreSelection, type SelectorStore } from "@/lib/selectorStore"
 import type { PaperProject } from "@/lib/projectFiles"
 export interface ProjectState {
   getProject: () => PaperProject
@@ -16,9 +17,13 @@ export interface ProjectState {
   setAgentBusy: (id: string, value: boolean) => void
   setBusy: (value: boolean) => void
 }
-export const ProjectContext = createContext<ProjectState | null>(null)
-export function useProject() {
-  const state = useContext(ProjectContext)
-  if (!state) throw new Error("Project provider missing")
-  return state
+export const ProjectContext = createContext<SelectorStore<ProjectState> | null>(null)
+const identity = (state: ProjectState) => state
+export function useProject<S = ProjectState>(
+  select: (state: ProjectState) => S = identity as (state: ProjectState) => S,
+  equal?: (left: S, right: S) => boolean,
+) {
+  const store = useContext(ProjectContext)
+  if (!store) throw new Error("Project provider missing")
+  return useStoreSelection(store, select, equal)
 }

@@ -185,7 +185,7 @@ export function GitHistoryView() {
   )
 }
 function CommitHistoryView({ directory, revision }: { directory: string; revision: number }) {
-  const { project: currentProject } = useProject()
+  const currentProject = useProject((state) => ({ id: state.project.id }))
   const project = { ...currentProject, rootPath: directory }
   const { t } = useT()
   const [log, setLog] = useState<GitLog | null>(null),
