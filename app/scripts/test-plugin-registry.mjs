@@ -1,6 +1,11 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { builtinPlugins, registerPlugins, pluginForLanguage } from "../server/plugin-registry.mjs"
+import {
+  builtinPlugins,
+  registerPlugins,
+  pluginForLanguage,
+  pluginLanguageForPath,
+} from "../server/plugin-registry.mjs"
 import { toolCatalog, lspServersByLanguage } from "../server/tool-registry.mjs"
 
 test("official language plugins preserve existing tools and fallback order", () => {
@@ -9,6 +14,11 @@ test("official language plugins preserve existing tools and fallback order", () 
     ["envoi.cpp", "envoi.python", "envoi.rust"],
   )
   assert.equal(pluginForLanguage("cpp")?.id, "envoi.cpp")
+  assert.equal(pluginLanguageForPath("main.cpp"), "cpp")
+  assert.equal(pluginLanguageForPath("include/Math.H"), "cpp")
+  assert.equal(pluginLanguageForPath("hello.py"), "python")
+  assert.equal(pluginLanguageForPath("main.rs"), "rust")
+  assert.equal(pluginLanguageForPath("notes.txt"), undefined)
   assert.equal(toolCatalog.find((tool) => tool.id === "clangd")?.group, "cpp")
   assert.deepEqual(lspServersByLanguage().cpp, [["clangd"], ["ccls"]])
   assert.deepEqual(lspServersByLanguage().python, [

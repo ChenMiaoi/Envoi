@@ -15,6 +15,7 @@ import {
 } from "./managementDir"
 import { envoi } from "./desktop"
 import { templateFiles } from "./paperTemplates"
+import { pluginLanguageForPath } from "@/settings/pluginCatalog"
 import type { FileKind, FileNode } from "@/data/workspace"
 export interface ProjectFile {
   version?: string
@@ -71,7 +72,8 @@ export function fileKind(path: string): FileKind {
 }
 export function isTextPath(path: string) {
   return (
-    /\.(tex|bib|md|markdown|txt|csv|tsv|json|sty|cls|bst|log|yaml|yml|toml|ini|cfg|py|pyi|pyw|r|js|ts|jsx|tsx|css|html|xml|sh|sql|c|h|cc|cpp|cxx|c\+\+|hh|hpp|hxx|h\+\+|inl|tpp|rs|go|jl|cmake|mk|mak|meson)$/i.test(
+    !!pluginLanguageForPath(path) ||
+    /\.(tex|bib|md|markdown|txt|csv|tsv|json|sty|cls|bst|log|yaml|yml|toml|ini|cfg|r|js|ts|jsx|tsx|css|html|xml|sh|sql|inl|tpp|go|jl|cmake|mk|mak|meson)$/i.test(
       path,
     ) ||
     /(^|\/)(README|LICENSE|GNUmakefile|Makefile|makefile|CMakeLists\.txt|meson\.build|meson\.options|meson_options\.txt|Cargo\.lock|uv\.lock|Dockerfile|\.gitignore|\.clangd|\.clang-format|\.python-version)$/i.test(

@@ -4,24 +4,12 @@ import path from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
 import { detectTool, pythonEnvironment } from "../../server/tool-config.mjs"
 import { lspServersByLanguage, toolCatalog } from "../../server/tool-registry.mjs"
+import { pluginForLanguage, pluginLanguageForPath } from "../../server/plugin-registry.mjs"
+import { PluginHost } from "../../server/plugin-host.mjs"
 
 // 服务器回退链由 tool-registry.mjs 的目录派生：kind 为 lsp 的条目按目录顺序排优先级。
 const servers = lspServersByLanguage()
 const extensionLanguage = {
-  ".c": "c",
-  ".h": "c",
-  ".cc": "cpp",
-  ".cpp": "cpp",
-  ".cxx": "cpp",
-  ".c++": "cpp",
-  ".hh": "cpp",
-  ".hpp": "cpp",
-  ".hxx": "cpp",
-  ".h++": "cpp",
-  ".rs": "rust",
-  ".py": "python",
-  ".pyi": "python",
-  ".pyw": "python",
   ".cmake": "cmake",
   ".mk": "make",
   ".mak": "make",
@@ -29,7 +17,8 @@ const extensionLanguage = {
   ".toml": "toml",
 }
 export function lspLanguage(file) {
-  if (/\.[CH]$/.test(file)) return "cpp"
+  const contributed = pluginLanguageForPath(file)
+  if (contributed) return contributed
   const name = path.basename(file).toLowerCase()
   if (name === "cmakelists.txt") return "cmake"
   if (["makefile", "gnumakefile"].includes(name)) return "make"
@@ -84,6 +73,7 @@ function position(text, offset) {
 export class LspService {
   constructor(publish = () => {}, resolve = executable) {
     this.sessions = new Map()
+    this.plugins = new PluginHost()
     this.publish = publish
     this.resolve = resolve
   }
@@ -102,11 +92,13 @@ export class LspService {
     const spec = this.resolve(root, language, preferredServer)
     if (!spec) return { available: false, error: `No ${language} language server found` }
     const key = this.key(owner, root, language)
+    const pluginId = pluginForLanguage(language)?.id
     let session = this.sessions.get(key)
     if (session && (session.spec.name !== spec.name || session.spec.command !== spec.command)) {
       session.docs.clear()
       session.stop()
       this.sessions.delete(key)
+      if (pluginId) void this.plugins.deactivate(pluginId, key)
       session = undefined
     }
     if (!session) {
@@ -121,11 +113,19 @@ export class LspService {
             this.publish(owner, { root, path: doc.path, diagnostics })
         },
         () => {
-          if (this.sessions.get(key) === session) this.sessions.delete(key)
+          if (this.sessions.get(key) === session) {
+            this.sessions.delete(key)
+            if (pluginId) void this.plugins.deactivate(pluginId, key)
+          }
         },
       )
       this.sessions.set(key, session)
-      session.ready = session.start()
+      session.ready = pluginId
+        ? this.plugins.activate(pluginId, key, async (context) => {
+            context.add(() => session.stop())
+            await session.start()
+          })
+        : session.start()
     }
     try {
       await session.ready
@@ -184,6 +184,8 @@ export class LspService {
     if (!session.docs.size) {
       session.stop()
       this.sessions.delete(key)
+      const pluginId = pluginForLanguage(lspLanguage(file))?.id
+      if (pluginId) void this.plugins.deactivate(pluginId, key)
     }
   }
   dispose(owner, root) {
@@ -191,6 +193,8 @@ export class LspService {
       if (key.startsWith(`${owner}\0`) && (!root || key.startsWith(`${owner}\0${root}\0`))) {
         session.stop()
         this.sessions.delete(key)
+        const pluginId = pluginForLanguage(session.language)?.id
+        if (pluginId) void this.plugins.deactivate(pluginId, key)
       }
   }
 }

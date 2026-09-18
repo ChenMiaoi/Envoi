@@ -27,6 +27,14 @@ test("LSP opens source, updates drafts, returns completions and stops sessions",
     assert.equal(lspLanguage("meson.build"), "meson")
     assert.equal(lspLanguage("Makefile"), "make")
     assert.equal(lspLanguage("notes.txt"), undefined)
+    await writeFile(path.join(root, "main.cpp"), "int value;")
+    assert.deepEqual(await service.open(3, root, "main.cpp", "int value;", "cpp-editor"), {
+      available: true,
+      server: "fixture",
+    })
+    assert.equal(service.plugins.status("envoi.cpp", service.key(3, root, "cpp")), "active")
+    service.close(3, root, "main.cpp", "cpp-editor")
+    assert.equal(service.plugins.status("envoi.cpp", service.key(3, root, "cpp")), "inactive")
     assert.deepEqual(await service.open(3, root, "main.py", "hello", "editor-one"), {
       available: true,
       server: "fixture",

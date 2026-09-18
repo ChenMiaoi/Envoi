@@ -88,10 +88,11 @@ export function pluginForLanguage(language) {
   )
 }
 
-export function pluginForPath(file) {
+export function pluginLanguageForPath(file) {
   const name = file.split(/[\\/]/).at(-1) ?? ""
-  const extension = /\.[CH]$/.test(name) ? ".h++" : name.toLowerCase().match(/\.[^.]+$/)?.[0]
-  return builtinPlugins.find((plugin) =>
-    plugin.contributes.languages?.some((item) => item.extensions.includes(extension)),
-  )
+  if (/\.[CH]$/.test(name)) return "cpp"
+  const extension = name.toLowerCase().match(/\.[^.]+$/)?.[0]
+  for (const plugin of builtinPlugins)
+    for (const language of plugin.contributes.languages ?? [])
+      if (language.extensions.includes(extension)) return language.id
 }
