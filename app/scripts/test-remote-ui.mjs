@@ -43,12 +43,13 @@ try {
   }
   await capture("remote-ssh-dialog.png")
   await page.keyboard.press("Escape")
-  await page.getByTestId("extension-wsl").getByRole("button", { name: "WSL", exact: true }).click()
+  await page.getByTestId("extension-wsl").getByRole("button", { name: "WSL 工作区…" }).click()
   await page.getByRole("combobox", { name: "发行版", exact: true }).waitFor()
   assert.equal(await page.getByRole("textbox", { name: "SSH 主机", exact: true }).count(), 0)
   const distro = process.env.ENVOI_TEST_WSL_DISTRO
   if (distro) {
-    await page.getByRole("combobox", { name: "发行版", exact: true }).selectOption(distro)
+    await page.getByRole("combobox", { name: "发行版", exact: true }).click()
+    await page.getByRole("option", { name: distro, exact: true }).click()
     await page.waitForFunction(async (host) => {
       const result = await window.envoi.wslDirectories(host)
       return document.querySelector('input[aria-label="远程目录"]')?.value === result.directory

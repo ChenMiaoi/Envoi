@@ -15,6 +15,7 @@ const en: Messages = {
   "wsl.installing": "Installing workspace runtime…",
   "wsl.distribution": "Distribution",
   "wsl.select": "Select a distribution",
+  "wsl.manage": "WSL workspaces…",
   "remote.title": "Remote SSH",
   "remote.description": "Connect to a remote host to edit files and run tools in your workspace.",
   "remote.requirements":
@@ -30,6 +31,7 @@ const en: Messages = {
   "remote.disconnect": "Disconnect",
   "remote.open": "Open workspace",
   "remote.manage": "Remote SSH workspaces…",
+  "remote.sessions": "Connections",
   "remote.terminal": "Remote terminal",
   "remote.terminalHint":
     "Commands run in the remote folder. Closing this panel keeps the terminal session.",

@@ -1,6 +1,11 @@
 import { useEffect, useState } from "react"
+import { AlertCircle, Folder, Home, RotateCw } from "lucide-react"
 import { envoi, ipcError } from "@/lib/desktop"
 import { useT } from "@/i18n/useT"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Spinner } from "@/components/ui/spinner"
 
 export function WslDirectoryPicker({
   host,
@@ -68,61 +73,80 @@ export function WslDirectoryPicker({
     }
   }, [host, home, value])
   return (
-    <div className="space-y-2">
-      <label className="block text-xs">
-        {t("remote.directory")}
-        <input
-          required
-          disabled={loading || !home}
-          aria-label={t("remote.directory")}
-          value={value}
-          onChange={(event) => {
-            const input = event.target.value
-            setSuggestions([])
-            onChange(
-              input === "~" ? home + "/" : input.startsWith("~/") ? home + input.slice(1) : input,
-            )
-          }}
-          className="mt-1 w-full rounded border bg-background p-2"
-        />
-      </label>
+    <div className="space-y-1.5">
+      <Label>{t("remote.directory")}</Label>
+      <Input
+        required
+        disabled={loading || !home}
+        aria-label={t("remote.directory")}
+        value={value}
+        onChange={(event) => {
+          const input = event.target.value
+          setSuggestions([])
+          onChange(
+            input === "~" ? home + "/" : input.startsWith("~/") ? home + input.slice(1) : input,
+          )
+        }}
+        className="font-mono"
+      />
       {loading && (
-        <p role="status" className="text-xs text-muted-foreground">
+        <p role="status" className="flex items-center gap-1.5 pt-1 text-xs text-muted-foreground">
+          <Spinner className="size-3.5" />
           {t("wsl.loadingDirectories")}
         </p>
       )}
       {home && (
-        <button type="button" onClick={() => onChange(home + "/")} className="text-xs text-primary">
-          {t("wsl.home")}
-        </button>
+        <div className="pt-1">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2 text-xs text-primary hover:text-primary"
+            onClick={() => onChange(home + "/")}
+          >
+            <Home className="size-3.5" />
+            {t("wsl.home")}
+          </Button>
+        </div>
       )}
       {suggestions.length > 0 && (
-        <div aria-label={t("wsl.suggestions")} className="max-h-36 overflow-auto rounded border">
+        <div
+          aria-label={t("wsl.suggestions")}
+          className="max-h-36 divide-y divide-border/60 overflow-auto rounded-lg border border-border/70 bg-card/60"
+        >
           {suggestions.map((directory) => (
             <button
               type="button"
               key={directory}
               onClick={() => onChange(directory)}
-              className="block w-full truncate px-2 py-1.5 text-left text-xs hover:bg-muted focus:bg-muted"
+              className="flex w-full items-center gap-2 px-2.5 py-1.5 text-left text-xs transition-colors hover:bg-muted focus:bg-muted"
               title={directory}
             >
-              {directory}
+              <Folder aria-hidden className="size-3.5 shrink-0 text-muted-foreground" />
+              <span className="truncate font-mono">{directory}</span>
             </button>
           ))}
         </div>
       )}
       {error && !home && (
-        <button
+        <Button
           type="button"
+          variant="ghost"
+          size="sm"
+          className="h-7 px-2 text-xs text-primary hover:text-primary"
           onClick={() => setRetry((value) => value + 1)}
-          className="text-xs text-primary"
         >
+          <RotateCw className="size-3.5" />
           {t("wsl.retry")}
-        </button>
+        </Button>
       )}
       {error && (
-        <p role="alert" className="text-xs text-destructive">
-          {error}
+        <p
+          role="alert"
+          className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive"
+        >
+          <AlertCircle aria-hidden className="mt-0.5 size-3.5 shrink-0" />
+          <span className="break-words">{error}</span>
         </p>
       )}
     </div>

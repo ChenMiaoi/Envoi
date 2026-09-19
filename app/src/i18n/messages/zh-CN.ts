@@ -16,6 +16,7 @@ export const zhCN = {
   "wsl.installing": "正在安装运行环境…",
   "wsl.distribution": "发行版",
   "wsl.select": "选择发行版",
+  "wsl.manage": "WSL 工作区…",
   "remote.title": "Remote SSH",
   "remote.description": "连接远程主机，在当前工作区编辑文件并运行远程工具。",
   "remote.requirements":
@@ -31,6 +32,7 @@ export const zhCN = {
   "remote.disconnect": "断开连接",
   "remote.open": "打开工作区",
   "remote.manage": "远程 SSH 工作区…",
+  "remote.sessions": "已有连接",
   "remote.terminal": "远程终端",
   "remote.terminalHint": "命令在远程目录执行。关闭面板保留终端，断开连接后请重新连接。",
   "remote.authentication": "SSH 身份验证",

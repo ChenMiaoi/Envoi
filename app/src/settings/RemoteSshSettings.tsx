@@ -1,54 +1,120 @@
-import { Network } from "lucide-react"
+import { Network, SquareTerminal } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useT } from "@/i18n/useT"
 import { usePreferences } from "./context"
 import { useProject } from "@/project/context"
 import { envoi, ipcError } from "@/lib/desktop"
+import { Button } from "@/components/ui/button"
+import type { RemoteState } from "../../shared/remote"
 import type { ToolInfo } from "./extensionTools"
+import { remoteStatusDot, remoteStatusPill } from "@/project/remoteStatus"
+const visuals = {
+  ssh: { icon: Network, color: "bg-emerald-500/10 text-emerald-400 ring-emerald-400/20" },
+  wsl: { icon: SquareTerminal, color: "bg-violet-500/10 text-violet-400 ring-violet-400/20" },
+} as const
 export function RemoteSshSettings({ kind = "ssh" }: { kind?: "ssh" | "wsl" }) {
   const plugin = kind === "wsl" ? "envoi.wsl" : "envoi.remote-ssh"
   const { t } = useT(),
     { preferences, update } = usePreferences()
   const root = useProject((state) => state.project.rootPath)
-  const active = root?.startsWith(`${kind}://`)
+  const active = root?.startsWith(`${kind}://`) ? root : undefined
+  const [connection, setConnection] = useState<RemoteState>()
+  useEffect(() => {
+    if (!active || typeof envoi().remoteList !== "function") {
+      setConnection(undefined)
+      return
+    }
+    let alive = true
+    void envoi()
+      .remoteList()
+      .then((entries) => {
+        if (alive) setConnection(entries.find((entry) => entry.root === active))
+      })
+      .catch(() => {})
+    const off = envoi().onRemoteEvent((event) => {
+      if (event.type === "state" && event.value.root === active) setConnection(event.value)
+    })
+    return () => {
+      alive = false
+      off()
+    }
+  }, [active])
+  const enabled = preferences.pluginStates[plugin] !== false
+  const title = t(kind === "wsl" ? "wsl.title" : "remote.title")
+  const Icon = visuals[kind].icon
   return (
     <article
       data-testid={kind === "wsl" ? "extension-wsl" : "extension-remote-ssh"}
-      className="rounded-2xl border border-border/70 bg-card/80 p-4"
+      className="overflow-hidden rounded-2xl border border-border/70 bg-card/80 shadow-sm transition-colors hover:border-border"
     >
-      <div className="flex items-center gap-3">
-        <Network className="size-8 text-primary" />
-        <div className="flex-1">
-          <h3 className="text-sm font-semibold">
-            {t(kind === "wsl" ? "wsl.title" : "remote.title")}
-          </h3>
+      <div className="flex min-h-20 items-center gap-3 px-4 py-3">
+        <span
+          aria-hidden
+          className={`flex size-11 shrink-0 items-center justify-center rounded-xl ring-1 ${visuals[kind].color}`}
+        >
+          <Icon className="size-5" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="text-[13px] font-semibold text-foreground">{title}</h3>
+            {connection && (
+              <span
+                className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-medium ring-1 ${remoteStatusPill(connection.state)}`}
+              >
+                <span
+                  aria-hidden
+                  className={`size-1.5 rounded-full ${remoteStatusDot(connection.state)}`}
+                />
+                {t(`remote.${connection.state}`)}
+              </span>
+            )}
+            {!enabled && (
+              <span className="rounded-full bg-muted/60 px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                {t("extensions.disabled")}
+              </span>
+            )}
+          </div>
           <p className="mt-1 text-xs text-muted-foreground">
             {t(kind === "wsl" ? "wsl.description" : "remote.description")}
           </p>
         </div>
-        <input
-          type="checkbox"
-          aria-label={`${t(kind === "wsl" ? "wsl.title" : "remote.title")} · ${t("extensions.enabled")}`}
-          checked={preferences.pluginStates[plugin] !== false}
-          disabled={active}
-          onChange={(event) =>
-            update({
-              pluginStates: {
-                ...preferences.pluginStates,
-                [plugin]: event.target.checked,
-              },
-            })
-          }
-        />
+        <span aria-hidden className="mx-1 h-8 w-px bg-border/70" />
+        <label
+          className={`relative inline-flex shrink-0 items-center ${active ? "cursor-not-allowed opacity-50" : "cursor-pointer"}`}
+        >
+          <input
+            type="checkbox"
+            aria-label={`${title} · ${t("extensions.enabled")}`}
+            checked={enabled}
+            disabled={!!active}
+            onChange={(event) =>
+              update({
+                pluginStates: {
+                  ...preferences.pluginStates,
+                  [plugin]: event.target.checked,
+                },
+              })
+            }
+            className="peer absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0 disabled:cursor-not-allowed"
+          />
+          <span className="h-5 w-9 rounded-full bg-muted-foreground/35 transition-colors peer-checked:bg-primary peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-primary" />
+          <span className="pointer-events-none absolute left-0.5 size-4 rounded-full bg-white shadow-sm transition-transform peer-checked:translate-x-4" />
+        </label>
       </div>
-      <button
-        disabled={preferences.pluginStates[plugin] === false}
-        className="mt-3 rounded border px-3 py-1.5 text-xs text-primary disabled:opacity-40"
-        onClick={() => window.dispatchEvent(new CustomEvent("envoi:open-remote", { detail: kind }))}
-      >
-        {t(kind === "wsl" ? "wsl.title" : "remote.manage")}
-      </button>
-      {active && <p className="mt-2 text-xs text-muted-foreground">{t("remote.disableHint")}</p>}
+      <div className="flex flex-wrap items-center gap-3 border-t border-border/60 bg-background/30 px-4 py-3">
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={!enabled}
+          onClick={() =>
+            window.dispatchEvent(new CustomEvent("envoi:open-remote", { detail: kind }))
+          }
+        >
+          <Icon />
+          {t(kind === "wsl" ? "wsl.manage" : "remote.manage")}
+        </Button>
+        {active && <p className="text-[11px] text-muted-foreground">{t("remote.disableHint")}</p>}
+      </div>
     </article>
   )
 }

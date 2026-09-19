@@ -14,6 +14,7 @@ const zhHK: Messages = {
   "wsl.installing": "正在安裝運行環境…",
   "wsl.distribution": "發行版",
   "wsl.select": "選擇發行版",
+  "wsl.manage": "WSL 工作區…",
   "remote.title": "Remote SSH",
   "remote.description": "連接遠程主機，在當前工作區編輯文件並運行遠程工具。",
   "remote.requirements":
@@ -29,6 +30,7 @@ const zhHK: Messages = {
   "remote.disconnect": "斷開連接",
   "remote.open": "打開工作區",
   "remote.manage": "遠程 SSH 工作區…",
+  "remote.sessions": "已有連接",
   "remote.terminal": "遠程終端",
   "remote.terminalHint": "命令在遠程目錄執行。關閉面板保留終端，斷開連接後請重新連接。",
   "remote.authentication": "SSH 身份驗證",

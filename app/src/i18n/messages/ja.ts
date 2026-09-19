@@ -15,6 +15,7 @@ const ja: Messages = {
   "wsl.installing": "実行環境をインストール中…",
   "wsl.distribution": "ディストリビューション",
   "wsl.select": "ディストリビューションを選択",
+  "wsl.manage": "WSL ワークスペース…",
   "remote.title": "Remote SSH",
   "remote.description":
     "リモートホストに接続し、ワークスペースでファイルの編集やツールの実行を行います。",
@@ -31,6 +32,7 @@ const ja: Messages = {
   "remote.disconnect": "切断",
   "remote.open": "ワークスペースを開く",
   "remote.manage": "リモート SSH ワークスペース…",
+  "remote.sessions": "接続",
   "remote.terminal": "リモートターミナル",
   "remote.terminalHint":
     "コマンドはリモートフォルダーで実行されます。パネルを閉じてもターミナルセッションは保持されます。",
