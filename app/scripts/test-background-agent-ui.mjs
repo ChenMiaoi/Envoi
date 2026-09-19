@@ -189,7 +189,14 @@ try {
   })
   // Explicit upward wheel pauses following even while new text arrives.
   await scroll.hover()
+  // Windows animates wheel scrolling after dispatch. Record the reading
+  // position only once that user scroll has actually finished.
+  await scroll.evaluate((el) => {
+    window.backgroundScrollSettled = false
+    el.addEventListener("scrollend", () => (window.backgroundScrollSettled = true), { once: true })
+  })
   await page.mouse.wheel(0, -450)
+  await page.waitForFunction(() => window.backgroundScrollSettled)
   await page.getByRole("button", { name: "回到最新", exact: true }).waitFor()
   const before = await scroll.evaluate((el) => el.scrollTop)
   await app.evaluate(() =>

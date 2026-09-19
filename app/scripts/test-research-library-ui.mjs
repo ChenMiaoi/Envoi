@@ -46,7 +46,16 @@ try {
     args: [path.resolve("."), "--user-data-dir=" + path.join(temp, "profile")],
     env: { ...process.env, ENVOI_DATA_DIR: path.join(temp, "data") },
   })
-  await app.evaluate(({ dialog }) => {
+  await app.evaluate(({ dialog, session }) => {
+    // These assertions exercise navigation and localization, not third-party
+    // availability. Keep real guest navigation events deterministic.
+    session.fromPartition("persist:paperbrowse").protocol.handle(
+      "https",
+      () =>
+        new Response("<!doctype html><title>Library browser fixture</title>", {
+          headers: { "Content-Type": "text/html" },
+        }),
+    )
     dialog.showMessageBox = async () => ({ response: 0, checkboxChecked: false })
   })
   const page = await app.firstWindow(),
@@ -393,14 +402,23 @@ try {
   await assert.rejects(readFile(movedPdf), { code: "ENOENT" })
 
   await page.getByTestId("library-mode-browse").click()
-  await page.evaluate(() =>
-    document.querySelector("webview").dispatchEvent(
+  await page.waitForFunction(() => {
+    try {
+      const view = document.querySelector("webview")
+      return !!view?.getWebContentsId() && !!view.getURL() && !view.isLoading()
+    } catch {
+      return false
+    }
+  })
+  await page.evaluate(() => {
+    const view = document.querySelector("webview")
+    view.dispatchEvent(
       Object.assign(new Event("did-fail-load"), {
         errorCode: -300,
         errorDescription: "ERR_BLOCKED_BY_RESPONSE",
       }),
-    ),
-  )
+    )
+  })
   for (const [language, address, back, blocked] of [
     ["en", "Web address", "Back", "This site does not allow embedded browsing"],
     ["ja", "ウェブアドレス", "戻る", "このサイトはアプリ内で表示できません"],

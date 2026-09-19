@@ -20,4 +20,6 @@ Before the repairs, partial-settings acceptance, watch invalidation and the thre
 
 Portable Windows path checks are not a substitute for Windows process/filesystem tests. The repository's existing `CI` workflow runs on `macos-latest` and `windows-latest`; a manual `workflow_dispatch` enables the full desktop suite through `ENVOI_DESKTOP_TEST_FULL=1`. Native validation must reference the exact review branch commit. GitHub runner tests skip TeX-dependent checks when the toolchain is unavailable, so their result does not certify a Windows TeX installation.
 
+The first native full run exposed two desktop-test synchronization gaps: the library localization test injected a blocked response before navigation finished, and the chat test captured its baseline before Windows wheel animation ended. The tests now serve a fixed guest page and await navigation completion, and await the native `scrollend` event before measuring the reading position. The blocked-message and scroll-preservation assertions remain unchanged.
+
 No data migration or public IPC channel rename is required by these repairs.
