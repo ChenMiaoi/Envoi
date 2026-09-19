@@ -5,3 +5,5 @@ This directory contains the Electron desktop shell, React/Vite interface, local 
 Commands can run directly here (`npm ci`, `npm run dev`, `npm test`, `npm run build`) or through the root npm wrappers. The paper example lives in [`../examples/demo/`](../examples/demo/). Architecture and local capability notes live in [`../docs/`](../docs/).
 
 See [desktop migration and trust](../docs/DESKTOP.md) for packaging and testing.
+
+See [application architecture](../docs/ARCHITECTURE.md) for module boundaries, resource ownership and contract validation.

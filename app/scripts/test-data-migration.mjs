@@ -9,9 +9,10 @@ import { build } from "esbuild"
 import { indexedDB } from "fake-indexeddb"
 const folder = await mkdtemp(path.join(os.tmpdir(), "envoi-migration-test-"))
 process.env.ENVOI_DATA_DIR = path.join(folder, "data")
-const { localDataPlugin, dataDir, dataStore } = await import("../server/local-data.mjs")
+const { dataDir, dataStore } = await import("../server/local-data.mjs")
 let handler
 const server = http.createServer((req, res) => void handler(req, res, () => res.end()))
+const { localDataPlugin } = await import("../server/http/local-data.mjs")
 localDataPlugin().configureServer({
   middlewares: {
     use(fn) {

@@ -71,7 +71,7 @@ export function ProviderConfiguration({
       return
     }
     const timer = setInterval(() => {
-      void agentRequest<OAuthJob>("oauth/status", { id: job.id })
+      void agentRequest("oauth/status", { id: job.id })
         .then((result) => {
           if (!active.current) return
           setJob(result)
@@ -86,7 +86,7 @@ export function ProviderConfiguration({
     setBusy(true)
     setMessage("")
     try {
-      const result = await agentRequest<{ validation?: { message: string } }>("credential", {
+      const result = await agentRequest("credential", {
         provider: provider.id,
         key,
       })
@@ -105,7 +105,7 @@ export function ProviderConfiguration({
     setBusy(true)
     setMessage("")
     try {
-      const result = await agentRequest<{ id: string }>("oauth/start", { provider: provider.id })
+      const result = await agentRequest("oauth/start", { provider: provider.id })
       if (!active.current) {
         void agentRequest("oauth/cancel", { id: result.id })
         return
@@ -246,7 +246,7 @@ export function ProviderConfiguration({
                   className="space-y-2"
                   onSubmit={(event) => {
                     event.preventDefault()
-                    void agentRequest<OAuthJob>("oauth/answer", { id: job.id, answer })
+                    void agentRequest("oauth/answer", { id: job.id, answer })
                       .then((result) => {
                         setAnswer("")
                         setJob(result)
@@ -287,7 +287,7 @@ export function ProviderConfiguration({
               )}
               <button
                 onClick={() =>
-                  void agentRequest<OAuthJob>("oauth/cancel", { id: job.id })
+                  void agentRequest("oauth/cancel", { id: job.id })
                     .then(setJob)
                     .catch((error) => setMessage(error.message))
                 }

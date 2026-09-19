@@ -1,18 +1,19 @@
-import { createProjectSaver } from "@/lib/projectSaver"
-import { useCallback, useMemo, useEffect, useRef, useState, type ReactNode } from "react"
-import { assertCanClose } from "@/lib/projectManagement"
-import { initialProject, emptyProject } from "@/lib/initialProject"
-import { envoi } from "@/lib/desktop"
-import { readProject, mergeDiskProject, dirtyFiles, type PaperProject } from "@/lib/projectFiles"
-import { restoreSession, saveSession, closeProjectSession } from "@/lib/projectSession"
-import { useProvidedStore } from "@/lib/selectorStore"
-import { ProjectContext, type ProjectState } from "./context"
 import { useT } from "@/i18n/useT"
+import { envoi } from "@/lib/desktop"
+import { emptyProject, initialProject } from "@/lib/initialProject"
+import { lspLanguageForPath } from "@/lib/lspLanguage"
+import { dirtyFiles, type PaperProject } from "@/lib/projectFiles"
+import { assertCanClose } from "@/lib/projectManagement"
+import { createProjectSaver } from "@/lib/projectSaver"
+import { closeProjectSession, restoreSession, saveSession } from "@/lib/projectSession"
+import { useProvidedStore } from "@/lib/selectorStore"
 import { usePreferences } from "@/settings/context"
 import { pluginEnabled } from "@/settings/model"
 import { pluginForLanguage } from "@/settings/pluginCatalog"
-import { lspLanguageForPath } from "@/lib/lspLanguage"
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import { toast } from "sonner"
+import { ProjectContext, type ProjectState } from "./context"
+import { useProjectDiskSync } from "./useProjectDiskSync"
 
 const formatters: Record<string, string> = {
   c: "clangFormat",
@@ -64,72 +65,15 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     activity.current = { busy, saving }
   }, [busy, saving])
-  useEffect(() => {
-    const root = project.rootPath
-    if (!root || !restored) return
-    let disposed = false,
-      running = false,
-      pending = false
-    let timer: ReturnType<typeof setTimeout>
-    const refresh = async () => {
-      if (disposed || running) return
-      if (activity.current.busy || activity.current.saving) {
-        timer = setTimeout(() => void refresh(), 200)
-        return
-      }
-      running = true
-      pending = false
-      try {
-        const paths = latest.current.files.map((file) => file.path).join("\0")
-        const disk = await readProject(root)
-        if (
-          activity.current.busy ||
-          activity.current.saving ||
-          paths !== latest.current.files.map((file) => file.path).join("\0")
-        ) {
-          pending = true
-          return
-        }
-        if (!disposed && !closing.current) setProject((current) => mergeDiskProject(current, disk))
-      } catch (error) {
-        if (!disposed) setMessage((error as Error).message)
-      } finally {
-        running = false
-        if (pending && !disposed) timer = setTimeout(() => void refresh(), 200)
-      }
-    }
-    const off = envoi().onFilesChanged((change) => {
-      if (change.root !== root) return
-      if (change.error) {
-        setMessage(change.error)
-        return
-      }
-      if (
-        change.paths.length &&
-        change.paths.every((p) => p === ".envoi/library" || p.startsWith(".envoi/library/"))
-      )
-        return
-      pending = true
-      clearTimeout(timer)
-      timer = setTimeout(() => void refresh(), 200)
-    })
-    void envoi()
-      .watchProject(root)
-      .then(() => {
-        if (!disposed) void refresh()
-      })
-      .catch((error) => {
-        if (!disposed) setMessage(error.message)
-      })
-    return () => {
-      disposed = true
-      clearTimeout(timer)
-      off()
-      void envoi()
-        .watchProject(null)
-        .catch(() => {})
-    }
-  }, [project.rootPath, restored, setProject])
+  useProjectDiskSync({
+    root: project.rootPath,
+    restored,
+    latest,
+    closing,
+    activity,
+    setProject,
+    setMessage,
+  })
   // createProjectSaver stores this getter; it reads the ref only when a save is requested.
   const saveAll = useMemo(
     () =>

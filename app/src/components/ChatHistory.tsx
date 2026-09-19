@@ -32,11 +32,9 @@ export function ChatHistory({ source }: { source?: ChatHistorySource } = {}) {
       void (
         list
           ? list(query)
-          : agentRequest<{ sessions: AgentRecord[] }>(
-              "sessions",
-              { projectId: agent.scope, query },
-              controller.signal,
-            ).then((result) => result.sessions)
+          : agentRequest("sessions", { projectId: agent.scope, query }, controller.signal).then(
+              (result) => result.sessions,
+            )
       )
         .then((rows) => {
           if (!controller.signal.aborted) setRows(rows)

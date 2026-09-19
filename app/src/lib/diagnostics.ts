@@ -1,5 +1,5 @@
 import { translate } from "@/i18n/runtime"
-import type { ProjectFile } from "./projectFiles"
+import type { ProjectFile } from "@/project/model"
 export interface Diagnostic {
   id: string
   column?: number

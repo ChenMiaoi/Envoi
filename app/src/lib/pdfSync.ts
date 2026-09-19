@@ -1,6 +1,6 @@
 import { translate } from "@/i18n/runtime"
 import { projectSignature } from "./compileClient"
-import type { PaperProject } from "./projectFiles"
+import type { PaperProject } from "@/project/model"
 export interface PreviewManifest {
   main: string
   pdfSha256: string

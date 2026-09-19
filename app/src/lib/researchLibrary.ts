@@ -1,25 +1,11 @@
+import type { LibraryAction, LibraryInput, LibraryResults } from "../../shared/contracts"
+export type { ResearchPaper, PaperDetail, LibraryIndex } from "../../shared/library-model"
 import { libraryMessage } from "./libraryMessages"
 import { envoi } from "./desktop"
-import type { LibraryPaper } from "./paperLibrary"
-import type { AgentRecord } from "./agentClient"
-export type ResearchPaper = Omit<LibraryPaper, "attachment" | "notes"> & {
-  attachmentHash?: string
-  attachmentPath?: string
-}
-export interface PaperDetail extends ResearchPaper {
-  note: { text: string; revision: number }
-  drafts?: { id: string; text: string }[]
-  state: { reading?: { page: number; fraction: number }; chat?: AgentRecord }
-}
-export interface LibraryIndex {
-  root: string
-  papersDirectory?: string
-  warnings?: string[]
-  researchId: string
-  papers: ResearchPaper[]
-  selected?: string
-}
-export function researchLibrary<T>(root: string, input: Record<string, unknown>) {
+export function researchLibrary<A extends LibraryAction>(
+  root: string,
+  input: LibraryInput<A>,
+): Promise<LibraryResults[A]> {
   return envoi()
     .library(root, input)
     .then((result) => {
@@ -29,10 +15,35 @@ export function researchLibrary<T>(root: string, input: Record<string, unknown>)
         "warnings" in result &&
         Array.isArray(result.warnings)
       )
-        return { ...result, warnings: result.warnings.map(libraryMessage) } as T
-      return result as T
+        return { ...result, warnings: result.warnings.map(libraryMessage) } as LibraryResults[A]
+      return result as LibraryResults[A]
     })
     .catch((error) => {
       throw new Error(libraryMessage(error))
     })
 }
+
+export type PaperAction = Extract<
+  LibraryAction,
+  | "get"
+  | "select"
+  | "attach"
+  | "remove"
+  | "pdf"
+  | "note"
+  | "dismiss-draft"
+  | "history"
+  | "chat-list"
+  | "chat-new"
+  | "chat-select"
+  | "state"
+  | "metadata"
+>
+type PaperFields<A extends PaperAction> = Omit<LibraryInput<A>, "action" | "paperId">
+export function createPaperClient(root: string, paperId: string) {
+  return <A extends PaperAction>(
+    action: A,
+    ...args: keyof PaperFields<A> extends never ? [extra?: PaperFields<A>] : [extra: PaperFields<A>]
+  ) => researchLibrary<A>(root, { ...args[0], action, paperId } as LibraryInput<A>)
+}
+export type PaperClient = ReturnType<typeof createPaperClient>

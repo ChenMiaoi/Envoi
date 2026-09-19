@@ -90,7 +90,10 @@ const app = await serve((req, res) => {
   }
   next()
 })
-for (const plugin of [local.localDataPlugin(), agent.agentPlugin()])
+for (const plugin of [
+  (await import("../server/http/local-data.mjs")).localDataPlugin(),
+  (await import("../server/http/agent.mjs")).agentPlugin(),
+])
   plugin.configureServer({
     httpServer: app.server,
     middlewares: {

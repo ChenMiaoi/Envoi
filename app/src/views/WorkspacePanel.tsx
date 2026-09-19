@@ -16,35 +16,7 @@ import { envoi, ipcError } from "@/lib/desktop"
 import { useProject } from "@/project/context"
 import { dirtyFiles } from "@/lib/projectFiles"
 import { saveSession } from "@/lib/projectSession"
-type Workspace = {
-  path: string
-  name: string
-  main: boolean
-  current: boolean
-  branch: string
-  changes: number
-  available: boolean
-  purpose: string
-  base?: string
-}
-type Overview = {
-  experimentDirectory: string
-  main: string
-  initialized: boolean
-  hasCommit: boolean
-  workspaces: Workspace[]
-}
-type Result = {
-  id: string
-  title: string
-  summary: string
-  command: string
-  created: string
-  experiment: string
-  commit: string
-  source: string
-  files: { path: string; sha256: string }[]
-}
+import type { Overview, Result } from "../../shared/workspace-model"
 const button =
   "inline-flex items-center justify-center gap-2 rounded-md border border-border px-3 py-2 text-xs hover:bg-secondary disabled:opacity-40"
 export function WorkspacePanel({

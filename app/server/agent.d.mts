@@ -1,5 +1,3 @@
-import type { Plugin } from "vite"
-export function agentPlugin(): Plugin
 export interface ChatEvent {
   type: "delta" | "thinking" | "session" | "tool" | "done" | "error"
   [key: string]: unknown

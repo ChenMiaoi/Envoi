@@ -249,7 +249,7 @@ export function WorkspaceBadge() {
                   })) as { path: string }
                   await open(result.path)
                 } else {
-                  await envoi().workspaces(root!, { action: "rename", target: root, name })
+                  await envoi().workspaces(root!, { action: "rename", target: root!, name })
                   await refresh()
                   window.dispatchEvent(new Event("envoi:workspaces-updated"))
                 }

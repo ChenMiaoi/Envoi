@@ -1,3 +1,4 @@
+import { validateBackendCall } from "../../shared/backend-contract.ts"
 const parentPort = process.parentPort
 process.on("uncaughtExceptionMonitor", (error) => {
   parentPort.postMessage({
@@ -25,6 +26,7 @@ async function ai() {
 const git = { gitInit: gitInitAt, gitStatus: gitStatusAt, gitLog: gitLogAt, gitShow: gitShowAt }
 async function dispatch(message) {
   const { id, method, args, owner, root } = message
+  validateBackendCall(method, args)
   if (method === "shutdown") {
     await tasks.cancel()
     await agent?.dispose()
@@ -36,7 +38,7 @@ async function dispatch(message) {
   }
   if (method === "runtime") return runtimeInfo({ trusted: true })
   if (method === "gitRuntime") return gitRuntime()
-  if (method in git) return git[method](...args)
+  if (Object.hasOwn(git, method)) return git[method](...args)
   if (method === "tools") {
     const options = args?.[0] ?? {}
     const environment =

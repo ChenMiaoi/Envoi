@@ -1,3 +1,4 @@
+import type { BackendArgs, BackendResults } from "../../shared/backend-contract"
 import { killProcessTree } from "../../server/process-tree.mjs"
 import { utilityProcess } from "electron"
 import path from "node:path"
@@ -123,19 +124,27 @@ export class BackendHost {
     })
     return child
   }
-  call<T = unknown>(
-    method: string,
-    args: unknown[] = [],
-    options: { owner?: number; root?: string; onEvent?: (event: Event) => void } = {},
-  ): Promise<T> {
+  call<M extends keyof BackendArgs>(
+    method: M,
+    ...parameters: BackendArgs[M] extends []
+      ? [
+          args?: BackendArgs[M],
+          options?: { owner?: number; root?: string; onEvent?: (event: Event) => void },
+        ]
+      : [
+          args: BackendArgs[M],
+          options?: { owner?: number; root?: string; onEvent?: (event: Event) => void },
+        ]
+  ): Promise<BackendResults[M]> {
+    const [args = [], options = {}] = parameters
     const child = this.start(),
       id = ++this.sequence
-    return new Promise<T>((resolve, reject) => {
+    return new Promise<BackendResults[M]>((resolve, reject) => {
       this.pending.set(id, {
         operationId: operationContext.getStore() ?? `${this.name}-${id}`,
         method,
         started: Date.now(),
-        resolve: (value) => resolve(value as T),
+        resolve: (value) => resolve(value as BackendResults[M]),
         reject,
         onEvent: options.onEvent,
       })

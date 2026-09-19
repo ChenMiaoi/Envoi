@@ -1,4 +1,4 @@
-import { applySearchFilters, normalizeDoi, normalizeArxivId } from "../src/lib/paperSearch.mjs"
+import { applySearchFilters, normalizeDoi, normalizeArxivId } from "../shared/paper-search.mjs"
 import { paperSearchConfig } from "./tool-config.mjs"
 // 在线论文检索：每个来源一个适配器，在主进程（可信 Node 侧）调用官方接口。
 // 统一返回标准化结果；适配器只负责抓取与字段映射，年份/开放全文筛选由 applySearchFilters 统一应用。

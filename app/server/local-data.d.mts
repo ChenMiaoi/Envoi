@@ -1,5 +1,3 @@
-import type { Plugin } from "vite"
-export function localDataPlugin(): Plugin
 export function trustedRoot(directory: string): Promise<string>
 export function dataStore(input: {
   store: string

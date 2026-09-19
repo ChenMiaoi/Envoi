@@ -1,6 +1,6 @@
 import { translate } from "@/i18n/runtime"
 import { envoi, ipcError } from "@/lib/desktop"
-import type { PaperProject } from "./projectFiles"
+import type { PaperProject } from "@/project/model"
 export function projectSignature(project: PaperProject) {
   return JSON.stringify([
     project.rootId,

@@ -5,7 +5,6 @@ import { projectConfiguration, type ProjectConfiguration } from "../settings/mod
 import { parseDiagnostics } from "./diagnostics"
 import { projectSignature } from "./compileClient"
 import { verifyPreview } from "./pdfSync"
-import type { CompileDiagnostics, Diagnostic } from "./diagnostics"
 import {
   managementDirName,
   legacyDirName,
@@ -15,87 +14,14 @@ import {
 } from "./managementDir"
 import { envoi } from "./desktop"
 import { templateFiles } from "./paperTemplates"
-import { pluginLanguageForPath } from "@/settings/pluginCatalog"
-import type { FileKind, FileNode } from "@/data/workspace"
-export interface ProjectFile {
-  version?: string
-  file?: File
-  id: string
-  path: string
-  kind: FileKind
-  text?: string
-  saved?: string
-  url?: string
-}
-export interface PaperProject {
-  settings?: ProjectConfiguration
-  lint?: {
-    fileId: string
-    text: string
-    status: "checking" | "ready" | "unavailable" | "disabled"
-    message?: string
-    items: Diagnostic[]
-  }
-  diagnostics?: CompileDiagnostics
-  engine?: "pdflatex" | "xelatex"
-  compiled?: { file: File; signature: string; synctex?: Uint8Array<ArrayBuffer> }
-  compileStatus?: string
-  compileLog?: string
-  id: string
-  name: string
-  files: ProjectFile[]
-  directories: string[]
-  rootId: string
-  rootPath?: string
-}
-export function fileKind(path: string): FileKind {
-  const extension = path.split(".").pop()?.toLowerCase()
-  return extension === "tex"
-    ? "latex"
-    : extension === "bib"
-      ? "bib"
-      : extension === "pdf"
-        ? "pdf"
-        : ["png", "jpg", "jpeg", "webp", "gif", "svg", "avif", "bmp", "ico"].includes(
-              extension ?? "",
-            )
-          ? "image"
-          : extension === "csv"
-            ? "csv"
-            : extension === "tsv"
-              ? "tsv"
-              : ["md", "markdown"].includes(extension ?? "")
-                ? "markdown"
-                : isTextPath(path)
-                  ? "text"
-                  : "binary"
-}
-export function isTextPath(path: string) {
-  return (
-    !!pluginLanguageForPath(path) ||
-    /\.(tex|bib|md|markdown|txt|csv|tsv|json|sty|cls|bst|log|yaml|yml|toml|ini|cfg|r|js|ts|jsx|tsx|css|html|xml|sh|sql|inl|tpp|go|jl|cmake|mk|mak|meson)$/i.test(
-      path,
-    ) ||
-    /(^|\/)(README|LICENSE|GNUmakefile|Makefile|makefile|CMakeLists\.txt|meson\.build|meson\.options|meson_options\.txt|Cargo\.lock|uv\.lock|Dockerfile|\.gitignore|\.clangd|\.clang-format|\.python-version)$/i.test(
-      path,
-    )
-  )
-}
+import type { CompileDiagnostics } from "./diagnostics"
+import type { FileNode } from "@/data/workspace"
+import type { PaperProject, ProjectFile } from "@/project/model"
+export type { PaperProject, ProjectFile } from "@/project/model"
+export { fileKind, isTextPath } from "../../shared/file-rules.mjs"
+import { fileKind, isTextPath, safePathParts } from "../../shared/file-rules.mjs"
 export function safePath(path: string) {
-  const parts = path.trim().split("/")
-  if (
-    !parts.length ||
-    parts.some(
-      (part) =>
-        !part ||
-        part === "." ||
-        part === ".." ||
-        /[\\:]/.test(part) ||
-        [...part].some((character) => character.charCodeAt(0) < 32),
-    )
-  )
-    throw new Error(translate("project.invalidPath"))
-  return parts
+  return safePathParts(path, translate("project.invalidPath"))
 }
 export function isWritingPath(path: string) {
   return (

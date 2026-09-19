@@ -1,7 +1,7 @@
 import { translate } from "@/i18n/runtime"
 
-import type { EnvoiBridge } from "../../electron/preload/api"
-export type { EnvoiBridge } from "../../electron/preload/api"
+import type { EnvoiBridge } from "../../shared/bridge"
+export type { EnvoiBridge } from "../../shared/bridge"
 
 declare global {
   interface Window {

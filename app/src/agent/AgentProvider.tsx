@@ -94,14 +94,10 @@ export function AgentProvider({ children }: { children: ReactNode }) {
           return
         }
       }
-      const result = await agentRequest<{
-        sessions: AgentRecord[]
-        settings: AiConfig
-        activeId?: string
-      }>("sessions", { projectId: id })
+      const result = await agentRequest("sessions", { projectId: id })
       const selected = result.activeId ?? result.sessions[0]?.id
       const record = selected
-        ? await agentRequest<AgentRecord>("session", { projectId: id, sessionId: selected })
+        ? await agentRequest("session", { projectId: id, sessionId: selected })
         : null
       patch(id, (state) => ({
         ...state,
@@ -146,7 +142,7 @@ export function AgentProvider({ children }: { children: ReactNode }) {
     setNavigating(true)
     try {
       patch(scope, {
-        record: await agentRequest<AgentRecord>("session", { projectId: scope, sessionId }),
+        record: await agentRequest("session", { projectId: scope, sessionId }),
         error: "",
       })
     } catch (error) {
@@ -161,7 +157,7 @@ export function AgentProvider({ children }: { children: ReactNode }) {
     navigation.current.add(scope)
     setNavigating(true)
     try {
-      const record = await agentRequest<AgentRecord>("new", { projectId: scope })
+      const record = await agentRequest("new", { projectId: scope })
       patch(scope, (state) => ({
         ...state,
         record,
@@ -266,7 +262,7 @@ export function AgentProvider({ children }: { children: ReactNode }) {
       if (writes) setAgentBusy(id, false)
       if (sessionId) {
         try {
-          const record = await agentRequest<AgentRecord>("session", { projectId: id, sessionId })
+          const record = await agentRequest("session", { projectId: id, sessionId })
           patch(id, (state) => ({
             ...state,
             record,

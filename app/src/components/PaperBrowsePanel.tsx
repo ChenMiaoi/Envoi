@@ -125,7 +125,7 @@ export function PaperBrowsePanel({
     setSaving(true)
     notifyLoading(t("browse.downloading"), "browse-pdf-fetch")
     try {
-      const file = await researchLibrary<{ name: string; base64: string }>(root, {
+      const file = await researchLibrary(root, {
         action: "download-pdf",
         url: pdfTarget,
       })

@@ -9,7 +9,8 @@
     "allowJs": true,
     "checkJs": false,
     "skipLibCheck": true,
-    "noEmit": true
+    "noEmit": true,
+    "allowImportingTsExtensions": true
   },
   "include": ["electron", "electron.vite.config.ts"]
 }

@@ -1,22 +1,10 @@
 import { translate } from "@/i18n/runtime"
 import { nativeGet, nativePut, nativeMigrateCache, encodeNative, decodeNative } from "./localData"
 import { parseBibliography } from "./bibliography"
-export interface LibraryPaper {
-  id: string
-  title: string
-  author: string
-  year: string
-  venue: string
-  tags: string[]
-  collection: string
-  status: "待读" | "在读" | "已读"
+import type { PaperMetadata } from "../../shared/library-model"
+export interface LibraryPaper extends PaperMetadata {
   notes: string
-  created: number
   attachment?: Blob
-  attachmentName?: string
-  contentHash?: string
-  bib?: string
-  citationKey?: string
 }
 export function createLibraryStore(name = "paperdesk-library-v1") {
   const database = () =>

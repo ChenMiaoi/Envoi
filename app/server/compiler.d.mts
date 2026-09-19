@@ -1,5 +1,3 @@
-import type { Plugin } from "vite"
-export function compilerPlugin(): Plugin
 export interface CompileInput {
   rootPath?: string
   main: string

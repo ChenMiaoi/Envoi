@@ -86,7 +86,7 @@ export function PaperSearchPanel({
     await Promise.all(
       targets.map(async (source) => {
         try {
-          const response = await researchLibrary<{ results: SourcePaper[] }>(root, {
+          const response = await researchLibrary(root, {
             action: "paper-search",
             source,
             query: text,
@@ -134,7 +134,7 @@ export function PaperSearchPanel({
       let pdfError = ""
       if (paper.pdfUrl) {
         try {
-          const file = await researchLibrary<{ name: string; base64: string }>(root, {
+          const file = await researchLibrary(root, {
             action: "download-pdf",
             url: paper.pdfUrl,
           })
