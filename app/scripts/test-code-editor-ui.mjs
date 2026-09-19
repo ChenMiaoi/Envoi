@@ -77,6 +77,13 @@ try {
   }
   const editor = page.getByRole("textbox", { name: "文本源码编辑器" })
   await page.getByRole("button", { name: "hello.py", exact: true }).click()
+  await editor.focus()
+  const focusStyle = await editor.evaluate((element) => ({
+    shadow: getComputedStyle(element).boxShadow,
+    outline: getComputedStyle(element).outlineStyle,
+  }))
+  assert.equal(focusStyle.shadow, "none")
+  assert.equal(focusStyle.outline, "none")
   await page.locator(".cm-lintRange-info").first().waitFor()
   await editor.fill("value = 42\n")
   const crashedPid = Number(await readFile(path.join(temp, "lsp.pid"), "utf8"))

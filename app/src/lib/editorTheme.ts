@@ -29,7 +29,8 @@ export const editorChrome = EditorView.theme({
   "&": { height: "100%", color: "hsl(var(--foreground))" },
   "&.cm-focused": { outline: "none" },
   ".cm-content": { padding: "12px 0" },
-  ".cm-line": { padding: "0 16px" },
+  ".cm-content:focus-visible, &.cm-focused": { outline: "none", boxShadow: "none" },
+  ".cm-line": { padding: "0 16px 0 2px" },
   ".cm-cursor": { borderLeftColor: "hsl(var(--primary))", borderLeftWidth: "2px" },
   ".cm-selectionBackground, &.cm-focused .cm-selectionBackground": {
     background: "hsl(var(--primary) / .2)",
