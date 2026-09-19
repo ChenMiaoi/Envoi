@@ -8,6 +8,18 @@ import { once } from "node:events"
 import { LspService, lspLanguage } from "../electron/main/lsp-service.mjs"
 import { lspServersByLanguage } from "../server/tool-registry.mjs"
 
+async function waitForExit(child) {
+  if (child.exitCode === null && child.signalCode === null)
+    await once(child, "exit", { signal: AbortSignal.timeout(5000) })
+}
+
+async function cleanup(service, root, ...owners) {
+  const sessions = [...service.sessions.values()]
+  for (const owner of owners) service.dispose(owner)
+  await Promise.all(sessions.map((session) => waitForExit(session.process)))
+  await rm(root, { recursive: true, force: true })
+}
+
 test("LSP opens source, updates drafts, returns completions and stops sessions", async () => {
   const root = await mkdtemp(path.join(tmpdir(), "envoi-lsp-"))
   const events = []
@@ -66,8 +78,7 @@ test("LSP opens source, updates drafts, returns completions and stops sessions",
     if (child.exitCode === null) await once(child, "exit")
     assert.equal(service.sessions.size, 0)
   } finally {
-    service.dispose(3)
-    await rm(root, { recursive: true, force: true })
+    await cleanup(service, root, 3)
   }
 })
 
@@ -116,8 +127,7 @@ test("changing the preferred language server replaces the active session", async
       await once(second.process, "exit")
     assert.equal(service.sessions.size, 0)
   } finally {
-    service.dispose(3)
-    await rm(root, { recursive: true, force: true })
+    await cleanup(service, root, 3)
   }
 })
 
@@ -157,11 +167,10 @@ test("closing pending documents and disposing owners cancels late activation", a
     await rejected
     assert.equal(service.sessions.has(service.key(3, root, "python")), false)
     assert(child.killed)
+    await waitForExit(child)
     assert.equal(service.opening.size, 0)
   } finally {
-    service.dispose(1)
-    service.dispose(2)
-    await rm(root, { recursive: true, force: true })
+    await cleanup(service, root, 1, 2, 3)
   }
 })
 
@@ -180,6 +189,7 @@ test("persisted extension preferences stop disabled sessions and retain workspac
     const python = service.sessions.get(service.key(1, root, "python")).process
     service.configurePreferences({ pluginStates: { "envoi.python": false } }, 2)
     assert(python.killed)
+    await waitForExit(python)
     assert.equal(service.sessions.size, 1)
     assert.equal((await service.open(1, root, "main.py", "x", "denied")).available, false)
     service.configurePreferences({}, 1)
@@ -202,10 +212,10 @@ test("persisted extension preferences stop disabled sessions and retain workspac
       4,
     )
     assert(restarted.killed)
+    await waitForExit(restarted)
     assert.equal(service.sessions.size, 1)
   } finally {
-    service.dispose(1)
-    await rm(root, { recursive: true, force: true })
+    await cleanup(service, root, 1, 2, 3)
   }
 })
 
@@ -234,8 +244,6 @@ test("unexpected server exit clears diagnostics and publishes token-scoped failu
     assert.equal((await service.open(1, root, "main.py", "x", "retry")).available, true)
     assert.notEqual(service.sessions.get(service.key(1, root, "python")).process, child)
   } finally {
-    service.dispose(1)
-    service.dispose(2)
-    await rm(root, { recursive: true, force: true })
+    await cleanup(service, root, 1, 2, 3)
   }
 })
