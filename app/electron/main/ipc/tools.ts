@@ -110,11 +110,13 @@ export function registerToolsIpc(
       for (const row of rows) {
         const installed = await installedTool(managedToolsDirectory(), row.id)
         if (installed) mergeInstalled(row, installed)
+        // probeCatalog 生成的行带有注册表中的可选 kind 字段。
+        const { kind } = row as { kind?: string }
+        const plan =
+          kind === "lsp" ? null : toolInstallPlan(row.id, { brew: !!brew, rustup: !!rustup })
         Object.assign(row, {
-          installable:
-            (row as { kind?: string }).kind === "lsp"
-              ? lspInstallable(row.id)
-              : !!toolInstallPlan(row.id, { brew: !!brew, rustup: !!rustup }),
+          installable: kind === "lsp" ? lspInstallable(row.id) : !!plan,
+          installMethod: plan?.method ?? null,
         })
       }
     for (const language of ["cpp", "python", "rust"]) {

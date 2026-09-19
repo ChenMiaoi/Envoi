@@ -182,6 +182,8 @@ export const zhCN = {
   "extensions.running": "运行中",
   "extensions.missingTool": "缺少语言服务器",
   "extensions.installPrompt": "未找到{name}语言服务器。要获取它吗？",
+  "extensions.toolInstallPrompt": "未找到{name}。要现在安装吗？",
+  "extensions.largeDownload": "安装包较大（约 1 GB），下载可能需要几分钟。",
   "extensions.downloadPage": "打开下载页面",
   "extensions.installAction": "下载安装",
   "extensions.installing": "正在安装{name}…",

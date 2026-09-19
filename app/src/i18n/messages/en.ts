@@ -189,6 +189,8 @@ const en: Messages = {
   "extensions.running": "Running",
   "extensions.missingTool": "Language server missing",
   "extensions.installPrompt": "{name} language server was not found. Get it now?",
+  "extensions.toolInstallPrompt": "{name} was not found. Install it now?",
+  "extensions.largeDownload": "The download is large (about 1 GB) and may take a few minutes.",
   "extensions.downloadPage": "Open download page",
   "extensions.installAction": "Download and install",
   "extensions.installing": "Installing {name}…",

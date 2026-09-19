@@ -46,7 +46,29 @@ test("install plans match official sources per platform and available package ma
     toolInstallPlan("clangTidy", { platform: "darwin", arch: "arm64", brew: true }),
     { method: "brew", formula: "llvm", binary: "clang-tidy" },
   )
-  assert.equal(toolInstallPlan("clangTidy", { platform: "linux", arch: "x64" }), null)
+  assert.deepEqual(toolInstallPlan("clangTidy", { platform: "linux", arch: "x64" }), {
+    method: "llvm",
+    target: "LLVM-{v}-Linux-X64",
+    binary: "clang-tidy",
+    platform: "linux",
+  })
+  assert.deepEqual(
+    toolInstallPlan("clangTidy", { platform: "win32", arch: "x64", brew: false, rustup: false }),
+    {
+      method: "llvm",
+      target: "clang+llvm-{v}-x86_64-pc-windows-msvc",
+      binary: "clang-tidy",
+      platform: "win32",
+    },
+  )
+  assert.deepEqual(
+    toolInstallPlan("clangTidy", { platform: "darwin", arch: "arm64", brew: false, rustup: false }),
+    { method: "llvm", target: "LLVM-{v}-macOS-ARM64", binary: "clang-tidy", platform: "darwin" },
+  )
+  assert.equal(
+    toolInstallPlan("clangTidy", { platform: "darwin", arch: "x64", brew: false, rustup: false }),
+    null,
+  )
   assert.deepEqual(toolInstallPlan("clangFormat", { platform: "linux", arch: "x64" }), {
     method: "npm",
     package: "clang-format",
@@ -54,7 +76,12 @@ test("install plans match official sources per platform and available package ma
     binary: "clang-format",
     platform: "linux",
   })
-  assert.equal(toolInstallPlan("clangFormat", { platform: "linux", arch: "arm64" }), null)
+  assert.deepEqual(toolInstallPlan("clangFormat", { platform: "linux", arch: "arm64" }), {
+    method: "llvm",
+    target: "LLVM-{v}-Linux-ARM64",
+    binary: "clang-format",
+    platform: "linux",
+  })
 })
 
 test("managed tool lookup accepts only installed files inside its version directory", async () => {
@@ -150,6 +177,49 @@ test("clang-format installs from the verified npm package binaries", async () =>
     })
     assert.equal(installed.version, "1.8.0")
     assert.equal(await readFile(installed.path, "utf8"), "#!/bin/sh\necho clang-format\n")
+  } finally {
+    globalThis.fetch = previousFetch
+    await rm(directory, { recursive: true, force: true })
+  }
+})
+
+test("clang-tidy installs from the verified LLVM release archive", async () => {
+  const env = {
+    platform: process.platform,
+    arch: process.arch === "arm64" ? "arm64" : "x64",
+    brew: false,
+    rustup: false,
+  }
+  const plan = toolInstallPlan("clangTidy", env)
+  // 宿主机决定可执行文件名（如 Windows 的 .exe）；无 LLVM 资产的平台（win32/arm64）跳过。
+  if (plan?.method !== "llvm") return
+  const base = plan.target.replace("{v}", "23.1.1")
+  const entry = `${base}/bin/${plan.platform === "win32" ? "clang-tidy.exe" : "clang-tidy"}`
+  const directory = await mkdtemp(path.join(tmpdir(), "envoi-llvm-install-test-"))
+  const previousFetch = globalThis.fetch
+  try {
+    const fixture = path.join(directory, "fixture")
+    await mkdir(path.join(fixture, path.posix.dirname(entry)), { recursive: true })
+    await writeFile(path.join(fixture, entry), "clang-tidy binary")
+    const archive = path.join(directory, "llvm.tar.xz")
+    // 系统 tar(Windows bsdtar / macOS bsdtar / GNU tar)与安装路径同款解包工具。
+    execFileSync("tar", ["-cJf", archive, "-C", fixture, base])
+    const bytes = await readFile(archive)
+    const digest = `sha256:${createHash("sha256").update(bytes).digest("hex")}`
+    const assetUrl = `https://github.com/llvm/llvm-project/releases/download/llvmorg-23.1.1/${base}.tar.xz`
+    globalThis.fetch = async (requested) => {
+      if (requested === "https://api.github.com/repos/llvm/llvm-project/releases/latest")
+        return Response.json({
+          tag_name: "llvmorg-23.1.1",
+          assets: [{ name: `${base}.tar.xz`, digest, browser_download_url: assetUrl }],
+        })
+      assert.equal(requested, assetUrl)
+      return new Response(bytes)
+    }
+    const installed = await installTool(path.join(directory, "tools"), "clangTidy", env)
+    assert.equal(installed.version, "23.1.1")
+    assert.equal(await readFile(installed.path, "utf8"), "clang-tidy binary")
+    assert.equal(installed.path, path.join(directory, "tools", "clang-tidy", "23.1.1", entry))
   } finally {
     globalThis.fetch = previousFetch
     await rm(directory, { recursive: true, force: true })

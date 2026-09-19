@@ -191,6 +191,9 @@ const ja: Messages = {
   "extensions.running": "実行中",
   "extensions.missingTool": "言語サーバーがありません",
   "extensions.installPrompt": "{name} 言語サーバーが見つかりません。入手しますか？",
+  "extensions.toolInstallPrompt": "{name} が見つかりません。インストールしますか？",
+  "extensions.largeDownload":
+    "ダウンロードサイズが大きいため（約 1 GB）、数分かかる場合があります。",
   "extensions.downloadPage": "ダウンロードページを開く",
   "extensions.installAction": "ダウンロードしてインストール",
   "extensions.installing": "{name} をインストール中…",

@@ -42,6 +42,17 @@ const npmTools = {
 const brewTools = { "clang-format": "clang-format", "clang-tidy": "llvm" }
 // Rust 组件经 rustup 官方渠道安装。
 const rustupTools = { rustfmt: "rustfmt", "cargo-clippy": "clippy" }
+// LLVM 官方完整工具链（clang-tidy 无独立分发）；归档数 GB，只提取请求的二进制。
+// 资产名中的版本号在解析最新 Release 后填入 `{v}` 占位。
+const llvmTools = ["clang-tidy", "clang-format"]
+const llvmTargets = {
+  win32: {
+    x64: "clang+llvm-{v}-x86_64-pc-windows-msvc",
+    arm64: "clang+llvm-{v}-aarch64-pc-windows-msvc",
+  },
+  darwin: { arm64: "LLVM-{v}-macOS-ARM64" },
+  linux: { x64: "LLVM-{v}-Linux-X64", arm64: "LLVM-{v}-Linux-ARM64" },
+}
 
 function toolOf(id) {
   const tool = toolCatalog.find((entry) => entry.id === id)
@@ -81,6 +92,8 @@ export function toolInstallPlan(
       binary,
       platform,
     }
+  const llvm = llvmTools.includes(binary) ? llvmTargets[platform]?.[arch] : undefined
+  if (llvm) return { method: "llvm", target: llvm, binary, platform }
   return null
 }
 
@@ -130,7 +143,33 @@ async function installBrewFormula(id, plan) {
   return { id, ...(await probeToolPath(id, binary)) }
 }
 
+async function llvmRelease(plan) {
+  const metadata = await json("https://api.github.com/repos/llvm/llvm-project/releases/latest")
+  const version = metadata.tag_name?.replace(/^llvmorg-/, "")
+  if (!/^\d+\.\d+\.\d+$/.test(version ?? "")) throw Error("Invalid LLVM release version")
+  const base = plan.target.replaceAll("{v}", version)
+  const name = `${base}.tar.xz`
+  const asset = metadata.assets?.find((entry) => entry.name === name)
+  if (!asset || !/^sha256:[0-9a-f]{64}$/i.test(asset.digest ?? ""))
+    throw Error("Verified tool archive is unavailable")
+  if (
+    !asset.browser_download_url?.startsWith(
+      "https://github.com/llvm/llvm-project/releases/download/",
+    )
+  )
+    throw Error("Invalid tool download URL")
+  return {
+    version,
+    url: asset.browser_download_url,
+    digest: asset.digest,
+    format: "xz",
+    // 成员名始终是正斜杠路径，与平台无关。
+    entry: `${base}/bin/${plan.platform === "win32" ? `${plan.binary}.exe` : plan.binary}`,
+  }
+}
+
 async function archiveRelease(plan) {
+  if (plan.method === "llvm") return llvmRelease(plan)
   if (plan.method === "github") {
     const metadata = await json(`https://api.github.com/repos/${plan.repository}/releases/latest`)
     const name = `${plan.binary}-${plan.target}`
@@ -172,9 +211,23 @@ async function installArchive(directory, id, plan) {
   const staging = await mkdtemp(path.join(parent, ".install-"))
   const archive = path.join(tmpdir(), `envoi-tool-${plan.binary}-${path.basename(staging)}.archive`)
   try {
-    await download(selected.url, archive, label)
+    // LLVM 工具链归档约 1–2 GB，需要更高的上限与更长的下载窗口。
+    await download(
+      selected.url,
+      archive,
+      label,
+      undefined,
+      plan.method === "llvm" ? { timeout: 1_800_000, maxBytes: 2_500_000_000 } : {},
+    )
     await verify(archive, selected.digest, label)
     if (selected.format === "zip") await unzip(archive, staging, label)
+    else if (selected.format === "xz")
+      // 系统 tar（Windows bsdtar / macOS bsdtar / GNU tar）均支持 xz 与按成员提取。
+      await executeFile("tar", ["-xJf", archive, "-C", staging, selected.entry], {
+        timeout: 600_000,
+        windowsHide: true,
+        maxBuffer: 1_000_000,
+      })
     else
       await tar.x({
         file: archive,

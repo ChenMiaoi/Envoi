@@ -179,6 +179,8 @@ const zhTW: Messages = {
   "extensions.running": "執行中",
   "extensions.missingTool": "缺少語言伺服器",
   "extensions.installPrompt": "找不到{name}語言伺服器。要取得嗎？",
+  "extensions.toolInstallPrompt": "未找到{name}。要現在安裝嗎？",
+  "extensions.largeDownload": "安裝包較大（約 1 GB），下載可能需要幾分鐘。",
   "extensions.downloadPage": "開啟下載頁面",
   "extensions.installAction": "下載並安裝",
   "extensions.installing": "正在安裝{name}…",

@@ -18,17 +18,23 @@ export async function json(url, accept = "application/vnd.github+json") {
   return response.json()
 }
 
-export async function download(url, destination, label = "Language server", signal) {
+export async function download(
+  url,
+  destination,
+  label = "Language server",
+  signal,
+  { timeout = 180_000, maxBytes = maxArchiveBytes } = {},
+) {
   const cancellation = signal
-    ? AbortSignal.any([signal, AbortSignal.timeout(180_000)])
-    : AbortSignal.timeout(180_000)
+    ? AbortSignal.any([signal, AbortSignal.timeout(timeout)])
+    : AbortSignal.timeout(timeout)
   const response = await fetch(url, { signal: cancellation })
   if (!response.ok || !response.body) throw Error(`${label} download failed (${response.status})`)
   let size = 0
   const limit = new Transform({
     transform(chunk, _encoding, callback) {
       size += chunk.length
-      callback(size > maxArchiveBytes ? Error(`${label} archive is too large`) : null, chunk)
+      callback(size > maxBytes ? Error(`${label} archive is too large`) : null, chunk)
     },
   })
   await pipeline(

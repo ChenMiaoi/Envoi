@@ -10,6 +10,7 @@ export type Tool = {
   candidates?: { path: string; version?: string }[]
   binary?: string
   installable?: boolean
+  installMethod?: string | null
 }
 export type ToolInfo = { groups?: Record<string, Tool[]> }
 export function pathsOf(tool: Tool) {

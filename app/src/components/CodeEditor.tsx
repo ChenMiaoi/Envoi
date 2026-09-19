@@ -42,6 +42,7 @@ import { editorFonts, pluginEnabled, themes } from "@/settings/model"
 import { pluginForLanguage } from "@/settings/pluginCatalog"
 import { useT } from "@/i18n/useT"
 import { completionChanges, type LspPosition, type LspRange } from "@/lib/lspCompletion"
+import type { ToolInfo } from "@/settings/extensionTools"
 
 type LspDiagnostic = { range: LspRange; message: string; severity?: number; source?: string }
 type LspCompletion = {
@@ -70,6 +71,12 @@ const linters: Record<string, string> = {
   python: "ruffLint",
   rust: "clippy",
 }
+const toolDownloads: Record<string, { name: string; url: string }> = {
+  clangTidy: { name: "clang-tidy", url: "https://github.com/llvm/llvm-project/releases" },
+  ruffLint: { name: "Ruff", url: "https://docs.astral.sh/ruff/installation/" },
+  clippy: { name: "Clippy", url: "https://rust-lang.github.io/rust-clippy/" },
+}
+const promptedTools = new Set<string>()
 
 // LSP CompletionItemKind → CodeMirror 补全类型(决定图标徽章)。
 const completionTypes: Record<number, string> = {
@@ -594,8 +601,65 @@ export function CodeEditor({
                 column: issue.column,
               })),
             )
-          } catch {
-            if (!cancelled) clearToolDiagnostics(path)
+          } catch (error) {
+            if (cancelled) return
+            clearToolDiagnostics(path)
+            const message = error instanceof Error ? error.message : String(error)
+            // 工具缺失且官方来源可安装时提示一次；其余失败保持静默。
+            const download = toolDownloads[id]
+            if (!download || !/is not installed$/.test(message) || /^(ssh|wsl):\/\//.test(root))
+              return
+            const promptKey = `${root}\0${id}`
+            if (promptedTools.has(promptKey)) return
+            promptedTools.add(promptKey)
+            void envoi()
+              .tools()
+              .then((info) => {
+                const rows = Object.values((info as ToolInfo).groups ?? {}).flat()
+                const row = rows.find((entry) => entry.id === id)
+                if (!row?.installable) return
+                toast.info(t("extensions.toolInstallPrompt", { name: download.name }), {
+                  duration: 12000,
+                  ...(row.installMethod === "llvm"
+                    ? { description: t("extensions.largeDownload") }
+                    : {}),
+                  action: {
+                    label: t("extensions.installAction"),
+                    onClick: () => {
+                      const notification = toast.loading(
+                        t("extensions.installing", { name: download.name }),
+                      )
+                      void Promise.resolve()
+                        .then(() => envoi().installTool(id))
+                        .then((result) => {
+                          toast.success(t("extensions.installed", { name: download.name }), {
+                            id: notification,
+                          })
+                          // 同一二进制的多个条目共享安装结果（与设置页一致）。
+                          const paths = { ...preferences.toolPaths }
+                          for (const peer of rows.filter(
+                            (entry) => entry.binary && entry.binary === row.binary,
+                          ))
+                            paths[peer.id] = result.path
+                          update({ toolPaths: paths })
+                        })
+                        .catch((cause) => {
+                          promptedTools.delete(promptKey)
+                          toast.error(t("extensions.installFailed", { name: download.name }), {
+                            id: notification,
+                            description: cause instanceof Error ? cause.message : String(cause),
+                            action: {
+                              label: t("extensions.downloadPage"),
+                              onClick: () =>
+                                window.open(download.url, "_blank", "noopener,noreferrer"),
+                            },
+                          })
+                        })
+                    },
+                  },
+                })
+              })
+              .catch(() => promptedTools.delete(promptKey))
           }
         }
         drainLint(queuedLint, lintRunning)
@@ -606,7 +670,7 @@ export function CodeEditor({
       cancelled = true
       clearTimeout(timer)
     }
-  }, [root, path, source, enabled, readOnly, lspLanguage, preferences.toolPaths])
+  }, [root, path, source, enabled, readOnly, lspLanguage, preferences.toolPaths, t, update])
   useLayoutEffect(() => {
     view.current?.dispatch({
       effects: settings.current.reconfigure([
