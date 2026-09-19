@@ -28,3 +28,11 @@ Project access separates opening from one persistent workspace trust decision sh
 Envoi's original code is licensed under Apache-2.0; see the root `LICENSE` file. Contributions are accepted under the same license unless a separate written agreement says otherwise. Do not relicense third-party components, paper templates, or user-owned research materials.
 
 The example button creates an independent project with five demonstration Git commits under the global data directory in development and packaged builds alike. `npm run demo:git` creates the same project from the command line and prints its path. Never edit the template through the runtime example flow or initialize a nested repository there. `test:desktop` validates creation, independent identities/history, normal saves and reopening; when TeX is installed it also compiles the generated example.
+
+### CI scheduling and desktop shards
+
+CI runs one macOS validation job and two independent Windows jobs. Each Windows job runs the complete non-desktop checks and half of the selected desktop suite (`ENVOI_DESKTOP_TEST_SHARD=1/2` or `2/2`). Selection happens after quick/full filtering, so their union preserves the existing coverage. Separate machines isolate Electron processes and fixture cleanup. This trades an extra Windows installation/build for a shorter critical path; it does not reduce total runner usage.
+
+The existing `check (macos-latest)` and `check (windows-latest)` gates succeed only after every validation job succeeds. Failed, cancelled or skipped validation cannot produce a green gate. A new run cancels older runs only for the same workflow, event and ref; manual/nightly full runs remain independent of PR/push quick runs. Validation jobs have a 30-minute timeout.
+
+Local commands remain unsharded. CI shards never publish reusable local check results, and `check:local` rejects a shard setting. `npm run ci:check` without a shard still runs all checks normally.

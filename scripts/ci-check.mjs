@@ -2,6 +2,7 @@ import { spawnSync } from "node:child_process"
 import { mkdir, readFile, writeFile, rm } from "node:fs/promises"
 import { fileURLToPath } from "node:url"
 import path from "node:path"
+import { selectShard } from "./test-shard.mjs"
 import { ensureAppDeps } from "./ensure-app-deps.mjs"
 import { artifactKey, canReuse, digest, sourceSnapshot, stepKey } from "./check-cache.mjs"
 
@@ -35,6 +36,13 @@ if (["darwin", "win32"].includes(process.platform)) {
 }
 
 try {
+  const shard = process.env.ENVOI_DESKTOP_TEST_SHARD || undefined
+  if (shard) {
+    selectShard([1, 2], shard)
+    if (local || !process.env.CI) throw new Error("Desktop sharding is only supported in CI")
+    if (!["darwin", "win32"].includes(process.platform))
+      throw new Error("Desktop sharding requires macOS or Windows")
+  }
   console.log(
     `${local ? "Local" : "Full CI"} checks: ${process.platform} ${process.arch}, Node ${process.version}`,
   )
@@ -104,9 +112,11 @@ try {
   if (digest(JSON.stringify(snapshot)) !== digest(JSON.stringify(await sourceSnapshot(root)))) {
     throw new Error("Source files changed during validation; rerun checks on the final contents")
   }
-  await mkdir(path.dirname(cachePath), { recursive: true })
-  await writeFile(cachePath, JSON.stringify(next, null, 2))
-  console.log(`\n${local ? "Local" : "CI"} checks passed.`)
+  if (!shard) {
+    await mkdir(path.dirname(cachePath), { recursive: true })
+    await writeFile(cachePath, JSON.stringify(next, null, 2))
+  }
+  console.log(`\n${shard ? `CI desktop shard ${shard}` : local ? "Local" : "CI"} checks passed.`)
   console.log(`Total: ${((Date.now() - started) / 1000).toFixed(1)}s`)
 } catch (error) {
   console.error(error.message)

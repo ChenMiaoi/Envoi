@@ -1,3 +1,5 @@
+import { tests, quickTests } from "./desktop-test-plan.mjs"
+import { selectShard } from "../../scripts/test-shard.mjs"
 import { execFileSync, spawnSync } from "node:child_process"
 import process from "node:process"
 
@@ -5,62 +7,6 @@ const visible = process.argv.includes("--visible")
 const quick = process.argv.includes("--quick")
 const started = performance.now()
 console.log(`Desktop tests: ${quick ? "quick" : "full"}, ${visible ? "visible" : "hidden"} windows`)
-
-const tests = [
-  [
-    "node:test fixtures",
-    [
-      "--test",
-      "--test-concurrency=1",
-      "scripts/test-project-trash.mjs",
-      "scripts/test-logging.mjs",
-      "scripts/test-workspace-trust.mjs",
-      "scripts/test-desktop-backend.mjs",
-      "scripts/test-example-project.mjs",
-      "scripts/test-workspaces.mjs",
-      "scripts/test-research-library.mjs",
-      "scripts/test-paper-download.mjs",
-      "scripts/test-paper-search.mjs",
-      "scripts/test-paper-files.mjs",
-      "scripts/test-updates.mjs",
-    ],
-  ],
-  ["component performance", ["scripts/test-performance-ui.mjs"]],
-  ["numeric settings", ["scripts/test-number-settings.mjs"]],
-  ["paper search settings", ["scripts/test-paper-search-settings-ui.mjs"]],
-  ["update settings", ["scripts/test-settings-display.mjs"]],
-  ["system fonts", ["scripts/test-system-fonts.mjs"]],
-  ["Git tree", ["scripts/test-git-tree.mjs"]],
-  ["code editor", ["scripts/test-code-editor-ui.mjs"]],
-  ["file actions", ["scripts/test-file-actions-ui.mjs"]],
-  ["restricted mode", ["scripts/test-restricted-mode.mjs"]],
-  ["desktop smoke", ["scripts/test-desktop-smoke.mjs"]],
-  ["project removal UI", ["scripts/test-project-removal-ui.mjs"]],
-  ["workspace UI", ["scripts/test-workspace-ui.mjs"]],
-  ["background agent UI", ["scripts/test-background-agent-ui.mjs"]],
-  ["research start UI", ["scripts/test-research-start-ui.mjs"]],
-  ["save and compile", ["scripts/test-save-compile.mjs"]],
-  ["model menu", ["scripts/test-model-menu.mjs"]],
-  ["status bar settings", ["scripts/test-status-bar-settings.mjs"]],
-  ["PDF scheduler", ["scripts/test-pdf-scheduler.mjs"]],
-  ["research library UI", ["scripts/test-research-library-ui.mjs"]],
-  ["diagnostics UI", ["scripts/test-diagnostics-ui.mjs"]],
-]
-
-const quickTests = new Set([
-  "component performance",
-  "node:test fixtures",
-  "numeric settings",
-  "Git tree",
-  "code editor",
-  "file actions",
-  "restricted mode",
-  "desktop smoke",
-  "save and compile",
-  "status bar settings",
-  "PDF scheduler",
-  "diagnostics UI",
-])
 
 function cleanupTree(pid) {
   if (process.platform !== "win32" || !pid) return
@@ -92,7 +38,11 @@ function cleanupNewElectronProcesses(before) {
   for (const pid of electronPids()) if (!before.has(pid)) cleanupTree(pid)
 }
 
-for (const [name, args] of tests.filter(([name]) => !quick || quickTests.has(name))) {
+const selected = selectShard(
+  tests.filter(([name]) => !quick || quickTests.has(name)),
+  process.env.ENVOI_DESKTOP_TEST_SHARD || undefined,
+)
+for (const [name, args] of selected) {
   console.log(`\n==> Desktop test: ${name}`)
   const testStarted = performance.now()
   let passed = false

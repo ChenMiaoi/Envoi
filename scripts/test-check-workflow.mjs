@@ -1,3 +1,5 @@
+import { tests, quickTests } from "../app/scripts/desktop-test-plan.mjs"
+import { selectShard } from "./test-shard.mjs"
 import assert from "node:assert/strict"
 import { test } from "node:test"
 import { mkdtemp, mkdir, readFile, writeFile, rm } from "node:fs/promises"
@@ -150,4 +152,19 @@ test("dependency reuse checks locked inputs and installation; failures cannot cr
     /installation failed/,
   )
   await assert.rejects(readFile(path.join(modules, ".envoi-deps.json")), { code: "ENOENT" })
+})
+
+test("desktop shards preserve complete coverage without overlap in quick and full suites", () => {
+  for (const selected of [tests, tests.filter(([name]) => quickTests.has(name))]) {
+    const items = selected.map(([name]) => name)
+    assert.deepEqual(selectShard(items), items)
+    const first = selectShard(items, "1/2")
+    const second = selectShard(items, "2/2")
+    assert(first.length > 0 && second.length > 0)
+    assert.deepEqual([...first, ...second].sort(), [...items].sort())
+    assert.equal(new Set([...first, ...second]).size, items.length)
+  }
+  for (const invalid of ["", "0/2", "3/2", "1/0", "1/3", "1.5/2", "garbage"]) {
+    assert.throws(() => selectShard([1, 2], invalid), /Invalid desktop shard/)
+  }
 })
