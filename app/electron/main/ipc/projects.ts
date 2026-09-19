@@ -40,6 +40,7 @@ export function registerProjectsIpc(
   })
 
   handle("envoi:bind-project", async (event, directory: string, opts?: { copy?: boolean }) => {
+    const ticket = sessions.beginBinding(event.sender.id)
     const root = await workspaceTrust.open(directory)
     const trusted = await workspaceTrust.isTrusted(root)
     let ignoreConfig = false
@@ -57,6 +58,8 @@ export function registerProjectsIpc(
       readOnly: !trusted,
       ignoreConfig,
     })
+    if (event.sender.isDestroyed() || !sessions.isCurrentBinding(event.sender.id, ticket))
+      throw Error("项目连接已取消")
     sessions.bindProject(event.sender.id, project.id, root)
     return { ok: true, project: { id: project.id, path: root, name: project.name } }
   })

@@ -1,3 +1,4 @@
+import path from "node:path"
 import assert from "node:assert/strict"
 import test from "node:test"
 import { ProjectSessionManager } from "../electron/main/services/project-sessions.ts"
@@ -79,4 +80,65 @@ test("settings requests preserve the service's partial-input defaults", () => {
   })
   validateBackendCall("agentRequest", ["settings", { settings: {} }])
   assert.throws(() => parseAgentInput("settings", { settings: { tools: "admin" } }))
+})
+
+test("switching projects invalidates pending and attached watches", () => {
+  const sessions = new ProjectSessionManager(() => {})
+  sessions.bindProject(1, "first", "/first")
+  const ticket = sessions.beginWatch(1)
+  let disposed = 0
+  sessions.attachWatch(1, ticket, () => disposed++)
+  sessions.bindProject(1, "second", "/second")
+  assert.equal(disposed, 1)
+  assert.equal(sessions.isCurrentWatch(1, ticket), false)
+})
+
+test("closing or superseding a project binding invalidates its asynchronous completion", () => {
+  const sessions = new ProjectSessionManager(() => {})
+  const first = sessions.beginBinding(1)
+  const second = sessions.beginBinding(1)
+  assert.equal(sessions.isCurrentBinding(1, first), false)
+  assert.equal(sessions.isCurrentBinding(1, second), true)
+  sessions.close(1)
+  assert.equal(sessions.isCurrentBinding(1, second), false)
+})
+
+test("compile cancellation does not cancel pending AI or lint, but closing does", () => {
+  const sessions = new ProjectSessionManager(() => {})
+  const compile = sessions.trackCompile(1, "/project")
+  const chat = sessions.trackOperation(1, "/project", "chat")
+  const lint = sessions.trackOperation(1, "/project", "lint")
+  sessions.cancelCompile(1)
+  assert.equal(compile.request.cancelled, true)
+  assert.equal(chat.request.cancelled, false)
+  assert.equal(lint.request.cancelled, false)
+  sessions.close(1)
+  assert.equal(chat.request.cancelled, true)
+  assert.equal(lint.request.cancelled, true)
+  for (const operation of [compile, chat, lint]) operation.finish()
+})
+
+test("Windows containment handles drive letters, case, UNC paths and sibling names", () => {
+  const sessions = new ProjectSessionManager(() => {}, path.win32)
+  const roots = [
+    String.raw`C:\Research`,
+    String.raw`c:\research\experiment`,
+    String.raw`C:\Research-other`,
+    String.raw`D:\Research`,
+    String.raw`\\server\share\Research`,
+    String.raw`\\server\share\Research\child`,
+    String.raw`\\server\other\Research`,
+  ]
+  roots.forEach((root, index) => sessions.bindProject(index, String(index), root))
+  const pending = roots.map((root, index) => sessions.trackOperation(index, root, "chat"))
+  assert.deepEqual(sessions.restrict(String.raw`c:\RESEARCH`), roots.slice(0, 2))
+  assert.deepEqual(
+    pending.map((item) => item.request.cancelled),
+    [true, true, false, false, false, false, false],
+  )
+  assert.deepEqual(sessions.restrict(String.raw`\\SERVER\SHARE\research`), roots.slice(4, 6))
+  assert.deepEqual(
+    pending.map((item) => item.request.cancelled),
+    [true, true, false, false, true, true, false],
+  )
 })

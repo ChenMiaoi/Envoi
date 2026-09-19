@@ -59,11 +59,16 @@ export function registerToolsIpc(
     async (
       event,
       input: { rootPath?: string; path: string; text: string; disabledRules?: number[] },
-    ) =>
-      toolsBackend.call("lint", [input], {
-        owner: event.sender.id,
-        root: await requireBoundRoot(input.rootPath ?? ""),
-      }),
+    ) => {
+      const { request, finish } = sessions.trackOperation(event.sender.id, input.rootPath, "lint")
+      try {
+        const root = await requireBoundRoot(input.rootPath ?? "")
+        if (request.cancelled || event.sender.isDestroyed()) throw Error("检查已取消")
+        return await toolsBackend.call("lint", [input], { owner: event.sender.id, root })
+      } finally {
+        finish()
+      }
+    },
   )
   handle("envoi:tools", async (event, options?: { refresh?: boolean; root?: string }) => {
     await requireToolContext(event)

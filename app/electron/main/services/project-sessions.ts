@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto"
 import path from "node:path"
 
-type CompileRequest = { cancelled: boolean; root?: string }
+type Operation = { cancelled: boolean; root?: string; kind: "compile" | "chat" | "lint" | "lsp" }
 type BrowseBinding = { root: string; controller: AbortController }
 
 // Owns window-scoped resources. A watch ticket cannot survive close or replacement.
@@ -12,10 +12,16 @@ export class ProjectSessionManager {
   private active = new Map<number, string>()
   private watches = new Map<number, () => void>()
   private tickets = new Map<number, object>()
-  private requests = new Map<number, Set<CompileRequest>>()
+  private requests = new Map<number, Set<Operation>>()
+  private bindings = new Map<number, object>()
+  private paths: Pick<typeof path, "relative" | "resolve" | "isAbsolute" | "sep">
   private browsing = new Map<number, BrowseBinding>()
   private disposeLanguage: (owner: number, root?: string) => void
-  constructor(disposeLanguage: (owner: number, root?: string) => void) {
+  constructor(
+    disposeLanguage: (owner: number, root?: string) => void,
+    paths: Pick<typeof path, "relative" | "resolve" | "isAbsolute" | "sep"> = path,
+  ) {
+    this.paths = paths
     this.disposeLanguage = disposeLanguage
   }
   bindRoot(root: string) {
@@ -39,10 +45,19 @@ export class ProjectSessionManager {
   activeRoot(owner: number) {
     return this.active.get(owner)
   }
+  beginBinding(owner: number) {
+    const ticket = {}
+    this.bindings.set(owner, ticket)
+    return ticket
+  }
+  isCurrentBinding(owner: number, ticket: object) {
+    return this.bindings.get(owner) === ticket
+  }
   bindProject(owner: number, id: string, root: string) {
     this.bindRoot(root)
     this.projects.set(id, root)
     if (this.active.get(owner) !== root) {
+      this.stopWatch(owner)
       this.cancelBrowse(owner)
       this.disposeLanguage(owner)
     }
@@ -82,8 +97,11 @@ export class ProjectSessionManager {
     this.watches.set(owner, dispose)
   }
   trackCompile(owner: number, root?: string) {
-    const request: CompileRequest = { cancelled: false, root }
-    const requests = this.requests.get(owner) ?? new Set<CompileRequest>()
+    return this.trackOperation(owner, root, "compile")
+  }
+  trackOperation(owner: number, root: string | undefined, kind: Operation["kind"]) {
+    const request: Operation = { cancelled: false, root, kind }
+    const requests = this.requests.get(owner) ?? new Set<Operation>()
     requests.add(request)
     this.requests.set(owner, requests)
     return {
@@ -95,28 +113,34 @@ export class ProjectSessionManager {
     }
   }
   cancelCompile(owner: number) {
-    for (const request of this.requests.get(owner) ?? []) request.cancelled = true
+    for (const request of this.requests.get(owner) ?? [])
+      if (request.kind === "compile") request.cancelled = true
   }
   close(owner: number) {
+    this.bindings.delete(owner)
     this.disposeLanguage(owner)
     this.cancelBrowse(owner)
     this.active.delete(owner)
     this.stopWatch(owner)
-    this.cancelCompile(owner)
+    for (const request of this.requests.get(owner) ?? []) request.cancelled = true
   }
   restrict(root: string) {
     const affected = [...new Set(this.projects.values())].filter((candidate) => {
-      const relative = path.relative(root, candidate)
+      const relative = this.paths.relative(root, candidate)
       return (
         !relative ||
-        (!relative.startsWith(".." + path.sep) && relative !== ".." && !path.isAbsolute(relative))
+        (!relative.startsWith(".." + this.paths.sep) &&
+          relative !== ".." &&
+          !this.paths.isAbsolute(relative))
       )
     })
     for (const requests of this.requests.values())
       for (const request of requests)
         if (
           request.root &&
-          affected.some((candidate) => path.relative(candidate, path.resolve(request.root!)) === "")
+          affected.some(
+            (candidate) => this.paths.relative(candidate, this.paths.resolve(request.root!)) === "",
+          )
         )
           request.cancelled = true
     for (const owner of this.active.keys()) {

@@ -1,9 +1,12 @@
 import { parseAgentRequest, agentChatSchema } from "../../../shared/contracts"
 import type { MainServices } from "../runtime"
 export function registerAgentIpc(
-  services: Pick<MainServices, "agentBackend" | "requireToolContext" | "agentRoot" | "handle">,
+  services: Pick<
+    MainServices,
+    "agentBackend" | "requireToolContext" | "agentRoot" | "handle" | "sessions"
+  >,
 ) {
-  const { agentBackend, requireToolContext, agentRoot, handle } = services
+  const { agentBackend, requireToolContext, agentRoot, handle, sessions } = services
   handle("envoi:agent-status", () => agentBackend.call("agentStatus"))
   handle("envoi:agent-request", async (event, route: string, body: unknown) => {
     if (["sessions", "session", "new", "history/delete"].includes(route))
@@ -29,25 +32,37 @@ export function registerAgentIpc(
     ) => {
       params = agentChatSchema.parse(params)
       const sender = event.sender
-      const root = await agentRoot(params)
-      if (!root) throw Error("请先打开并信任项目。")
-      void agentBackend
-        .call("agentChat", [params], {
-          owner: sender.id,
-          root,
-          onEvent: (chatEvent: Record<string, unknown>) => {
+      const { request, finish } = sessions.trackOperation(
+        sender.id,
+        sessions.projectRoot(params.projectId),
+        "chat",
+      )
+      try {
+        const root = await agentRoot(params)
+        if (request.cancelled || sender.isDestroyed()) throw Error("任务已取消")
+        if (!root) throw Error("请先打开并信任项目。")
+        void agentBackend
+          .call("agentChat", [params], {
+            owner: sender.id,
+            root,
+            onEvent: (chatEvent: Record<string, unknown>) => {
+              if (!sender.isDestroyed())
+                sender.send("envoi:agent-event", { projectId: params.projectId, ...chatEvent })
+            },
+          })
+          .catch((error: Error) => {
             if (!sender.isDestroyed())
-              sender.send("envoi:agent-event", { projectId: params.projectId, ...chatEvent })
-          },
-        })
-        .catch((error: Error) => {
-          if (!sender.isDestroyed())
-            sender.send("envoi:agent-event", {
-              projectId: params.projectId,
-              type: "error",
-              message: error.message,
-            })
-        })
+              sender.send("envoi:agent-event", {
+                projectId: params.projectId,
+                type: "error",
+                message: error.message,
+              })
+          })
+      } finally {
+        // The backend owns cancellation after synchronous dispatch. Until then,
+        // this reservation covers asynchronous trust checks in the main process.
+        finish()
+      }
       return { ok: true }
     },
   )
