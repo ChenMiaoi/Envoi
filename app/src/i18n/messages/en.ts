@@ -2,6 +2,12 @@
 import type { Messages } from "./zh-CN"
 const en: Messages = {
   "remote.configFile": "SSH config file (optional, absolute local path)",
+  "wsl.title": "WSL",
+  "wsl.description": "Open Linux projects in Windows Subsystem for Linux.",
+  "wsl.requirements":
+    "Windows with WSL is required. Install Node.js 22+ in the distribution; terminals also need Python 3.",
+  "wsl.distribution": "Distribution",
+  "wsl.select": "Select a distribution",
   "remote.title": "Remote SSH",
   "remote.description": "Connect to a remote host to edit files and run tools in your workspace.",
   "remote.requirements":

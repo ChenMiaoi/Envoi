@@ -430,7 +430,7 @@ export function CodeEditor({
           ) {
             const download = lspDownloads[lspLanguage]
             const promptKey = `${root}\0${pluginId ?? lspLanguage}`
-            if (download && !root.startsWith("ssh://") && !promptedLsp.has(promptKey)) {
+            if (download && !/^(ssh|wsl):\/\//.test(root) && !promptedLsp.has(promptKey)) {
               promptedLsp.add(promptKey)
               toast.info(t("extensions.installPrompt", { name: download.name }), {
                 duration: 12000,
@@ -513,7 +513,7 @@ export function CodeEditor({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [attempt])
   useLayoutEffect(() => {
-    if (!root?.startsWith("ssh://") || typeof envoi().onRemoteEvent !== "function") return
+    if (!/^(ssh|wsl):\/\//.test(root ?? "") || typeof envoi().onRemoteEvent !== "function") return
     return envoi().onRemoteEvent((event) => {
       if (event.type !== "state" || event.value.root !== root) return
       if (event.value.state === "connected") {

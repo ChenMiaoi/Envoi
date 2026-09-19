@@ -1,4 +1,5 @@
 export interface SshTarget {
+  kind?: "ssh" | "wsl"
   host: string
   configFile?: string
   port?: number
@@ -6,6 +7,7 @@ export interface SshTarget {
 }
 export interface RemoteState {
   root: string
+  kind?: "ssh" | "wsl"
   host: string
   directory: string
   state: "connecting" | "connected" | "disconnected"

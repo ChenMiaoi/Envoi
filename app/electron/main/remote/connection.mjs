@@ -3,6 +3,7 @@ import { createHash, randomBytes, randomUUID } from "node:crypto"
 import { mkdir, readFile, writeFile, chmod, rename } from "node:fs/promises"
 import net from "node:net"
 import path from "node:path"
+import { validateWslTarget, listWslDistributions, wslArguments } from "./wsl.mjs"
 import { RpcPeer } from "./rpc.mjs"
 
 export function validateSshTarget(target) {
@@ -38,18 +39,22 @@ export function validateSshTarget(target) {
     directory: path.posix.normalize(target.directory),
   }
 }
+export function validateRemoteTarget(target) {
+  if (target?.kind === "wsl") return validateWslTarget(target)
+  if (target?.kind !== undefined && target.kind !== "ssh") throw Error("Unknown connection type")
+  return validateSshTarget(target)
+}
 export function remoteRoot(target) {
   return (
-    "ssh://" +
+    (target?.kind === "wsl" ? "wsl://" : "ssh://") +
     createHash("sha256")
-      .update(JSON.stringify(validateSshTarget(target)))
+      .update(JSON.stringify(validateRemoteTarget(target)))
       .digest("hex") +
     "/"
   )
 }
 const quote = (value) => "'" + value.replaceAll("'", "'\\''") + "'"
-export function sshArguments(target, size, digest, session) {
-  validateSshTarget(target)
+export function deploymentScript(size, digest, session) {
   if (
     !Number.isInteger(size) ||
     size <= 0 ||
@@ -58,7 +63,12 @@ export function sshArguments(target, size, digest, session) {
   )
     throw Error("Invalid agent deployment")
   // Uploaded bytes are data on stdin; no workspace paths or user commands enter this script.
-  const script = `set -eu\ncommand -v node >/dev/null || { echo 'Remote SSH requires Node.js 22 or later on the host' >&2; exit 1; }\numask 077\nd="$HOME/.envoi/remote-server"\nmkdir -p "$d"\nf="$d/${digest}.cjs"\nt=$(mktemp "$d/upload.XXXXXX")\ntrap 'rm -f "$t"' EXIT\nhead -c ${size} > "$t"\n[ "$(wc -c < "$t")" -eq ${size} ] || exit 1\n[ "$(sha256sum "$t" | cut -d ' ' -f 1)" = '${digest}' ] || exit 1\nmv "$t" "$f"\nexec node "$f" --proxy ${session}`
+  const script = `set -eu\ncommand -v node >/dev/null || { echo 'Linux workspace requires Node.js 22 or later on the host' >&2; exit 1; }\numask 077\nd="$HOME/.envoi/remote-server"\nmkdir -p "$d"\nf="$d/${digest}.cjs"\nt=$(mktemp "$d/upload.XXXXXX")\ntrap 'rm -f "$t"' EXIT\nhead -c ${size} > "$t"\n[ "$(wc -c < "$t")" -eq ${size} ] || exit 1\n[ "$(sha256sum "$t" | cut -d ' ' -f 1)" = '${digest}' ] || exit 1\nmv "$t" "$f"\nexec node "$f" --proxy ${session}`
+  return script
+}
+export function sshArguments(target, size, digest, session) {
+  validateSshTarget(target)
+  const script = deploymentScript(size, digest, session)
   return [
     ...(target.configFile ? ["-F", target.configFile] : []),
     "-T",
@@ -113,6 +123,7 @@ export class RemoteWorkspaces {
   describe(entry) {
     return {
       root: entry.root,
+      kind: entry.target.kind ?? "ssh",
       host: entry.target.host,
       directory: entry.target.directory,
       state: entry.state,
@@ -128,6 +139,7 @@ export class RemoteWorkspaces {
         ? this.describe(entry)
         : {
             root,
+            kind: profile.target.kind ?? "ssh",
             host: profile.target.host,
             directory: profile.target.directory,
             state: "disconnected",
@@ -137,7 +149,7 @@ export class RemoteWorkspaces {
   }
   async connect(owner, target, existingRoot) {
     await this.ready
-    target = validateSshTarget(target)
+    target = validateRemoteTarget(target)
     const root = existingRoot ?? remoteRoot(target),
       key = `${owner}:${root}`
     let entry = this.entries.get(key)
@@ -164,13 +176,18 @@ export class RemoteWorkspaces {
     let askpass,
       stderr = ""
     try {
-      askpass = await this.askpass(entry.owner)
+      const wsl = entry.target.kind === "wsl"
+      if (wsl && !(await listWslDistributions()).includes(entry.target.host))
+        throw Error("WSL distribution is not installed")
+      askpass = wsl ? { env: {}, dispose() {} } : await this.askpass(entry.owner)
       const bytes = await readFile(path.join(this.binaryDirectory, "remote-agent.cjs"))
       const digest = createHash("sha256").update(bytes).digest("hex")
       if (entry.intentional) throw Error("Connection cancelled")
       const child = spawn(
-        "ssh",
-        [...this.sshArgs, ...sshArguments(entry.target, bytes.length, digest, entry.session)],
+        wsl ? "wsl.exe" : "ssh",
+        wsl
+          ? wslArguments(entry.target, deploymentScript(bytes.length, digest, entry.session))
+          : [...this.sshArgs, ...sshArguments(entry.target, bytes.length, digest, entry.session)],
         {
           windowsHide: true,
           stdio: "pipe",
@@ -187,7 +204,7 @@ export class RemoteWorkspaces {
       const peer = new RpcPeer(child.stdout, child.stdin)
       entry.peer = peer
       child.on("error", (error) => peer.close(error))
-      child.on("close", () => peer.close(Error(stderr || "SSH connection closed")))
+      child.on("close", () => peer.close(Error(stderr || "Workspace connection closed")))
       peer.on("event", (event) => {
         if (entry.peer !== peer) return
         if (
@@ -346,7 +363,9 @@ export class RemoteWorkspaces {
   get(owner, root) {
     const entry = this.entries.get(`${owner}:${root}`)
     if (!entry || entry.state !== "connected")
-      throw Error("SSH connection is disconnected; drafts are preserved. Reconnect before saving.")
+      throw Error(
+        "Workspace connection is disconnected; drafts are preserved. Reconnect before saving.",
+      )
     return entry
   }
   async call(owner, root, method, args = []) {

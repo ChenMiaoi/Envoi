@@ -12,6 +12,7 @@ import type {
 import type { AgentStatus } from "./agent-model"
 // Platform-neutral contract implemented by the Electron preload bridge.
 export interface EnvoiBridge {
+  wslDistributions(): Promise<string[]>
   remoteList(): Promise<import("./remote").RemoteState[]>
   remoteConnect(target: import("./remote").SshTarget): Promise<import("./remote").RemoteState>
   remoteReconnect(root: string): Promise<import("./remote").RemoteState>

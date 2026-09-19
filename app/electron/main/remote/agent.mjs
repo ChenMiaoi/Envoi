@@ -43,7 +43,7 @@ export function createAgent(publish) {
     async call(method, args) {
       if (method === "hello") {
         if (process.platform !== "linux" || Number(process.versions.node.split(".")[0]) < 22)
-          throw Error("Remote SSH requires Linux and Node.js 22 or later")
+          throw Error("Linux workspaces require Linux and Node.js 22 or later")
         if (args[0] !== REMOTE_PROTOCOL) throw Error("Remote protocol version mismatch")
         const requested = args[1]
         if (typeof requested !== "string" || !path.isAbsolute(requested))

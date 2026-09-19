@@ -42,23 +42,41 @@ try {
     }
   }
   await capture("remote-ssh-dialog.png")
-  const config = process.env.ENVOI_TEST_SSH_CONFIG
-  if (config) {
-    await page
-      .getByRole("textbox", { name: "SSH 主机", exact: true })
-      .fill(process.env.ENVOI_TEST_SSH_HOST ?? "envoi-test")
+  await page.keyboard.press("Escape")
+  await page.getByTestId("extension-wsl").getByRole("button", { name: "WSL", exact: true }).click()
+  await page.getByRole("combobox", { name: "发行版", exact: true }).waitFor()
+  assert.equal(await page.getByRole("textbox", { name: "SSH 主机", exact: true }).count(), 0)
+  const distro = process.env.ENVOI_TEST_WSL_DISTRO
+  if (distro) {
+    await page.getByRole("combobox", { name: "发行版", exact: true }).selectOption(distro)
     await page
       .getByRole("textbox", { name: "远程目录", exact: true })
-      .fill(process.env.ENVOI_TEST_SSH_DIRECTORY ?? "/workspace")
-    await page
-      .getByRole("textbox", { name: "SSH 配置文件（可选，本机绝对路径）", exact: true })
-      .fill(config)
+      .fill(process.env.ENVOI_TEST_WSL_DIRECTORY)
+    await capture("wsl-dialog.png")
+  } else {
+    await page.keyboard.press("Escape")
+    await page.getByTestId("extension-remote-ssh").getByRole("button").click()
+  }
+  const config = process.env.ENVOI_TEST_SSH_CONFIG
+  if (config || distro) {
+    if (config) {
+      await page
+        .getByRole("textbox", { name: "SSH 主机", exact: true })
+        .fill(process.env.ENVOI_TEST_SSH_HOST ?? "envoi-test")
+      await page
+        .getByRole("textbox", { name: "远程目录", exact: true })
+        .fill(process.env.ENVOI_TEST_SSH_DIRECTORY ?? "/workspace")
+      await page
+        .getByRole("textbox", { name: "SSH 配置文件（可选，本机绝对路径）", exact: true })
+        .fill(config)
+    }
     const connecting = page.getByRole("button", { name: "连接并打开", exact: true }).click()
     // One-time fixture host confirmation, if this known_hosts file is still empty.
     await connecting
     const auth = page.getByRole("heading", { name: "SSH 身份验证", exact: true })
     const trust = page.getByRole("button", { name: "信任项目", exact: true })
-    await Promise.race([auth.waitFor(), trust.waitFor()])
+    if (distro) await trust.waitFor({ timeout: 90000 })
+    else await Promise.race([auth.waitFor(), trust.waitFor()])
     if (await auth.isVisible()) {
       await page.getByRole("textbox", { name: "验证响应", exact: true }).fill("yes")
       await page.getByRole("button", { name: "继续", exact: true }).click()
@@ -86,7 +104,7 @@ try {
         .querySelector(".xterm-accessibility-tree")
         ?.textContent?.includes("ENVOI_UI_TERMINAL"),
     )
-    await capture("remote-ssh-workspace.png")
+    await capture(distro ? "wsl-workspace.png" : "remote-ssh-workspace.png")
     await page.keyboard.press("Escape")
     await editor.click()
     await editor.press("Control+End")
@@ -107,7 +125,7 @@ try {
     )
   }
   assert.deepEqual(errors, [])
-  console.log("PASS Remote SSH extension and connection validation UI")
+  console.log("PASS SSH and WSL extensions and connection validation UI")
 } finally {
   await app
     ?.evaluate(({ BrowserWindow }) => {

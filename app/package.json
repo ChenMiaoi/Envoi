@@ -20,6 +20,7 @@
     "package:mac": "npm run build:desktop && electron-builder --mac --config electron-builder.yml --publish never",
     "lint": "eslint . && node scripts/check-architecture.mjs",
     "preview": "vite preview",
+    "test:wsl": "node scripts/test-wsl.mjs",
     "test:remote": "node scripts/test-remote-ssh.mjs",
     "test:references": "node scripts/test-references.mjs",
     "test": "npm run test:references && node scripts/test-library.mjs",

@@ -5,43 +5,48 @@ import { usePreferences } from "./context"
 import { useProject } from "@/project/context"
 import { envoi, ipcError } from "@/lib/desktop"
 import type { ToolInfo } from "./extensionTools"
-export function RemoteSshSettings() {
+export function RemoteSshSettings({ kind = "ssh" }: { kind?: "ssh" | "wsl" }) {
+  const plugin = kind === "wsl" ? "envoi.wsl" : "envoi.remote-ssh"
   const { t } = useT(),
     { preferences, update } = usePreferences()
   const root = useProject((state) => state.project.rootPath)
-  const active = root?.startsWith("ssh://")
+  const active = root?.startsWith(`${kind}://`)
   return (
     <article
-      data-testid="extension-remote-ssh"
+      data-testid={kind === "wsl" ? "extension-wsl" : "extension-remote-ssh"}
       className="rounded-2xl border border-border/70 bg-card/80 p-4"
     >
       <div className="flex items-center gap-3">
         <Network className="size-8 text-primary" />
         <div className="flex-1">
-          <h3 className="text-sm font-semibold">{t("remote.title")}</h3>
-          <p className="mt-1 text-xs text-muted-foreground">{t("remote.description")}</p>
+          <h3 className="text-sm font-semibold">
+            {t(kind === "wsl" ? "wsl.title" : "remote.title")}
+          </h3>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {t(kind === "wsl" ? "wsl.description" : "remote.description")}
+          </p>
         </div>
         <input
           type="checkbox"
-          aria-label={`${t("remote.title")} · ${t("extensions.enabled")}`}
-          checked={preferences.pluginStates["envoi.remote-ssh"] !== false}
+          aria-label={`${t(kind === "wsl" ? "wsl.title" : "remote.title")} · ${t("extensions.enabled")}`}
+          checked={preferences.pluginStates[plugin] !== false}
           disabled={active}
           onChange={(event) =>
             update({
               pluginStates: {
                 ...preferences.pluginStates,
-                "envoi.remote-ssh": event.target.checked,
+                [plugin]: event.target.checked,
               },
             })
           }
         />
       </div>
       <button
-        disabled={preferences.pluginStates["envoi.remote-ssh"] === false}
+        disabled={preferences.pluginStates[plugin] === false}
         className="mt-3 rounded border px-3 py-1.5 text-xs text-primary disabled:opacity-40"
-        onClick={() => window.dispatchEvent(new Event("envoi:open-remote"))}
+        onClick={() => window.dispatchEvent(new CustomEvent("envoi:open-remote", { detail: kind }))}
       >
-        {t("remote.manage")}
+        {t(kind === "wsl" ? "wsl.title" : "remote.manage")}
       </button>
       {active && <p className="mt-2 text-xs text-muted-foreground">{t("remote.disableHint")}</p>}
     </article>
@@ -77,6 +82,7 @@ export function RemoteExtensionTools({ root }: { root: string }) {
   return (
     <div className="space-y-3">
       <RemoteSshSettings />
+      <RemoteSshSettings kind="wsl" />
       <p className="text-xs text-muted-foreground">{t("remote.toolsHint")}</p>
       <button className="text-xs text-primary" onClick={load}>
         {t("settings.tools.refresh")}

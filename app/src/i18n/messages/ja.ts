@@ -2,6 +2,12 @@
 import type { Messages } from "./zh-CN"
 const ja: Messages = {
   "remote.configFile": "SSH 設定ファイル（任意、ローカルの絶対パス）",
+  "wsl.title": "WSL",
+  "wsl.description": "Windows Subsystem for Linux のプロジェクトを開きます。",
+  "wsl.requirements":
+    "Windows と WSL が必要です。ディストリビューションに Node.js 22+、ターミナルには Python 3 が必要です。",
+  "wsl.distribution": "ディストリビューション",
+  "wsl.select": "ディストリビューションを選択",
   "remote.title": "Remote SSH",
   "remote.description":
     "リモートホストに接続し、ワークスペースでファイルの編集やツールの実行を行います。",

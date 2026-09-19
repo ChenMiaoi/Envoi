@@ -43,18 +43,18 @@ export class RpcPeer extends EventEmitter {
         }
       }
     })
-    input.on("end", () => this.close(Error("SSH connection closed")))
+    input.on("end", () => this.close(Error("Workspace connection closed")))
     input.on("error", (error) => this.close(error))
     output.on("error", (error) => this.close(error))
   }
   send(message) {
-    if (this.closed) throw Error("SSH connection is disconnected")
+    if (this.closed) throw Error("Workspace connection is disconnected")
     const frame = JSON.stringify(message) + "\n"
     if (Buffer.byteLength(frame) > MAX_FRAME) throw Error("Remote frame too large")
     this.output.write(frame)
   }
   call(method, args = [], timeout = 60000) {
-    if (this.closed) return Promise.reject(Error("SSH connection is disconnected"))
+    if (this.closed) return Promise.reject(Error("Workspace connection is disconnected"))
     return new Promise((resolve, reject) => {
       const id = ++this.serial
       const timer = setTimeout(() => {

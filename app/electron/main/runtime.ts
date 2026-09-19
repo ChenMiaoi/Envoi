@@ -73,7 +73,7 @@ export function createMainServices() {
     const entry = [...remote.entries.values()].find(
       (entry) => entry.root === root && entry.state === "connected",
     )
-    if (!entry) throw Error("SSH connection is disconnected")
+    if (!entry) throw Error("Workspace connection is disconnected")
     const result = await remote.call(entry.owner, root, "fs-read", [file])
     return typeof result.text === "string"
       ? Buffer.from(result.text)

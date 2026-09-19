@@ -4,6 +4,11 @@
  */
 export const zhCN = {
   "remote.configFile": "SSH 配置文件（可选，本机绝对路径）",
+  "wsl.title": "WSL",
+  "wsl.description": "打开 Windows Subsystem for Linux 中的 Linux 项目。",
+  "wsl.requirements": "需要 Windows 和 WSL。发行版内需安装 Node.js 22+，终端另需 Python 3。",
+  "wsl.distribution": "发行版",
+  "wsl.select": "选择发行版",
   "remote.title": "Remote SSH",
   "remote.description": "连接远程主机，在当前工作区编辑文件并运行远程工具。",
   "remote.requirements":

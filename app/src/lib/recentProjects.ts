@@ -48,7 +48,7 @@ async function remember(store: "recent" | "roots", rootPath: string) {
   const previous = await (store === "recent" ? recentProjects() : authorizedRoots())
   let identity: string | undefined
   try {
-    identity = rootPath.startsWith("ssh://")
+    identity = /^(ssh|wsl):\/\//.test(rootPath)
       ? "remote-" + new URL(rootPath).hostname
       : JSON.parse((await projectConfigFile(rootPath))?.text ?? "{}").projectId
   } catch {

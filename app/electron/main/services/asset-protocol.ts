@@ -56,7 +56,7 @@ export function createAssetProtocol(
     const root = sessions.rootForToken(url.host)
     if (!root) return new Response("未授权的资源访问", { status: 403 })
     const relative = decodeURIComponent(url.pathname).replace(/^\/+/, "")
-    if (root.startsWith("ssh://")) {
+    if (/^(ssh|wsl):\/\//.test(root)) {
       try {
         const data = await remoteRead?.(root, relative)
         if (!data) return new Response("Remote asset unavailable", { status: 503 })

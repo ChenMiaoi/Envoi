@@ -1,13 +1,13 @@
 import { dataStore } from "../../../server/local-data.mjs"
 import { safePathParts } from "../../../shared/file-rules.mjs"
-export const isRemoteRoot = (root) => typeof root === "string" && root.startsWith("ssh://")
+export const isRemoteRoot = (root) => typeof root === "string" && /^(ssh|wsl):\/\//.test(root)
 
 export async function remotePreferences() {
   const result = await dataStore({ store: "preferences", key: "default", action: "get" })
   return { value: result.body?.value ?? {}, revision: result.body?.revision ?? 0 }
 }
 
-// Routes all workspace capabilities through the same owner-bound SSH environment.
+// Routes all workspace capabilities through the same owner-bound Linux environment.
 // Unknown remote operations fail here; a remote identifier never reaches local fs/process APIs.
 export async function routeRemoteWorkspace(remote, sessions, owner, channel, args) {
   const method = channel.replace(/^envoi:/, "")
@@ -45,10 +45,15 @@ export async function routeRemoteWorkspace(remote, sessions, owner, channel, arg
     }
   if (method === "bind-project") {
     const ticket = sessions.beginBinding(owner)
-    if (!profile && !entry) throw Error("Unknown SSH workspace; connect from Remote SSH first")
+    if (!profile && !entry)
+      throw Error("Unknown workspace; connect from its connection plugin first")
+    const target = entry?.target ?? profile.target
     const preferences = await remotePreferences()
-    if (preferences.value.pluginStates?.["envoi.remote-ssh"] === false)
-      throw Error("Remote SSH is disabled")
+    if (
+      preferences.value.pluginStates?.[target.kind === "wsl" ? "envoi.wsl" : "envoi.remote-ssh"] ===
+      false
+    )
+      throw Error("Workspace connection plugin is disabled")
     await remote.connect(owner, entry?.target ?? profile.target, root)
     if (!sessions.isCurrentBinding(owner, ticket)) throw Error("Remote project binding cancelled")
     if (isRemoteRoot(active) && active !== root) remote.disconnect(owner, active)
@@ -80,8 +85,9 @@ export async function routeRemoteWorkspace(remote, sessions, owner, channel, arg
     (!entry || entry.state !== "connected" || sessions.activeRoot(owner) !== root)
   )
     return { value: null }
-  if (!entry) throw Error("SSH workspace is not connected in this window")
-  if (sessions.activeRoot(owner) !== root) throw Error("SSH workspace is not active in this window")
+  if (!entry) throw Error("Remote workspace is not connected in this window")
+  if (sessions.activeRoot(owner) !== root)
+    throw Error("Remote workspace is not active in this window")
   if (method === "grant-project-trust" || method === "restrict-project") {
     const trusted = method === "grant-project-trust"
     remote.profiles[root].trusted = trusted
@@ -188,5 +194,5 @@ export async function routeRemoteWorkspace(remote, sessions, owner, channel, arg
     ].includes(method)
   )
     return { value: await remote.call(owner, root, method, args) }
-  throw Error(`This capability is not available in SSH workspaces yet: ${method}`)
+  throw Error(`This capability is not available in Remote workspaces yet: ${method}`)
 }

@@ -75,7 +75,7 @@ function SectionTitle({
 
 export function ExtensionsSettings({ scope }: { scope: "global" | "project" }) {
   const root = useProject((state) => state.project.rootPath)
-  return root?.startsWith("ssh://") ? (
+  return root && /^(ssh|wsl):\/\//.test(root) ? (
     <RemoteExtensionTools root={root} />
   ) : (
     <LocalExtensionsSettings scope={scope} />
@@ -112,6 +112,7 @@ function LocalExtensionsSettings({ scope }: { scope: "global" | "project" }) {
   return (
     <div className="space-y-3">
       <RemoteSshSettings />
+      <RemoteSshSettings kind="wsl" />
       <div className="flex items-center justify-between gap-3 px-1">
         <div className="min-w-0">
           <p className="text-xs font-medium text-foreground">{t("extensions.localEnvironment")}</p>

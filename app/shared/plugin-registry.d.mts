@@ -5,6 +5,7 @@ export function loadPlugins<T>(manifests: T[]): {
 
 type Manifest =
   | typeof import("../plugins/remote-ssh/manifest.json")
+  | typeof import("../plugins/wsl/manifest.json")
   | typeof import("../plugins/cpp/manifest.json")
   | typeof import("../plugins/python/manifest.json")
   | typeof import("../plugins/rust/manifest.json")

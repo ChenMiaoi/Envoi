@@ -2,6 +2,11 @@
 import type { Messages } from "./zh-CN"
 const zhHK: Messages = {
   "remote.configFile": "SSH 配置文件（可選，本機絕對路徑）",
+  "wsl.title": "WSL",
+  "wsl.description": "打開 Windows Subsystem for Linux 中的 Linux 項目。",
+  "wsl.requirements": "需要 Windows 和 WSL。發行版內需安裝 Node.js 22+，終端另需 Python 3。",
+  "wsl.distribution": "發行版",
+  "wsl.select": "選擇發行版",
   "remote.title": "Remote SSH",
   "remote.description": "連接遠程主機，在當前工作區編輯文件並運行遠程工具。",
   "remote.requirements":

@@ -19,6 +19,8 @@ export function RemoteWorkspaceControls() {
   const { project, navigationBusy, saving } = useProject()
   const [open, setOpen] = useState(false),
     [terminal, setTerminal] = useState(false)
+  const [kind, setKind] = useState<"ssh" | "wsl">("ssh")
+  const [distributions, setDistributions] = useState<string[]>([])
   const [host, setHost] = useState(""),
     [directory, setDirectory] = useState(""),
     [port, setPort] = useState("")
@@ -28,11 +30,13 @@ export function RemoteWorkspaceControls() {
     [error, setError] = useState("")
   const [prompt, setPrompt] = useState<{ id: string; prompt: string }>(),
     [answer, setAnswer] = useState("")
-  const root = project.rootPath?.startsWith("ssh://") ? project.rootPath : undefined
+  const root = /^(ssh|wsl):\/\//.test(project.rootPath ?? "") ? project.rootPath : undefined
   const current = states.find((entry) => entry.root === root)
-  const enabled = preferences.pluginStates["envoi.remote-ssh"] !== false
+  const enabled =
+    preferences.pluginStates[kind === "wsl" ? "envoi.wsl" : "envoi.remote-ssh"] !== false
   useEffect(() => {
-    const show = () => {
+    const show = (event: Event) => {
+      setKind((event as CustomEvent).detail === "wsl" ? "wsl" : "ssh")
       setOpen(true)
       setError("")
     }
@@ -59,6 +63,24 @@ export function RemoteWorkspaceControls() {
       window.removeEventListener("envoi:open-remote", show)
     }
   }, [])
+  useEffect(() => {
+    if (!open || kind !== "wsl") return
+    let alive = true
+    void envoi()
+      .wslDistributions()
+      .then((names) => {
+        if (alive) {
+          setDistributions(names)
+          setHost(names[0] ?? "")
+        }
+      })
+      .catch((error) => {
+        if (alive) setError(ipcError(error).message)
+      })
+    return () => {
+      alive = false
+    }
+  }, [open, kind])
   const run = async (action: () => Promise<void>) => {
     if (working) return
     setWorking(true)
@@ -81,9 +103,13 @@ export function RemoteWorkspaceControls() {
         <div className="flex items-center gap-2 text-xs">
           <button
             className="max-w-64 truncate rounded border border-primary/30 px-2 py-1 text-primary"
-            onClick={() => setOpen(true)}
+            onClick={() => {
+              setKind(current?.kind ?? "ssh")
+              setOpen(true)
+            }}
           >
-            SSH: {current?.host ?? "…"} · {t(`remote.${current?.state ?? "disconnected"}`)}
+            {current?.kind === "wsl" ? "WSL" : "SSH"}: {current?.host ?? "…"} ·{" "}
+            {t(`remote.${current?.state ?? "disconnected"}`)}
           </button>
           <button
             aria-label={t("remote.terminal")}
@@ -97,8 +123,10 @@ export function RemoteWorkspaceControls() {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-xl">
           <DialogHeader>
-            <DialogTitle>{t("remote.title")}</DialogTitle>
-            <DialogDescription>{t("remote.requirements")}</DialogDescription>
+            <DialogTitle>{t(kind === "wsl" ? "wsl.title" : "remote.title")}</DialogTitle>
+            <DialogDescription>
+              {t(kind === "wsl" ? "wsl.requirements" : "remote.requirements")}
+            </DialogDescription>
           </DialogHeader>
           <form
             className="space-y-3"
@@ -106,25 +134,43 @@ export function RemoteWorkspaceControls() {
               event.preventDefault()
               void run(async () => {
                 const result = await envoi().remoteConnect({
+                  kind,
                   host: host.trim(),
-                  ...(configFile.trim() ? { configFile: configFile.trim() } : {}),
+                  ...(kind === "ssh" && configFile.trim() ? { configFile: configFile.trim() } : {}),
                   directory: directory.trim(),
-                  ...(port ? { port: Number(port) } : {}),
+                  ...(kind === "ssh" && port ? { port: Number(port) } : {}),
                 })
                 activate(result.root)
               })
             }}
           >
             <label className="block text-xs">
-              {t("remote.host")}
-              <input
-                required
-                aria-label={t("remote.host")}
-                value={host}
-                onChange={(event) => setHost(event.target.value)}
-                placeholder="research / user@host"
-                className="mt-1 w-full rounded border bg-background p-2"
-              />
+              {t(kind === "wsl" ? "wsl.distribution" : "remote.host")}
+              {kind === "wsl" ? (
+                <select
+                  required
+                  aria-label={t("wsl.distribution")}
+                  value={host}
+                  onChange={(event) => setHost(event.target.value)}
+                  className="mt-1 w-full rounded border bg-background p-2"
+                >
+                  <option value="">{t("wsl.select")}</option>
+                  {distributions.map((name) => (
+                    <option key={name} value={name}>
+                      {name}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  required
+                  aria-label={t("remote.host")}
+                  value={host}
+                  onChange={(event) => setHost(event.target.value)}
+                  placeholder="research / user@host"
+                  className="mt-1 w-full rounded border bg-background p-2"
+                />
+              )}
             </label>
             <div className="flex gap-3">
               <label className="min-w-0 flex-1 text-xs">
@@ -138,31 +184,35 @@ export function RemoteWorkspaceControls() {
                   className="mt-1 w-full rounded border bg-background p-2"
                 />
               </label>
-              <label className="w-24 text-xs">
-                {t("remote.port")}
+              {kind === "ssh" && (
+                <label className="w-24 text-xs">
+                  {t("remote.port")}
+                  <input
+                    type="number"
+                    min={1}
+                    max={65535}
+                    aria-label={t("remote.port")}
+                    value={port}
+                    onChange={(event) => setPort(event.target.value)}
+                    placeholder="config"
+                    className="mt-1 w-full rounded border bg-background p-2"
+                  />
+                </label>
+              )}
+            </div>
+            {kind === "ssh" && (
+              <label className="block text-xs">
+                {t("remote.configFile")}
                 <input
-                  type="number"
-                  min={1}
-                  max={65535}
-                  aria-label={t("remote.port")}
-                  value={port}
-                  onChange={(event) => setPort(event.target.value)}
-                  placeholder="config"
+                  aria-label={t("remote.configFile")}
+                  value={configFile}
+                  onChange={(event) => setConfigFile(event.target.value)}
                   className="mt-1 w-full rounded border bg-background p-2"
                 />
               </label>
-            </div>
-            <label className="block text-xs">
-              {t("remote.configFile")}
-              <input
-                aria-label={t("remote.configFile")}
-                value={configFile}
-                onChange={(event) => setConfigFile(event.target.value)}
-                className="mt-1 w-full rounded border bg-background p-2"
-              />
-            </label>
+            )}
             <button
-              disabled={working || navigationBusy || saving || !enabled}
+              disabled={working || navigationBusy || saving || !enabled || !host}
               className="rounded bg-primary px-3 py-2 text-xs text-primary-foreground disabled:opacity-50"
             >
               {t(working ? "remote.connecting" : "remote.connect")}
@@ -185,41 +235,45 @@ export function RemoteWorkspaceControls() {
           </form>
           {!enabled && <p className="text-xs">{t("extensions.disabled")}</p>}
           <div className="max-h-60 space-y-2 overflow-auto">
-            {states.map((state) => (
-              <div key={state.root} className="rounded border p-3 text-xs">
-                <div className="flex items-center gap-2">
-                  <Network size={14} />
-                  <strong>{state.host}</strong>
-                  <span>{t(`remote.${state.state}`)}</span>
-                </div>
-                <p className="mt-1 break-all text-muted-foreground">{state.directory}</p>
-                {state.error && <p className="mt-1 break-words text-destructive">{state.error}</p>}
-                <button
-                  disabled={working || navigationBusy || saving || !enabled}
-                  className="mt-2 text-primary disabled:opacity-50"
-                  onClick={() =>
-                    void run(async () => {
-                      await envoi().remoteReconnect(state.root)
-                      activate(state.root)
-                    })
-                  }
-                >
-                  {t(state.state === "connected" ? "remote.open" : "remote.reconnect")}
-                </button>
-                {state.state === "connected" && (
+            {states
+              .filter((state) => (state.kind ?? "ssh") === kind)
+              .map((state) => (
+                <div key={state.root} className="rounded border p-3 text-xs">
+                  <div className="flex items-center gap-2">
+                    <Network size={14} />
+                    <strong>{state.host}</strong>
+                    <span>{t(`remote.${state.state}`)}</span>
+                  </div>
+                  <p className="mt-1 break-all text-muted-foreground">{state.directory}</p>
+                  {state.error && (
+                    <p className="mt-1 break-words text-destructive">{state.error}</p>
+                  )}
                   <button
-                    className="ml-4 text-muted-foreground"
+                    disabled={working || navigationBusy || saving || !enabled}
+                    className="mt-2 text-primary disabled:opacity-50"
                     onClick={() =>
                       void run(async () => {
-                        await envoi().remoteDisconnect(state.root)
+                        await envoi().remoteReconnect(state.root)
+                        activate(state.root)
                       })
                     }
                   >
-                    {t("remote.disconnect")}
+                    {t(state.state === "connected" ? "remote.open" : "remote.reconnect")}
                   </button>
-                )}
-              </div>
-            ))}
+                  {state.state === "connected" && (
+                    <button
+                      className="ml-4 text-muted-foreground"
+                      onClick={() =>
+                        void run(async () => {
+                          await envoi().remoteDisconnect(state.root)
+                        })
+                      }
+                    >
+                      {t("remote.disconnect")}
+                    </button>
+                  )}
+                </div>
+              ))}
           </div>
           {error && (
             <p role="alert" className="text-xs text-destructive">

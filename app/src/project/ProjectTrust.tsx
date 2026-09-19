@@ -19,7 +19,7 @@ export function ProjectTrust() {
   const state = useProjectTrust(root)
   const [remoteLocation, setRemoteLocation] = useState<{ root: string; label: string }>()
   useEffect(() => {
-    if (!root?.startsWith("ssh://")) return
+    if (!root || !/^(ssh|wsl):\/\//.test(root)) return
     let alive = true
     void envoi()
       .remoteList()
@@ -32,7 +32,7 @@ export function ProjectTrust() {
       alive = false
     }
   }, [root])
-  const identified = !root?.startsWith("ssh://") || remoteLocation?.root === root
+  const identified = !/^(ssh|wsl):\/\//.test(root ?? "") || remoteLocation?.root === root
   const { t } = useT()
   const [open, setOpen] = useState(false)
   const [localTrusted, setLocalTrusted] = useState<boolean>()
@@ -117,7 +117,7 @@ export function ProjectTrust() {
             <DialogDescription>{t("trust.description")}</DialogDescription>
           </DialogHeader>
           <p className="break-all text-xs text-muted-foreground">
-            {root.startsWith("ssh://")
+            {/^(ssh|wsl):\/\//.test(root)
               ? remoteLocation?.root === root
                 ? remoteLocation.label
                 : t("remote.connecting")

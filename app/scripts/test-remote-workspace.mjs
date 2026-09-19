@@ -95,43 +95,81 @@ test("shared workspace filesystem preserves drafts on conflicts and blocks path 
   }
 })
 
-test("remote trust decisions survive restriction and apply to every window, including offline sessions", async () => {
-  const { routeRemoteWorkspace } = await import("../electron/main/remote/workspace-routing.mjs")
-  const root = "ssh://fixture/",
-    calls = []
-  const first = { owner: 1, root, trusted: true, state: "connected" }
-  const second = { owner: 2, root, trusted: true, state: "disconnected" }
-  const remote = {
-    ready: Promise.resolve(),
-    profiles: { [root]: { trusted: true } },
-    entries: new Map([
-      [`1:${root}`, first],
-      [`2:${root}`, second],
-    ]),
-    async saveProfiles() {},
-    async call(owner, _root, method, args) {
-      calls.push({ owner, method, args })
-    },
-    send() {},
-  }
-  const sessions = { activeRoot: () => root }
-  await routeRemoteWorkspace(remote, sessions, 1, "envoi:restrict-project", [root])
-  assert.equal(first.trusted, false)
-  assert.equal(second.trusted, false)
-  assert.equal(remote.profiles[root].decided, true)
-  assert.deepEqual(calls, [{ owner: 1, method: "trust", args: [false] }])
-  assert.deepEqual(await routeRemoteWorkspace(remote, sessions, 2, "envoi:project-trust", [root]), {
-    value: { trusted: false, decided: true },
+for (const scheme of ["ssh", "wsl"])
+  test(`${scheme} trust decisions survive restriction and apply to every window, including offline sessions`, async () => {
+    const { routeRemoteWorkspace } = await import("../electron/main/remote/workspace-routing.mjs")
+    const root = `${scheme}://fixture/`,
+      calls = []
+    const first = { owner: 1, root, trusted: true, state: "connected" }
+    const second = { owner: 2, root, trusted: true, state: "disconnected" }
+    const remote = {
+      ready: Promise.resolve(),
+      profiles: { [root]: { trusted: true } },
+      entries: new Map([
+        [`1:${root}`, first],
+        [`2:${root}`, second],
+      ]),
+      async saveProfiles() {},
+      async call(owner, _root, method, args) {
+        calls.push({ owner, method, args })
+      },
+      send() {},
+    }
+    const sessions = { activeRoot: () => root }
+    await routeRemoteWorkspace(remote, sessions, 1, "envoi:restrict-project", [root])
+    assert.equal(first.trusted, false)
+    assert.equal(second.trusted, false)
+    assert.equal(remote.profiles[root].decided, true)
+    assert.deepEqual(calls, [{ owner: 1, method: "trust", args: [false] }])
+    assert.deepEqual(
+      await routeRemoteWorkspace(remote, sessions, 2, "envoi:project-trust", [root]),
+      {
+        value: { trusted: false, decided: true },
+      },
+    )
+    await assert.rejects(
+      routeRemoteWorkspace(remote, { activeRoot: () => "other" }, 1, "envoi:fs-read", [
+        root,
+        "main.cpp",
+      ]),
+      /not active/,
+    )
+    assert.equal(
+      await routeRemoteWorkspace(remote, sessions, 1, "envoi:remote-reconnect", [root]),
+      undefined,
+    )
   })
-  await assert.rejects(
-    routeRemoteWorkspace(remote, { activeRoot: () => "other" }, 1, "envoi:fs-read", [
-      root,
-      "main.cpp",
-    ]),
-    /not active/,
+
+test("WSL discovery decodes Windows output and isolates distribution identities", async () => {
+  const { parseWslDistributions, validateWslTarget, wslArguments } =
+    await import("../electron/main/remote/wsl.mjs")
+  const { validateRemoteTarget, deploymentScript } =
+    await import("../electron/main/remote/connection.mjs")
+  const { isRemoteRoot } = await import("../electron/main/remote/workspace-routing.mjs")
+  assert.deepEqual(
+    parseWslDistributions(Buffer.from("Ubuntu\r\nFedora\r\nUbuntu\r\n", "utf16le")),
+    ["Ubuntu", "Fedora"],
   )
-  assert.equal(
-    await routeRemoteWorkspace(remote, sessions, 1, "envoi:remote-reconnect", [root]),
-    undefined,
-  )
+  const target = { kind: "wsl", host: "Ubuntu", directory: "/work/space and 'quotes'" }
+  assert.match(remoteRoot(target), /^wsl:\/\//)
+  assert(isRemoteRoot(remoteRoot(target)))
+  assert.notEqual(remoteRoot(target), remoteRoot({ ...target, kind: "ssh" }))
+  assert.notEqual(remoteRoot(target), remoteRoot({ ...target, host: "Fedora" }))
+  for (const host of ["--exec", "Ubuntu;id", "Ubuntu\n", "$(id)"])
+    assert.throws(() => validateWslTarget({ ...target, host }))
+  assert.throws(() => validateWslTarget({ ...target, port: 22 }))
+  assert.throws(() => validateWslTarget({ ...target, directory: "C:\\work" }))
+  assert.throws(() => validateRemoteTarget({ ...target, kind: "unknown" }))
+  const script = deploymentScript(100, "a".repeat(64), "b".repeat(32))
+  assert(!script.includes(target.directory))
+  assert.deepEqual(wslArguments(target, script), [
+    "--distribution",
+    "Ubuntu",
+    "--cd",
+    "~",
+    "--exec",
+    "sh",
+    "-c",
+    script,
+  ])
 })

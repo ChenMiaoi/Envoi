@@ -250,7 +250,7 @@ export async function restoreProjectCache(
       url: file.url?.startsWith("blob:") ? undefined : file.url,
     })),
   }
-  if (!cached.rootPath || cached.rootPath.startsWith("ssh://")) return { project: cached }
+  if (!cached.rootPath || /^(ssh|wsl):\/\//.test(cached.rootPath)) return { project: cached }
   try {
     const binding = await bindProject(cached.rootPath)
     return { project: mergeDrafts(await readProject(binding.project.path), cached) }
@@ -258,7 +258,7 @@ export async function restoreProjectCache(
     return {
       project: {
         ...cached,
-        rootPath: cached.rootPath?.startsWith("ssh://") ? cached.rootPath : undefined,
+        rootPath: /^(ssh|wsl):\/\//.test(cached.rootPath ?? "") ? cached.rootPath : undefined,
       },
       warning: translate("project.restoreFailed", {
         name: cached.name,
