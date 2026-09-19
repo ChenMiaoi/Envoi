@@ -49,6 +49,23 @@ try {
   const distro = process.env.ENVOI_TEST_WSL_DISTRO
   if (distro) {
     await page.getByRole("combobox", { name: "发行版", exact: true }).selectOption(distro)
+    await page.waitForFunction(async (host) => {
+      const result = await window.envoi.wslDirectories(host)
+      return document.querySelector('input[aria-label="远程目录"]')?.value === result.directory
+    }, distro)
+    await page
+      .getByRole("textbox", { name: "远程目录", exact: true })
+      .fill(process.env.ENVOI_TEST_WSL_DIRECTORY + "/spa")
+    await page
+      .getByRole("button", {
+        name: process.env.ENVOI_TEST_WSL_DIRECTORY + "/space directory/",
+        exact: true,
+      })
+      .click()
+    assert.equal(
+      await page.getByRole("textbox", { name: "远程目录", exact: true }).inputValue(),
+      process.env.ENVOI_TEST_WSL_DIRECTORY + "/space directory/",
+    )
     await page
       .getByRole("textbox", { name: "远程目录", exact: true })
       .fill(process.env.ENVOI_TEST_WSL_DIRECTORY)

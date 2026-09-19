@@ -52,3 +52,49 @@ export function wslArguments(target, script) {
   validateWslTarget(target)
   return ["--distribution", target.host, "--cd", "~", "--exec", "sh", "-c", script]
 }
+
+export async function runWsl(host, script, args = [], options = {}) {
+  validateWslTarget({ kind: "wsl", host, directory: "/" })
+  if (process.platform !== "win32") throw Error("WSL workspaces require Windows")
+  const { stdout } = await promisify(execFile)(
+    "wsl.exe",
+    ["--distribution", host, "--cd", "~", "--exec", "sh", "-c", script, "envoi", ...args],
+    { windowsHide: true, encoding: "utf8", timeout: 30000, maxBuffer: 1024 * 1024, ...options },
+  )
+  return stdout
+}
+
+export function parseWslDirectories(output) {
+  const [home, directory, ...entries] = output.split("\0")
+  if (!home?.startsWith("/") || !directory?.startsWith("/"))
+    throw Error("Invalid WSL directory response")
+  return {
+    home,
+    directory,
+    directories: entries
+      .filter((entry) => entry.startsWith("/") && !/[\0\r\n]/.test(entry))
+      .sort()
+      .slice(0, 200),
+  }
+}
+
+export async function browseWslDirectories(host, input = "") {
+  if (typeof input !== "string" || /[\0\r\n]/.test(input) || input.length > 4096)
+    throw Error("Invalid WSL directory")
+  const script = [
+    "set -eu",
+    "p=$1",
+    'case "$p" in ""|"~") p="$HOME/" ;; "~/"*) p="$HOME/"${p#\\~/} ;; /*) ;; *) p="$HOME/$p" ;; esac',
+    'case "$p" in */) base=$p; prefix="" ;; *) base=${p%/*}/; prefix=${p##*/} ;; esac',
+    'test -d "$base" && test -r "$base" || { echo "Directory is unavailable or unreadable" >&2; exit 1; }',
+    'printf "%s\\0%s\\0" "$HOME" "$p"',
+    "count=0",
+    'for entry in "$base"* "$base".[!.]* "$base"..?*; do',
+    'test -d "$entry" || continue',
+    "name=${entry##*/}",
+    'case "$name" in "$prefix"*) printf "%s/\\0" "$entry"; count=$((count + 1));; esac',
+    'test "$count" -lt 200 || break',
+    "done",
+  ].join("\n")
+  return parseWslDirectories(await runWsl(host, script, [input]))
+}

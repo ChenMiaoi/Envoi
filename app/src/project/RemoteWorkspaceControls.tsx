@@ -12,6 +12,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import type { RemoteState } from "../../shared/remote"
+import { WslDirectoryPicker } from "./WslDirectoryPicker"
 import { RemoteTerminal } from "./RemoteTerminal"
 export function RemoteWorkspaceControls() {
   const { t } = useT()
@@ -26,6 +27,7 @@ export function RemoteWorkspaceControls() {
     [port, setPort] = useState("")
   const [states, setStates] = useState<RemoteState[]>([])
   const [configFile, setConfigFile] = useState("")
+  const [preparing, setPreparing] = useState<"checking" | "downloading" | "installing">()
   const [working, setWorking] = useState(false),
     [error, setError] = useState("")
   const [prompt, setPrompt] = useState<{ id: string; prompt: string }>(),
@@ -53,6 +55,7 @@ export function RemoteWorkspaceControls() {
           ...previous.filter((entry) => entry.root !== event.value.root),
           event.value,
         ])
+      if (event.type === "preparing") setPreparing(event.stage)
       if (event.type === "prompt") {
         setPrompt(event)
         setAnswer("")
@@ -83,6 +86,7 @@ export function RemoteWorkspaceControls() {
   }, [open, kind])
   const run = async (action: () => Promise<void>) => {
     if (working) return
+    setPreparing(undefined)
     setWorking(true)
     setError("")
     try {
@@ -90,6 +94,7 @@ export function RemoteWorkspaceControls() {
     } catch (error) {
       setError(ipcError(error).message)
     } finally {
+      setPreparing(undefined)
       setWorking(false)
     }
   }
@@ -172,34 +177,38 @@ export function RemoteWorkspaceControls() {
                 />
               )}
             </label>
-            <div className="flex gap-3">
-              <label className="min-w-0 flex-1 text-xs">
-                {t("remote.directory")}
-                <input
-                  required
-                  aria-label={t("remote.directory")}
-                  value={directory}
-                  onChange={(event) => setDirectory(event.target.value)}
-                  placeholder="/home/user/project"
-                  className="mt-1 w-full rounded border bg-background p-2"
-                />
-              </label>
-              {kind === "ssh" && (
-                <label className="w-24 text-xs">
-                  {t("remote.port")}
+            {kind === "wsl" ? (
+              <WslDirectoryPicker host={host} value={directory} onChange={setDirectory} />
+            ) : (
+              <div className="flex gap-3">
+                <label className="min-w-0 flex-1 text-xs">
+                  {t("remote.directory")}
                   <input
-                    type="number"
-                    min={1}
-                    max={65535}
-                    aria-label={t("remote.port")}
-                    value={port}
-                    onChange={(event) => setPort(event.target.value)}
-                    placeholder="config"
+                    required
+                    aria-label={t("remote.directory")}
+                    value={directory}
+                    onChange={(event) => setDirectory(event.target.value)}
+                    placeholder="/home/user/project"
                     className="mt-1 w-full rounded border bg-background p-2"
                   />
                 </label>
-              )}
-            </div>
+                {kind === "ssh" && (
+                  <label className="w-24 text-xs">
+                    {t("remote.port")}
+                    <input
+                      type="number"
+                      min={1}
+                      max={65535}
+                      aria-label={t("remote.port")}
+                      value={port}
+                      onChange={(event) => setPort(event.target.value)}
+                      placeholder="config"
+                      className="mt-1 w-full rounded border bg-background p-2"
+                    />
+                  </label>
+                )}
+              </div>
+            )}
             {kind === "ssh" && (
               <label className="block text-xs">
                 {t("remote.configFile")}
@@ -212,11 +221,16 @@ export function RemoteWorkspaceControls() {
               </label>
             )}
             <button
-              disabled={working || navigationBusy || saving || !enabled || !host}
+              disabled={working || navigationBusy || saving || !enabled || !host || !directory}
               className="rounded bg-primary px-3 py-2 text-xs text-primary-foreground disabled:opacity-50"
             >
               {t(working ? "remote.connecting" : "remote.connect")}
             </button>
+            {working && kind === "wsl" && preparing && (
+              <p role="status" className="text-xs text-muted-foreground">
+                {t(`wsl.${preparing}`)}
+              </p>
+            )}
             {working && (
               <button
                 type="button"

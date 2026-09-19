@@ -15,6 +15,7 @@ export interface RemoteState {
   generation: number
 }
 export type RemoteEvent =
+  | { type: "preparing"; root: string; stage: "checking" | "downloading" | "installing" }
   | { type: "state"; value: RemoteState }
   | { type: "prompt"; id: string; prompt: string }
   | { type: "terminal"; root: string; data?: string; exit?: number }

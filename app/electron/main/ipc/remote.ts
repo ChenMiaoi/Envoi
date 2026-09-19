@@ -1,9 +1,12 @@
 import type { MainServices } from "../runtime"
-import { listWslDistributions } from "../remote/wsl.mjs"
+import { listWslDistributions, browseWslDirectories } from "../remote/wsl.mjs"
 import type { SshTarget } from "../../../shared/remote"
 import { remotePreferences } from "../remote/workspace-routing.mjs"
 export function registerRemoteIpc({ handle, remote }: Pick<MainServices, "handle" | "remote">) {
   handle("envoi:remote-wsl-distributions", () => listWslDistributions())
+  handle("envoi:remote-wsl-directories", (_event, host: string, input?: string) =>
+    browseWslDirectories(host, input),
+  )
   handle("envoi:remote-list", (event) => remote.list(event.sender.id))
   handle("envoi:remote-connect", async (event, target: SshTarget) => {
     const preferences = await remotePreferences()

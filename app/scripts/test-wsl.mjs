@@ -4,10 +4,10 @@ import { mkdtemp, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { RemoteWorkspaces } from "../electron/main/remote/connection.mjs"
-import { listWslDistributions } from "../electron/main/remote/wsl.mjs"
+import { listWslDistributions, browseWslDirectories } from "../electron/main/remote/wsl.mjs"
 
 const host = process.env.ENVOI_TEST_WSL_DISTRO
-assert(host, "Set ENVOI_TEST_WSL_DISTRO to an installed distribution with Node.js 22+ and Python 3")
+assert(host, "Set ENVOI_TEST_WSL_DISTRO to an installed distribution with Python 3 and Git")
 assert((await listWslDistributions()).includes(host))
 const run = (script, args = []) =>
   execFileSync("wsl.exe", ["-d", host, "--exec", "sh", "-c", script, "sh", ...args], {
@@ -15,6 +15,9 @@ const run = (script, args = []) =>
     windowsHide: true,
     timeout: 60000,
   }).trim()
+const systemNode = run("command -v node || true")
+const home = await browseWslDirectories(host)
+assert.equal(home.directory, home.home + "/")
 const root = run("mktemp -d /var/tmp/envoi-wsl-test.XXXXXXXX")
 assert.match(root, /^\/var\/tmp\/envoi-wsl-test\.[A-Za-z0-9]+$/)
 const temporary = await mkdtemp(path.join(tmpdir(), "envoi-wsl-"))
@@ -37,7 +40,12 @@ try {
     'printf "int value = 42;\\nint main() { return value; }\\n" > "$1/main.cpp"; git -C "$1" init',
     [root],
   )
+  run('mkdir "$1/space directory" "$1/other"', [root])
+  const completion = await browseWslDirectories(host, root + "/spa")
+  assert.deepEqual(completion.directories, [root + "/space directory/"])
+  await assert.rejects(browseWslDirectories(host, root + "/missing/"))
   const state = await remote.connect(1, { kind: "wsl", host, directory: root })
+  assert.equal(run("command -v node || true"), systemNode)
   assert.equal(state.kind, "wsl")
   assert.match(state.root, /^wsl:\/\//)
   const call = (method, args = []) => remote.call(1, state.root, method, args)

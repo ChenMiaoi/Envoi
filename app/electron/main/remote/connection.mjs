@@ -4,6 +4,7 @@ import { mkdir, readFile, writeFile, chmod, rename } from "node:fs/promises"
 import net from "node:net"
 import path from "node:path"
 import { validateWslTarget, listWslDistributions, wslArguments } from "./wsl.mjs"
+import { ensureWslRuntime } from "./wsl-runtime.mjs"
 import { RpcPeer } from "./rpc.mjs"
 
 export function validateSshTarget(target) {
@@ -179,6 +180,15 @@ export class RemoteWorkspaces {
       const wsl = entry.target.kind === "wsl"
       if (wsl && !(await listWslDistributions()).includes(entry.target.host))
         throw Error("WSL distribution is not installed")
+      let runtime
+      if (wsl)
+        runtime = await ensureWslRuntime(entry.target.host, (stage) => {
+          this.send(entry.owner, "envoi:remote-event", {
+            type: "preparing",
+            root: entry.root,
+            stage,
+          })
+        })
       askpass = wsl ? { env: {}, dispose() {} } : await this.askpass(entry.owner)
       const bytes = await readFile(path.join(this.binaryDirectory, "remote-agent.cjs"))
       const digest = createHash("sha256").update(bytes).digest("hex")
@@ -186,7 +196,11 @@ export class RemoteWorkspaces {
       const child = spawn(
         wsl ? "wsl.exe" : "ssh",
         wsl
-          ? wslArguments(entry.target, deploymentScript(bytes.length, digest, entry.session))
+          ? wslArguments(
+              entry.target,
+              `export PATH="$HOME/${runtime}/bin:$PATH"\n` +
+                deploymentScript(bytes.length, digest, entry.session),
+            )
           : [...this.sshArgs, ...sshArguments(entry.target, bytes.length, digest, entry.session)],
         {
           windowsHide: true,

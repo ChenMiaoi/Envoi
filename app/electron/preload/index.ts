@@ -11,6 +11,7 @@ function invoke<T>(channel: string, ...args: unknown[]): Promise<T> {
 // agentStatus agentRequest agentChat onAgentEvent
 // fsList fsRead fsWrite fsWriteFiles fsMkdir fsRemove fsRename fsTrashProject assetUrl
 const bridge: EnvoiBridge = {
+  wslDirectories: (host, input) => invoke("envoi:remote-wsl-directories", host, input),
   wslDistributions: () => invoke("envoi:remote-wsl-distributions"),
   remoteList: () => invoke("envoi:remote-list"),
   remoteConnect: (target) => invoke("envoi:remote-connect", target),

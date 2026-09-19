@@ -173,3 +173,22 @@ test("WSL discovery decodes Windows output and isolates distribution identities"
     script,
   ])
 })
+
+test("WSL directory responses preserve spaces and runtime plans pin architecture and integrity", async () => {
+  const { parseWslDirectories } = await import("../electron/main/remote/wsl.mjs")
+  const { wslRuntimePlan, WSL_NODE_VERSION } =
+    await import("../electron/main/remote/wsl-runtime.mjs")
+  assert.deepEqual(parseWslDirectories("/home/user\0/home/user/\0/home/user/space dir/\0"), {
+    home: "/home/user",
+    directory: "/home/user/",
+    directories: ["/home/user/space dir/"],
+  })
+  assert.throws(() => parseWslDirectories("bad output"))
+  for (const machine of ["x86_64", "aarch64"]) {
+    const plan = wslRuntimePlan(machine)
+    assert(plan.url.startsWith(`https://nodejs.org/dist/v${WSL_NODE_VERSION}/`))
+    assert.match(plan.digest, /^[a-f0-9]{64}$/)
+    assert(plan.relative.startsWith(".envoi/runtimes/"))
+  }
+  assert.throws(() => wslRuntimePlan("unsupported"))
+})
