@@ -115,9 +115,9 @@ const agentShapes = {
     settings: z.object({
       provider: text.nullable().optional(),
       thinking: text.nullable().optional(),
-      model: text.nullable(),
-      context: z.enum(["none", "current"]),
-      tools: z.enum(["none", "read", "write"]),
+      model: text.nullable().optional(),
+      context: z.enum(["none", "current"]).optional(),
+      tools: z.enum(["none", "read", "write"]).optional(),
     }),
   }),
   credential: z.object({ provider: text, key: optionalText, remove: z.boolean().optional() }),

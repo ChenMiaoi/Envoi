@@ -72,3 +72,11 @@ test("shared file rules recognize plugin languages and reject traversal", () => 
   for (const file of ["../secret", "/absolute", "a\\b", "a:b", "a/./b", "a\0b"])
     assert.throws(() => safePathParts(file))
 })
+
+test("settings requests preserve the service's partial-input defaults", () => {
+  assert.deepEqual(parseAgentInput("settings", { settings: { model: null } }), {
+    settings: { model: null },
+  })
+  validateBackendCall("agentRequest", ["settings", { settings: {} }])
+  assert.throws(() => parseAgentInput("settings", { settings: { tools: "admin" } }))
+})

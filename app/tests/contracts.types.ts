@@ -5,6 +5,7 @@ import type { PaperDetail } from "../shared/library-model"
 
 // Compiled by check-architecture; never executed against a user's project.
 export function checkContracts(bridge: EnvoiBridge) {
+  const settings = bridge.agentRequest("settings", { settings: { model: null } })
   const paper: Promise<PaperDetail> = bridge.library("root", { action: "get", paperId: "paper" })
   // @ts-expect-error A note write requires its expected revision.
   bridge.library("root", { action: "note", paperId: "paper", text: "draft" })
@@ -21,5 +22,5 @@ export function checkContracts(bridge: EnvoiBridge) {
   // @ts-expect-error Shared declarations must retain event payload checking.
   appendChatEvent({ id: "a", role: "assistant", text: "" }, { type: "delta", text: 123 })
   const compileResult: BackendResults["compile"] = { ok: false, log: "cancelled" }
-  return { paper, badCompile, badAgent, compileResult }
+  return { settings, paper, badCompile, badAgent, compileResult }
 }
