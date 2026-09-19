@@ -7,6 +7,8 @@ import { usePreferences } from "@/settings/context"
 import { envoi } from "@/lib/desktop"
 import { ProjectIdentity } from "@/project/ProjectIdentity"
 import { RemoteWorkspaceControls } from "@/project/RemoteWorkspaceControls"
+import { RemoteUnavailable } from "@/project/RemoteUnavailable"
+import { isRemoteWorkspace } from "@/lib/workspaceLocation"
 import { WorkspaceBadge } from "@/project/WorkspaceBadge"
 import { AgentProvider } from "@/agent/AgentProvider"
 import {
@@ -260,7 +262,7 @@ function ProjectApp() {
         className={
           emptyWorkspace
             ? "hidden"
-            : `relative flex h-11 shrink-0 items-center ${mac ? "window-drag pl-[80px]" : windows ? "window-drag pr-[150px]" : ""}`
+            : `relative grid h-11 shrink-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 ${mac ? "window-drag pl-[80px]" : windows ? "window-drag pr-[150px]" : ""}`
         }
       >
         <div className="relative z-10 flex min-w-0 items-center gap-2 pl-3.5">
@@ -268,17 +270,18 @@ function ProjectApp() {
             <ProjectMenu />
           </div>
           <ProjectIdentity />
-          <WorkspaceBadge />
+          <div className="hidden min-w-0 xl:block">
+            <WorkspaceBadge />
+          </div>
           <RemoteWorkspaceControls />
         </div>
-        <div className="absolute left-1/2 -translate-x-1/2">
+        <div className="min-w-0">
           <ActivityBar view={view} />
         </div>
-        <div className="min-w-0 flex-1" />
-        <div className="flex shrink-0 items-center pr-3.5">
+        <div className="flex min-w-0 items-center justify-end pr-3.5">
           <button
             onClick={() => setPaletteOpen(true)}
-            className="flex h-7 w-44 max-w-full items-center gap-2 rounded-full border border-white/[0.08] bg-card/40 px-3 text-[11.5px] text-muted-foreground backdrop-blur-xl backdrop-saturate-150 transition-colors hover:border-primary/50"
+            className="flex h-7 w-9 lg:w-44 max-w-full items-center gap-2 rounded-full border border-white/[0.08] bg-card/40 px-3 text-[11.5px] text-muted-foreground backdrop-blur-xl backdrop-saturate-150 transition-colors hover:border-primary/50"
           >
             <Search className="h-3 w-3" />
             <span className="hidden min-w-0 flex-1 truncate text-left lg:inline">
@@ -337,7 +340,9 @@ function ProjectApp() {
                 className="h-full motion-safe:animate-[view-in_160ms_ease-out]"
                 aria-label={t("app.aria.library")}
               >
-                {project.rootPath && !trust?.trusted ? (
+                {isRemoteWorkspace(project.rootPath) ? (
+                  <RemoteUnavailable />
+                ) : project.rootPath && !trust?.trusted ? (
                   <div className="h-full p-1.5">
                     <div className="workspace-pane h-full">
                       <TrustRequired />
@@ -388,6 +393,7 @@ function ProjectApp() {
       </div>
 
       {/* 状态栏 */}
+      <div id="workspace-terminal" className="shrink-0 px-2.5 pb-12 empty:hidden" />
       {!emptyWorkspace && (
         <div className="pointer-events-none absolute bottom-3.5 left-1/2 z-30 w-max max-w-[calc(100vw-1.5rem)] -translate-x-1/2 text-[11px] text-muted-foreground">
           <div className="pointer-events-auto scrollbar-none flex h-7 max-w-full items-center gap-3 overflow-x-auto rounded-full border border-white/[0.08] bg-card/40 px-4 shadow-[0_8px_32px_-12px_rgba(0,0,0,0.5)] backdrop-blur-xl backdrop-saturate-150 tabular-nums">

@@ -1,9 +1,24 @@
 import { mountDirectory, installDesktopFixture } from "./desktopFixture"
 import { saveProjectConfiguration } from "../src/settings/projectSettings"
 import { paperTemplates, templateFiles } from "../src/lib/paperTemplates"
+import { rememberProject, recentProjects, forgetRecentProject } from "../src/lib/recentProjects"
 import assert from "node:assert/strict"
 import { test, beforeEach } from "node:test"
 beforeEach(installDesktopFixture)
+
+test("remote recent records keep readable names and repair legacy hash labels", async () => {
+  const root = "ssh://" + "d".repeat(64) + "/"
+  window.envoi!.remoteList = async () => [
+    { root, host: "research", directory: "/work/paper", state: "disconnected", generation: 0 },
+  ]
+  await rememberProject(root)
+  const entry = (await recentProjects()).find((row) => row.path === root)!
+  assert.equal(entry.name, "paper")
+  assert.deepEqual(entry.location, { kind: "ssh", host: "research", directory: "/work/paper" })
+  await window.envoi!.dataPut("recent", [{ ...entry, name: "d".repeat(64), location: undefined }])
+  assert.equal((await recentProjects()).find((row) => row.path === root)?.name, "paper")
+  await forgetRecentProject(entry.id)
+})
 import {
   persistBuild,
   persistDiagnostics,

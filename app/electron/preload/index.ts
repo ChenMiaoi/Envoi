@@ -14,13 +14,14 @@ const bridge: EnvoiBridge = {
   wslDirectories: (host, input) => invoke("envoi:remote-wsl-directories", host, input),
   wslDistributions: () => invoke("envoi:remote-wsl-distributions"),
   remoteList: () => invoke("envoi:remote-list"),
-  remoteConnect: (target) => invoke("envoi:remote-connect", target),
-  remoteReconnect: (root) => invoke("envoi:remote-reconnect", root),
+  remoteConnect: (target, requestId) => invoke("envoi:remote-connect", target, requestId),
+  remoteReconnect: (root, requestId) => invoke("envoi:remote-reconnect", root, requestId),
+  remoteCancel: (requestId) => invoke("envoi:remote-cancel", requestId),
   remoteDisconnect: (root) => invoke("envoi:remote-disconnect", root),
   remoteAnswer: (id, answer) => invoke("envoi:remote-answer", id, answer),
-  terminalOpen: () => invoke("envoi:terminal-open"),
+  terminalOpen: (root) => invoke("envoi:terminal-open", root),
   terminalInput: (input) => invoke("envoi:terminal-input", input),
-  terminalClose: () => invoke("envoi:terminal-close"),
+  terminalClose: (root) => invoke("envoi:terminal-close", root),
   onRemoteEvent: (listener) => {
     const handler = (_event: unknown, payload: import("../../shared/remote").RemoteEvent) =>
       listener(payload)
@@ -53,6 +54,7 @@ const bridge: EnvoiBridge = {
   trustDirectory: (directory) => invoke("envoi:trust-directory", directory),
   pickDirectory: () => invoke("envoi:pick-directory"),
   bindProject: (directory, opts) => invoke("envoi:bind-project", directory, opts),
+  cancelProjectOpen: () => invoke("envoi:cancel-project-open"),
 
   compilerRuntime: () => invoke("envoi:compiler-runtime"),
   compile: (input) => invoke("envoi:compile", input),

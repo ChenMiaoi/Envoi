@@ -1,6 +1,7 @@
 import { createEventBatch } from "@/lib/eventBatch"
 import { appendChatEvent } from "@/lib/chatActivity.mjs"
 import { useProjectTrust } from "@/project/useProjectTrust"
+import { isRemoteWorkspace } from "@/lib/workspaceLocation"
 import { translate } from "@/i18n/runtime"
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 import { useProvidedStore } from "@/lib/selectorStore"
@@ -9,7 +10,6 @@ import {
   agentStatus,
   agentRequest,
   agentChat,
-  bindProject,
   type AgentStatus,
   type AgentRecord,
   type AiConfig,
@@ -74,7 +74,7 @@ export function AgentProvider({ children }: { children: ReactNode }) {
   )
   const refresh = useCallback(async () => {
     const id = scope
-    if (rootPath && !trusted) {
+    if (rootPath && (!trusted || isRemoteWorkspace(rootPath))) {
       patch(id, { ...blank })
       return
     }
@@ -87,12 +87,6 @@ export function AgentProvider({ children }: { children: ReactNode }) {
       }
       if (id !== "global") {
         if (!rootPath) throw Error(translate("ai.projectNotConnected"))
-        const result = await bindProject(rootPath)
-        if (result.project.id !== id) {
-          const fresh = await readProject(rootPath)
-          setProject((current) => (current.id === id ? mergeDrafts(fresh, current) : current))
-          return
-        }
       }
       const result = await agentRequest("sessions", { projectId: id })
       const selected = result.activeId ?? result.sessions[0]?.id
@@ -115,7 +109,7 @@ export function AgentProvider({ children }: { children: ReactNode }) {
           : (error as Error).message,
       })
     }
-  }, [scope, rootPath, setProject, patch, trusted])
+  }, [scope, rootPath, patch, trusted])
   useEffect(
     () => () => {
       for (const controller of controllers.current.values()) controller.abort()

@@ -24,7 +24,10 @@ export function wslRuntimePlan(machine) {
   }
 }
 
-export async function ensureWslRuntime(host, progress = () => {}) {
+export async function ensureWslRuntime(host, progress = () => {}, signal) {
+  // A cancellable connection owns its preparation; cancelling one window must
+  // not abort another window's installation into the same distribution.
+  if (signal) return prepare(host, progress, signal)
   if (pending.has(host)) return pending.get(host)
   const operation = prepare(host, progress)
   pending.set(host, operation)
@@ -35,19 +38,22 @@ export async function ensureWslRuntime(host, progress = () => {}) {
   }
 }
 
-async function prepare(host, progress) {
+async function prepare(host, progress, signal) {
+  signal?.throwIfAborted()
   progress("checking")
-  const machine = (await runWsl(host, "uname -m")).trim()
+  const machine = (await runWsl(host, "uname -m", [], { signal })).trim()
   const plan = wslRuntimePlan(machine)
   const check = `"$HOME/${plan.relative}/bin/node" --version`
-  if ((await runWsl(host, check).catch(() => "")).trim() === `v${WSL_NODE_VERSION}`)
+  if ((await runWsl(host, check, [], { signal }).catch(() => "")).trim() === `v${WSL_NODE_VERSION}`)
     return plan.relative
+  signal?.throwIfAborted()
   const temporary = await mkdtemp(path.join(tmpdir(), "envoi-wsl-node-"))
   try {
     progress("downloading")
     const archive = path.join(temporary, "node.tar.xz")
-    await download(plan.url, archive, "WSL Node.js")
+    await download(plan.url, archive, "WSL Node.js", signal)
     await verify(archive, `sha256:${plan.digest}`, "WSL Node.js")
+    signal?.throwIfAborted()
     progress("installing")
     const script = [
       "set -eu",
@@ -66,6 +72,7 @@ async function prepare(host, progress) {
       const child = spawn("wsl.exe", wslArguments({ kind: "wsl", host, directory: "/" }, script), {
         windowsHide: true,
         stdio: ["pipe", "ignore", "pipe"],
+        signal,
       })
       let error = ""
       const source = createReadStream(archive)
@@ -92,7 +99,7 @@ async function prepare(host, progress) {
       })
       source.pipe(child.stdin)
     })
-    if ((await runWsl(host, check)).trim() !== `v${WSL_NODE_VERSION}`)
+    if ((await runWsl(host, check, [], { signal })).trim() !== `v${WSL_NODE_VERSION}`)
       throw Error("WSL runtime verification failed")
     return plan.relative
   } finally {

@@ -37,17 +37,17 @@ export function RemoteTerminal({ root }: { root: string }) {
       }
     })
     const input = terminal.onData((data) => {
-      if (ready) void envoi().terminalInput({ data }).catch(fail)
+      if (ready) void envoi().terminalInput({ data, root }).catch(fail)
     })
     const resize = () => {
       fit.fit()
       if (ready)
-        void envoi().terminalInput({ cols: terminal.cols, rows: terminal.rows }).catch(fail)
+        void envoi().terminalInput({ cols: terminal.cols, rows: terminal.rows, root }).catch(fail)
     }
     const observer = new ResizeObserver(resize)
     observer.observe(host.current)
     void envoi()
-      .terminalOpen()
+      .terminalOpen(root)
       .then(({ output }) => {
         if (!alive) return
         terminal.write(output)
@@ -67,7 +67,7 @@ export function RemoteTerminal({ root }: { root: string }) {
     }
   }, [root])
   return (
-    <div className="flex h-80 flex-col gap-2">
+    <div className="flex h-full min-h-0 flex-col gap-2">
       <p className="text-xs text-muted-foreground">{t("remote.terminalHint")}</p>
       {error && (
         <p role="alert" className="text-xs text-destructive">

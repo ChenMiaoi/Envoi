@@ -1,6 +1,6 @@
 import { useProjectTrust } from "./useProjectTrust"
 import { initializeLocalGit } from "@/lib/localGit"
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { ShieldCheck, ShieldAlert } from "lucide-react"
 import { envoi, ipcError } from "@/lib/desktop"
 import { useProject } from "./context"
@@ -38,11 +38,27 @@ export function ProjectTrust() {
   const [localTrusted, setLocalTrusted] = useState<boolean>()
   const [working, setWorking] = useState(false)
   const [error, setError] = useState("")
+  const request = useRef(0)
+  const dismiss = () => {
+    request.current++
+    setOpen(false)
+    setWorking(false)
+    setError("")
+  }
   const undecided = !!state && !state.decided
   useEffect(() => {
+    request.current++
     setOpen(false)
+    setWorking(false)
     setError("")
     setLocalTrusted(undefined)
+  }, [root])
+  useEffect(() => {
+    if (!root || !/^(ssh|wsl):\/\//.test(root)) return
+    return envoi().onRemoteEvent((event) => {
+      if (event.type === "state" && event.value.root === root && event.value.state !== "connected")
+        dismiss()
+    })
   }, [root])
   useEffect(() => {
     if (undecided) setOpen(true)
@@ -58,6 +74,8 @@ export function ProjectTrust() {
   if (!root) return null
   async function decide(trusted: boolean) {
     if (!root || working) return
+    const serial = ++request.current
+    const current = () => serial === request.current
     setWorking(true)
     try {
       if (
@@ -67,7 +85,9 @@ export function ProjectTrust() {
         throw Error(t("trust.restart"))
       if (trusted) {
         await envoi().grantProjectTrust(root)
+        if (!current()) return
         await state?.refresh()
+        if (!current()) return
         setLocalTrusted(true)
         const config = await envoi()
           .fsRead(root, ".envoi/project.json")
@@ -79,6 +99,7 @@ export function ProjectTrust() {
             }
           })
           .catch(() => ({}))
+        if (!current()) return
         if (config.git?.requested && config.git?.status === "pending-local-init") {
           await initializeLocalGit(root)
           window.dispatchEvent(new Event("envoi:connection-updated"))
@@ -86,14 +107,16 @@ export function ProjectTrust() {
         }
       } else {
         await envoi().restrictProject(root)
+        if (!current()) return
         await state?.refresh()
+        if (!current()) return
         setLocalTrusted(false)
       }
-      setOpen(false)
+      if (current()) setOpen(false)
     } catch (reason) {
-      setError(ipcError(reason).message)
+      if (current()) setError(ipcError(reason).message)
     } finally {
-      setWorking(false)
+      if (current()) setWorking(false)
     }
   }
   return (
@@ -105,10 +128,18 @@ export function ProjectTrust() {
       <Dialog
         open={open}
         onOpenChange={(value) => {
-          if (!working) {
-            if (!value && !state?.decided && localTrusted === undefined) void decide(false)
-            else setOpen(value)
-          }
+          if (!value) {
+            // Preserve the local restricted-mode choice without blocking dismissal.
+            // Remote decisions require a live connection and remain explicit.
+            if (
+              !working &&
+              !/^(ssh|wsl):\/\//.test(root) &&
+              !state?.decided &&
+              localTrusted === undefined
+            )
+              void decide(false)
+            dismiss()
+          } else setOpen(true)
         }}
       >
         <DialogContent className="sm:max-w-lg">

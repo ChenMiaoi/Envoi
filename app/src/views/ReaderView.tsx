@@ -45,6 +45,7 @@ import {
 import { TexCompilePreview } from "@/components/TexCompilePreview"
 import { FileTree, type TreeMenuAction } from "@/components/FileTree"
 import { ChatPanel } from "@/components/ChatPanel"
+import { isRemoteWorkspace } from "@/lib/workspaceLocation"
 import { DelimitedEditor } from "@/components/DelimitedEditor"
 import { MarkdownEditor } from "@/components/MarkdownEditor"
 import { CodeEditor } from "@/components/CodeEditor"
@@ -360,7 +361,11 @@ export function ReaderView({
                   onOpen={openNode}
                   onMenu={project.rootPath ? onTreeMenu : undefined}
                   onPaste={(node) => void pasteNode(node)}
-                  onImport={(files, node) => void importFiles(files, node)}
+                  onImport={
+                    isRemoteWorkspace(project.rootPath)
+                      ? undefined
+                      : (files, node) => void importFiles(files, node)
+                  }
                 />
               </div>
             </div>

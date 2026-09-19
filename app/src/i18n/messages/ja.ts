@@ -1,6 +1,16 @@
 /** 日本語メッセージ。zh-CN と完全に同じキーを持つこと。 */
 import type { Messages } from "./zh-CN"
 const ja: Messages = {
+  "remote.endTerminal": "ターミナルを終了",
+  "wsl.noDistributions":
+    "WSL ディストリビューションがありません。インストール後、この画面を開き直してください。",
+  "remote.projectScope":
+    "言語の切り替えは現在のプロジェクトにのみ適用されます。ツールはリモート環境で実行されます。",
+  "remote.globalScope":
+    "言語の切り替えは全体の既定値を変更します。以下は現在のリモート環境のツールです。",
+  "remote.featureUnavailable":
+    "この機能は SSH/WSL プロジェクトではまだ利用できません。編集、Git 履歴、コンパイル、ターミナルは利用できます。",
+  "remote.hideTerminal": "ターミナルを隠す",
   "remote.configFile": "SSH 設定ファイル（任意、ローカルの絶対パス）",
   "wsl.title": "WSL",
   "wsl.description": "Windows Subsystem for Linux のプロジェクトを開きます。",
@@ -35,7 +45,7 @@ const ja: Messages = {
   "remote.sessions": "接続",
   "remote.terminal": "リモートターミナル",
   "remote.terminalHint":
-    "コマンドはリモートフォルダーで実行されます。パネルを閉じてもターミナルセッションは保持されます。",
+    "コマンドはこの環境のプロジェクト内で実行されます。パネルを隠しても端末は保持されます。切断すると終了します。",
   "remote.authentication": "SSH 認証",
   "remote.answer": "認証応答",
   "remote.continue": "続行",
@@ -1041,9 +1051,9 @@ const ja: Messages = {
 
   "project.dialogFileTitle": "新規プロジェクトファイル",
 
-  "project.dialogNewTitle": "新規論文プロジェクト",
+  "project.dialogNewTitle": "新規プロジェクト",
   "project.dialogOpenDesc": "プロジェクトフォルダーを選択してください。",
-  "project.dialogOpenTitle": "論文プロジェクトを開く",
+  "project.dialogOpenTitle": "プロジェクトを開く",
   "project.discardIfCurrent": "このプロジェクトの未保存の変更を破棄",
   "project.discardOnSwitch": "切り替え時に未保存の変更を破棄",
   "project.discardUnsaved": "現在の未保存の変更を破棄",
@@ -1051,8 +1061,7 @@ const ja: Messages = {
   "project.emptyFolderHint": "先にフォルダーを選択してください。",
   "project.enableGit": "Git バージョン管理を有効化",
   "project.errorCloseChanged": "クローズ中にプロジェクトが変更されたため、閉じられませんでした。",
-  "project.errorFileExtension":
-    ".tex、.bib、.md、.txt、.csv、.sty、.cls のいずれかのテキスト拡張子を使用してください。",
+  "project.errorFileExtension": "テキストまたはソースコードの拡張子を使用してください。",
   "project.errorGitIncomplete":
     "プロジェクトの骨格は作成されましたが、Git が完了しませんでした：{error}。ファイルは保持されています。プロジェクトを開いて確認してください。",
   "project.errorNoDirectoryAuth":
@@ -1076,7 +1085,7 @@ const ja: Messages = {
     "プロジェクトを作成し、Git リポジトリを初期化しました（main）。コミットはまだありません。",
 
   "project.gitProbing": "ローカル Git を検出中…",
-  "project.identityAria": "プロジェクト：{name}、プロジェクト管理を開く",
+  "project.identityAria": "プロジェクト：{name}、プロジェクトを切り替える",
   "project.localConnectionMenu": "プロジェクトのローカル接続…",
   "project.localPathAria": "選択した場所のローカル絶対パス",
   "project.locationLabel": "プロジェクトの場所",

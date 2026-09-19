@@ -346,9 +346,8 @@ try {
   await reopened.evaluate(() => window.dispatchEvent(new Event("envoi:open-project")))
   await reopened.getByRole("button", { name: "选择文件夹…", exact: true }).click()
   await reopened.getByRole("button", { name: "打开当前目录", exact: true }).click()
-  await reopened
-    .getByRole("button", { name: "项目：delete-paper，打开项目管理", exact: true })
-    .click()
+  await reopened.getByRole("button", { name: "项目：delete-paper，切换项目", exact: true }).click()
+  await reopened.getByRole("menuitem", { name: "管理项目 / 移除 / 删除…", exact: true }).click()
   await reopened.getByRole("button", { name: "删除当前项目文件…", exact: true }).click()
   await reopened.getByRole("button", { name: "检查待删除目录", exact: true }).click()
   await reopened
@@ -439,7 +438,7 @@ try {
     (record) => record.path !== example,
   ).path
   await reopened
-    .getByRole("button", { name: `项目：${path.basename(another)}，打开项目管理`, exact: true })
+    .getByRole("button", { name: `项目：${path.basename(another)}，切换项目`, exact: true })
     .waitFor()
   assert.notEqual(another, example)
   assert.equal(path.dirname(another), path.join(temp, "data", "examples"))
@@ -450,7 +449,7 @@ try {
     example,
   )
   await reopened
-    .getByRole("button", { name: `项目：${path.basename(example)}，打开项目管理`, exact: true })
+    .getByRole("button", { name: `项目：${path.basename(example)}，切换项目`, exact: true })
     .waitFor()
   await reopened.waitForFunction(() => location.hash === "#/reader")
   await reopened.evaluate(() => (location.hash = "/writer"))

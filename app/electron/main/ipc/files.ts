@@ -68,14 +68,17 @@ export function registerFilesIpc(
   handle("envoi:fs-children", async (_event, root: string) =>
     (await provider(root)).files.children(),
   )
-  handle("envoi:fs-list", async (_event, root: string) => {
+  handle("envoi:fs-list", async (event, root: string) => {
     const { base, files } = await provider(root)
     return {
       ...(await files.list()),
       name: (await workspaceTrust.isTrusted(base))
         ? await workspaceProjectName(base).catch(() => undefined)
         : undefined,
-      projectId: sessions.projectId(base),
+      projectId:
+        sessions.preparedProject(event.sender.id)?.root === base
+          ? sessions.preparedProject(event.sender.id)?.id
+          : sessions.projectId(base),
     }
   })
   for (const [channel, method] of Object.entries({

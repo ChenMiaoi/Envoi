@@ -18,8 +18,11 @@ export async function json(url, accept = "application/vnd.github+json") {
   return response.json()
 }
 
-export async function download(url, destination, label = "Language server") {
-  const response = await fetch(url, { signal: AbortSignal.timeout(180_000) })
+export async function download(url, destination, label = "Language server", signal) {
+  const cancellation = signal
+    ? AbortSignal.any([signal, AbortSignal.timeout(180_000)])
+    : AbortSignal.timeout(180_000)
+  const response = await fetch(url, { signal: cancellation })
   if (!response.ok || !response.body) throw Error(`${label} download failed (${response.status})`)
   let size = 0
   const limit = new Transform({
@@ -32,6 +35,7 @@ export async function download(url, destination, label = "Language server") {
     Readable.fromWeb(response.body),
     limit,
     createWriteStream(destination, { flags: "wx" }),
+    { signal: cancellation },
   )
 }
 

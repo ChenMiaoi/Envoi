@@ -11,6 +11,8 @@ import { ChatHistory, type ChatHistorySource } from "./ChatHistory"
 import { PiModelMenu } from "./PiModelMenu"
 import { cn } from "@/lib/utils"
 import { useT } from "@/i18n/useT"
+import { isRemoteWorkspace } from "@/lib/workspaceLocation"
+import { RemoteUnavailable } from "@/project/RemoteUnavailable"
 
 export interface ChatContext {
   label: string
@@ -125,6 +127,7 @@ export function ChatPanel({
     )
   }
 
+  if (isRemoteWorkspace(project.rootPath) && !conversation) return <RemoteUnavailable />
   if (project.rootPath && !trusted) return <TrustRequired />
   return (
     <div

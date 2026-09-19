@@ -56,9 +56,12 @@ export async function routeRemoteWorkspace(remote, sessions, owner, channel, arg
       throw Error("Workspace connection plugin is disabled")
     await remote.connect(owner, entry?.target ?? profile.target, root)
     if (!sessions.isCurrentBinding(owner, ticket)) throw Error("Remote project binding cancelled")
-    if (isRemoteRoot(active) && active !== root) remote.disconnect(owner, active)
     const id = "remote-" + new URL(root).hostname
-    sessions.bindProject(owner, id, root)
+    if (args[1]?.prepare) sessions.prepareProject(owner, id, root)
+    else {
+      if (isRemoteRoot(active) && active !== root) remote.disconnect(owner, active)
+      sessions.bindProject(owner, id, root)
+    }
     return {
       value: {
         ok: true,
@@ -86,7 +89,10 @@ export async function routeRemoteWorkspace(remote, sessions, owner, channel, arg
   )
     return { value: null }
   if (!entry) throw Error("Remote workspace is not connected in this window")
-  if (sessions.activeRoot(owner) !== root)
+  const prepared = sessions.preparedProject?.(owner)
+  const preparingRead =
+    prepared?.root === root && ["fs-list", "fs-read", "asset-url"].includes(method)
+  if (sessions.activeRoot(owner) !== root && !preparingRead)
     throw Error("Remote workspace is not active in this window")
   if (method === "grant-project-trust" || method === "restrict-project") {
     const trusted = method === "grant-project-trust"
@@ -132,7 +138,7 @@ export async function routeRemoteWorkspace(remote, sessions, owner, channel, arg
     return {
       value: {
         ...listing,
-        projectId: sessions.projectId(root),
+        projectId: prepared?.root === root ? prepared.id : sessions.projectId(root),
         name: entry.target.directory.split("/").filter(Boolean).at(-1) ?? "/",
       },
     }

@@ -256,3 +256,29 @@ for (const action of ["close", "supersede", "destroy"]) {
     assert.notEqual(sessions.activeRoot(1), "/research")
   })
 }
+
+test("preparing and cancelling a project preserves the active workspace resources", () => {
+  const disposed = []
+  const sessions = new ProjectSessionManager((owner) => disposed.push(owner))
+  sessions.bindProject(1, "current", "/current")
+  const watch = sessions.beginWatch(1)
+  let stopped = false
+  sessions.attachWatch(1, watch, () => {
+    stopped = true
+  })
+  const count = disposed.length
+  sessions.prepareProject(1, "candidate", "/candidate")
+  assert.equal(sessions.activeRoot(1), "/current")
+  assert.equal(sessions.preparedProject(2), undefined)
+  assert.equal(stopped, false)
+  assert.equal(disposed.length, count)
+  sessions.cancelPreparation(1)
+  assert.equal(sessions.preparedProject(1), undefined)
+  assert.equal(sessions.activeRoot(1), "/current")
+  assert.equal(stopped, false)
+  sessions.prepareProject(1, "candidate", "/candidate")
+  sessions.bindProject(1, "candidate", "/candidate")
+  assert.equal(stopped, true)
+  assert.equal(sessions.preparedProject(1), undefined)
+  assert.equal(sessions.activeRoot(1), "/candidate")
+})

@@ -148,8 +148,9 @@ export class RemoteWorkspaces {
           }
     })
   }
-  async connect(owner, target, existingRoot) {
+  async connect(owner, target, existingRoot, signal) {
     await this.ready
+    signal?.throwIfAborted()
     target = validateRemoteTarget(target)
     const root = existingRoot ?? remoteRoot(target),
       key = `${owner}:${root}`
@@ -167,12 +168,19 @@ export class RemoteWorkspaces {
     }
     entry.intentional = false
     this.entries.set(key, entry)
+    const cancel = () => {
+      void this.disconnect(owner, root)
+    }
+    signal?.addEventListener("abort", cancel, { once: true })
     entry.connecting = this.start(entry).finally(() => {
+      signal?.removeEventListener("abort", cancel)
       entry.connecting = undefined
     })
     return entry.connecting
   }
   async start(entry) {
+    const controller = new AbortController()
+    entry.controller = controller
     this.state(entry, "connecting")
     let askpass,
       stderr = ""
@@ -182,13 +190,17 @@ export class RemoteWorkspaces {
         throw Error("WSL distribution is not installed")
       let runtime
       if (wsl)
-        runtime = await ensureWslRuntime(entry.target.host, (stage) => {
-          this.send(entry.owner, "envoi:remote-event", {
-            type: "preparing",
-            root: entry.root,
-            stage,
-          })
-        })
+        runtime = await ensureWslRuntime(
+          entry.target.host,
+          (stage) => {
+            this.send(entry.owner, "envoi:remote-event", {
+              type: "preparing",
+              root: entry.root,
+              stage,
+            })
+          },
+          controller.signal,
+        )
       askpass = wsl ? { env: {}, dispose() {} } : await this.askpass(entry.owner)
       const bytes = await readFile(path.join(this.binaryDirectory, "remote-agent.cjs"))
       const digest = createHash("sha256").update(bytes).digest("hex")
@@ -390,6 +402,7 @@ export class RemoteWorkspaces {
     for (const entry of this.entries.values()) {
       if (entry.owner !== owner || (root && entry.root !== root)) continue
       entry.intentional = true
+      entry.controller?.abort(Error("Connection cancelled"))
       clearTimeout(entry.retry)
       clearInterval(entry.heartbeat)
       const peer = entry.peer,

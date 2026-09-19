@@ -1,56 +1,118 @@
 import { useEffect, useState } from "react"
-import { FolderOpen, ChevronDown } from "lucide-react"
+import { FolderOpen, ChevronDown, Check, Network, SquareTerminal } from "lucide-react"
 import { useProject } from "./context"
 import { useT } from "@/i18n/useT"
-import { nativeGet } from "@/lib/localData"
-import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
+import { recentProjects, type RecentProject } from "@/lib/recentProjects"
+import { locationLabel } from "@/lib/workspaceLocation"
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu"
+
 export function ProjectIdentity() {
   const { t } = useT()
-  const project = useProject((state) => ({ id: state.project.id, name: state.project.name })),
-    [location, setLocation] = useState<{ id: string; path: string } | null>(null)
-  const empty = project.id === "empty",
-    name = empty ? t("project.notOpened") : project.name,
-    path = location?.id === project.id ? location.path : ""
+  const { project, navigationBusy, saving, setMessage } = useProject()
+  const [recent, setRecent] = useState<RecentProject[]>([])
+  const refresh = () =>
+    void recentProjects()
+      .then(setRecent)
+      .catch((error) => setMessage(error.message))
   useEffect(() => {
-    let live = true
-    const read = () => {
-      void nativeGet<Record<string, string>>("bindings")
-        .then((result) => {
-          const value = result?.value[project.id]
-          if (live)
-            setLocation({
-              id: project.id,
-              path: typeof value === "string" && /^(?:[a-z]:[\\/]|[\\/])/i.test(value) ? value : "",
-            })
-        })
-        .catch(() => {})
-    }
-    if (!empty) read()
-    window.addEventListener("envoi:connection-updated", read)
+    let alive = true
+    void recentProjects()
+      .then((rows) => {
+        if (alive) setRecent(rows)
+      })
+      .catch(() => {})
     return () => {
-      live = false
-      window.removeEventListener("envoi:connection-updated", read)
+      alive = false
     }
-  }, [project.id, empty])
+  }, [project.id])
+  const name = project.id === "empty" ? t("project.notOpened") : project.name
+  const current = recent.find((entry) => entry.path === project.rootPath)
+  const blocked = navigationBusy || saving
   return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <button
-          aria-label={t("project.identityAria", { name })}
-          onClick={() =>
-            window.dispatchEvent(new Event(empty ? "envoi:open-project" : "envoi:manage-projects"))
-          }
-          className="flex min-w-0 max-w-72 items-center gap-1.5 rounded-md px-2 py-1 text-[13px] font-medium text-foreground hover:bg-secondary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+    <DropdownMenu
+      onOpenChange={(open) => {
+        if (open) refresh()
+      }}
+    >
+      <DropdownMenuTrigger
+        disabled={blocked}
+        aria-label={t("project.identityAria", { name })}
+        title={current ? locationLabel(current) : name}
+        className="flex min-w-0 max-w-64 flex-1 items-center gap-1.5 rounded-md px-2 py-1 text-[13px] font-medium hover:bg-secondary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+      >
+        <FolderOpen className="size-4 shrink-0 text-muted-foreground" />
+        <span className="truncate">{name}</span>
+        <ChevronDown className="size-3 shrink-0 text-muted-foreground" />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="w-80 max-w-[calc(100vw-2rem)]">
+        <DropdownMenuLabel>{t("project.recentHeading")}</DropdownMenuLabel>
+        <div className="max-h-64 overflow-y-auto">
+          {recent.map((entry) => (
+            <DropdownMenuItem
+              key={entry.id}
+              disabled={blocked || !entry.path}
+              onSelect={() =>
+                window.dispatchEvent(new CustomEvent("envoi:open-recent", { detail: entry.path }))
+              }
+            >
+              <span className="w-4 shrink-0">
+                {entry.path === project.rootPath && <Check className="size-4" />}
+              </span>
+              <span className="min-w-0">
+                <span className="block truncate">{entry.name}</span>
+                <span
+                  className="block truncate text-[11px] text-muted-foreground"
+                  title={locationLabel(entry)}
+                >
+                  {locationLabel(entry)}
+                </span>
+              </span>
+            </DropdownMenuItem>
+          ))}
+          {!recent.length && (
+            <p className="px-2 py-3 text-xs text-muted-foreground">{t("project.noRecent")}</p>
+          )}
+        </div>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onSelect={() => window.dispatchEvent(new Event("envoi:open-project"))}>
+          <FolderOpen />
+          {t("project.openProjectFolder")}
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => window.dispatchEvent(new Event("envoi:open-remote"))}>
+          <Network />
+          {t("remote.manage")}
+        </DropdownMenuItem>
+        {/Win/.test(navigator.platform) && (
+          <DropdownMenuItem
+            onSelect={() =>
+              window.dispatchEvent(new CustomEvent("envoi:open-remote", { detail: "wsl" }))
+            }
+          >
+            <SquareTerminal />
+            {t("wsl.manage")}
+          </DropdownMenuItem>
+        )}
+        <DropdownMenuItem onSelect={() => window.dispatchEvent(new Event("envoi:new-project"))}>
+          {t("project.newProject")}
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          disabled={project.id === "empty"}
+          onSelect={() => window.dispatchEvent(new Event("envoi:close-project"))}
         >
-          <FolderOpen className="h-4 w-4 shrink-0 text-muted-foreground" />
-          <span className="truncate">{name}</span>
-          <ChevronDown className="h-3 w-3 shrink-0 text-muted-foreground" />
-        </button>
-      </TooltipTrigger>
-      <TooltipContent side="bottom" className="max-w-lg break-all">
-        <span>{name}</span>
-        {path && <span className="mt-1 block font-mono text-[11px]">{path}</span>}
-      </TooltipContent>
-    </Tooltip>
+          {t("project.closeCurrentEllipsis")}
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => window.dispatchEvent(new Event("envoi:manage-projects"))}>
+          {t("project.manageMenu")}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   )
 }

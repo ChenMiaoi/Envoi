@@ -13,6 +13,7 @@ import { layoutGraph } from "@/lib/gitGraph"
 import { cn } from "@/lib/utils"
 import { useT } from "@/i18n/useT"
 import { WorkspacePanel } from "./WorkspacePanel"
+import { isRemoteWorkspace } from "@/lib/workspaceLocation"
 
 /** 车道颜色随主题的 hue 槽位解析；SVG 表现属性支持 var() 引用。 */
 const LANE_COLORS = ["yellow", "blue", "green", "red", "violet", "orange", "cyan", "pink"].map(
@@ -176,6 +177,9 @@ function CommitDetail({ show, error, busy }: { show?: GitShow; error: string; bu
 }
 
 export function GitHistoryView() {
+  const root = useProject((state) => state.project.rootPath)
+  if (root && isRemoteWorkspace(root))
+    return <CommitHistoryView key={root} directory={root} revision={0} />
   return (
     <WorkspacePanel
       history={(root, revision) => (

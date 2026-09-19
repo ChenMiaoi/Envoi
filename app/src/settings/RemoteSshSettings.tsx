@@ -1,6 +1,7 @@
 import { Network, SquareTerminal } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useT } from "@/i18n/useT"
+import type { MessageKey } from "@/i18n/runtime"
 import { usePreferences } from "./context"
 import { useProject } from "@/project/context"
 import { envoi, ipcError } from "@/lib/desktop"
@@ -8,6 +9,8 @@ import { Button } from "@/components/ui/button"
 import type { RemoteState } from "../../shared/remote"
 import type { ToolInfo } from "./extensionTools"
 import { remoteStatusDot, remoteStatusPill } from "@/project/remoteStatus"
+import { languagePlugins } from "./pluginCatalog"
+import { pluginEnabled } from "./model"
 const visuals = {
   ssh: { icon: Network, color: "bg-emerald-500/10 text-emerald-400 ring-emerald-400/20" },
   wsl: { icon: SquareTerminal, color: "bg-violet-500/10 text-violet-400 ring-violet-400/20" },
@@ -42,6 +45,7 @@ export function RemoteSshSettings({ kind = "ssh" }: { kind?: "ssh" | "wsl" }) {
   const enabled = preferences.pluginStates[plugin] !== false
   const title = t(kind === "wsl" ? "wsl.title" : "remote.title")
   const Icon = visuals[kind].icon
+  if (kind === "wsl" && !/Win/.test(navigator.platform)) return null
   return (
     <article
       data-testid={kind === "wsl" ? "extension-wsl" : "extension-remote-ssh"}
@@ -118,8 +122,15 @@ export function RemoteSshSettings({ kind = "ssh" }: { kind?: "ssh" | "wsl" }) {
     </article>
   )
 }
-export function RemoteExtensionTools({ root }: { root: string }) {
+export function RemoteExtensionTools({
+  root,
+  scope,
+}: {
+  root: string
+  scope: "global" | "project"
+}) {
   const { t } = useT()
+  const { preferences, update } = usePreferences()
   const [tools, setTools] = useState<ToolInfo>(),
     [error, setError] = useState("")
   const load = () => {
@@ -147,8 +158,52 @@ export function RemoteExtensionTools({ root }: { root: string }) {
   }, [root])
   return (
     <div className="space-y-3">
-      <RemoteSshSettings />
-      <RemoteSshSettings kind="wsl" />
+      {scope === "global" && (
+        <>
+          <RemoteSshSettings />
+          <RemoteSshSettings kind="wsl" />
+        </>
+      )}
+      <p className="text-xs text-muted-foreground">
+        {t(scope === "global" ? "remote.globalScope" : "remote.projectScope")}
+      </p>
+      {languagePlugins.map((plugin) => (
+        <label
+          key={plugin.id}
+          className="flex items-center justify-between rounded-lg border p-3 text-sm"
+        >
+          <span>{t(plugin.displayNameKey as MessageKey)}</span>
+          <input
+            type="checkbox"
+            aria-label={t(plugin.displayNameKey as MessageKey)}
+            checked={
+              scope === "project"
+                ? pluginEnabled(preferences, root, plugin.id)
+                : preferences.pluginStates[plugin.id] !== false
+            }
+            onChange={(event) =>
+              update(
+                scope === "global"
+                  ? {
+                      pluginStates: {
+                        ...preferences.pluginStates,
+                        [plugin.id]: event.target.checked,
+                      },
+                    }
+                  : {
+                      pluginWorkspaces: {
+                        ...preferences.pluginWorkspaces,
+                        [root]: {
+                          ...preferences.pluginWorkspaces[root],
+                          [plugin.id]: event.target.checked,
+                        },
+                      },
+                    },
+              )
+            }
+          />
+        </label>
+      ))}
       <p className="text-xs text-muted-foreground">{t("remote.toolsHint")}</p>
       <button className="text-xs text-primary" onClick={load}>
         {t("settings.tools.refresh")}

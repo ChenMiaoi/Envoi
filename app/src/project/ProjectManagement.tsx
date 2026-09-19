@@ -1,4 +1,5 @@
 import { nativeBasename, nativePathWithin, nativePathKey } from "@/lib/nativePath"
+import { isRemoteWorkspace, locationLabel } from "@/lib/workspaceLocation"
 import { useEffect, useRef, useState } from "react"
 import { useT } from "@/i18n/useT"
 import { useProject } from "./context"
@@ -276,7 +277,9 @@ export function ProjectManagement() {
                 {t("project.currentName", { name: project.name })}
               </span>
               <button
-                disabled={busy || saving || !project.rootPath}
+                disabled={
+                  busy || saving || !project.rootPath || isRemoteWorkspace(project.rootPath)
+                }
                 className="shrink-0 text-xs text-danger disabled:opacity-40"
                 onClick={() => project.rootPath && choose(project.rootPath)}
               >
@@ -294,9 +297,9 @@ export function ProjectManagement() {
                       <span className="block truncate">{entry.name}</span>
                       <span
                         className="block truncate text-xs text-muted-foreground"
-                        title={entry.path}
+                        title={locationLabel(entry)}
                       >
-                        {entry.path}
+                        {locationLabel(entry)}
                       </span>
                     </span>
                     <button
@@ -307,7 +310,7 @@ export function ProjectManagement() {
                       {isCurrent(entry) ? t("project.removeAndClose") : t("project.removeRecord")}
                     </button>
                     <button
-                      disabled={busy || saving}
+                      disabled={busy || saving || isRemoteWorkspace(entry.path)}
                       className="shrink-0 text-xs text-danger"
                       onClick={() =>
                         entry.path ? choose(entry.path) : status(t("project.reopenToVerify"))

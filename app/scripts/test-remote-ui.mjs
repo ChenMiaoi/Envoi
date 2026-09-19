@@ -1,6 +1,6 @@
 import { _electron } from "playwright"
 import { createRequire } from "node:module"
-import { mkdtemp, rm } from "node:fs/promises"
+import { mkdtemp, mkdir, writeFile, rm } from "node:fs/promises"
 import path from "node:path"
 import { tmpdir } from "node:os"
 import assert from "node:assert/strict"
@@ -20,6 +20,17 @@ try {
     errors = []
   page.on("pageerror", (error) => errors.push(error.message))
   await page.getByTestId("welcome-page").waitFor()
+  if (process.env.ENVOI_TEST_WSL_DISTRO || process.env.ENVOI_TEST_SSH_CONFIG) {
+    const previous = path.join(directory, "previous-local")
+    await mkdir(previous)
+    await writeFile(path.join(previous, "before.md"), "# Previous local project\n")
+    await page.evaluate(async (root) => {
+      await window.envoi.trustDirectory(root)
+      await window.envoi.grantProjectTrust(root)
+      window.dispatchEvent(new CustomEvent("envoi:open-recent", { detail: root }))
+    }, previous)
+    await page.getByRole("button", { name: "before.md", exact: true }).waitFor()
+  }
   await page.evaluate(() => {
     window.location.hash = "/settings/global/extensions"
   })
@@ -99,6 +110,22 @@ try {
       await page.getByRole("textbox", { name: "验证响应", exact: true }).fill("yes")
       await page.getByRole("button", { name: "继续", exact: true }).click()
     }
+    await trust.waitFor()
+    await page.evaluate(async () => {
+      const [state] = await window.envoi.remoteList()
+      await window.envoi.remoteDisconnect(state.root)
+    })
+    await page
+      .getByRole("dialog", { name: "项目安全模式", exact: true })
+      .waitFor({ state: "hidden" })
+    await page.getByRole("button", { name: /项目：.*切换项目/ }).click()
+    await page.getByRole("menuitem", { name: /关闭当前项目/ }).waitFor()
+    await page.keyboard.press("Escape")
+    await page.evaluate(async () => {
+      const [state] = await window.envoi.remoteList()
+      await window.envoi.remoteReconnect(state.root)
+      window.dispatchEvent(new Event("envoi:show-trust"))
+    })
     await trust.click()
     await page.getByRole("button", { name: "main.cpp", exact: true }).click()
     const editor = page.getByRole("textbox", { name: "文本源码编辑器" })
@@ -113,6 +140,8 @@ try {
     })
     await page.getByRole("button", { name: "远程终端", exact: true }).click()
     await page.locator('[data-terminal-ready="true"]').waitFor()
+    assert.equal(await page.getByRole("dialog").count(), 0, "terminal does not block the editor")
+    assert.equal(await editor.isVisible(), true)
     await page
       .locator(".xterm-helper-textarea")
       .pressSequentially("printf 'ENVOI_UI_TERMINAL\\n'; pwd")
@@ -123,7 +152,27 @@ try {
         ?.textContent?.includes("ENVOI_UI_TERMINAL"),
     )
     await capture(distro ? "wsl-workspace.png" : "remote-ssh-workspace.png")
-    await page.keyboard.press("Escape")
+    await page.getByRole("button", { name: "隐藏终端", exact: true }).click()
+    await page.getByRole("button", { name: "远程终端", exact: true }).click()
+    await page.locator('[data-terminal-ready="true"]').waitFor()
+    await page.waitForFunction(
+      () =>
+        document
+          .querySelector(".xterm-accessibility-tree")
+          ?.textContent?.includes("ENVOI_UI_TERMINAL"),
+      undefined,
+      { polling: 100 },
+    )
+    await page.getByRole("button", { name: "隐藏终端", exact: true }).click()
+    await page.evaluate(() => {
+      location.hash = "/history"
+    })
+    await page.getByRole("button", { name: "刷新 Git 历史", exact: true }).waitFor()
+    assert.equal(await page.getByTestId("research-workspaces").count(), 0)
+    if (distro) await page.getByText("仓库还没有提交。", { exact: true }).waitFor()
+    await page.evaluate(() => {
+      location.hash = "/reader"
+    })
     await editor.click()
     await editor.press("Control+End")
     await editor.press("Enter")

@@ -1,14 +1,21 @@
 import { useProjectTrust } from "./useProjectTrust"
-import { openDirectory } from "@/lib/desktop"
+import { openDirectory, ipcError } from "@/lib/desktop"
+import { locationLabel } from "@/lib/workspaceLocation"
 import { Notification } from "@/components/Notification"
 import { restoreProjectSession, saveOutgoingSession } from "@/lib/projectSession"
 import { bindProject } from "@/lib/agentClient"
 import { ProjectManagement } from "./ProjectManagement"
 import { BrandMark } from "@/components/BrandMark"
 import { usePreferences } from "@/settings/context"
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { Folder, FolderOpen, ArrowUp, HardDrive, FilePlus2, Search, Check } from "lucide-react"
-import { createPaper, createTextFile, dirtyFiles, readProject } from "@/lib/projectFiles"
+import {
+  createPaper,
+  createTextFile,
+  dirtyFiles,
+  readProject,
+  isTextPath,
+} from "@/lib/projectFiles"
 import {
   authorizedRoots,
   rememberRoot,
@@ -42,6 +49,7 @@ import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 export function ProjectMenu() {
+  const operationPending = useRef(false)
   const { preferences } = usePreferences()
   const { t } = useT()
   const {
@@ -160,14 +168,16 @@ export function ProjectMenu() {
   }, [])
   const run = useCallback(
     async (operation: () => Promise<void>) => {
-      if (busy || saving) return
+      if (busy || saving || operationPending.current) return
+      operationPending.current = true
       setBusy(true)
       setMessage("")
       try {
         await operation()
       } catch (error) {
-        setMessage((error as Error).message)
+        setMessage(ipcError(error).message)
       } finally {
+        operationPending.current = false
         setBusy(false)
       }
     },
@@ -175,12 +185,29 @@ export function ProjectMenu() {
   )
   const activate = useCallback(
     async (rootPath: string, discard = false) => {
-      const binding = await bindProject(rootPath)
-      rootPath = binding.project.path
-      window.dispatchEvent(new Event("envoi:connection-updated"))
-      const fresh = await readProject(rootPath)
-      await saveOutgoingSession(getProject(), discard)
-      const next = await restoreProjectSession(fresh)
+      let next
+      let outgoing: ReturnType<typeof getProject> | undefined
+      try {
+        const prepared = await envoi().bindProject(rootPath, { prepare: true })
+        rootPath = prepared.project.path
+        const fresh = await readProject(rootPath)
+        outgoing = getProject()
+        await saveOutgoingSession(outgoing, discard)
+        next = await restoreProjectSession(fresh)
+        await bindProject(rootPath)
+      } catch (error) {
+        await envoi()
+          .cancelProjectOpen()
+          .catch(() => {})
+        if (discard && outgoing) {
+          try {
+            await saveOutgoingSession(outgoing, false)
+          } catch {
+            throw Error(`${ipcError(error).message}\n${t("project.recoverySaveFailed")}`)
+          }
+        }
+        throw error
+      }
       let remembered = true
       try {
         await rememberProject(rootPath)
@@ -188,6 +215,7 @@ export function ProjectMenu() {
         remembered = false
       }
       setProject(next)
+      window.dispatchEvent(new Event("envoi:recent-updated"))
       setMessage(remembered ? "" : t("project.openedNoRecent", { name: next.name }))
     },
     [getProject, setProject, setMessage, t],
@@ -272,14 +300,16 @@ export function ProjectMenu() {
           >
             {t("remote.manage")}
           </DropdownMenuItem>
-          <DropdownMenuItem
-            disabled={busy}
-            onSelect={() =>
-              window.dispatchEvent(new CustomEvent("envoi:open-remote", { detail: "wsl" }))
-            }
-          >
-            {t("wsl.title")}…
-          </DropdownMenuItem>
+          {/Win/.test(navigator.platform) && (
+            <DropdownMenuItem
+              disabled={busy}
+              onSelect={() =>
+                window.dispatchEvent(new CustomEvent("envoi:open-remote", { detail: "wsl" }))
+              }
+            >
+              {t("wsl.title")}…
+            </DropdownMenuItem>
+          )}
           <DropdownMenuItem disabled={busy} onSelect={() => openDialog("open")}>
             {t("project.openProjectFolder")}
           </DropdownMenuItem>
@@ -376,10 +406,12 @@ export function ProjectMenu() {
                   <button
                     key={entry.id}
                     disabled={busy || !entry.path}
+                    title={locationLabel(entry)}
                     className="mb-1 flex w-full items-center gap-2 rounded px-2 py-2 text-left text-xs hover:bg-secondary disabled:opacity-40"
                     onClick={() =>
                       void run(async () => {
-                        await browse([entry.path!])
+                        await activate(entry.path!)
+                        setMode(null)
                       })
                     }
                   >
@@ -629,8 +661,7 @@ export function ProjectMenu() {
               onClick={() =>
                 void run(async () => {
                   if (mode === "file") {
-                    if (!/\.(tex|bib|md|txt|csv|sty|cls)$/i.test(name.trim()))
-                      throw new Error(t("project.errorFileExtension"))
+                    if (!isTextPath(name.trim())) throw new Error(t("project.errorFileExtension"))
                     await createTextFile(project.rootPath!, name.trim(), "")
                     const fresh = await readProject(project.rootPath!).catch((error) => {
                       throw new Error(t("project.errorRefreshFailed", { error: error.message }))

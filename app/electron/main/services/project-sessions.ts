@@ -10,6 +10,7 @@ export class ProjectSessionManager {
   private roots = new Map<string, string>()
   private projects = new Map<string, string>()
   private active = new Map<number, string>()
+  private prepared = new Map<number, { id: string; root: string }>()
   private watches = new Map<number, () => void>()
   private tickets = new Map<number, object>()
   private requests = new Map<number, Set<Operation>>()
@@ -45,6 +46,17 @@ export class ProjectSessionManager {
   activeRoot(owner: number) {
     return this.active.get(owner)
   }
+  prepareProject(owner: number, id: string, root: string) {
+    this.bindRoot(root)
+    this.prepared.set(owner, { id, root })
+  }
+  preparedProject(owner: number) {
+    return this.prepared.get(owner)
+  }
+  cancelPreparation(owner: number) {
+    this.bindings.delete(owner)
+    this.prepared.delete(owner)
+  }
   beginBinding(owner: number) {
     const ticket = {}
     this.bindings.set(owner, ticket)
@@ -54,6 +66,7 @@ export class ProjectSessionManager {
     return this.bindings.get(owner) === ticket
   }
   bindProject(owner: number, id: string, root: string) {
+    this.prepared.delete(owner)
     this.bindRoot(root)
     this.projects.set(id, root)
     if (this.active.get(owner) !== root) {
@@ -117,6 +130,7 @@ export class ProjectSessionManager {
       if (request.kind === "compile") request.cancelled = true
   }
   close(owner: number) {
+    this.prepared.delete(owner)
     this.bindings.delete(owner)
     this.disposeLanguage(owner)
     this.cancelBrowse(owner)

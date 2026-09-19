@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react"
-import { AlertCircle, Network, SquareTerminal, TerminalSquare } from "lucide-react"
+import { createPortal } from "react-dom"
+import { useCallback, useEffect, useRef, useState } from "react"
+import { AlertCircle, Network, SquareTerminal, TerminalSquare, X } from "lucide-react"
 import { envoi, ipcError } from "@/lib/desktop"
 import { useProject } from "./context"
 import { useT } from "@/i18n/useT"
@@ -33,14 +34,35 @@ const visuals = {
 export function RemoteWorkspaceControls() {
   const { t } = useT()
   const { preferences } = usePreferences()
-  const { project, navigationBusy, saving } = useProject()
+  const { project, navigationBusy, saving, setMessage } = useProject()
   const [open, setOpen] = useState(false),
     [terminal, setTerminal] = useState(false)
   const [kind, setKind] = useState<"ssh" | "wsl">("ssh")
   const [distributions, setDistributions] = useState<string[]>([])
-  const [host, setHost] = useState(""),
-    [directory, setDirectory] = useState(""),
-    [port, setPort] = useState("")
+  const [ssh, setSsh] = useState({ host: "", directory: "" })
+  const [wsl, setWsl] = useState({ host: "", directory: "" })
+  const [port, setPort] = useState("")
+  const { host, directory } = kind === "ssh" ? ssh : wsl
+  const setHost = (host: string) =>
+    kind === "ssh"
+      ? setSsh((old) => ({ ...old, host }))
+      : setWsl((old) => (old.host === host ? old : { host, directory: "" }))
+  const setDirectory = useCallback(
+    (directory: string) => {
+      const update = kind === "ssh" ? setSsh : setWsl
+      update((old) => ({ ...old, directory }))
+    },
+    [kind],
+  )
+  const attempt = useRef<{ id: string; cancelled: boolean } | null>(null)
+  const cancel = () => {
+    const pending = attempt.current
+    if (!pending) return
+    pending.cancelled = true
+    void envoi()
+      .remoteCancel(pending.id)
+      .catch((error) => setMessage(ipcError(error).message))
+  }
   const [states, setStates] = useState<RemoteState[]>([])
   const [configFile, setConfigFile] = useState("")
   const [preparing, setPreparing] = useState<"checking" | "downloading" | "installing">()
@@ -66,11 +88,12 @@ export function RemoteWorkspaceControls() {
       .then(setStates)
       .catch(() => {})
     const off = envoi().onRemoteEvent((event) => {
-      if (event.type === "state")
+      if (event.type === "state") {
         setStates((previous) => [
           ...previous.filter((entry) => entry.root !== event.value.root),
           event.value,
         ])
+      }
       if (event.type === "preparing") setPreparing(event.stage)
       if (event.type === "prompt") {
         setPrompt(event)
@@ -90,7 +113,9 @@ export function RemoteWorkspaceControls() {
       .then((names) => {
         if (alive) {
           setDistributions(names)
-          setHost(names[0] ?? "")
+          setWsl((old) =>
+            names.includes(old.host) ? old : { host: names[0] ?? "", directory: "" },
+          )
         }
       })
       .catch((error) => {
@@ -101,20 +126,23 @@ export function RemoteWorkspaceControls() {
     }
   }, [open, kind])
   const run = async (action: () => Promise<void>) => {
-    if (working) return
+    if (working || attempt.current) return
+    attempt.current = { id: crypto.randomUUID(), cancelled: false }
     setPreparing(undefined)
     setWorking(true)
     setError("")
     try {
       await action()
     } catch (error) {
-      setError(ipcError(error).message)
+      if (!attempt.current?.cancelled) setError(ipcError(error).message)
     } finally {
       setPreparing(undefined)
       setWorking(false)
+      attempt.current = null
     }
   }
   const activate = (root: string) => {
+    if (attempt.current?.cancelled) return
     window.dispatchEvent(new CustomEvent("envoi:open-recent", { detail: root }))
     setOpen(false)
   }
@@ -123,11 +151,11 @@ export function RemoteWorkspaceControls() {
   return (
     <>
       {root && (
-        <div className="flex items-center gap-1 text-xs">
+        <div className="flex min-w-0 items-center gap-1 text-xs">
           <button
-            className="flex max-w-64 items-center gap-1.5 rounded-md border border-primary/30 bg-primary/5 px-2 py-1 text-primary transition-colors hover:bg-primary/10"
+            className="flex min-w-0 max-w-64 items-center gap-1.5 rounded-md border border-primary/30 bg-primary/5 px-2 py-1 text-primary transition-colors hover:bg-primary/10"
             onClick={() => {
-              setKind(current?.kind ?? "ssh")
+              setKind(root?.startsWith("wsl://") ? "wsl" : "ssh")
               setOpen(true)
             }}
           >
@@ -136,7 +164,7 @@ export function RemoteWorkspaceControls() {
               className={`size-1.5 shrink-0 rounded-full ${remoteStatusDot(current?.state ?? "disconnected")}`}
             />
             <span className="truncate">
-              {current?.kind === "wsl" ? "WSL" : "SSH"}: {current?.host ?? "…"} ·{" "}
+              {root?.startsWith("wsl://") ? "WSL" : "SSH"}: {current?.host ?? "…"} ·{" "}
               {t(`remote.${current?.state ?? "disconnected"}`)}
             </span>
           </button>
@@ -150,7 +178,13 @@ export function RemoteWorkspaceControls() {
           </button>
         </div>
       )}
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog
+        open={open}
+        onOpenChange={(value) => {
+          if (!value) cancel()
+          setOpen(value)
+        }}
+      >
         <DialogContent className="sm:max-w-xl">
           <DialogHeader className="flex-row items-start gap-3 space-y-0 text-left">
             <span
@@ -171,13 +205,18 @@ export function RemoteWorkspaceControls() {
             onSubmit={(event) => {
               event.preventDefault()
               void run(async () => {
-                const result = await envoi().remoteConnect({
-                  kind,
-                  host: host.trim(),
-                  ...(kind === "ssh" && configFile.trim() ? { configFile: configFile.trim() } : {}),
-                  directory: directory.trim(),
-                  ...(kind === "ssh" && port ? { port: Number(port) } : {}),
-                })
+                const result = await envoi().remoteConnect(
+                  {
+                    kind,
+                    host: host.trim(),
+                    ...(kind === "ssh" && configFile.trim()
+                      ? { configFile: configFile.trim() }
+                      : {}),
+                    directory: directory.trim(),
+                    ...(kind === "ssh" && port ? { port: Number(port) } : {}),
+                  },
+                  attempt.current!.id,
+                )
                 activate(result.root)
               })
             }}
@@ -185,7 +224,12 @@ export function RemoteWorkspaceControls() {
             <div className="space-y-1.5">
               <Label>{t(kind === "wsl" ? "wsl.distribution" : "remote.host")}</Label>
               {kind === "wsl" ? (
-                <Select value={host} onValueChange={setHost}>
+                <Select
+                  value={host}
+                  onValueChange={(value) => {
+                    if (value) setHost(value)
+                  }}
+                >
                   <SelectTrigger aria-label={t("wsl.distribution")} className="w-full">
                     <SelectValue placeholder={t("wsl.select")} />
                   </SelectTrigger>
@@ -250,6 +294,11 @@ export function RemoteWorkspaceControls() {
                 {t("extensions.disabled")}
               </p>
             )}
+            {kind === "wsl" && !distributions.length && (
+              <p role="status" className="text-xs text-muted-foreground">
+                {t("wsl.noDistributions")}
+              </p>
+            )}
             <div className="flex flex-wrap items-center gap-2">
               <Button
                 type="submit"
@@ -259,17 +308,7 @@ export function RemoteWorkspaceControls() {
                 {t(working ? "remote.connecting" : "remote.connect")}
               </Button>
               {working && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={() =>
-                    void Promise.all(
-                      states
-                        .filter((state) => state.state === "connecting")
-                        .map((state) => envoi().remoteDisconnect(state.root)),
-                    ).catch(() => {})
-                  }
-                >
+                <Button type="button" variant="ghost" onClick={cancel}>
                   {t("remote.cancel")}
                 </Button>
               )}
@@ -312,7 +351,7 @@ export function RemoteWorkspaceControls() {
                           disabled={working || navigationBusy || saving || !enabled}
                           onClick={() =>
                             void run(async () => {
-                              await envoi().remoteReconnect(state.root)
+                              await envoi().remoteReconnect(state.root, attempt.current!.id)
                               activate(state.root)
                             })
                           }
@@ -404,17 +443,46 @@ export function RemoteWorkspaceControls() {
           </form>
         </DialogContent>
       </Dialog>
-      <Dialog open={terminal && !!root} onOpenChange={setTerminal}>
-        <DialogContent className="sm:max-w-4xl">
-          <DialogHeader>
-            <DialogTitle>
-              {t("remote.terminal")} · {current?.host}
-            </DialogTitle>
-            <DialogDescription>{current?.directory}</DialogDescription>
-          </DialogHeader>
-          {root && <RemoteTerminal key={`${root}:${current?.generation}`} root={root} />}
-        </DialogContent>
-      </Dialog>
+      {terminal &&
+        root &&
+        document.getElementById("workspace-terminal") &&
+        createPortal(
+          <section
+            aria-label={t("remote.terminal")}
+            className="flex h-72 min-h-48 max-h-[55vh] resize-y flex-col overflow-auto rounded-lg border border-border bg-background"
+          >
+            <header className="flex shrink-0 items-center gap-3 border-b px-3 py-2 text-xs">
+              <TerminalSquare size={14} />
+              <span className="min-w-0 flex-1 truncate" title={current?.directory}>
+                {t("remote.terminal")} · {current?.host} · {current?.directory}
+              </span>
+              <span>{t(`remote.${current?.state ?? "disconnected"}`)}</span>
+              <button
+                disabled={current?.state !== "connected"}
+                className="rounded px-2 py-1 hover:bg-secondary disabled:opacity-40"
+                onClick={() =>
+                  void envoi()
+                    .terminalClose(root)
+                    .then(() => setTerminal(false))
+                    .catch((error) => setMessage(ipcError(error).message))
+                }
+              >
+                {t("remote.endTerminal")}
+              </button>
+              <button
+                aria-label={t("remote.hideTerminal")}
+                onClick={() => setTerminal(false)}
+                className="rounded p-1 hover:bg-secondary"
+              >
+                <X size={15} />
+              </button>
+            </header>
+            <div className="min-h-0 flex-1 p-2">
+              <RemoteTerminal key={`${root}:${current?.generation}`} root={root} />
+            </div>
+          </section>,
+          document.getElementById("workspace-terminal")!,
+        )}
     </>
   )
 }

@@ -3,12 +3,14 @@ import { envoi } from "./desktop"
 import { translate } from "@/i18n/runtime"
 import { nativeMigrateCache, nativePut, nativeGet, encodeNative } from "./localData"
 import { projectConfigFile } from "./managementDir"
+import { isRemoteWorkspace, type WorkspaceLocation } from "./workspaceLocation"
 export interface RecentProject {
   id: string
   name: string
   projectId?: string
   path?: string
   updated: number
+  location?: WorkspaceLocation
 }
 async function database() {
   return await new Promise<IDBDatabase>((resolve, reject) => {
@@ -58,13 +60,24 @@ async function remember(store: "recent" | "roots", rootPath: string) {
     previous.find((entry) => entry.path === rootPath) ??
     previous.find((entry) => identity && entry.projectId === identity)
   const id = existing?.id ?? identity ?? crypto.randomUUID()
+  const connection = isRemoteWorkspace(rootPath)
+    ? (await envoi().remoteList()).find((entry) => entry.root === rootPath)
+    : undefined
+  const location = connection
+    ? {
+        kind: connection.kind ?? ("ssh" as const),
+        host: connection.host,
+        directory: connection.directory,
+      }
+    : undefined
   const db = await database()
   try {
     await new Promise<void>((resolve, reject) => {
       const transaction = db.transaction(store, "readwrite")
       transaction.objectStore(store).put({
         id,
-        name: nativeBasename(rootPath),
+        name: nativeBasename(location?.directory ?? rootPath),
+        ...(location ? { location } : {}),
         projectId: identity,
         path: rootPath,
         updated: Date.now(),
@@ -148,7 +161,37 @@ async function records(store: "recent" | "roots"): Promise<RecentProject[]> {
     return cached
   }
 }
-export const recentProjects = () => records("recent")
+export async function recentProjects(): Promise<RecentProject[]> {
+  const rows = await records("recent")
+  if (!rows.some((entry) => isRemoteWorkspace(entry.path))) return rows
+  const connections = await envoi()
+    .remoteList()
+    .catch(() => [])
+  return rows.map((entry) => {
+    const remote = connections.find((connection) => connection.root === entry.path)
+    if (!remote) {
+      if (
+        isRemoteWorkspace(entry.path) &&
+        !entry.location &&
+        entry.name === new URL(entry.path!).hostname
+      )
+        return {
+          ...entry,
+          name: translate(entry.path!.startsWith("wsl://") ? "wsl.title" : "remote.title"),
+        }
+      return entry
+    }
+    return {
+      ...entry,
+      name: nativeBasename(remote.directory),
+      location: {
+        kind: remote.kind ?? "ssh",
+        host: remote.host,
+        directory: remote.directory,
+      },
+    }
+  })
+}
 export const authorizedRoots = () => records("roots")
 async function syncRegistry(
   store: "recent" | "roots",

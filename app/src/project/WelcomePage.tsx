@@ -9,7 +9,10 @@ import {
   X,
   Settings,
   Keyboard,
+  Network,
+  SquareTerminal,
 } from "lucide-react"
+import { locationLabel } from "@/lib/workspaceLocation"
 import { BrandMark } from "@/components/BrandMark"
 import { useT } from "@/i18n/useT"
 import { recentProjects, forgetRecentProject, type RecentProject } from "@/lib/recentProjects"
@@ -68,6 +71,12 @@ export function WelcomePage() {
       description: undefined,
     },
   ] as const
+  const remoteActions = [
+    { kind: "ssh", icon: Network, title: "remote.manage" },
+    ...(/Win/.test(navigator.platform)
+      ? [{ kind: "wsl", icon: SquareTerminal, title: "wsl.manage" } as const]
+      : []),
+  ] as const
   return (
     <main data-testid="welcome-page" className="welcome-page h-full overflow-auto bg-background">
       <div className="welcome-panel mx-auto flex w-full max-w-2xl flex-col px-6 py-10 sm:px-10">
@@ -112,6 +121,21 @@ export function WelcomePage() {
                   )}
                 </button>
               ))}
+              {remoteActions.map((action) => (
+                <button
+                  key={action.kind}
+                  disabled={blocked}
+                  className={`flex items-center gap-3 rounded-lg border border-border text-left text-sm hover:border-primary/40 hover:bg-primary/5 disabled:opacity-40 ${hasRecent ? "px-3 py-2" : "w-full p-4"}`}
+                  onClick={() =>
+                    window.dispatchEvent(
+                      new CustomEvent("envoi:open-remote", { detail: action.kind }),
+                    )
+                  }
+                >
+                  <action.icon className="size-5 text-primary" />
+                  {t(action.title)}
+                </button>
+              ))}
             </div>
           </section>
           {(loading || hasRecent) && (
@@ -149,10 +173,10 @@ export function WelcomePage() {
                         <span className="min-w-0 flex-1">
                           <span className="block truncate text-sm font-medium">{entry.name}</span>
                           <span
-                            title={entry.path}
+                            title={locationLabel(entry)}
                             className="mt-1 block truncate text-xs text-muted-foreground"
                           >
-                            {entry.path ?? t("project.reopenToVerify")}
+                            {locationLabel(entry) || t("project.reopenToVerify")}
                           </span>
                         </span>
                         <ArrowRight className="h-3 w-3 shrink-0 text-muted-foreground" />

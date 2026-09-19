@@ -3,6 +3,13 @@
  * 插值占位符使用 {name}；翻译文件必须与本文件键集合完全一致（编译期以 Record<MessageKey,string> 保证）。
  */
 export const zhCN = {
+  "remote.endTerminal": "结束终端",
+  "wsl.noDistributions": "没有可用的 WSL 发行版。请先安装发行版，再重新打开此窗口。",
+  "remote.projectScope": "语言开关仅对当前项目生效；工具在当前远程环境运行。",
+  "remote.globalScope": "语言开关修改全局默认；下方工具检测来自当前远程环境。",
+  "remote.featureUnavailable":
+    "当前 SSH/WSL 项目暂不支持此功能。文件编辑、Git 历史、编译与终端仍可使用。",
+  "remote.hideTerminal": "隐藏终端",
   "remote.configFile": "SSH 配置文件（可选，本机绝对路径）",
   "wsl.title": "WSL",
   "wsl.description": "打开 Windows Subsystem for Linux 中的 Linux 项目。",
@@ -34,7 +41,7 @@ export const zhCN = {
   "remote.manage": "远程 SSH 工作区…",
   "remote.sessions": "已有连接",
   "remote.terminal": "远程终端",
-  "remote.terminalHint": "命令在远程目录执行。关闭面板保留终端，断开连接后请重新连接。",
+  "remote.terminalHint": "命令在当前环境的项目目录执行。隐藏面板保留终端；断开连接将结束终端。",
   "remote.authentication": "SSH 身份验证",
   "remote.answer": "验证响应",
   "remote.continue": "继续",
@@ -969,9 +976,9 @@ export const zhCN = {
 
   "project.dialogFileTitle": "新建项目文件",
 
-  "project.dialogNewTitle": "新建论文项目",
+  "project.dialogNewTitle": "新建项目",
   "project.dialogOpenDesc": "选择项目文件夹。",
-  "project.dialogOpenTitle": "打开论文项目",
+  "project.dialogOpenTitle": "打开项目",
   "project.discardIfCurrent": "放弃此项目未保存的修改",
   "project.discardOnSwitch": "切换时放弃未保存修改",
   "project.discardUnsaved": "放弃当前未保存修改",
@@ -979,7 +986,7 @@ export const zhCN = {
   "project.emptyFolderHint": "请先选择文件夹。",
   "project.enableGit": "启用 Git 版本管理",
   "project.errorCloseChanged": "项目在关闭过程中发生变化，未关闭。",
-  "project.errorFileExtension": "请使用 .tex、.bib、.md、.txt、.csv、.sty 或 .cls 文本扩展名。",
+  "project.errorFileExtension": "请使用文本或代码文件扩展名。",
   "project.errorGitIncomplete":
     "项目骨架已创建，但 Git 未完成：{error}。文件保留，请打开该项目检查。",
   "project.errorNoDirectoryAuth": "未获得目录授权，当前项目不变。",
@@ -996,7 +1003,7 @@ export const zhCN = {
   "project.gitInitialized": "项目已创建，Git 仓库已初始化（main）；尚无提交。",
 
   "project.gitProbing": "检测本地 Git…",
-  "project.identityAria": "项目：{name}，打开项目管理",
+  "project.identityAria": "项目：{name}，切换项目",
   "project.localConnectionMenu": "项目本地连接…",
   "project.localPathAria": "所选位置的本地绝对路径",
   "project.locationLabel": "项目位置",

@@ -76,7 +76,7 @@ function SectionTitle({
 export function ExtensionsSettings({ scope }: { scope: "global" | "project" }) {
   const root = useProject((state) => state.project.rootPath)
   return root && /^(ssh|wsl):\/\//.test(root) ? (
-    <RemoteExtensionTools root={root} />
+    <RemoteExtensionTools key={`${root}:${scope}`} root={root} scope={scope} />
   ) : (
     <LocalExtensionsSettings scope={scope} />
   )

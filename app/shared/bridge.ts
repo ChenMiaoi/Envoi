@@ -18,14 +18,20 @@ export interface EnvoiBridge {
   ): Promise<{ home: string; directory: string; directories: string[] }>
   wslDistributions(): Promise<string[]>
   remoteList(): Promise<import("./remote").RemoteState[]>
-  remoteConnect(target: import("./remote").SshTarget): Promise<import("./remote").RemoteState>
-  remoteReconnect(root: string): Promise<import("./remote").RemoteState>
+  remoteConnect(
+    target: import("./remote").SshTarget,
+    requestId?: string,
+  ): Promise<import("./remote").RemoteState>
+  remoteReconnect(root: string, requestId?: string): Promise<import("./remote").RemoteState>
+  remoteCancel(requestId: string): Promise<void>
   remoteDisconnect(root?: string): Promise<void>
   remoteAnswer(id: string, answer: string): Promise<void>
   onRemoteEvent(listener: (event: import("./remote").RemoteEvent) => void): () => void
-  terminalOpen(): Promise<{ output: string }>
-  terminalInput(input: { data: string } | { cols: number; rows: number }): Promise<void>
-  terminalClose(): Promise<void>
+  terminalOpen(root?: string): Promise<{ output: string }>
+  terminalInput(
+    input: { data: string; root?: string } | { cols: number; rows: number; root?: string },
+  ): Promise<void>
+  terminalClose(root?: string): Promise<void>
   projectTrust(root: string): Promise<{ trusted: boolean; decided: boolean }>
   grantProjectTrust(root: string): Promise<{ trusted: boolean; decided: boolean }>
   restrictProject(root: string): Promise<{ trusted: boolean; decided: boolean }>
@@ -70,8 +76,9 @@ export interface EnvoiBridge {
   pickDirectory(): Promise<string | null>
   bindProject(
     directory: string,
-    opts?: { copy?: boolean },
+    opts?: { copy?: boolean; prepare?: boolean },
   ): Promise<{ ok: boolean; project: { id: string; path: string; name: string } }>
+  cancelProjectOpen(): Promise<void>
 
   // 编译（形状 = compileSnapshot 输入/输出；files 为 [{path, base64}]）
   compilerRuntime(): Promise<Record<string, unknown>>

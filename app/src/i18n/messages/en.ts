@@ -1,6 +1,16 @@
 /** English messages. Must contain exactly the same keys as zh-CN. */
 import type { Messages } from "./zh-CN"
 const en: Messages = {
+  "remote.endTerminal": "End terminal",
+  "wsl.noDistributions":
+    "No WSL distributions are available. Install a distribution, then reopen this window.",
+  "remote.projectScope":
+    "Language switches apply only to this project. Tools run in its remote environment.",
+  "remote.globalScope":
+    "Language switches change global defaults. Tool detection below uses the current remote environment.",
+  "remote.featureUnavailable":
+    "This feature is not yet available in SSH/WSL projects. Editing, Git history, compilation and terminals remain available.",
+  "remote.hideTerminal": "Hide terminal",
   "remote.configFile": "SSH config file (optional, absolute local path)",
   "wsl.title": "WSL",
   "wsl.description": "Open Linux projects in Windows Subsystem for Linux.",
@@ -34,7 +44,7 @@ const en: Messages = {
   "remote.sessions": "Connections",
   "remote.terminal": "Remote terminal",
   "remote.terminalHint":
-    "Commands run in the remote folder. Closing this panel keeps the terminal session.",
+    "Commands run in this environment’s project directory. Hiding the panel keeps the terminal; disconnecting ends it.",
   "remote.authentication": "SSH authentication",
   "remote.answer": "Authentication response",
   "remote.continue": "Continue",
@@ -1029,7 +1039,7 @@ const en: Messages = {
   "project.emptyFolderHint": "Select a folder first.",
   "project.enableGit": "Enable Git version control",
   "project.errorCloseChanged": "The project changed while closing and was not closed.",
-  "project.errorFileExtension": "Use a text extension: .tex, .bib, .md, .txt, .csv, .sty, or .cls.",
+  "project.errorFileExtension": "Use a text or source code file extension.",
   "project.errorGitIncomplete":
     "Project scaffold created, but Git did not finish: {error}. Files are kept; open the project to check.",
   "project.errorNoDirectoryAuth":
@@ -1052,7 +1062,7 @@ const en: Messages = {
     "Project created and Git repository initialized (main); no commits yet.",
 
   "project.gitProbing": "Detecting local Git…",
-  "project.identityAria": "Project: {name}, open project management",
+  "project.identityAria": "Project: {name}, switch project",
   "project.localConnectionMenu": "Project Local Connection…",
   "project.localPathAria": "Local absolute path of the selected location",
   "project.locationLabel": "Project location",

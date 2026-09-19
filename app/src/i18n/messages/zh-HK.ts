@@ -1,6 +1,13 @@
 /** 由 scripts/i18n-traditional.mjs 从 zh-CN.ts 自动生成（OpenCC）。术语覆盖请修改该脚本，勿手改本文件。 */
 import type { Messages } from "./zh-CN"
 const zhHK: Messages = {
+  "remote.endTerminal": "結束終端",
+  "wsl.noDistributions": "沒有可用的 WSL 發行版。請先安裝發行版，再重新打開此窗口。",
+  "remote.projectScope": "語言開關僅對當前項目生效；工具在當前遠程環境運行。",
+  "remote.globalScope": "語言開關修改全局預設；下方工具檢測來自當前遠程環境。",
+  "remote.featureUnavailable":
+    "當前 SSH/WSL 項目暫不支持此功能。文件編輯、Git 歷史、編譯與終端仍可使用。",
+  "remote.hideTerminal": "隱藏終端",
   "remote.configFile": "SSH 配置文件（可選，本機絕對路徑）",
   "wsl.title": "WSL",
   "wsl.description": "打開 Windows Subsystem for Linux 中的 Linux 項目。",
@@ -32,7 +39,7 @@ const zhHK: Messages = {
   "remote.manage": "遠程 SSH 工作區…",
   "remote.sessions": "已有連接",
   "remote.terminal": "遠程終端",
-  "remote.terminalHint": "命令在遠程目錄執行。關閉面板保留終端，斷開連接後請重新連接。",
+  "remote.terminalHint": "命令在當前環境的項目目錄執行。隱藏面板保留終端；斷開連接將結束終端。",
   "remote.authentication": "SSH 身份驗證",
   "remote.answer": "驗證響應",
   "remote.continue": "繼續",
@@ -925,9 +932,9 @@ const zhHK: Messages = {
   "project.deleteForeverHeading": "移到回收站：{name}",
   "project.deletedPermanently": "目錄已移到回收站{suffix}",
   "project.dialogFileTitle": "新建項目文件",
-  "project.dialogNewTitle": "新建論文項目",
+  "project.dialogNewTitle": "新建項目",
   "project.dialogOpenDesc": "選擇項目文件夾。",
-  "project.dialogOpenTitle": "打開論文項目",
+  "project.dialogOpenTitle": "打開項目",
   "project.discardIfCurrent": "放棄此項目未保存的修改",
   "project.discardOnSwitch": "切換時放棄未保存修改",
   "project.discardUnsaved": "放棄當前未保存修改",
@@ -935,7 +942,7 @@ const zhHK: Messages = {
   "project.emptyFolderHint": "請先選擇文件夾。",
   "project.enableGit": "啓用 Git 版本管理",
   "project.errorCloseChanged": "項目在關閉過程中發生變化，未關閉。",
-  "project.errorFileExtension": "請使用 .tex、.bib、.md、.txt、.csv、.sty 或 .cls 文本擴展名。",
+  "project.errorFileExtension": "請使用文本或代碼文件擴展名。",
   "project.errorGitIncomplete":
     "項目骨架已創建，但 Git 未完成：{error}。文件保留，請打開該項目檢查。",
   "project.errorNoDirectoryAuth": "未獲得目錄授權，當前項目不變。",
@@ -951,7 +958,7 @@ const zhHK: Messages = {
   "project.gitDisabledSuffix": "{error} 已自動關閉 Git，可繼續創建項目。",
   "project.gitInitialized": "項目已創建，Git 倉庫已初始化（main）；尚無提交。",
   "project.gitProbing": "檢測本地 Git…",
-  "project.identityAria": "項目：{name}，打開項目管理",
+  "project.identityAria": "項目：{name}，切換項目",
   "project.localConnectionMenu": "項目本地連接…",
   "project.localPathAria": "所選位置的本地絕對路徑",
   "project.locationLabel": "項目位置",

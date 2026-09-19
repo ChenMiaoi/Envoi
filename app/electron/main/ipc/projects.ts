@@ -39,31 +39,44 @@ export function registerProjectsIpc(
     return result.canceled ? null : (result.filePaths[0] ?? null)
   })
 
-  handle("envoi:bind-project", async (event, directory: string, opts?: { copy?: boolean }) => {
-    const ticket = sessions.beginBinding(event.sender.id)
-    const root = await workspaceTrust.open(directory)
-    const trusted = await workspaceTrust.isTrusted(root)
-    let ignoreConfig = false
-    if (!trusted) {
-      for (const rel of [".envoi/project.json", ".paperdesk/project.json", "paperdesk.json"]) {
-        try {
-          await restrictedPath(root, rel)
-        } catch {
-          ignoreConfig = true
+  handle("envoi:cancel-project-open", async (event) => {
+    const owner = event.sender.id
+    const prepared = sessions.preparedProject(owner)
+    sessions.cancelPreparation(owner)
+    if (prepared && prepared.root !== sessions.activeRoot(owner))
+      await remote.disconnect(owner, prepared.root)
+  })
+  handle(
+    "envoi:bind-project",
+    async (event, directory: string, opts?: { copy?: boolean; prepare?: boolean }) => {
+      const ticket = sessions.beginBinding(event.sender.id)
+      const root = await workspaceTrust.open(directory)
+      const trusted = await workspaceTrust.isTrusted(root)
+      let ignoreConfig = false
+      if (!trusted) {
+        for (const rel of [".envoi/project.json", ".paperdesk/project.json", "paperdesk.json"]) {
+          try {
+            await restrictedPath(root, rel)
+          } catch {
+            ignoreConfig = true
+          }
         }
       }
-    }
-    const project = await registerProject(root, {
-      copy: opts?.copy ?? false,
-      readOnly: !trusted,
-      ignoreConfig,
-    })
-    if (event.sender.isDestroyed() || !sessions.isCurrentBinding(event.sender.id, ticket))
-      throw Error("项目连接已取消")
-    remote.disconnect(event.sender.id)
-    sessions.bindProject(event.sender.id, project.id, root)
-    return { ok: true, project: { id: project.id, path: root, name: project.name } }
-  })
+      const project = await registerProject(root, {
+        copy: opts?.copy ?? false,
+        readOnly: !trusted,
+        ignoreConfig,
+      })
+      if (event.sender.isDestroyed() || !sessions.isCurrentBinding(event.sender.id, ticket))
+        throw Error("项目连接已取消")
+      if (opts?.prepare) sessions.prepareProject(event.sender.id, project.id, root)
+      else {
+        remote.disconnect(event.sender.id)
+        sessions.bindProject(event.sender.id, project.id, root)
+      }
+      return { ok: true, project: { id: project.id, path: root, name: project.name } }
+    },
+  )
 
   handle("envoi:canonical-directory", (_event, directory: string) => {
     if (typeof directory !== "string" || !path.isAbsolute(directory))

@@ -5,8 +5,14 @@ import { mkdtemp, mkdir, readFile, writeFile, rm, symlink } from "node:fs/promis
 import path from "node:path"
 import { tmpdir } from "node:os"
 import { RpcPeer } from "../electron/main/remote/rpc.mjs"
-import { validateSshTarget, remoteRoot, sshArguments } from "../electron/main/remote/connection.mjs"
+import {
+  RemoteWorkspaces,
+  validateSshTarget,
+  remoteRoot,
+  sshArguments,
+} from "../electron/main/remote/connection.mjs"
 import { workspaceFiles } from "../electron/main/workspace-files.mjs"
+import { ProjectSessionManager } from "../electron/main/services/project-sessions.ts"
 
 test("SSH destinations reject option and shell injection; identities include host and path", () => {
   for (const host of [
@@ -191,4 +197,82 @@ test("WSL directory responses preserve spaces and runtime plans pin architecture
     assert(plan.relative.startsWith(".envoi/runtimes/"))
   }
   assert.throws(() => wslRuntimePlan("unsupported"))
+})
+
+test("prepared remote projects allow reads but cannot run tools or replace the active project on load failure", async () => {
+  const { routeRemoteWorkspace } = await import("../electron/main/remote/workspace-routing.mjs")
+  const sessions = new ProjectSessionManager(() => {})
+  sessions.bindProject(1, "old", "ssh://old/")
+  sessions.prepareProject(1, "new", "wsl://new/")
+  const remote = {
+    ready: Promise.resolve(),
+    profiles: {},
+    entries: new Map([["1:wsl://new/", { trusted: true, target: { directory: "/project" } }]]),
+    call: async () => {
+      throw Error("Workspace text exceeds 24 MB")
+    },
+  }
+  await assert.rejects(
+    routeRemoteWorkspace(remote, sessions, 1, "envoi:fs-list", ["wsl://new/"]),
+    /24 MB/,
+  )
+  assert.equal(sessions.activeRoot(1), "ssh://old/")
+  for (const method of ["fs-save", "terminal-open", "git-log"])
+    await assert.rejects(
+      routeRemoteWorkspace(remote, sessions, 1, `envoi:${method}`, ["wsl://new/"]),
+      /not active/,
+    )
+  sessions.cancelPreparation(1)
+  await assert.rejects(
+    routeRemoteWorkspace(remote, sessions, 1, "envoi:fs-read", ["wsl://new/", "notes.md"]),
+    /not active/,
+  )
+})
+
+test("cancelled WSL preparation never invokes the distribution", async () => {
+  const { ensureWslRuntime } = await import("../electron/main/remote/wsl-runtime.mjs")
+  const progress = []
+  await assert.rejects(
+    ensureWslRuntime(
+      "fixture",
+      (stage) => progress.push(stage),
+      AbortSignal.abort(Error("cancelled")),
+    ),
+    /cancelled/,
+  )
+  assert.deepEqual(progress, [])
+})
+
+test("cancelling before saved connections load cannot start a late connection", async () => {
+  const directory = await mkdtemp(path.join(tmpdir(), "envoi-cancel-connect-"))
+  try {
+    const remote = new RemoteWorkspaces({ directory, send() {} })
+    await remote.ready
+    let release
+    remote.ready = new Promise((resolve) => {
+      release = resolve
+    })
+    let started = false
+    remote.start = async () => {
+      started = true
+    }
+    const controller = new AbortController()
+    const promise = remote.connect(
+      1,
+      { host: "fixture", directory: "/work" },
+      undefined,
+      controller.signal,
+    )
+    controller.abort(Error("cancelled"))
+    release()
+    await assert.rejects(promise, /cancelled/)
+    assert.equal(started, false)
+    assert.equal(remote.entries.size, 0)
+  } finally {
+    assert(
+      path.dirname(directory) === tmpdir() &&
+        path.basename(directory).startsWith("envoi-cancel-connect-"),
+    )
+    await rm(directory, { recursive: true, force: true })
+  }
 })

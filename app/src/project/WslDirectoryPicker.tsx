@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { AlertCircle, Folder, Home, RotateCw } from "lucide-react"
 import { envoi, ipcError } from "@/lib/desktop"
 import { useT } from "@/i18n/useT"
@@ -17,6 +17,8 @@ export function WslDirectoryPicker({
   onChange: (value: string) => void
 }) {
   const { t } = useT()
+  const latestValue = useRef(value)
+  latestValue.current = value
   const [retry, setRetry] = useState(0)
   const [home, setHome] = useState("")
   const [suggestions, setSuggestions] = useState<string[]>([])
@@ -24,7 +26,6 @@ export function WslDirectoryPicker({
   const [loading, setLoading] = useState(false)
   useEffect(() => {
     let alive = true
-    onChange("")
     setHome("")
     setSuggestions([])
     setError("")
@@ -35,8 +36,8 @@ export function WslDirectoryPicker({
       .then((result) => {
         if (!alive) return
         setHome(result.home)
-        onChange(result.directory)
-        setSuggestions(result.directories)
+        if (!latestValue.current) onChange(result.directory)
+        setSuggestions(latestValue.current ? [] : result.directories)
       })
       .catch((error) => {
         if (alive) setError(ipcError(error).message)
