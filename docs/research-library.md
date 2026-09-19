@@ -10,6 +10,8 @@ All renderer changes pass through the trusted Electron library IPC. The AI has a
 
 A note write carries its expected revision. Stale content is retained as a conflict draft rather than overwriting the current note. The UI keeps the editor content and offers explicit merge/reload choices. Historical versions can be restored as a new edit. Markdown replacement is atomic; if a process exits between file replacement and the database commit, the next read detects and records the changed file.
 
+If a database transaction fails, the library compensates for completed file writes and moves. Rollback checks the current file contents and preserves detected external edits instead of overwriting them. This handles caught operation failures; it does not make filesystem and SQLite changes atomic across a process crash or power loss.
+
 ## Bidirectional papers mapping
 
 Every new research or manuscript project starts with `papers/README.md`. A library import publishes its PDF into this directory using a readable filename and a content-hash suffix; same-name files are not overwritten. Opening an existing library materializes its previous attachments here while preserving IDs, notes and conversations. The internal schema upgrades from 1 to 2, so older Envoi versions must not reopen this format.
@@ -51,3 +53,5 @@ Development requires Node.js 24+ for the built-in SQLite module; Electron suppli
 Reading-position updates resolve the research root without scanning Git status in each worktree. Root lookups have a short cache invalidated by registry changes. Library and Git worktree administrative events do not refresh manuscript snapshots; external manuscript edits still do. Rasterization waits for resize events to settle. UI regressions verify note autosaves do not allocate new PDF bitmaps.
 
 Fast scrolling pauses the viewer render queue and PDF.js continuation callbacks. After 140 ms without scrolling, pending offscreen work is discarded and nearby pages are rendered one at a time, followed by text and annotations. The UI test crosses 29 pages continuously and checks that intermediate pages do not start bitmap rendering. `ENVOI_PDF_STRESS_FILE` can run the same scenario against a real local PDF of at least 30 pages.
+
+Browser PDF downloads remain bound to the window and workspace that started them. Switching or closing that workspace, revoking trust, or destroying its window cancels the operation; a late response cannot import into the newly selected project. Library, browser and PDF controls and recognized library errors follow the selected interface language.
