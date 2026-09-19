@@ -8,7 +8,19 @@ import { ProjectManagement } from "./ProjectManagement"
 import { BrandMark } from "@/components/BrandMark"
 import { usePreferences } from "@/settings/context"
 import { useCallback, useEffect, useRef, useState } from "react"
-import { Folder, FolderOpen, ArrowUp, HardDrive, FilePlus2, Search, Check } from "lucide-react"
+import {
+  Folder,
+  FolderOpen,
+  FolderPlus,
+  ArrowUp,
+  HardDrive,
+  FilePlus2,
+  Network,
+  Save,
+  Search,
+  SquareTerminal,
+  Check,
+} from "lucide-react"
 import {
   createPaper,
   createTextFile,
@@ -38,6 +50,7 @@ import {
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -275,7 +288,14 @@ export function ProjectMenu() {
   return (
     <>
       <ProjectManagement />
-      <DropdownMenu>
+      <DropdownMenu
+        onOpenChange={(open) => {
+          if (open)
+            void recentProjects()
+              .then(setRecent)
+              .catch((error) => setMessage(error.message))
+        }}
+      >
         <DropdownMenuTrigger
           aria-label={t("project.menuAria")}
           className="flex items-center gap-2 rounded focus-visible:outline focus-visible:outline-primary"
@@ -287,60 +307,84 @@ export function ProjectMenu() {
             Envoi
           </span>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="w-64">
-          <DropdownMenuLabel>
-            {t("project.menuLabel")} {changed ? t("project.unsavedSuffix", { count: changed }) : ""}
-          </DropdownMenuLabel>
-          <DropdownMenuItem disabled={busy} onSelect={() => openDialog("new")}>
-            {t("project.newProject")}
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            disabled={busy}
-            onSelect={() => window.dispatchEvent(new Event("envoi:open-remote"))}
-          >
-            {t("remote.manage")}
-          </DropdownMenuItem>
-          {/Win/.test(navigator.platform) && (
+        <DropdownMenuContent align="start" className="w-72">
+          <div className="mx-1 mb-1.5 flex items-center gap-2.5 rounded-lg border border-border/60 bg-secondary/40 px-2.5 py-2">
+            <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+              <FolderOpen className="size-4" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-[13px] font-medium leading-5">
+                {project.id === "empty" ? t("project.notOpened") : project.name}
+              </span>
+              {project.rootPath && (
+                <span
+                  className="block truncate text-[11px] leading-4 text-muted-foreground"
+                  title={project.rootPath}
+                >
+                  {project.rootPath}
+                </span>
+              )}
+            </span>
+            {changed > 0 && (
+              <span className="shrink-0 rounded-full bg-warning/15 px-2 py-0.5 text-[10px] font-medium text-warning">
+                {t("project.unsavedBadge", { count: changed })}
+              </span>
+            )}
+          </div>
+          <DropdownMenuGroup>
+            <DropdownMenuLabel className="px-2 py-1 text-[11px] font-medium text-muted-foreground/70">
+              {t("project.groupWorkspace")}
+            </DropdownMenuLabel>
+            <DropdownMenuItem disabled={busy} onSelect={() => openDialog("new")}>
+              <FolderPlus />
+              {t("project.newProject")}
+            </DropdownMenuItem>
+            <DropdownMenuItem disabled={busy} onSelect={() => openDialog("open")}>
+              <FolderOpen />
+              {t("project.openProjectFolder")}
+            </DropdownMenuItem>
             <DropdownMenuItem
               disabled={busy}
-              onSelect={() =>
-                window.dispatchEvent(new CustomEvent("envoi:open-remote", { detail: "wsl" }))
-              }
+              onSelect={() => window.dispatchEvent(new Event("envoi:open-remote"))}
             >
-              {t("wsl.title")}…
+              <Network />
+              {t("remote.manage")}
             </DropdownMenuItem>
-          )}
-          <DropdownMenuItem disabled={busy} onSelect={() => openDialog("open")}>
-            {t("project.openProjectFolder")}
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            disabled={taskBusy || !project.rootPath}
-            onSelect={() => openDialog("file")}
-          >
-            {t("project.newFile")}
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            disabled={taskBusy || saving || !changed}
-            onSelect={() => void saveAll()}
-          >
-            {t("project.saveAll")}
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            disabled={taskBusy || saving || project.id === "empty"}
-            onSelect={() => window.dispatchEvent(new Event("envoi:close-project"))}
-          >
-            {t("project.closeCurrentEllipsis")}
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            disabled={busy || saving}
-            onSelect={() => window.dispatchEvent(new Event("envoi:manage-projects"))}
-          >
-            {t("project.manageMenu")}
-          </DropdownMenuItem>
+            {/Win/.test(navigator.platform) && (
+              <DropdownMenuItem
+                disabled={busy}
+                onSelect={() =>
+                  window.dispatchEvent(new CustomEvent("envoi:open-remote", { detail: "wsl" }))
+                }
+              >
+                <SquareTerminal />
+                {t("wsl.title")}…
+              </DropdownMenuItem>
+            )}
+          </DropdownMenuGroup>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onSelect={() => openDialog("open")}>
-            {t("project.recentMenu", { count: recent.length })}
-          </DropdownMenuItem>
+          <DropdownMenuGroup>
+            <DropdownMenuLabel className="px-2 py-1 text-[11px] font-medium text-muted-foreground/70">
+              {t("project.groupCurrent")}
+            </DropdownMenuLabel>
+            <DropdownMenuItem
+              disabled={taskBusy || !project.rootPath}
+              onSelect={() => openDialog("file")}
+            >
+              <FilePlus2 />
+              {t("project.newFile")}
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              disabled={taskBusy || saving || !changed}
+              onSelect={() => void saveAll()}
+            >
+              <Save />
+              {t("project.saveAll")}
+              {changed > 0 && (
+                <span className="ml-auto text-[11px] font-medium text-warning">{changed}</span>
+              )}
+            </DropdownMenuItem>
+          </DropdownMenuGroup>
         </DropdownMenuContent>
       </DropdownMenu>
       <Dialog

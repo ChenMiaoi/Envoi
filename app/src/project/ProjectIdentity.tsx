@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { FolderOpen, ChevronDown, Check, Network, SquareTerminal } from "lucide-react"
+import { Folder, FolderOpen, FolderX, FolderCog, ChevronDown, Check } from "lucide-react"
 import { useProject } from "./context"
 import { useT } from "@/i18n/useT"
 import { recentProjects, type RecentProject } from "@/lib/recentProjects"
@@ -52,28 +52,32 @@ export function ProjectIdentity() {
         <ChevronDown className="size-3 shrink-0 text-muted-foreground" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-80 max-w-[calc(100vw-2rem)]">
-        <DropdownMenuLabel>{t("project.recentHeading")}</DropdownMenuLabel>
+        <DropdownMenuLabel className="px-2 py-1 text-[11px] font-medium text-muted-foreground/70">
+          {t("project.recentHeading")}
+        </DropdownMenuLabel>
         <div className="max-h-64 overflow-y-auto">
           {recent.map((entry) => (
             <DropdownMenuItem
               key={entry.id}
               disabled={blocked || !entry.path}
+              className="gap-2.5 py-1.5"
               onSelect={() =>
                 window.dispatchEvent(new CustomEvent("envoi:open-recent", { detail: entry.path }))
               }
             >
-              <span className="w-4 shrink-0">
-                {entry.path === project.rootPath && <Check className="size-4" />}
-              </span>
-              <span className="min-w-0">
-                <span className="block truncate">{entry.name}</span>
+              <Folder className="size-4 shrink-0" />
+              <span className="min-w-0 flex-1">
+                <span className="block truncate leading-5">{entry.name}</span>
                 <span
-                  className="block truncate text-[11px] text-muted-foreground"
+                  className="block truncate text-[11px] leading-4 text-muted-foreground"
                   title={locationLabel(entry)}
                 >
                   {locationLabel(entry)}
                 </span>
               </span>
+              {entry.path === project.rootPath && (
+                <Check className="size-3.5 shrink-0 text-primary" />
+              )}
             </DropdownMenuItem>
           ))}
           {!recent.length && (
@@ -81,35 +85,15 @@ export function ProjectIdentity() {
           )}
         </div>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onSelect={() => window.dispatchEvent(new Event("envoi:open-project"))}>
-          <FolderOpen />
-          {t("project.openProjectFolder")}
-        </DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => window.dispatchEvent(new Event("envoi:open-remote"))}>
-          <Network />
-          {t("remote.manage")}
-        </DropdownMenuItem>
-        {/Win/.test(navigator.platform) && (
-          <DropdownMenuItem
-            onSelect={() =>
-              window.dispatchEvent(new CustomEvent("envoi:open-remote", { detail: "wsl" }))
-            }
-          >
-            <SquareTerminal />
-            {t("wsl.manage")}
-          </DropdownMenuItem>
-        )}
-        <DropdownMenuItem onSelect={() => window.dispatchEvent(new Event("envoi:new-project"))}>
-          {t("project.newProject")}
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
         <DropdownMenuItem
           disabled={project.id === "empty"}
           onSelect={() => window.dispatchEvent(new Event("envoi:close-project"))}
         >
+          <FolderX />
           {t("project.closeCurrentEllipsis")}
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => window.dispatchEvent(new Event("envoi:manage-projects"))}>
+          <FolderCog />
           {t("project.manageMenu")}
         </DropdownMenuItem>
       </DropdownMenuContent>
