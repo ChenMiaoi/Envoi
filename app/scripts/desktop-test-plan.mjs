@@ -1,4 +1,11 @@
+// Order matters twice: the runner's parallel workers pick tests in list order,
+// and CI shards alternate items (offset % total). Keep the slowest tests first
+// so workers start them early and round-robin shards stay duration-balanced.
 export const tests = [
+  ["desktop smoke", ["scripts/test-desktop-smoke.mjs"]],
+  ["code editor", ["scripts/test-code-editor-ui.mjs"]],
+  ["project navigation UI", ["scripts/test-project-navigation-ui.mjs"]],
+  ["file actions", ["scripts/test-file-actions-ui.mjs"]],
   [
     "node:test fixtures",
     [
@@ -17,28 +24,23 @@ export const tests = [
       "scripts/test-updates.mjs",
     ],
   ],
-  ["component performance", ["scripts/test-performance-ui.mjs"]],
-  ["numeric settings", ["scripts/test-number-settings.mjs"]],
+  ["restricted mode", ["scripts/test-restricted-mode.mjs"]],
+  ["status bar settings", ["scripts/test-status-bar-settings.mjs"]],
+  ["remote SSH UI", ["scripts/test-remote-ui.mjs"]],
+  ["workspace UI", ["scripts/test-workspace-ui.mjs"]],
+  ["background agent UI", ["scripts/test-background-agent-ui.mjs"]],
+  ["research library UI", ["scripts/test-research-library-ui.mjs"]],
+  ["research start UI", ["scripts/test-research-start-ui.mjs"]],
+  ["model menu", ["scripts/test-model-menu.mjs"]],
   ["paper search settings", ["scripts/test-paper-search-settings-ui.mjs"]],
   ["update settings", ["scripts/test-settings-display.mjs"]],
   ["system fonts", ["scripts/test-system-fonts.mjs"]],
-  ["Git tree", ["scripts/test-git-tree.mjs"]],
-  ["remote SSH UI", ["scripts/test-remote-ui.mjs"]],
-  ["project navigation UI", ["scripts/test-project-navigation-ui.mjs"]],
-  ["code editor", ["scripts/test-code-editor-ui.mjs"]],
-  ["file actions", ["scripts/test-file-actions-ui.mjs"]],
-  ["restricted mode", ["scripts/test-restricted-mode.mjs"]],
-  ["desktop smoke", ["scripts/test-desktop-smoke.mjs"]],
-  ["project removal UI", ["scripts/test-project-removal-ui.mjs"]],
-  ["workspace UI", ["scripts/test-workspace-ui.mjs"]],
-  ["background agent UI", ["scripts/test-background-agent-ui.mjs"]],
-  ["research start UI", ["scripts/test-research-start-ui.mjs"]],
   ["save and compile", ["scripts/test-save-compile.mjs"]],
-  ["model menu", ["scripts/test-model-menu.mjs"]],
-  ["status bar settings", ["scripts/test-status-bar-settings.mjs"]],
-  ["PDF scheduler", ["scripts/test-pdf-scheduler.mjs"]],
-  ["research library UI", ["scripts/test-research-library-ui.mjs"]],
   ["diagnostics UI", ["scripts/test-diagnostics-ui.mjs"]],
+  ["numeric settings", ["scripts/test-number-settings.mjs"]],
+  ["Git tree", ["scripts/test-git-tree.mjs"]],
+  ["component performance", ["scripts/test-performance-ui.mjs"]],
+  ["PDF scheduler", ["scripts/test-pdf-scheduler.mjs"]],
 ]
 
 export const quickTests = new Set([

@@ -31,7 +31,9 @@ The example button creates an independent project with five demonstration Git co
 
 ### CI scheduling and desktop shards
 
-CI runs one macOS validation job and two independent Windows jobs. Each Windows job runs the complete non-desktop checks and half of the selected desktop suite (`ENVOI_DESKTOP_TEST_SHARD=1/2` or `2/2`). Selection happens after quick/full filtering, so their union preserves the existing coverage. Separate machines isolate Electron processes and fixture cleanup. This trades an extra Windows installation/build for a shorter critical path; it does not reduce total runner usage.
+CI runs two independent validation jobs per platform. Each job runs the complete non-desktop checks and half of the selected desktop suite (`ENVOI_DESKTOP_TEST_SHARD=1/2` or `2/2`). Selection happens after quick/full filtering, so each platform's two shards preserve identical coverage and Windows/macOS results stay comparable. Separate machines isolate Electron processes and fixture cleanup. This trades extra installation/build time for a shorter critical path; it does not reduce total runner usage.
+
+Within a job the desktop runner executes tests concurrently: each test launches an isolated Electron instance with its own data directory, output is buffered per test and released when it finishes, and failed tests get one retry before the run reports every failure together. Concurrency defaults to 4 locally and 2 in CI; override it with `ENVOI_DESKTOP_TEST_CONCURRENCY`. The test plan lists the slowest tests first so workers start them early and the round-robin shards stay duration-balanced.
 
 The existing `check (macos-latest)` and `check (windows-latest)` gates succeed only after every validation job succeeds. Failed, cancelled or skipped validation cannot produce a green gate. A new run cancels older runs only for the same workflow, event and ref; manual/nightly full runs remain independent of PR/push quick runs. Validation jobs have a 30-minute timeout.
 

@@ -23,6 +23,9 @@ jobs:
       matrix:
         include:
           - os: macos-latest
+            shard: 1/2
+          - os: macos-latest
+            shard: 2/2
           - os: windows-latest
             shard: 1/2
           - os: windows-latest

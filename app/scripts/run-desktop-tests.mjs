@@ -1,12 +1,21 @@
 import { tests, quickTests } from "./desktop-test-plan.mjs"
 import { selectShard } from "../../scripts/test-shard.mjs"
-import { execFileSync, spawnSync } from "node:child_process"
+import { execFileSync, spawn, spawnSync } from "node:child_process"
 import process from "node:process"
 
 const visible = process.argv.includes("--visible")
 const quick = process.argv.includes("--quick")
 const started = performance.now()
-console.log(`Desktop tests: ${quick ? "quick" : "full"}, ${visible ? "visible" : "hidden"} windows`)
+const concurrency = Number(process.env.ENVOI_DESKTOP_TEST_CONCURRENCY || (process.env.CI ? 2 : 4))
+if (!Number.isInteger(concurrency) || concurrency < 1) {
+  console.error(
+    `Invalid ENVOI_DESKTOP_TEST_CONCURRENCY: ${process.env.ENVOI_DESKTOP_TEST_CONCURRENCY}`,
+  )
+  process.exit(1)
+}
+console.log(
+  `Desktop tests: ${quick ? "quick" : "full"}, ${visible ? "visible" : "hidden"} windows, concurrency ${concurrency}`,
+)
 
 function cleanupTree(pid) {
   if (process.platform !== "win32" || !pid) return
@@ -42,27 +51,58 @@ const selected = selectShard(
   tests.filter(([name]) => !quick || quickTests.has(name)),
   process.env.ENVOI_DESKTOP_TEST_SHARD || undefined,
 )
-for (const [name, args] of selected) {
-  console.log(`\n==> Desktop test: ${name}`)
+
+// Buffer each test's output and release it when the test finishes, so parallel
+// runs never interleave logs. A failure dumps everything the test printed.
+async function runTest(name, args) {
   const testStarted = performance.now()
-  let passed = false
-  for (let attempt = 1; attempt <= 2 && !passed; attempt++) {
-    const before = electronPids()
-    const child = spawnSync(process.execPath, args, {
+  let output = Buffer.alloc(0)
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    output = Buffer.alloc(0)
+    const child = spawn(process.execPath, args, {
       env: { ...process.env, ENVOI_DESKTOP_TEST_HIDDEN: visible ? "0" : "1" },
-      stdio: "inherit",
       windowsHide: true,
     })
+    child.stdout.on("data", (chunk) => (output = Buffer.concat([output, chunk])))
+    child.stderr.on("data", (chunk) => (output = Buffer.concat([output, chunk])))
+    const status = await new Promise((resolve, reject) => {
+      child.on("error", reject)
+      child.on("close", (code) => resolve(code ?? 1))
+    })
     cleanupTree(child.pid)
-    cleanupNewElectronProcesses(before)
-    if (child.error) throw child.error
-    passed = child.status === 0
-    if (!passed && attempt === 1) console.log(`Retrying desktop test: ${name}`)
+    const elapsed = Math.round((performance.now() - testStarted) / 1000)
+    if (status === 0) {
+      process.stdout.write(output)
+      console.log(`Desktop test ${name}: passed in ${elapsed}s`)
+      return true
+    }
+    process.stdout.write(output)
+    if (attempt === 1) console.log(`Retrying desktop test: ${name}`)
   }
   console.log(
-    `Desktop test ${name}: ${passed ? "passed" : "failed"} in ${Math.round((performance.now() - testStarted) / 1000)}s`,
+    `Desktop test ${name}: failed in ${Math.round((performance.now() - testStarted) / 1000)}s`,
   )
-  if (!passed) process.exit(1)
+  return false
 }
 
+let cursor = 0
+const failed = []
+async function worker() {
+  while (cursor < selected.length && !failed.length) {
+    const [name, args] = selected[cursor++]
+    console.log(`\n==> Desktop test: ${name}`)
+    if (!(await runTest(name, args))) failed.push(name)
+  }
+}
+
+// Sweep only after every worker finishes: a mid-run global sweep would kill
+// sibling tests' Electron processes when running concurrently.
+const baseline = electronPids()
+await Promise.all(Array.from({ length: Math.min(concurrency, selected.length) }, worker))
+cleanupNewElectronProcesses(baseline)
+
+if (failed.length) {
+  console.error(`\nDesktop tests failed: ${failed.join(", ")}`)
+  process.exit(1)
+}
 console.log(`\nDesktop tests passed in ${Math.round((performance.now() - started) / 1000)}s.`)
