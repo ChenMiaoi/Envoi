@@ -52,6 +52,7 @@ const bridge: EnvoiBridge = {
   lspQuery: (root, path, method, offset, text) =>
     invoke("envoi:lsp-query", root, path, method, offset, text),
   lspClose: (root, path, token) => invoke("envoi:lsp-close", root, path, token),
+  pythonEnvironment: (root, manager) => invoke("envoi:python-environment", root, manager),
   installLsp: (language) => invoke("envoi:install-lsp", language),
   installTool: (id) => invoke("envoi:install-tool", id),
   languageTool: (root, path, text, kind, selectedPath) =>

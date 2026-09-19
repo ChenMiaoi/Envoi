@@ -1,3 +1,4 @@
+import { PythonEnvironment } from "./PythonEnvironment"
 import { useLayoutEffect, useRef, useState } from "react"
 import { EditorState, Compartment } from "@codemirror/state"
 import {
@@ -613,6 +614,9 @@ export function CodeEditor({
   }, [readOnly, preferences, attempt])
   return (
     <div className="flex h-full min-h-0 flex-col">
+      {root && lspLanguage === "python" && !readOnly && (
+        <PythonEnvironment root={root} onCreated={() => setAttempt((value) => value + 1)} />
+      )}
       {failed && enabled && (
         <button
           data-testid="lsp-retry"

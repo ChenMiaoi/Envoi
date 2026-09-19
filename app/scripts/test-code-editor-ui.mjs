@@ -77,6 +77,18 @@ try {
   }
   const editor = page.getByRole("textbox", { name: "文本源码编辑器" })
   await page.getByRole("button", { name: "hello.py", exact: true }).click()
+  await page.getByRole("button", { name: "创建 Python 环境", exact: true }).click()
+  const environmentPrompt = page
+    .locator("[data-sonner-toast]")
+    .filter({ hasText: "项目尚无虚拟环境" })
+  await environmentPrompt.getByRole("button", { name: "venv", exact: true }).waitFor()
+  await environmentPrompt.getByRole("button", { name: "uv", exact: true }).waitFor()
+  await environmentPrompt.getByRole("button", { name: "关闭", exact: true }).click()
+  await environmentPrompt.waitFor({ state: "hidden" })
+  await page.getByRole("button", { name: "创建 Python 环境", exact: true }).click()
+  await environmentPrompt.getByRole("button", { name: "uv", exact: true }).waitFor()
+  await environmentPrompt.getByRole("button", { name: "关闭", exact: true }).click()
+  await environmentPrompt.waitFor({ state: "hidden" })
   await editor.focus()
   const focusStyle = await editor.evaluate((element) => ({
     shadow: getComputedStyle(element).boxShadow,
@@ -84,6 +96,7 @@ try {
   }))
   assert.equal(focusStyle.shadow, "none")
   assert.equal(focusStyle.outline, "none")
+  console.log("PASS: Python environment choices can be reopened and editor focus has no glow")
   await page.locator(".cm-lintRange-info").first().waitFor()
   await editor.fill("value = 42\n")
   const crashedPid = Number(await readFile(path.join(temp, "lsp.pid"), "utf8"))

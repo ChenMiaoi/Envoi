@@ -1,6 +1,11 @@
 /** 由 scripts/i18n-traditional.mjs 从 zh-CN.ts 自动生成（OpenCC）。术语覆盖请修改该脚本，勿手改本文件。 */
 import type { Messages } from "./zh-CN"
 const zhTW: Messages = {
+  "python.environment.title": "建立 Python 環境",
+  "python.environment.description": "專案尚無虛擬環境。選擇 venv 或 uv，在專案中建立 .venv。",
+  "python.environment.creating": "正在建立 Python 環境…",
+  "python.environment.created": "Python 環境已建立",
+  "python.environment.failed": "建立 Python 環境失敗",
   "settings.category.extensions": "擴充功能",
   "browse.bindFailed": "網頁瀏覽繫結失敗：{message}",
   "browse.importFailed": "下載入庫失敗：{message}",

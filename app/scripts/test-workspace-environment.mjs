@@ -36,3 +36,67 @@ test("local environment confines file and process operations to its workspace", 
     await rm(parent, { recursive: true, force: true })
   }
 })
+
+test("Python environments create once, preserve existing paths and allow retry after failure", async () => {
+  const { createPythonEnvironment, pythonEnvironmentStatus } =
+    await import("../electron/main/python-environment.mjs")
+  const { realpath } = await import("node:fs/promises")
+  const root = await realpath(await mkdtemp(path.join(tmpdir(), "envoi-python-")))
+  const target = path.join(root, ".venv")
+  const resolve = (name) => `/tools/${name}`
+  try {
+    assert.equal(pythonEnvironmentStatus(root).path, null)
+    await assert.rejects(createPythonEnvironment(root, "pip", undefined, resolve), /Unknown/)
+    await assert.rejects(
+      createPythonEnvironment(root, "uv", undefined, () => undefined),
+      /uv is not installed/,
+    )
+    await mkdir(target)
+    await writeFile(path.join(target, "keep"), "existing")
+    await assert.rejects(
+      createPythonEnvironment(root, "venv", async () => assert.fail("must not run"), resolve),
+      /EEXIST/,
+    )
+    assert.equal(await readFile(path.join(target, "keep"), "utf8"), "existing")
+    await rm(target, { recursive: true })
+    await assert.rejects(
+      createPythonEnvironment(
+        root,
+        "venv",
+        async () => {
+          throw Error("failed")
+        },
+        resolve,
+      ),
+      /failed/,
+    )
+    let calls = 0
+    const run = async (command, args, options) => {
+      calls++
+      assert.equal(command, "/tools/python3")
+      assert.deepEqual(args, ["-m", "venv", target])
+      assert.equal(options.cwd, root)
+      await writeFile(path.join(target, "pyvenv.cfg"), "home = /tools")
+    }
+    await Promise.all([
+      createPythonEnvironment(root, "venv", run, resolve),
+      createPythonEnvironment(root, "venv", run, resolve),
+    ])
+    assert.equal(calls, 1)
+    assert.equal(pythonEnvironmentStatus(root).path, target)
+    await createPythonEnvironment(root, "uv", async () => assert.fail("must reuse"), resolve)
+    await rm(target, { recursive: true })
+    await createPythonEnvironment(
+      root,
+      "uv",
+      async (command, args) => {
+        assert.equal(command, "/tools/uv")
+        assert.deepEqual(args, ["venv", target])
+        await writeFile(path.join(target, "pyvenv.cfg"), "home = /tools")
+      },
+      resolve,
+    )
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})

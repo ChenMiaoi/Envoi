@@ -1,3 +1,4 @@
+import { createPythonEnvironment, pythonEnvironmentStatus } from "./python-environment.mjs"
 import { downloadPaper } from "../../server/paper-download.mjs"
 import { searchPapers } from "../../server/paper-search.mjs"
 import { restrictedPath } from "./restricted-path.mjs"
@@ -702,6 +703,13 @@ function registerIpc(): void {
       if (row && installed) mergeInstalled(row, installed)
     }
     return info
+  })
+  handle("envoi:python-environment", async (event, root: string, manager?: string) => {
+    root = await requireBoundRoot(root)
+    if (activeRoots.get(event.sender.id) !== root) throw Error("Project is not active")
+    if (manager === undefined) return pythonEnvironmentStatus(root)
+    await requireToolContext(event)
+    return createPythonEnvironment(root, manager)
   })
   handle("envoi:install-lsp", async (event, language: string) => {
     await requireToolContext(event)

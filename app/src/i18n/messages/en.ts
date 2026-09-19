@@ -1,6 +1,12 @@
 /** English messages. Must contain exactly the same keys as zh-CN. */
 import type { Messages } from "./zh-CN"
 const en: Messages = {
+  "python.environment.title": "Create Python environment",
+  "python.environment.description":
+    "This project has no virtual environment. Choose venv or uv to create .venv in the project.",
+  "python.environment.creating": "Creating Python environment…",
+  "python.environment.created": "Python environment created",
+  "python.environment.failed": "Could not create Python environment",
   "settings.category.extensions": "Extensions",
   "browse.bindFailed": "Browser binding failed: {message}",
   "browse.importFailed": "Could not import download: {message}",

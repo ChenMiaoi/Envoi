@@ -3,6 +3,11 @@
  * 插值占位符使用 {name}；翻译文件必须与本文件键集合完全一致（编译期以 Record<MessageKey,string> 保证）。
  */
 export const zhCN = {
+  "python.environment.title": "创建 Python 环境",
+  "python.environment.description": "项目尚无虚拟环境。选择 venv 或 uv，在项目中创建 .venv。",
+  "python.environment.creating": "正在创建 Python 环境…",
+  "python.environment.created": "Python 环境已创建",
+  "python.environment.failed": "创建 Python 环境失败",
   "settings.category.extensions": "扩展",
   "browse.bindFailed": "网页浏览绑定失败：{message}",
   "browse.importFailed": "下载入库失败：{message}",

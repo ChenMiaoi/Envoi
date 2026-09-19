@@ -1,6 +1,12 @@
 /** 日本語メッセージ。zh-CN と完全に同じキーを持つこと。 */
 import type { Messages } from "./zh-CN"
 const ja: Messages = {
+  "python.environment.title": "Python 環境を作成",
+  "python.environment.description":
+    "仮想環境がありません。venv または uv を選択してプロジェクトに .venv を作成します。",
+  "python.environment.creating": "Python 環境を作成中…",
+  "python.environment.created": "Python 環境を作成しました",
+  "python.environment.failed": "Python 環境を作成できませんでした",
   "settings.category.extensions": "拡張機能",
   "browse.bindFailed": "ブラウザーの接続に失敗しました：{message}",
   "browse.importFailed": "ダウンロードの取り込みに失敗しました：{message}",
