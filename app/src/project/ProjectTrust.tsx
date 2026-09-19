@@ -17,6 +17,22 @@ export function ProjectTrust() {
   const project = useProject((state) => ({ rootPath: state.project.rootPath }))
   const root = project.rootPath
   const state = useProjectTrust(root)
+  const [remoteLocation, setRemoteLocation] = useState<{ root: string; label: string }>()
+  useEffect(() => {
+    if (!root?.startsWith("ssh://")) return
+    let alive = true
+    void envoi()
+      .remoteList()
+      .then((entries) => {
+        const entry = entries.find((candidate) => candidate.root === root)
+        if (alive && entry) setRemoteLocation({ root, label: `${entry.host} · ${entry.directory}` })
+      })
+      .catch(() => {})
+    return () => {
+      alive = false
+    }
+  }, [root])
+  const identified = !root?.startsWith("ssh://") || remoteLocation?.root === root
   const { t } = useT()
   const [open, setOpen] = useState(false)
   const [localTrusted, setLocalTrusted] = useState<boolean>()
@@ -100,7 +116,13 @@ export function ProjectTrust() {
             <DialogTitle>{t("trust.title")}</DialogTitle>
             <DialogDescription>{t("trust.description")}</DialogDescription>
           </DialogHeader>
-          <p className="break-all text-xs text-muted-foreground">{root}</p>
+          <p className="break-all text-xs text-muted-foreground">
+            {root.startsWith("ssh://")
+              ? remoteLocation?.root === root
+                ? remoteLocation.label
+                : t("remote.connecting")
+              : root}
+          </p>
           <div className="flex flex-wrap justify-end gap-2">
             <button
               disabled={working}
@@ -110,7 +132,7 @@ export function ProjectTrust() {
               {t("trust.continueRestricted")}
             </button>
             <button
-              disabled={working}
+              disabled={working || !identified}
               className="rounded bg-primary px-3 py-2 text-sm text-primary-foreground"
               onClick={() => void decide(true)}
             >

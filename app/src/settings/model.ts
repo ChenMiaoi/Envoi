@@ -207,7 +207,7 @@ export function normalizePreferences(raw: unknown): Preferences {
         : {},
   }
 }
-const pluginIds = new Set(["envoi.cpp", "envoi.python", "envoi.rust"])
+const pluginIds = new Set(["envoi.cpp", "envoi.python", "envoi.rust", "envoi.remote-ssh"])
 function normalizePluginStates(raw: unknown): Record<string, boolean> {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {}
   return Object.fromEntries(

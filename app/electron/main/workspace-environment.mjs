@@ -1,3 +1,4 @@
+import { workspaceFiles } from "./workspace-files.mjs"
 import { spawn } from "node:child_process"
 import { readFile, readdir, stat } from "node:fs/promises"
 import { realpathSync } from "node:fs"
@@ -13,7 +14,7 @@ function within(root, candidate) {
   return relative !== ".." && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative)
 }
 
-export function createLocalWorkspaceEnvironment(root) {
+export function createLocalWorkspaceEnvironment(root, { resolveFile, fileLimits } = {}) {
   const canonical = realpathSync(root)
   const paths = {
     resolve(relative) {
@@ -32,6 +33,7 @@ export function createLocalWorkspaceEnvironment(root) {
       capabilities: ["files", "process", "watch", "tools"],
     },
     root: canonical,
+    files: workspaceFiles(canonical, resolveFile, fileLimits),
     paths,
     fs: {
       async read(relative) {

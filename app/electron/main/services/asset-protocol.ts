@@ -6,6 +6,7 @@ import { ProjectSessionManager } from "./project-sessions"
 export function createAssetProtocol(
   sessions: ProjectSessionManager,
   resolveInside: (root: string, file: string) => Promise<string>,
+  remoteRead?: (root: string, file: string) => Promise<Buffer | undefined>,
 ) {
   // ── envoi:// 自定义协议（契约第 2 节）──
 
@@ -54,6 +55,22 @@ export function createAssetProtocol(
     const url = new URL(request.url)
     const root = sessions.rootForToken(url.host)
     if (!root) return new Response("未授权的资源访问", { status: 403 })
+    const relative = decodeURIComponent(url.pathname).replace(/^\/+/, "")
+    if (root.startsWith("ssh://")) {
+      try {
+        const data = await remoteRead?.(root, relative)
+        if (!data) return new Response("Remote asset unavailable", { status: 503 })
+        return new Response(new Uint8Array(data), {
+          headers: {
+            "Content-Type":
+              MIME[path.extname(relative).slice(1).toLowerCase()] ?? "application/octet-stream",
+            "Cache-Control": "no-store",
+          },
+        })
+      } catch {
+        return new Response("Remote asset unavailable", { status: 503 })
+      }
+    }
     let target: string
     try {
       target = await resolveInside(root, decodeURIComponent(url.pathname).replace(/^\/+/, ""))

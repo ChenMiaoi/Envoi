@@ -1,6 +1,34 @@
 /** English messages. Must contain exactly the same keys as zh-CN. */
 import type { Messages } from "./zh-CN"
 const en: Messages = {
+  "remote.configFile": "SSH config file (optional, absolute local path)",
+  "remote.title": "Remote SSH",
+  "remote.description": "Connect to a remote host to edit files and run tools in your workspace.",
+  "remote.requirements":
+    "Uses your system SSH config and keys. Requires Linux with Node.js 22+; the interactive terminal also needs Python 3. Connecting installs the Envoi remote service.",
+  "remote.host": "SSH host",
+  "remote.directory": "Remote folder",
+  "remote.port": "Port",
+  "remote.connect": "Connect and open",
+  "remote.connecting": "Connecting",
+  "remote.connected": "Connected",
+  "remote.disconnected": "Disconnected",
+  "remote.reconnect": "Reconnect",
+  "remote.disconnect": "Disconnect",
+  "remote.open": "Open workspace",
+  "remote.manage": "Remote SSH workspaces…",
+  "remote.terminal": "Remote terminal",
+  "remote.terminalHint":
+    "Commands run in the remote folder. Closing this panel keeps the terminal session.",
+  "remote.authentication": "SSH authentication",
+  "remote.answer": "Authentication response",
+  "remote.continue": "Continue",
+  "remote.cancel": "Cancel connection",
+  "remote.disableHint":
+    "Close the remote workspace before disabling this extension; the usual draft protection applies.",
+  "remote.toolsHint":
+    "These tools are detected and run on the remote host. Tool paths come from the remote environment; install tools through the remote terminal in this version.",
+
   "python.environment.title": "Create Python environment",
   "python.environment.description":
     "This project has no virtual environment. Choose venv or uv to create .venv in the project.",

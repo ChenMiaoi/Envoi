@@ -3,6 +3,32 @@
  * 插值占位符使用 {name}；翻译文件必须与本文件键集合完全一致（编译期以 Record<MessageKey,string> 保证）。
  */
 export const zhCN = {
+  "remote.configFile": "SSH 配置文件（可选，本机绝对路径）",
+  "remote.title": "Remote SSH",
+  "remote.description": "连接远程主机，在当前工作区编辑文件并运行远程工具。",
+  "remote.requirements":
+    "使用系统 SSH 配置及密钥。首版支持 Linux 远端，需要 Node.js 22+；交互终端还需要 Python 3。首次连接会安装 Envoi 远端服务。",
+  "remote.host": "SSH 主机",
+  "remote.directory": "远程目录",
+  "remote.port": "端口",
+  "remote.connect": "连接并打开",
+  "remote.connecting": "连接中",
+  "remote.connected": "已连接",
+  "remote.disconnected": "已断开",
+  "remote.reconnect": "重新连接",
+  "remote.disconnect": "断开连接",
+  "remote.open": "打开工作区",
+  "remote.manage": "远程 SSH 工作区…",
+  "remote.terminal": "远程终端",
+  "remote.terminalHint": "命令在远程目录执行。关闭面板保留终端，断开连接后请重新连接。",
+  "remote.authentication": "SSH 身份验证",
+  "remote.answer": "验证响应",
+  "remote.continue": "继续",
+  "remote.cancel": "取消连接",
+  "remote.disableHint": "关闭远程工作区后可停用此扩展；未保存内容会按项目关闭流程处理。",
+  "remote.toolsHint":
+    "以下工具在远端检测和运行。工具路径使用远端环境；此版本请通过远程终端安装工具。",
+
   "python.environment.title": "创建 Python 环境",
   "python.environment.description": "项目尚无虚拟环境。选择 venv 或 uv，在项目中创建 .venv。",
   "python.environment.creating": "正在创建 Python 环境…",

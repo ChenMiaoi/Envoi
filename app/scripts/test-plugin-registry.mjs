@@ -11,7 +11,7 @@ import { toolCatalog, lspServersByLanguage } from "../server/tool-registry.mjs"
 test("official language plugins preserve existing tools and fallback order", () => {
   assert.deepEqual(
     builtinPlugins.map((plugin) => plugin.id),
-    ["envoi.cpp", "envoi.python", "envoi.rust"],
+    ["envoi.cpp", "envoi.python", "envoi.rust", "envoi.remote-ssh"],
   )
   assert.equal(pluginForLanguage("cpp")?.id, "envoi.cpp")
   assert.equal(pluginLanguageForPath("main.cpp"), "cpp")
@@ -63,7 +63,7 @@ test("a rejected plugin cannot abort or reserve contributions for later plugins"
   const partial = structuredClone(builtinPlugins[1])
   partial.id = "envoi.invalid"
   partial.contributes.tools.push({ id: builtinPlugins[0].contributes.tools[0].id })
-  const recovered = loadPlugins([builtinPlugins[0], partial, builtinPlugins[1], builtinPlugins[2]])
+  const recovered = loadPlugins([builtinPlugins[0], partial, ...builtinPlugins.slice(1)])
   assert.deepEqual(recovered.plugins, builtinPlugins)
   assert.equal(recovered.errors.length, 1)
   assert.equal(loadPlugins([null, { id: "bad" }]).plugins.length, 0)

@@ -1,6 +1,31 @@
 /** 由 scripts/i18n-traditional.mjs 从 zh-CN.ts 自动生成（OpenCC）。术语覆盖请修改该脚本，勿手改本文件。 */
 import type { Messages } from "./zh-CN"
 const zhHK: Messages = {
+  "remote.configFile": "SSH 配置文件（可選，本機絕對路徑）",
+  "remote.title": "Remote SSH",
+  "remote.description": "連接遠程主機，在當前工作區編輯文件並運行遠程工具。",
+  "remote.requirements":
+    "使用系統 SSH 配置及密鑰。首版支持 Linux 遠端，需要 Node.js 22+；交互終端還需要 Python 3。首次連接會安裝 Envoi 遠端服務。",
+  "remote.host": "SSH 主機",
+  "remote.directory": "遠程目錄",
+  "remote.port": "端口",
+  "remote.connect": "連接並打開",
+  "remote.connecting": "連接中",
+  "remote.connected": "已連接",
+  "remote.disconnected": "已斷開",
+  "remote.reconnect": "重新連接",
+  "remote.disconnect": "斷開連接",
+  "remote.open": "打開工作區",
+  "remote.manage": "遠程 SSH 工作區…",
+  "remote.terminal": "遠程終端",
+  "remote.terminalHint": "命令在遠程目錄執行。關閉面板保留終端，斷開連接後請重新連接。",
+  "remote.authentication": "SSH 身份驗證",
+  "remote.answer": "驗證響應",
+  "remote.continue": "繼續",
+  "remote.cancel": "取消連接",
+  "remote.disableHint": "關閉遠程工作區後可停用此擴展；未保存內容會按項目關閉流程處理。",
+  "remote.toolsHint":
+    "以下工具在遠端檢測和運行。工具路徑使用遠端環境；此版本請通過遠程終端安裝工具。",
   "python.environment.title": "創建 Python 環境",
   "python.environment.description": "項目尚無虛擬環境。選擇 venv 或 uv，在項目中創建 .venv。",
   "python.environment.creating": "正在創建 Python 環境…",

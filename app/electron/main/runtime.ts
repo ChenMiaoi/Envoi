@@ -12,6 +12,8 @@ import { createAssetProtocol } from "./services/asset-protocol"
 import { setupPaperBrowse } from "./services/paper-browser"
 import { ProjectSessionManager } from "./services/project-sessions"
 import { createWorkspaceTrust } from "./workspace-trust.mjs"
+import { RemoteWorkspaces } from "./remote/connection.mjs"
+import { routeRemoteWorkspace, isRemoteRoot } from "./remote/workspace-routing.mjs"
 export function createMainServices() {
   // Desktop launchers may omit installed tools from PATH; share discovery with workers and AI.
   process.env.PATH = [
@@ -36,6 +38,18 @@ export function createMainServices() {
   // ── 已绑定项目根与 envoi:// token 映射（仅存主进程内存）──
 
   const sessions = new ProjectSessionManager((owner, root) => lspService.dispose(owner, root))
+  const remote = new RemoteWorkspaces({
+    directory: path.join(dataDir, "remote-ssh"),
+    binaryDirectory: import.meta.dirname,
+    executable: process.execPath,
+    sessions,
+    send: (owner: number, channel: string, payload?: unknown) => {
+      const sender = BrowserWindow.getAllWindows().find(
+        (window) => window.webContents.id === owner,
+      )?.webContents
+      if (sender && !sender.isDestroyed()) sender.send(channel, payload)
+    },
+  })
   const droppedFiles = new Map<string, string>()
   async function requireBoundRoot(root: string): Promise<string> {
     const resolved = await workspaceTrust.requireTrust(root)
@@ -54,7 +68,17 @@ export function createMainServices() {
     return path.join(root, ...safePathParts(relPath))
   }
 
-  const handleAsset = createAssetProtocol(sessions, resolveInside)
+  const handleAsset = createAssetProtocol(sessions, resolveInside, async (root, file) => {
+    if (!isRemoteRoot(root)) return undefined
+    const entry = [...remote.entries.values()].find(
+      (entry) => entry.root === root && entry.state === "connected",
+    )
+    if (!entry) throw Error("SSH connection is disconnected")
+    const result = await remote.call(entry.owner, root, "fs-read", [file])
+    return typeof result.text === "string"
+      ? Buffer.from(result.text)
+      : Buffer.from(result.base64, "base64")
+  })
   // ── 编译单飞（对应当前服务端 running 语义；lint 不支持取消，见契约 §3）──
 
   const compilerBackend = new BackendHost("Compiler")
@@ -98,7 +122,14 @@ export function createMainServices() {
         started = Date.now()
       return operationContext.run(operationId, async () => {
         try {
-          const result = await listener(event, ...args)
+          const routed = await routeRemoteWorkspace(
+            remote,
+            sessions,
+            event.sender.id,
+            channel,
+            args,
+          )
+          const result = routed ? routed.value : await listener(event, ...args)
           diagnostics.write("debug", "ipc", "operation.completed", {
             operationId,
             method: channel,
@@ -122,6 +153,7 @@ export function createMainServices() {
   // ── 内置论文浏览：独立持久会话（persist:paperbrowse），PDF 下载直接入库 ──
 
   return {
+    remote,
     workspaceTrust,
     decodeText,
     droppedFiles,

@@ -1,6 +1,6 @@
 import { app, shell } from "electron"
 import { randomUUID } from "node:crypto"
-import { mkdir, readFile, readdir, realpath, stat } from "node:fs/promises"
+import { stat } from "node:fs/promises"
 import path from "node:path"
 import { dataDir } from "../../../server/local-data.mjs"
 import {
@@ -8,13 +8,8 @@ import {
   trashProjectDirectory,
   workspaceProjectName,
 } from "../../../server/workspaces.mjs"
-import { fileKind, isTextPath, safePathParts } from "../../../shared/file-rules.mjs"
-import {
-  atomicProjectWrite,
-  removeProjectFile,
-  renameProjectFile,
-  saveProjectFiles,
-} from "../file-service.mjs"
+import { safePathParts } from "../../../shared/file-rules.mjs"
+import { createLocalWorkspaceEnvironment } from "../workspace-environment.mjs"
 import { copyIntoProject } from "../file-transfer.mjs"
 import { watchProjectDirectory } from "../project-watch.mjs"
 import type { MainServices } from "../runtime"
@@ -34,7 +29,6 @@ export function registerFilesIpc(
 ) {
   const {
     workspaceTrust,
-    decodeText,
     droppedFiles,
     requireBoundRoot,
     requireOpenRoot,
@@ -62,123 +56,45 @@ export function registerFilesIpc(
       }),
     )
   })
-  handle("envoi:fs-children", async (_event, root: string) => {
-    const entries = await readdir(await requireOpenRoot(root), { withFileTypes: true })
-    return entries.map((entry) => ({
-      name: entry.name,
-      kind: entry.isDirectory() ? "directory" : "file",
-    }))
-  })
-  handle("envoi:fs-list", async (_event, root: string) => {
+  const provider = async (root: string) => {
     const base = await requireOpenRoot(root)
-    const files: { path: string; kind: string; text?: string; version: string }[] = []
-    const directories: string[] = []
-    const walk = async (directory: string, prefix: string): Promise<void> => {
-      for (const entry of await readdir(directory, { withFileTypes: true })) {
-        if (
-          [
-            ".git",
-            ".envoi",
-            ".paperdesk",
-            "node_modules",
-            ".DS_Store",
-            ".venv",
-            "venv",
-            "__pycache__",
-            "target",
-            "cmake-build-debug",
-            "cmake-build-release",
-          ].includes(entry.name) ||
-          entry.isSymbolicLink()
-        )
-          continue
-        const rel = prefix + entry.name
-        await resolveInside(base, rel)
-        if (entry.isDirectory()) {
-          directories.push(rel)
-          await walk(path.join(directory, entry.name), rel + "/")
-        } else if (entry.isFile()) {
-          const kind = fileKind(rel)
-          let text: string | undefined
-          if (isTextPath(rel)) {
-            const bytes = await readFile(path.join(directory, entry.name))
-            if (bytes.length > 5_000_000) throw new Error(`文本文件超过大小限制（5MB）：${rel}`)
-            text = decodeText(bytes)
-          }
-          const info = await stat(path.join(directory, entry.name))
-          files.push({ path: rel, kind, text, version: `${info.mtimeMs}:${info.size}` })
-        }
-      }
-    }
-    await walk(base, "")
-    files.sort((a, b) => a.path.localeCompare(b.path))
     return {
-      files,
-      directories,
+      base,
+      files: createLocalWorkspaceEnvironment(base, {
+        resolveFile: (file: string) => resolveInside(base, file),
+      }).files,
+    }
+  }
+  handle("envoi:fs-children", async (_event, root: string) =>
+    (await provider(root)).files.children(),
+  )
+  handle("envoi:fs-list", async (_event, root: string) => {
+    const { base, files } = await provider(root)
+    return {
+      ...(await files.list()),
       name: (await workspaceTrust.isTrusted(base))
         ? await workspaceProjectName(base).catch(() => undefined)
         : undefined,
       projectId: sessions.projectId(base),
     }
   })
-
-  handle("envoi:fs-read", async (_event, root: string, relPath: string) => {
-    const target = await resolveInside(await requireOpenRoot(root), relPath)
-    const bytes = await readFile(await realpath(target))
-    const text = isTextPath(relPath) ? decodeText(bytes) : undefined
-    return text !== undefined ? { text } : { base64: bytes.toString("base64") }
-  })
-
-  const writeOne = async (
-    base: string,
-    file: { path: string; text?: string; base64?: string },
-  ): Promise<void> => {
-    await resolveInside(base, file.path)
-    await atomicProjectWrite(base, file.path, file)
+  for (const [channel, method] of Object.entries({
+    "fs-read": "read",
+    "fs-save": "save",
+    "fs-write": "write",
+    "fs-write-files": "writeFiles",
+    "fs-mkdir": "mkdir",
+    "fs-remove": "remove",
+    "fs-rename": "rename",
+    "fs-copy": "copy",
+  })) {
+    handle(`envoi:${channel}`, async (_event, root: string, ...args: unknown[]) => {
+      const { files } = await provider(root)
+      return (files as unknown as Record<string, (...values: unknown[]) => Promise<unknown>>)[
+        method
+      ](...args)
+    })
   }
-  handle(
-    "envoi:fs-save",
-    async (
-      _event,
-      root: string,
-      changes: { path: string; text: string; expectedText: string | null }[],
-    ) => {
-      const base = await requireOpenRoot(root)
-      for (const file of changes) await resolveInside(base, file.path)
-      return saveProjectFiles(base, changes)
-    },
-  )
-  handle(
-    "envoi:fs-write",
-    async (_event, root: string, relPath: string, content: { text?: string; base64?: string }) => {
-      await writeOne(await requireOpenRoot(root), { path: relPath, ...content })
-    },
-  )
-  handle(
-    "envoi:fs-write-files",
-    async (_event, root: string, files: { path: string; text?: string; base64?: string }[]) => {
-      const base = await requireOpenRoot(root)
-      for (const file of files) await writeOne(base, file)
-    },
-  )
-  handle("envoi:fs-mkdir", async (_event, root: string, relPath: string) => {
-    await mkdir(await resolveInside(await requireOpenRoot(root), relPath), { recursive: true })
-  })
-  handle("envoi:fs-remove", async (_event, root: string, relPath: string) => {
-    const base = await requireOpenRoot(root)
-    await resolveInside(base, relPath)
-    await removeProjectFile(base, relPath)
-  })
-  handle("envoi:fs-rename", async (_event, root: string, from: string, to: string) => {
-    const base = await requireOpenRoot(root)
-    await resolveInside(base, from)
-    await resolveInside(base, to)
-    await renameProjectFile(base, from, to)
-  })
-  handle("envoi:fs-copy", async (_event, root: string, from: string, to: string) => {
-    const base = await requireOpenRoot(root)
-    await copyIntoProject(base, await resolveInside(base, from), await resolveInside(base, to))
-  })
   handle("envoi:fs-import-token", async (_event, source: string) => {
     if (typeof source !== "string" || !path.isAbsolute(source)) throw Error("无效来源路径")
     await stat(source)

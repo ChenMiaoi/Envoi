@@ -6,6 +6,7 @@ import { Toaster } from "@/components/ui/sonner"
 import { usePreferences } from "@/settings/context"
 import { envoi } from "@/lib/desktop"
 import { ProjectIdentity } from "@/project/ProjectIdentity"
+import { RemoteWorkspaceControls } from "@/project/RemoteWorkspaceControls"
 import { WorkspaceBadge } from "@/project/WorkspaceBadge"
 import { AgentProvider } from "@/agent/AgentProvider"
 import {
@@ -268,6 +269,7 @@ function ProjectApp() {
           </div>
           <ProjectIdentity />
           <WorkspaceBadge />
+          <RemoteWorkspaceControls />
         </div>
         <div className="absolute left-1/2 -translate-x-1/2">
           <ActivityBar view={view} />

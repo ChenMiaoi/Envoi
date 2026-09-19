@@ -266,6 +266,12 @@ export function ProjectMenu() {
           <DropdownMenuItem disabled={busy} onSelect={() => openDialog("new")}>
             {t("project.newProject")}
           </DropdownMenuItem>
+          <DropdownMenuItem
+            disabled={busy}
+            onSelect={() => window.dispatchEvent(new Event("envoi:open-remote"))}
+          >
+            {t("remote.manage")}
+          </DropdownMenuItem>
           <DropdownMenuItem disabled={busy} onSelect={() => openDialog("open")}>
             {t("project.openProjectFolder")}
           </DropdownMenuItem>

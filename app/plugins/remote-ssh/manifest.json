@@ -1,0 +1,10 @@
+{
+  "id": "envoi.remote-ssh",
+  "version": "0.1.0",
+  "apiVersion": 1,
+  "displayNameKey": "remote.title",
+  "descriptionKey": "remote.description",
+  "activationEvents": ["onConnection"],
+  "capabilities": ["files", "process", "network", "connection"],
+  "contributes": { "languages": [], "tools": [], "languageServers": [], "commands": [] }
+}

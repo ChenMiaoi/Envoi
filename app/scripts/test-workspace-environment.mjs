@@ -11,7 +11,11 @@ test("local environment confines file and process operations to its workspace", 
   const root = path.join(parent, "project")
   await mkdir(root)
   await writeFile(path.join(parent, "outside.txt"), "private")
-  await symlink(parent, path.join(root, "escape"), "dir")
+  await symlink(
+    parent,
+    path.join(root, "escape"),
+    process.platform === "win32" ? "junction" : "dir",
+  )
   const environment = createLocalWorkspaceEnvironment(root)
   try {
     assert.match(environment.identity.id, /^local:/)

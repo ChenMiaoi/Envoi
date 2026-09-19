@@ -11,6 +11,20 @@ function invoke<T>(channel: string, ...args: unknown[]): Promise<T> {
 // agentStatus agentRequest agentChat onAgentEvent
 // fsList fsRead fsWrite fsWriteFiles fsMkdir fsRemove fsRename fsTrashProject assetUrl
 const bridge: EnvoiBridge = {
+  remoteList: () => invoke("envoi:remote-list"),
+  remoteConnect: (target) => invoke("envoi:remote-connect", target),
+  remoteReconnect: (root) => invoke("envoi:remote-reconnect", root),
+  remoteDisconnect: (root) => invoke("envoi:remote-disconnect", root),
+  remoteAnswer: (id, answer) => invoke("envoi:remote-answer", id, answer),
+  terminalOpen: () => invoke("envoi:terminal-open"),
+  terminalInput: (input) => invoke("envoi:terminal-input", input),
+  terminalClose: () => invoke("envoi:terminal-close"),
+  onRemoteEvent: (listener) => {
+    const handler = (_event: unknown, payload: import("../../shared/remote").RemoteEvent) =>
+      listener(payload)
+    ipcRenderer.on("envoi:remote-event", handler)
+    return () => ipcRenderer.removeListener("envoi:remote-event", handler)
+  },
   projectTrust: (root) => invoke("envoi:project-trust", root),
   grantProjectTrust: (root) => invoke("envoi:grant-project-trust", root),
   restrictProject: (root) => invoke("envoi:restrict-project", root),

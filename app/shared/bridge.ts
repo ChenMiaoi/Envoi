@@ -12,6 +12,15 @@ import type {
 import type { AgentStatus } from "./agent-model"
 // Platform-neutral contract implemented by the Electron preload bridge.
 export interface EnvoiBridge {
+  remoteList(): Promise<import("./remote").RemoteState[]>
+  remoteConnect(target: import("./remote").SshTarget): Promise<import("./remote").RemoteState>
+  remoteReconnect(root: string): Promise<import("./remote").RemoteState>
+  remoteDisconnect(root?: string): Promise<void>
+  remoteAnswer(id: string, answer: string): Promise<void>
+  onRemoteEvent(listener: (event: import("./remote").RemoteEvent) => void): () => void
+  terminalOpen(): Promise<{ output: string }>
+  terminalInput(input: { data: string } | { cols: number; rows: number }): Promise<void>
+  terminalClose(): Promise<void>
   projectTrust(root: string): Promise<{ trusted: boolean; decided: boolean }>
   grantProjectTrust(root: string): Promise<{ trusted: boolean; decided: boolean }>
   restrictProject(root: string): Promise<{ trusted: boolean; decided: boolean }>

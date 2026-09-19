@@ -8,10 +8,10 @@ import type { MainServices } from "../runtime"
 export function registerProjectsIpc(
   services: Pick<
     MainServices,
-    "workspaceTrust" | "requireOpenRoot" | "backends" | "handle" | "sessions"
+    "workspaceTrust" | "requireOpenRoot" | "backends" | "handle" | "sessions" | "remote"
   >,
 ) {
-  const { workspaceTrust, requireOpenRoot, backends, handle, sessions } = services
+  const { workspaceTrust, requireOpenRoot, backends, handle, sessions, remote } = services
   handle("envoi:window-colors", (event, colors: { color: string; symbolColor: string }) => {
     if (
       !colors ||
@@ -60,6 +60,7 @@ export function registerProjectsIpc(
     })
     if (event.sender.isDestroyed() || !sessions.isCurrentBinding(event.sender.id, ticket))
       throw Error("项目连接已取消")
+    remote.disconnect(event.sender.id)
     sessions.bindProject(event.sender.id, project.id, root)
     return { ok: true, project: { id: project.id, path: root, name: project.name } }
   })

@@ -2,6 +2,8 @@ import cpp from "../plugins/cpp/manifest.json" with { type: "json" }
 import python from "../plugins/python/manifest.json" with { type: "json" }
 import rust from "../plugins/rust/manifest.json" with { type: "json" }
 
+import remoteSsh from "../plugins/remote-ssh/manifest.json" with { type: "json" }
+
 export const PLUGIN_API_VERSION = 1
 const contributionTypes = new Set([
   "languages",
@@ -97,7 +99,7 @@ export function loadPlugins(manifests) {
   return { plugins, errors }
 }
 // Fixed official list. No arbitrary directory is scanned or executed.
-const loaded = loadPlugins([cpp, python, rust])
+const loaded = loadPlugins([cpp, python, rust, remoteSsh])
 export const builtinPlugins = loaded.plugins
 export const pluginLoadErrors = loaded.errors
 

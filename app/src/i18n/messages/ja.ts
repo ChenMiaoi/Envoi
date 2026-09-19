@@ -1,6 +1,35 @@
 /** 日本語メッセージ。zh-CN と完全に同じキーを持つこと。 */
 import type { Messages } from "./zh-CN"
 const ja: Messages = {
+  "remote.configFile": "SSH 設定ファイル（任意、ローカルの絶対パス）",
+  "remote.title": "Remote SSH",
+  "remote.description":
+    "リモートホストに接続し、ワークスペースでファイルの編集やツールの実行を行います。",
+  "remote.requirements":
+    "システムの SSH 設定と鍵を使用します。Linux と Node.js 22 以降が必要です。対話型ターミナルには Python 3 も必要です。接続時に Envoi リモートサービスを配置します。",
+  "remote.host": "SSH ホスト",
+  "remote.directory": "リモートフォルダー",
+  "remote.port": "ポート",
+  "remote.connect": "接続して開く",
+  "remote.connecting": "接続中",
+  "remote.connected": "接続済み",
+  "remote.disconnected": "切断済み",
+  "remote.reconnect": "再接続",
+  "remote.disconnect": "切断",
+  "remote.open": "ワークスペースを開く",
+  "remote.manage": "リモート SSH ワークスペース…",
+  "remote.terminal": "リモートターミナル",
+  "remote.terminalHint":
+    "コマンドはリモートフォルダーで実行されます。パネルを閉じてもターミナルセッションは保持されます。",
+  "remote.authentication": "SSH 認証",
+  "remote.answer": "認証応答",
+  "remote.continue": "続行",
+  "remote.cancel": "接続をキャンセル",
+  "remote.disableHint":
+    "この拡張機能を無効にする前にリモートワークスペースを閉じてください。通常の未保存変更の保護が適用されます。",
+  "remote.toolsHint":
+    "ツールはリモートホストで検出・実行されます。パスにはリモート環境を使用します。このバージョンではリモートターミナルからツールをインストールしてください。",
+
   "python.environment.title": "Python 環境を作成",
   "python.environment.description":
     "仮想環境がありません。venv または uv を選択してプロジェクトに .venv を作成します。",

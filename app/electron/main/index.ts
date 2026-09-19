@@ -10,6 +10,7 @@ import { registerProjectsIpc } from "./ipc/projects"
 import { registerResearchIpc } from "./ipc/research"
 import { registerToolsIpc } from "./ipc/tools"
 import { registerUpdatesIpc } from "./ipc/updates"
+import { registerRemoteIpc } from "./ipc/remote"
 import { createMainServices } from "./runtime"
 const services = createMainServices()
 const { handleAsset, backends, lspService, sessions, setupPaperBrowse } = services
@@ -47,6 +48,7 @@ function createWindow(): void {
   )
   const owner = window.webContents.id
   window.webContents.once("destroyed", () => {
+    services.remote.disconnect(owner)
     sessions.close(owner)
     for (const backend of backends) void backend.cancel(owner).catch(() => {})
   })
@@ -79,6 +81,7 @@ void app.whenReady().then(() => {
   if (process.platform !== "darwin") Menu.setApplicationMenu(null)
   protocol.handle("envoi", handleAsset)
   setupPaperBrowse()
+  registerRemoteIpc(services)
   registerLanguageIpc(services)
   registerDiagnosticsIpc(services)
   registerUpdatesIpc(services)
@@ -99,8 +102,15 @@ let cleanedUp = false
 app.on("will-quit", (event) => {
   if (cleanedUp) return
   event.preventDefault()
-  for (const window of BrowserWindow.getAllWindows()) lspService.dispose(window.webContents.id)
-  void Promise.allSettled(backends.map((backend) => backend.dispose())).then(() => {
+  for (const window of BrowserWindow.getAllWindows()) {
+    services.remote.disconnect(window.webContents.id)
+    lspService.dispose(window.webContents.id)
+  }
+  const owners = new Set([...services.remote.entries.values()].map((entry) => entry.owner))
+  void Promise.allSettled([
+    ...backends.map((backend) => backend.dispose()),
+    ...[...owners].map((owner) => services.remote.disconnect(owner)),
+  ]).then(() => {
     diagnostics.write("info", "main", "app.stopped")
     cleanedUp = true
     app.quit()
