@@ -14,6 +14,126 @@ import {
 import { workspaceFiles } from "../electron/main/workspace-files.mjs"
 import { ProjectSessionManager } from "../electron/main/services/project-sessions.ts"
 
+function remoteFixture(entries = []) {
+  const remote = Object.create(RemoteWorkspaces.prototype)
+  remote.entries = new Map(entries.map((entry) => [`${entry.owner}:${entry.root}`, entry]))
+  remote.send = () => {}
+  return remote
+}
+
+for (const kind of ["ssh", "wsl"])
+  test(`disabling ${kind} only closes that transport`, async () => {
+    const entries = ["ssh", "wsl"].map((kind, owner) => ({
+      owner,
+      root: `${kind}://fixture/`,
+      target: { kind },
+      state: "connected",
+    }))
+    const remote = remoteFixture(entries),
+      closed = [],
+      updated = []
+    remote.disconnect = async (_owner, root) => closed.push(root)
+    remote.call = async (_owner, root) => updated.push(root)
+    await remote.configurePreferences(
+      {
+        pluginStates: {
+          [kind === "wsl" ? "envoi.wsl" : "envoi.remote-ssh"]: false,
+        },
+      },
+      1,
+    )
+    assert.deepEqual(closed, [`${kind}://fixture/`])
+    assert.deepEqual(updated, [`${kind === "ssh" ? "wsl" : "ssh"}://fixture/`])
+  })
+
+test("a failed preference delivery does not fail persistence or skip another window", async () => {
+  const remote = remoteFixture(
+    [1, 2].map((owner) => ({
+      owner,
+      root: "wsl://fixture/",
+      target: { kind: "wsl" },
+      state: "connected",
+    })),
+  )
+  const delivered = [],
+    closed = []
+  remote.call = async (owner) => {
+    if (owner === 1) throw Error("Disconnected during settings save")
+    delivered.push(owner)
+  }
+  remote.disconnect = async (owner) => {
+    closed.push(owner)
+  }
+  await remote.configurePreferences({ pluginStates: { "envoi.python": false } }, 3)
+  assert.deepEqual(delivered, [2])
+  assert.deepEqual(closed, [1])
+  for (const entry of remote.entries.values()) {
+    assert.equal(entry.preferences[1], 3)
+    assert.equal(entry.preferences[0].pluginStates["envoi.python"], false)
+  }
+})
+
+for (const trusted of [true, false])
+  test(`connection acknowledges a concurrent trust change to ${trusted} before publishing connected`, async () => {
+    const entry = {
+      owner: 1,
+      root: "ssh://fixture/",
+      target: {},
+      state: "connecting",
+      trusted: !trusted,
+    }
+    const remote = remoteFixture([entry])
+    let calls = 0,
+      agentTrust
+    const peer = {
+      call: async (method, args) => {
+        assert.equal(entry.state, "connecting")
+        if (method === "trust") {
+          agentTrust = args[0]
+          if (++calls === 1) {
+            entry.trusted = trusted
+            entry.trustRevision = 1
+          }
+        }
+      },
+    }
+    await remote.synchronizePolicy(entry, peer)
+    assert.equal(entry.state, "connected")
+    assert.equal(agentTrust, trusted)
+    assert.equal(calls, 2)
+  })
+
+test("policy changes and cancellation during the handshake cannot publish stale connected state", async () => {
+  const entry = {
+    owner: 1,
+    root: "wsl://fixture/",
+    target: {},
+    state: "connecting",
+    trusted: true,
+    preferences: [{}, 1],
+  }
+  const remote = remoteFixture([entry]),
+    revisions = []
+  await remote.synchronizePolicy(entry, {
+    call: async (method, args) => {
+      if (method !== "preferences") return
+      revisions.push(args[1])
+      if (args[1] === 1) entry.preferences = [{}, 2]
+    },
+  })
+  assert.deepEqual(revisions, [1, 2])
+  entry.state = "connecting"
+  await assert.rejects(
+    remote.synchronizePolicy(entry, {
+      call: async () => {
+        entry.intentional = true
+      },
+    }),
+    /cancelled/,
+  )
+  assert.equal(entry.state, "connecting")
+})
+
 test("SSH destinations reject option and shell injection; identities include host and path", () => {
   for (const host of [
     "-oProxyCommand=x",

@@ -35,21 +35,7 @@ export function registerDataIpc(services: Pick<MainServices, "lspService" | "han
           pluginStates?: Record<string, boolean>
           pluginWorkspaces?: Record<string, Record<string, boolean>>
         }
-        for (const entry of remote.entries.values()) {
-          if (preferences.pluginStates?.["envoi.remote-ssh"] === false) {
-            remote.disconnect(entry.owner, entry.root)
-            continue
-          }
-          const value = {
-            pluginStates: {
-              ...preferences.pluginStates,
-              ...preferences.pluginWorkspaces?.[entry.root],
-            },
-          }
-          entry.preferences = [value, saved.revision]
-          if (entry.state === "connected")
-            await remote.call(entry.owner, entry.root, "preferences", entry.preferences)
-        }
+        await remote.configurePreferences(preferences, saved.revision)
       }
       return result
     },

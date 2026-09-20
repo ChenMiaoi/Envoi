@@ -148,6 +148,45 @@ export class RemoteWorkspaces {
           }
     })
   }
+  async configurePreferences(preferences, revision) {
+    // Persistence has already succeeded. A failed transport must not turn a
+    // local settings save into a failure or prevent other windows updating.
+    await Promise.allSettled(
+      [...this.entries.values()].map(async (entry) => {
+        const plugin = entry.target.kind === "wsl" ? "envoi.wsl" : "envoi.remote-ssh"
+        entry.preferences = [
+          {
+            pluginStates: {
+              ...preferences.pluginStates,
+              ...preferences.pluginWorkspaces?.[entry.root],
+            },
+          },
+          revision,
+        ]
+        if (preferences.pluginStates?.[plugin] === false)
+          return this.disconnect(entry.owner, entry.root)
+        if (entry.state !== "connected") return
+        try {
+          await this.call(entry.owner, entry.root, "preferences", entry.preferences)
+        } catch {
+          // Stop using an agent which has not acknowledged the current policy.
+          await this.disconnect(entry.owner, entry.root)
+        }
+      }),
+    )
+  }
+  async synchronizePolicy(entry, peer) {
+    let revision, preferences
+    do {
+      if (entry.intentional) throw Error("Connection cancelled")
+      revision = entry.trustRevision ?? 0
+      preferences = entry.preferences
+      await peer.call("trust", [entry.trusted])
+      if (preferences) await peer.call("preferences", preferences)
+    } while (revision !== (entry.trustRevision ?? 0) || preferences !== entry.preferences)
+    if (entry.intentional) throw Error("Connection cancelled")
+    this.state(entry, "connected")
+  }
   async connect(owner, target, existingRoot, signal) {
     await this.ready
     signal?.throwIfAborted()
@@ -262,8 +301,6 @@ export class RemoteWorkspaces {
       const hello = await peer.call("hello", [1, entry.target.directory], 150000)
       if (hello.protocol !== 1) throw Error("Remote protocol version mismatch")
       if (entry.intentional) throw Error("Connection cancelled")
-      await peer.call("trust", [entry.trusted])
-      if (entry.preferences) await peer.call("preferences", entry.preferences)
       entry.generation++
       this.profiles[entry.root] = {
         target: entry.target,
@@ -271,8 +308,8 @@ export class RemoteWorkspaces {
         decided: entry.decided,
       }
       await this.saveProfiles()
-      this.state(entry, "connected")
       if (entry.watching) await peer.call("watch-project", [true])
+      await this.synchronizePolicy(entry, peer)
       this.send(entry.owner, "envoi:files-changed", { root: entry.root, paths: [] })
       entry.heartbeat = setInterval(() => {
         void peer.call("ping", [], 10000).catch((error) => peer.close(error))

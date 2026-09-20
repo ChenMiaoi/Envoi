@@ -103,6 +103,7 @@ export async function routeRemoteWorkspace(remote, sessions, owner, channel, arg
       if (candidate.root !== root) continue
       candidate.trusted = trusted
       candidate.decided = true
+      candidate.trustRevision = (candidate.trustRevision ?? 0) + 1
       if (candidate.state === "connected") {
         try {
           await remote.call(candidate.owner, root, "trust", [trusted])
