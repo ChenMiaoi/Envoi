@@ -39,6 +39,7 @@ export function RemoteWorkspaceControls() {
     [terminal, setTerminal] = useState(false)
   const [kind, setKind] = useState<"ssh" | "wsl">("ssh")
   const [distributions, setDistributions] = useState<string[]>([])
+  const [discovering, setDiscovering] = useState(false)
   const [ssh, setSsh] = useState({ host: "", directory: "" })
   const [wsl, setWsl] = useState({ host: "", directory: "" })
   const [port, setPort] = useState("")
@@ -77,6 +78,7 @@ export function RemoteWorkspaceControls() {
   useEffect(() => {
     const show = (event: Event) => {
       setKind((event as CustomEvent).detail === "wsl" ? "wsl" : "ssh")
+      setDiscovering(true)
       setOpen(true)
       setError("")
     }
@@ -108,18 +110,20 @@ export function RemoteWorkspaceControls() {
   useEffect(() => {
     if (!open || kind !== "wsl") return
     let alive = true
+    setDiscovering(true)
     void envoi()
       .wslDistributions()
       .then((names) => {
         if (alive) {
           setDistributions(names)
-          setWsl((old) =>
-            names.includes(old.host) ? old : { host: names[0] ?? "", directory: "" },
-          )
+          setWsl((old) => (names.includes(old.host) ? old : { host: "", directory: "" }))
         }
       })
       .catch((error) => {
         if (alive) setError(ipcError(error).message)
+      })
+      .finally(() => {
+        if (alive) setDiscovering(false)
       })
     return () => {
       alive = false
@@ -156,6 +160,14 @@ export function RemoteWorkspaceControls() {
             className="flex min-w-0 max-w-64 items-center gap-1.5 rounded-md border border-primary/30 bg-primary/5 px-2 py-1 text-primary transition-colors hover:bg-primary/10"
             onClick={() => {
               setKind(root?.startsWith("wsl://") ? "wsl" : "ssh")
+              setDiscovering(true)
+              if (current) {
+                const update = root.startsWith("wsl://") ? setWsl : setSsh
+                update({ host: current.host, directory: current.directory })
+                setPort(current.port ? String(current.port) : "")
+                setConfigFile(current.configFile ?? "")
+              }
+              setError("")
               setOpen(true)
             }}
           >
@@ -294,7 +306,13 @@ export function RemoteWorkspaceControls() {
                 {t("extensions.disabled")}
               </p>
             )}
-            {kind === "wsl" && !distributions.length && (
+            {kind === "wsl" && discovering && (
+              <p role="status" className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Spinner />
+                {t("wsl.discovering")}
+              </p>
+            )}
+            {kind === "wsl" && !discovering && !error && !distributions.length && (
               <p role="status" className="text-xs text-muted-foreground">
                 {t("wsl.noDistributions")}
               </p>
@@ -377,7 +395,7 @@ export function RemoteWorkspaceControls() {
                     <p className="mt-1 break-all pl-4 font-mono text-[11px] text-muted-foreground">
                       {state.directory}
                     </p>
-                    {state.error && (
+                    {state.error && state.error !== error && (
                       <p className="mt-1 break-words pl-4 text-[11px] text-destructive">
                         {state.error}
                       </p>
@@ -388,13 +406,22 @@ export function RemoteWorkspaceControls() {
             </section>
           )}
           {error && (
-            <p
+            <div
               role="alert"
               className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive"
             >
               <AlertCircle aria-hidden className="mt-0.5 size-3.5 shrink-0" />
-              <span className="break-words">{error}</span>
-            </p>
+              <div className="min-w-0 break-words whitespace-pre-wrap">
+                {error.length < 500 ? (
+                  error
+                ) : (
+                  <details>
+                    <summary>{error.split("\n")[0].slice(0, 180)}</summary>
+                    {error}
+                  </details>
+                )}
+              </div>
+            </div>
           )}
         </DialogContent>
       </Dialog>

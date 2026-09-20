@@ -7,8 +7,6 @@ import { usePreferences } from "@/settings/context"
 import { envoi } from "@/lib/desktop"
 import { ProjectIdentity } from "@/project/ProjectIdentity"
 import { RemoteWorkspaceControls } from "@/project/RemoteWorkspaceControls"
-import { RemoteUnavailable } from "@/project/RemoteUnavailable"
-import { isRemoteWorkspace } from "@/lib/workspaceLocation"
 import { WorkspaceBadge } from "@/project/WorkspaceBadge"
 import { AgentProvider } from "@/agent/AgentProvider"
 import {
@@ -174,6 +172,25 @@ function ProjectApp() {
     setView("writer")
   }
   const [activeId, setActiveId] = useState<string | null>(null)
+  useEffect(() => {
+    const created = (event: Event) => {
+      const file = (event as CustomEvent<ProjectFile>).detail
+      if (file.kind === "latex") {
+        setWriterFile((previous) => ({ id: file.id, request: (previous?.request ?? 0) + 1 }))
+        setView("writer")
+      } else {
+        setOpenFiles((files) =>
+          files.some((item) => item.id === file.id)
+            ? files
+            : [...files, { id: file.id, name: file.path, kind: file.kind }],
+        )
+        setActiveId(file.id)
+        setView("reader")
+      }
+    }
+    window.addEventListener("envoi:file-created", created)
+    return () => window.removeEventListener("envoi:file-created", created)
+  }, [setView])
 
   const allFiles = useMemo(() => flatten(fileTree), [fileTree])
 
@@ -340,16 +357,14 @@ function ProjectApp() {
                 className="h-full motion-safe:animate-[view-in_160ms_ease-out]"
                 aria-label={t("app.aria.library")}
               >
-                {isRemoteWorkspace(project.rootPath) ? (
-                  <RemoteUnavailable />
-                ) : project.rootPath && !trust?.trusted ? (
+                {project.rootPath && !trust?.trusted ? (
                   <div className="h-full p-1.5">
                     <div className="workspace-pane h-full">
                       <TrustRequired />
                     </div>
                   </div>
                 ) : (
-                  <LibraryView />
+                  <LibraryView key={project.rootPath} />
                 )}
               </section>
             )}

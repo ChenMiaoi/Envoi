@@ -36,10 +36,7 @@ async function waitFor(predicate, timeout = 60000) {
   }
 }
 try {
-  run(
-    'printf "int value = 42;\\nint main() { return value; }\\n" > "$1/main.cpp"; git -C "$1" init',
-    [root],
-  )
+  run('printf "int value = 42;\\nint main() { return value; }\\n" > "$1/main.cpp"', [root])
   run('mkdir "$1/space directory" "$1/other"', [root])
   const completion = await browseWslDirectories(host, root + "/spa")
   assert.deepEqual(completion.directories, [root + "/space directory/"])
@@ -66,9 +63,20 @@ try {
   )
   await assert.rejects(call("fs-read", ["../outside"]))
   await assert.rejects(call("terminal-open"), /Trust/)
+  await assert.rejects(call("library", [{ action: "list" }]), /Trust/)
   await call("trust", [true])
   remote.get(1, state.root).trusted = true
-  assert(await call("git-status"))
+  await call("library", [
+    {
+      action: "import",
+      papers: [{ title: "WSL research", citationKey: "wslStudy", notes: "Remote note" }],
+    },
+  ])
+  const library = await call("library", [{ action: "list" }])
+  assert.equal(library.papers[0].title, "WSL research")
+  const paper = await call("library", [{ action: "get", paperId: library.papers[0].id }])
+  assert.equal(paper.note.text, "Remote note")
+  assert.equal((await call("git-status")).state, "not-initialized")
   if (process.env.ENVOI_TEST_WSL_LSP === "1") {
     const lsp = await call("lsp-open", ["main.cpp", source, "editor"])
     assert.equal(lsp.available, true)

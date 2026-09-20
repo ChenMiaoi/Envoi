@@ -385,7 +385,7 @@ test("prepared remote projects allow reads but cannot run tools or replace the a
     /24 MB/,
   )
   assert.equal(sessions.activeRoot(1), "ssh://old/")
-  for (const method of ["fs-save", "terminal-open", "git-log"])
+  for (const method of ["fs-save", "terminal-open", "git-log", "library", "paper-browse"])
     await assert.rejects(
       routeRemoteWorkspace(remote, sessions, 1, `envoi:${method}`, ["wsl://new/"]),
       /not active/,

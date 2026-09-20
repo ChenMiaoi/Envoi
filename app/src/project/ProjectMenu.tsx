@@ -722,6 +722,11 @@ export function ProjectMenu() {
                     }))
                     setMode(null)
                     setMessage("")
+                    const created = fresh.files.find((file) => file.path === name.trim())
+                    if (created)
+                      window.dispatchEvent(
+                        new CustomEvent("envoi:file-created", { detail: created }),
+                      )
                   } else {
                     const rootPath =
                       mode === "new"

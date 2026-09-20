@@ -160,6 +160,8 @@ export async function routeRemoteWorkspace(remote, sessions, owner, channel, arg
   )
     return { value: await remote.call(owner, root, method, args.slice(1)) }
   if (!entry.trusted) throw Error("Trust this remote workspace before running tools")
+  // Network requests and native dialogs stay on the desktop; storage is remote.
+  if (method === "library" || method === "paper-browse") return undefined
   if (
     [
       "lsp-open",

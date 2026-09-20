@@ -4,6 +4,7 @@
  */
 export const zhCN = {
   "remote.endTerminal": "结束终端",
+  "wsl.discovering": "正在查找 WSL 发行版…",
   "wsl.noDistributions": "没有可用的 WSL 发行版。请先安装发行版，再重新打开此窗口。",
   "remote.projectScope": "语言开关仅对当前项目生效；工具在当前远程环境运行。",
   "remote.globalScope": "语言开关修改全局默认；下方工具检测来自当前远程环境。",
@@ -661,7 +662,8 @@ export const zhCN = {
   "history.noBinding": "已授权目录；本地工具路径尚未连接，可在项目菜单完善一次项目连接。",
   "history.noChanges": "没有文件改动。",
   "history.noDirectory": "请先打开本地项目。",
-  "history.notInitialized": "此项目尚未初始化 Git 仓库；新建项目时可启用版本管理。",
+  "history.notInitialized":
+    "此项目尚未初始化 Git 仓库。点击“启用 Git 版本管理”即可在当前目录初始化。",
   "history.notLoaded": "Git 历史未读取",
   "history.refreshAria": "刷新 Git 历史",
   "history.truncated": "仅显示最近 500 条提交",

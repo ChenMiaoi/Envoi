@@ -1,4 +1,5 @@
 import { ChatPanel } from "@/components/ChatPanel"
+import { isRemoteWorkspace } from "@/lib/workspaceLocation"
 import { MarkdownEditor } from "@/components/MarkdownEditor"
 import { TexCompilePreview } from "@/components/TexCompilePreview"
 import {
@@ -347,35 +348,37 @@ export function PaperWorkspace({
               </div>
             )}
           </div>
-          <div className="shrink-0 pb-1 pt-3">
-            <div className="flex items-center gap-2 px-5 pb-2 text-[11px] text-muted-foreground">
-              <span className="h-1 w-1 rounded-full bg-primary/60" />
-              <span>{t("research.assistant")}</span>
-              <span className="ml-auto text-[10px] opacity-70">
-                {t("research.assistantContext")}
-              </span>
+          {!isRemoteWorkspace(root) && (
+            <div className="shrink-0 pb-1 pt-3">
+              <div className="flex items-center gap-2 px-5 pb-2 text-[11px] text-muted-foreground">
+                <span className="h-1 w-1 rounded-full bg-primary/60" />
+                <span>{t("research.assistant")}</span>
+                <span className="ml-auto text-[10px] opacity-70">
+                  {t("research.assistantContext")}
+                </span>
+              </div>
+              <ChatPanel
+                compact
+                inputOnly
+                historySource={{
+                  scope: root + paper.id,
+                  record: chat ?? null,
+                  busy,
+                  newSession: newChat,
+                  select: selectChat,
+                  list: listChats,
+                }}
+                placeholder={t("research.assistantPlaceholder")}
+                conversation={{
+                  record: chat ?? null,
+                  busy,
+                  error,
+                  send,
+                  stop,
+                }}
+              />
             </div>
-            <ChatPanel
-              compact
-              inputOnly
-              historySource={{
-                scope: root + paper.id,
-                record: chat ?? null,
-                busy,
-                newSession: newChat,
-                select: selectChat,
-                list: listChats,
-              }}
-              placeholder={t("research.assistantPlaceholder")}
-              conversation={{
-                record: chat ?? null,
-                busy,
-                error,
-                send,
-                stop,
-              }}
-            />
-          </div>
+          )}
         </aside>
       </Panel>
     </Group>

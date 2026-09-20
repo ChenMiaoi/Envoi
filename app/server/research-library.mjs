@@ -49,8 +49,9 @@ function atomic(file, text) {
     if (existsSync(temp)) unlinkSync(temp)
   }
 }
-export async function libraryRequest(root, input, isCurrent = () => true) {
-  root = await researchRoot(root)
+export async function libraryRequest(root, input, isCurrent = () => true, { scoped = false } = {}) {
+  // Remote sessions may only access their bound folder, including in Git worktrees.
+  root = scoped ? await realpath(root) : await researchRoot(root)
   if (!isCurrent()) throw Error("Paper download cancelled")
   const folder = safeDirectory(root, ".envoi/library")
   const db = new DatabaseSync(safeFile(path.join(folder, "library.sqlite")))

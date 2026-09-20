@@ -126,7 +126,9 @@ export function ReaderView({
       files.includes(activeId) ? files.filter((id) => id !== activeId) : [...files, activeId],
     )
   }
-  const [showChat, setShowChat] = useState(true)
+  const [chatRequested, setShowChat] = useState(true)
+  const chatAvailable = !isRemoteWorkspace(project.rootPath)
+  const showChat = chatAvailable && chatRequested
   const [showTree, setShowTree] = useState(true)
   const active = openFiles.find((f) => f.id === activeId)
   const [pdfContext, setPdfContext] = useState<{ id: string; text: string } | null>(null)
@@ -522,16 +524,18 @@ export function ReaderView({
                   >
                     <FolderTree className="h-3.5 w-3.5" />
                   </button>
-                  <button
-                    title={showChat ? t("reader.hideChat") : t("reader.showChat")}
-                    onClick={() => setShowChat(!showChat)}
-                    className={cn(
-                      "rounded-md p-1.5 transition-colors",
-                      showChat ? "text-primary" : "text-muted-foreground hover:bg-secondary",
-                    )}
-                  >
-                    <MessageSquareText className="h-3.5 w-3.5" />
-                  </button>
+                  {chatAvailable && (
+                    <button
+                      title={showChat ? t("reader.hideChat") : t("reader.showChat")}
+                      onClick={() => setShowChat(!showChat)}
+                      className={cn(
+                        "rounded-md p-1.5 transition-colors",
+                        showChat ? "text-primary" : "text-muted-foreground hover:bg-secondary",
+                      )}
+                    >
+                      <MessageSquareText className="h-3.5 w-3.5" />
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

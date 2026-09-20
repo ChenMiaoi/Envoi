@@ -15,14 +15,31 @@ import {
   workspaceTarget,
 } from "../../../server/workspaces.mjs"
 import type { MainServices } from "../runtime"
+import { isRemoteRoot } from "../remote/workspace-routing.mjs"
 export function registerResearchIpc(
-  services: Pick<MainServices, "requireBoundRoot" | "handle" | "sessions">,
+  services: Pick<MainServices, "requireBoundRoot" | "handle" | "sessions" | "remote">,
 ) {
-  const { requireBoundRoot, handle, sessions } = services
+  const { requireBoundRoot, handle, sessions, remote } = services
   handle("envoi:library", async (event, root: string, raw: unknown) => {
     const input = parseLibraryInput(raw)
-    root = await requireBoundRoot(root)
-    await requireBoundRoot(await researchRoot(root))
+    const remoteRoot = isRemoteRoot(root)
+    if (!remoteRoot) {
+      root = await requireBoundRoot(root)
+      await requireBoundRoot(await researchRoot(root))
+    }
+    const request = (input: ReturnType<typeof parseLibraryInput>) => {
+      if (!remoteRoot) return libraryRequest(root, input)
+      if (
+        sessions.activeRoot(event.sender.id) !== root ||
+        !remote.get(event.sender.id, root).trusted
+      )
+        throw Error("Remote research project is no longer active or trusted")
+      return remote
+        .call(event.sender.id, root, "library", [input])
+        .then((result: unknown) =>
+          input.action === "list" ? { ...(result as object), root } : result,
+        )
+    }
     if (input.action === "download-pdf") return downloadPaper(input.url)
     if (input.action === "paper-search") return searchPapers(input)
     if (input.action === "export-file") {
@@ -33,15 +50,17 @@ export function registerResearchIpc(
         filters: [{ name: "研究资料（文献、PDF、笔记与会话）", extensions: ["json"] }],
       })
       if (result.canceled || !result.filePath) return { saved: false }
-      const archive = await libraryRequest(root, { action: "export" })
+      const archive = await request({ action: "export" })
       await writeFile(result.filePath, JSON.stringify(archive, null, 2), { mode: 0o600 })
       return { saved: true, path: result.filePath }
     }
-    return libraryRequest(root, input)
+    return request(input)
   })
   handle("envoi:paper-browse", async (event, root: string) => {
-    root = await requireBoundRoot(root)
-    await requireBoundRoot(await researchRoot(root))
+    if (!isRemoteRoot(root)) {
+      root = await requireBoundRoot(root)
+      await requireBoundRoot(await researchRoot(root))
+    }
     if (sessions.activeRoot(event.sender.id) !== root) throw Error("Project is not active")
     sessions.bindBrowse(event.sender.id, root)
     return { ok: true }

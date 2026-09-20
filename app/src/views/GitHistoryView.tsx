@@ -4,6 +4,7 @@ import { useProject } from "@/project/context"
 
 import {
   localGitLog,
+  initializeLocalGit,
   localGitShow,
   type GitCommit,
   type GitLog,
@@ -288,6 +289,26 @@ function CommitHistoryView({ directory, revision }: { directory: string; revisio
           <RefreshCw className={`h-3.5 w-3.5 ${busy ? "animate-spin" : ""}`} />
         </button>
       </header>
+      {log?.state === "not-initialized" && (
+        <button
+          disabled={busy}
+          className="m-4 self-center rounded border border-border px-3 py-2 text-sm hover:bg-secondary disabled:opacity-50"
+          onClick={() => {
+            setBusy(true)
+            void initializeLocalGit(directory)
+              .then(async () => {
+                window.dispatchEvent(new Event("envoi:connection-updated"))
+                await refresh()
+              })
+              .catch((error: Error) => {
+                setMessage(error.message)
+              })
+              .finally(() => setBusy(false))
+          }}
+        >
+          {t("project.enableGit")}
+        </button>
+      )}
       {!log && (
         <div className="flex flex-1 flex-col items-center justify-center gap-2 px-8 text-center">
           <p role="status" className="text-sm text-muted-foreground">

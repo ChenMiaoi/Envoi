@@ -157,6 +157,20 @@ test("research library isolates projects, shares worktrees, persists notes and r
       execFileSync("git", args, { cwd: main, stdio: "pipe" })
     const worktree = await createWorkspace(main, { name: "experiment" })
     assert.equal((await request(worktree.path, { action: "list" })).researchId, index.researchId)
+    const scoped = await request(worktree.path, { action: "list" }, () => true, { scoped: true })
+    assert.notEqual(scoped.researchId, index.researchId)
+    assert(!scoped.papers.some((paper) => paper.id === paperId))
+    await request(
+      worktree.path,
+      { action: "import", papers: [{ title: "Worktree only" }] },
+      () => true,
+      { scoped: true },
+    )
+    assert(
+      !(await request(main, { action: "list" })).papers.some(
+        (paper) => paper.title === "Worktree only",
+      ),
+    )
     assert.equal(
       (await request(worktree.path, { action: "get", paperId })).note.text,
       "external edit",

@@ -56,12 +56,20 @@ export function wslArguments(target, script) {
 export async function runWsl(host, script, args = [], options = {}) {
   validateWslTarget({ kind: "wsl", host, directory: "/" })
   if (process.platform !== "win32") throw Error("WSL workspaces require Windows")
-  const { stdout } = await promisify(execFile)(
-    "wsl.exe",
-    ["--distribution", host, "--cd", "~", "--exec", "sh", "-c", script, "envoi", ...args],
-    { windowsHide: true, encoding: "utf8", timeout: 30000, maxBuffer: 1024 * 1024, ...options },
-  )
-  return stdout
+  try {
+    const { stdout } = await promisify(execFile)(
+      "wsl.exe",
+      ["--distribution", host, "--cd", "~", "--exec", "sh", "-c", script, "envoi", ...args],
+      { windowsHide: true, encoding: "utf8", timeout: 30000, maxBuffer: 1024 * 1024, ...options },
+    )
+    return stdout
+  } catch (error) {
+    if (options.signal?.aborted) throw error
+    throw Error(
+      error.stderr?.trim() || `WSL command failed in ${host}: ${error.code ?? "unknown error"}`,
+      { cause: error },
+    )
+  }
 }
 
 export function parseWslDirectories(output) {

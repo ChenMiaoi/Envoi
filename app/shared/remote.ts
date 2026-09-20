@@ -6,6 +6,8 @@ export interface SshTarget {
   directory: string
 }
 export interface RemoteState {
+  port?: number
+  configFile?: string
   root: string
   kind?: "ssh" | "wsl"
   host: string

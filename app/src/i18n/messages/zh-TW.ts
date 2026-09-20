@@ -2,6 +2,7 @@
 import type { Messages } from "./zh-CN"
 const zhTW: Messages = {
   "remote.endTerminal": "結束終端",
+  "wsl.discovering": "正在查詢 WSL 發行版…",
   "wsl.noDistributions": "沒有可用的 WSL 發行版。請先安裝發行版，再重新開啟此視窗。",
   "remote.projectScope": "語言開關僅對當前專案生效；工具在當前遠端環境執行。",
   "remote.globalScope": "語言開關修改全域預設；下方工具檢測來自當前遠端環境。",
@@ -622,7 +623,8 @@ const zhTW: Messages = {
   "history.noBinding": "已授權目錄；本地工具路徑尚未連線，可在專案選單完善一次專案連線。",
   "history.noChanges": "沒有檔案改動。",
   "history.noDirectory": "請先開啟本地專案。",
-  "history.notInitialized": "此專案尚未初始化 Git 倉庫；新建專案時可啟用版本管理。",
+  "history.notInitialized":
+    "此專案尚未初始化 Git 倉庫。點選“啟用 Git 版本管理”即可在當前目錄初始化。",
   "history.notLoaded": "Git 歷史未讀取",
   "history.refreshAria": "重新整理 Git 歷史",
   "history.truncated": "僅顯示最近 500 條提交",

@@ -19,6 +19,7 @@ import { collectPaper, type SourceLocation } from "@/lib/paperSources"
 import { AssetsPanel } from "@/components/AssetsPanel"
 import { ReferencesPanel } from "@/components/ReferencesPanel"
 import { ChatPanel } from "@/components/ChatPanel"
+import { isRemoteWorkspace } from "@/lib/workspaceLocation"
 import { LatexEditor, type LatexEditorHandle } from "@/components/LatexEditor"
 import { useT } from "@/i18n/useT"
 import { useLocation } from "react-router"
@@ -229,13 +230,15 @@ export function WriterView({
               </div>
             </div>
           </div>
-          <div className="shrink-0 bg-editor">
-            <ChatPanel
-              compact
-              inputOnly
-              context={active ? { label: active.path, text: source } : undefined}
-            />
-          </div>
+          {!isRemoteWorkspace(project.rootPath) && (
+            <div className="shrink-0 bg-editor">
+              <ChatPanel
+                compact
+                inputOnly
+                context={active ? { label: active.path, text: source } : undefined}
+              />
+            </div>
+          )}
         </div>
       </Panel>
       <PanelResizeHandle className="workspace-pane-divider" />

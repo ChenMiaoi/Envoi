@@ -171,7 +171,7 @@ export function createMainServices() {
     requireToolContext,
     agentRoot,
     handle,
-    setupPaperBrowse: () => setupPaperBrowse({ sessions, requireBoundRoot }),
+    setupPaperBrowse: () => setupPaperBrowse({ sessions, requireBoundRoot, remote }),
     sessions,
   }
 }

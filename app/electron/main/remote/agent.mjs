@@ -15,6 +15,7 @@ import { lintText } from "../../../server/lint.mjs"
 import { toolInfo } from "../../../server/tool-config.mjs"
 import { createRemoteTerminal } from "./terminal.mjs"
 import { restrictedPath } from "../restricted-path.mjs"
+import { parseLibraryInput } from "../../../shared/contracts.ts"
 
 export const REMOTE_PROTOCOL = 1
 export function createAgent(publish) {
@@ -111,6 +112,22 @@ export function createAgent(publish) {
         return null
       }
       requireTrust()
+      if (method === "library") {
+        try {
+          await import("node:sqlite")
+        } catch {
+          throw Error(
+            "The remote research library requires Node.js with node:sqlite support. Upgrade the remote Node.js runtime (WSL uses the managed runtime).",
+          )
+        }
+        const { libraryRequest } = await import("../../../server/research-library.mjs")
+        return libraryRequest(
+          root,
+          parseLibraryInput(args[0]),
+          () => trusted && !requestSignal?.aborted,
+          { scoped: true },
+        )
+      }
       const signal = requestSignal
         ? AbortSignal.any([toolLifetime.signal, requestSignal])
         : toolLifetime.signal

@@ -47,6 +47,7 @@ async function prepare(host, progress, signal) {
   if ((await runWsl(host, check, [], { signal }).catch(() => "")).trim() === `v${WSL_NODE_VERSION}`)
     return plan.relative
   signal?.throwIfAborted()
+  await runWsl(host, wslPrerequisites, [], { signal })
   const temporary = await mkdtemp(path.join(tmpdir(), "envoi-wsl-node-"))
   try {
     progress("downloading")
@@ -106,3 +107,23 @@ async function prepare(host, progress, signal) {
     await rm(temporary, { recursive: true, force: true })
   }
 }
+
+export const wslPrerequisites = `
+missing=""
+for tool in tar xz sha256sum cut mktemp mkdir cat mv rm; do
+  command -v "$tool" >/dev/null 2>&1 || missing="$missing $tool"
+done
+if [ -n "$missing" ]; then
+  printf 'WSL runtime prerequisites missing:%s\\n' "$missing" >&2
+  if command -v dnf >/dev/null 2>&1; then
+    echo 'Install in this distribution: sudo dnf install tar xz coreutils' >&2
+  elif command -v apt-get >/dev/null 2>&1; then
+    echo 'Install in this distribution: sudo apt-get update && sudo apt-get install tar xz-utils coreutils' >&2
+  elif command -v apk >/dev/null 2>&1; then
+    echo 'Install in this distribution: sudo apk add tar xz coreutils' >&2
+  else
+    echo 'Install tar, xz and coreutils with this distribution package manager, then reconnect.' >&2
+  fi
+  exit 1
+fi
+`

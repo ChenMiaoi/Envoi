@@ -2,6 +2,7 @@
 import type { Messages } from "./zh-CN"
 const en: Messages = {
   "remote.endTerminal": "End terminal",
+  "wsl.discovering": "Finding WSL distributions…",
   "wsl.noDistributions":
     "No WSL distributions are available. Install a distribution, then reopen this window.",
   "remote.projectScope":
@@ -681,7 +682,7 @@ const en: Messages = {
   "history.noChanges": "No file changes.",
   "history.noDirectory": "Open a local project first.",
   "history.notInitialized":
-    "This project has no Git repository yet; version control can be enabled when creating a project.",
+    "This project has no Git repository yet. Enable Git version control to initialize this directory.",
   "history.notLoaded": "Git history not loaded",
   "history.refreshAria": "Refresh Git history",
   "history.truncated": "Showing only the latest 500 commits",

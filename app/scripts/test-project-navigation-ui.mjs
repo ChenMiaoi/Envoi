@@ -45,6 +45,12 @@ try {
       }))
     })
     await page.getByRole("button", { name: "WSL 工作区…", exact: true }).click()
+    assert.equal(
+      await page.getByRole("textbox", { name: "远程目录", exact: true }).inputValue(),
+      "",
+    )
+    await page.getByRole("combobox", { name: "发行版", exact: true }).click()
+    await page.getByRole("option", { name: "Fixture-Ubuntu", exact: true }).click()
     await page.waitForFunction(
       () => document.querySelector('input[aria-label="远程目录"]')?.value === "/home/fixture/",
       undefined,

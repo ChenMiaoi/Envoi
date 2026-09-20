@@ -5,13 +5,17 @@ import path from "node:path"
 import { downloadPaper } from "../../../server/paper-download.mjs"
 import { libraryRequest, researchRoot } from "../../../server/research-library.mjs"
 import { ProjectSessionManager } from "./project-sessions"
+import { isRemoteRoot } from "../remote/workspace-routing.mjs"
+import type { MainServices } from "../runtime"
 
 export function setupPaperBrowse({
   sessions,
   requireBoundRoot,
+  remote,
 }: {
   sessions: ProjectSessionManager
   requireBoundRoot: (root: string) => Promise<string>
+  remote: MainServices["remote"]
 }): void {
   const browse = session.fromPartition("persist:paperbrowse")
   const origin = (contents: Electron.WebContents) => {
@@ -35,6 +39,19 @@ export function setupPaperBrowse({
   }
   const importFile = async (source: Origin, name: string, base64: string) => {
     if (!source.current()) return
+    if (isRemoteRoot(source.binding.root)) {
+      const root = source.binding.root
+      if (!remote.get(source.owner.id, root).trusted)
+        throw Error("Trust this remote workspace before importing papers")
+      await remote.call(source.owner.id, root, "library", [
+        {
+          action: "import",
+          papers: [{ title: pdfName(name), attachment: { $blob: base64 } }],
+        },
+      ])
+      notify(source, { title: name })
+      return
+    }
     const root = await requireBoundRoot(source.binding.root)
     await requireBoundRoot(await researchRoot(root))
     if (!source.current()) return

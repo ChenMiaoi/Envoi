@@ -2,6 +2,7 @@
 import type { Messages } from "./zh-CN"
 const ja: Messages = {
   "remote.endTerminal": "ターミナルを終了",
+  "wsl.discovering": "WSL ディストリビューションを検索中…",
   "wsl.noDistributions":
     "WSL ディストリビューションがありません。インストール後、この画面を開き直してください。",
   "remote.projectScope":
@@ -692,7 +693,7 @@ const ja: Messages = {
   "history.noChanges": "ファイルの変更はありません。",
   "history.noDirectory": "先にローカルプロジェクトを開いてください。",
   "history.notInitialized":
-    "このプロジェクトはまだ Git リポジトリが初期化されていません。プロジェクト作成時にバージョン管理を有効にできます。",
+    "このプロジェクトには Git リポジトリがありません。「Git バージョン管理を有効にする」で現在のディレクトリを初期化できます。",
   "history.notLoaded": "Git 履歴は未読み込み",
   "history.refreshAria": "Git 履歴を更新",
   "history.truncated": "直近 500 件のコミットのみ表示",

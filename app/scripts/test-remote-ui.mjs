@@ -58,6 +58,10 @@ try {
   if (process.platform === "win32") {
     await page.getByTestId("extension-wsl").getByRole("button", { name: "WSL 工作区…" }).click()
     await page.getByRole("combobox", { name: "发行版", exact: true }).waitFor()
+    assert.equal(
+      await page.getByRole("textbox", { name: "远程目录", exact: true }).inputValue(),
+      "",
+    )
     assert.equal(await page.getByRole("textbox", { name: "SSH 主机", exact: true }).count(), 0)
     if (distro) {
       await page.getByRole("combobox", { name: "发行版", exact: true }).click()
@@ -132,9 +136,42 @@ try {
       window.dispatchEvent(new Event("envoi:show-trust"))
     })
     await trust.click()
+    if (distro) {
+      await page.getByRole("button", { name: new RegExp(`WSL: ${distro}`) }).click()
+      await page.waitForFunction(
+        (host) =>
+          document.querySelector('[role="combobox"][aria-label="发行版"]')?.textContent === host,
+        distro,
+      )
+      assert.equal(
+        await page.getByRole("textbox", { name: "远程目录", exact: true }).inputValue(),
+        process.env.ENVOI_TEST_WSL_DIRECTORY,
+      )
+      await page.keyboard.press("Escape")
+    }
     await page.getByRole("button", { name: "main.cpp", exact: true }).click()
     const editor = page.getByRole("textbox", { name: "文本源码编辑器" })
     await editor.waitFor()
+    assert.equal(await page.getByTitle("显示 AI 对话").count(), 0)
+    await page.evaluate(async () => {
+      const [state] = await window.envoi.remoteList()
+      await window.envoi.library(state.root, {
+        action: "import",
+        papers: [{ title: "Remote UI library fixture", notes: "Saved remotely" }],
+      })
+      location.hash = "/library"
+    })
+    await page
+      .getByRole("button", { name: /^Remote UI library fixture/ })
+      .first()
+      .waitFor()
+      .catch(async (error) => {
+        console.error(await page.locator("body").innerText(), errors)
+        throw error
+      })
+    await page.evaluate(() => {
+      location.hash = "/reader"
+    })
     await editor.press("Control+End")
     await editor.press("Enter")
     await editor.type("// remote UI saved")
@@ -174,7 +211,14 @@ try {
     })
     await page.getByRole("button", { name: "刷新 Git 历史", exact: true }).waitFor()
     assert.equal(await page.getByTestId("research-workspaces").count(), 0)
-    if (distro) await page.getByText("仓库还没有提交。", { exact: true }).waitFor()
+    if (distro) {
+      const initialize = page.getByRole("button", { name: "启用 Git 版本管理", exact: true })
+      if (await initialize.count()) {
+        await initialize.click()
+        await page.getByRole("button", { name: "main", exact: true }).waitFor()
+      }
+      await page.getByText("仓库还没有提交。", { exact: true }).waitFor()
+    }
     await page.evaluate(() => {
       location.hash = "/reader"
     })
