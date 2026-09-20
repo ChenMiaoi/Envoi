@@ -50,6 +50,12 @@ Envoi 希望把这些过程放回论文身边：**主工作区保留论文，独
 
 文件树用颜色和标记呈现 Git 状态；版本与实验页面集中展示工作区、提交历史与保存的结果。论文的演进与实验的过程可以一起追踪。
 
+## 在工具所在的环境工作
+
+从欢迎页、项目切换菜单或「设置 → 扩展」打开 **远程 SSH 工作区**，或在 Windows 上选择已安装的 **WSL 发行版**。连接后可编辑文件、使用语言服务、查看 Git 历史、编译和打开终端。
+
+SSH 需要本机 OpenSSH 和 Linux 远端的 Node.js 22+；WSL 会自动准备经过校验的 Node.js 运行时。语言工具、Git 和编译器需安装在目标环境中。远端 AI、文献库与实验工作区管理尚未支持，安装要求与当前边界见 [SSH 指南](docs/REMOTE_SSH.md) 和 [WSL 指南](docs/WSL.md)。
+
 ## 熟悉的文件，自己的节奏
 
 Envoi 直接使用本地项目文件。基础阅读与手工编辑可以在限制模式下进行；信任项目后，才启用编译、Git 和 AI 工具等执行能力。
@@ -126,7 +132,7 @@ docs/                  使用、架构与发布文档
 
 ## 文档与参与
 
-[桌面使用](docs/DESKTOP.md) · [阅读与文件格式](docs/READER_AND_LIBRARY.md) · [项目文献库](docs/research-library.md) · [设置](docs/SETTINGS.md) · [发布流程](docs/RELEASE.md)
+[桌面使用](docs/DESKTOP.md) · [阅读与文件格式](docs/READER_AND_LIBRARY.md) · [项目文献库](docs/research-library.md) · [设置](docs/SETTINGS.md) · [远程 SSH](docs/REMOTE_SSH.md) · [WSL](docs/WSL.md) · [发布流程](docs/RELEASE.md)
 
 欢迎通过 [Issues](https://github.com/ChenMiaoi/Envoi/issues) 反馈问题。报告问题时，请附上应用版本、操作系统、复现步骤，以及不含私人内容的截图或日志。提交代码前请阅读 [贡献指南](CONTRIBUTING.md)。
 

@@ -50,6 +50,12 @@ New ideas do not have to overwrite the current paper. Create an experimental wor
 
 The file tree shows Git status with colors and badges; the version and experiment views bring together workspace state, commit history, and saved results. The evolution of a paper and the process of experimentation can be followed together.
 
+## Work where your tools are
+
+Open a Linux project through **Remote SSH**, or choose an installed **WSL** distribution on Windows, from the welcome page, project switcher, or Settings → Extensions. Edit files, use language services, inspect Git history, compile, and open a terminal in the connected environment.
+
+SSH requires OpenSSH locally and Node.js 22+ on the Linux host; WSL prepares its own verified Node.js runtime. Install language tools, Git, and compilers in the target environment. Remote AI, the literature library, and experiment workspace management are not yet supported. See the [SSH guide](docs/REMOTE_SSH.md) and [WSL guide](docs/WSL.md) for setup and current limits.
+
 ## Familiar files, your own pace
 
 Envoi works directly with local project files. Reading and manual editing are available in restricted mode; compilation, Git, and AI tools become available only after the project is trusted.
@@ -126,7 +132,7 @@ The dependency lockfile is `app/package-lock.json`. See [CONTRIBUTING.md](CONTRI
 
 ## Documentation and contributing
 
-[Desktop use](docs/DESKTOP.md) · [Reading and file formats](docs/READER_AND_LIBRARY.md) · [Project literature library](docs/research-library.md) · [Settings](docs/SETTINGS.md) · [Release process](docs/RELEASE.md)
+[Desktop use](docs/DESKTOP.md) · [Reading and file formats](docs/READER_AND_LIBRARY.md) · [Project literature library](docs/research-library.md) · [Settings](docs/SETTINGS.md) · [Remote SSH](docs/REMOTE_SSH.md) · [WSL](docs/WSL.md) · [Release process](docs/RELEASE.md)
 
 Use [Issues](https://github.com/ChenMiaoi/Envoi/issues) for feedback. Include the app version, operating system, reproduction steps, and screenshots or logs without private content when reporting a problem. Read the [contribution guide](CONTRIBUTING.md) before submitting code.
 

@@ -19,8 +19,8 @@ git push origin v0.1.0
 
 The workflow then builds:
 
-- Windows NSIS installer (`.exe`)
+- Windows NSIS installer (`.exe`) and `latest.yml` for in-app updates
 - macOS DMG and ZIP installers
 - `SHA256SUMS.txt`
 
-The workflow creates or reuses the GitHub Release for the tag and uploads these files. Wait for all release jobs to finish successfully, then verify the published notes, installer assets and checksums. macOS signing and notarization are not configured; add repository secrets and an explicit signing policy before distributing signed macOS builds.
+The workflow creates or reuses the GitHub Release for the tag and uploads these files. Wait for all release jobs to finish successfully, then verify the published notes, installer assets and checksums. Confirm that `latest.yml` references the published Windows installer and matching version. macOS signing and notarization are not configured; add repository secrets and an explicit signing policy before distributing signed macOS builds.
