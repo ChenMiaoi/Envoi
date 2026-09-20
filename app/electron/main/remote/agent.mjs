@@ -33,14 +33,17 @@ export function createAgent(publish) {
   const requireTrust = () => {
     if (!trusted) throw Error("Trust this remote workspace before running tools")
   }
+  let toolLifetime = new AbortController()
   const disposeTools = () => {
+    toolLifetime.abort(Error("Remote workspace tools cancelled"))
+    toolLifetime = new AbortController()
     lsp.dispose(1)
     terminal?.dispose()
     terminal = undefined
     compilation?.abort()
   }
   return {
-    async call(method, args) {
+    async call(method, args, requestSignal) {
       if (method === "hello") {
         if (process.platform !== "linux" || Number(process.versions.node.split(".")[0]) < 22)
           throw Error("Linux workspaces require Linux and Node.js 22 or later")
@@ -108,8 +111,13 @@ export function createAgent(publish) {
         return null
       }
       requireTrust()
+      const signal = requestSignal
+        ? AbortSignal.any([toolLifetime.signal, requestSignal])
+        : toolLifetime.signal
+      signal.throwIfAborted()
       if (method === "lsp-open") {
         await restrictedPath(root, args[0])
+        signal.throwIfAborted()
         return lsp.open(1, root, ...args)
       }
       if (method === "lsp-change") {
@@ -119,12 +127,13 @@ export function createAgent(publish) {
       if (method === "lsp-query") return lsp.query(1, root, ...args)
       if (method === "language-tool") {
         await restrictedPath(root, args[0])
-        return runLanguageTool(root, ...args)
+        signal.throwIfAborted()
+        return runLanguageTool(root, args[0], args[1], args[2], undefined, { signal })
       }
       if (method === "python-environment")
         return args[0] === undefined
           ? pythonEnvironmentStatus(root)
-          : createPythonEnvironment(root, args[0])
+          : createPythonEnvironment(root, args[0], undefined, undefined, { signal })
       if (method === "tools")
         return { ...(await toolInfo({ ...args[0], root })), latex: runtimeInfo({ trusted: true }) }
       if (method === "git-runtime") return gitRuntime()
@@ -144,7 +153,7 @@ export function createAgent(publish) {
           return await compileSnapshot(input, {
             trustedRoot: root,
             sourceRoot: input.drafts ? root : undefined,
-            signal: compilation.signal,
+            signal: AbortSignal.any([compilation.signal, signal]),
           })
         } finally {
           compilation = undefined
@@ -154,7 +163,8 @@ export function createAgent(publish) {
         compilation?.abort()
         return null
       }
-      if (method === "lint") return lintText({ ...args[0], rootPath: root }, { trustedRoot: root })
+      if (method === "lint")
+        return lintText({ ...args[0], rootPath: root }, { trustedRoot: root, signal })
       if (method === "terminal-open") {
         if (!terminal) {
           const next = createRemoteTerminal(root, (event) => {
@@ -207,7 +217,7 @@ async function start() {
         return
       }
       clearTimeout(idle)
-      peer = new RpcPeer(socket, socket, (method, args) => agent.call(method, args))
+      peer = new RpcPeer(socket, socket, (method, args, signal) => agent.call(method, args, signal))
       peer.on("close", () => {
         socket.destroy()
         idle = setTimeout(shutdown, 300000)

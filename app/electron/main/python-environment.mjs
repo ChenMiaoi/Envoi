@@ -1,20 +1,35 @@
-import { execFile } from "node:child_process"
 import { mkdir, realpath, rm } from "node:fs/promises"
 import path from "node:path"
-import { promisify } from "node:util"
 import { detectTool, pythonEnvironment } from "../../server/tool-config.mjs"
+import { runToolProcess } from "./tool-process.mjs"
 
-const execute = promisify(execFile)
+const execute = async (command, args, options) => {
+  const result = await runToolProcess(command, args, options)
+  if (result.code !== 0) throw Error(result.stderr.trim() || "Python environment creation failed")
+  return result
+}
 const pending = new Map()
 
 export function pythonEnvironmentStatus(root) {
   return { path: pythonEnvironment(root) ?? null }
 }
 
-export async function createPythonEnvironment(root, manager, run = execute, resolve = detectTool) {
+export async function createPythonEnvironment(
+  root,
+  manager,
+  run = execute,
+  resolve = detectTool,
+  { signal } = {},
+) {
+  signal?.throwIfAborted()
   if (!["venv", "uv"].includes(manager)) throw Error("Unknown Python environment manager")
   root = await realpath(root)
-  if (pending.has(root)) return pending.get(root)
+  signal?.throwIfAborted()
+  if (pending.has(root)) {
+    const result = await pending.get(root)
+    signal?.throwIfAborted()
+    return result
+  }
   const job = (async () => {
     const existing = pythonEnvironment(root)
     if (existing) return { path: existing }
@@ -29,12 +44,15 @@ export async function createPythonEnvironment(root, manager, run = execute, reso
     // Reserve the target exclusively: never modify an existing directory or symlink.
     await mkdir(target)
     try {
+      signal?.throwIfAborted()
       await run(command, manager === "uv" ? ["venv", target] : ["-m", "venv", target], {
         cwd: root,
         windowsHide: true,
         timeout: 120_000,
         maxBuffer: 1_000_000,
+        signal,
       })
+      signal?.throwIfAborted()
       if (pythonEnvironment(root) !== target)
         throw Error("Python environment creation did not finish")
       return { path: target }

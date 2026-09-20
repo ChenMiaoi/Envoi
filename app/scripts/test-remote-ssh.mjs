@@ -102,6 +102,67 @@ try {
   await waitFor(() => remote.entries.get(`1:${state.root}`)?.generation > state.generation, 60000)
   assert.equal((await call("fs-read", ["main.cpp"])).text, source)
   assert((await call("terminal-open")).output.includes("ENVOI_PTY_OK"))
+  // Deterministic long-running tools prove that revocation and RPC deadlines
+  // terminate real Linux processes rather than only rejecting local promises.
+  docker(
+    "exec",
+    name,
+    "sh",
+    "-c",
+    `cat > /usr/local/bin/clang-format <<'EOF'
+#!/bin/sh
+if [ "$1" = --version ]; then echo 'clang-format version 18.0.0'; exit 0; fi
+echo $$ > /tmp/envoi-tool-started
+exec sleep 60
+EOF
+cat > /usr/local/bin/uv <<'EOF'
+#!/bin/sh
+if [ "$1" = --version ]; then echo 'uv 0.5.0'; exit 0; fi
+echo $$ > /tmp/envoi-python-started
+exec sleep 60
+EOF
+chmod +x /usr/local/bin/clang-format /usr/local/bin/uv`,
+  )
+  const toolStarted = (marker) => {
+    try {
+      return Boolean(docker("exec", name, "cat", marker).trim())
+    } catch {
+      return false
+    }
+  }
+  for (const [method, args, marker] of [
+    ["language-tool", ["main.cpp", source, "format"], "/tmp/envoi-tool-started"],
+    ["python-environment", ["uv"], "/tmp/envoi-python-started"],
+  ]) {
+    const job = call(method, args)
+    const rejected = assert.rejects(job, /cancelled/)
+    await waitFor(() => toolStarted(marker))
+    const pid = docker("exec", name, "cat", marker).trim()
+    await call("trust", [false])
+    await rejected
+    docker("exec", name, "sh", "-c", 'test ! -e "/proc/$1"', "sh", pid)
+    if (method === "python-environment") docker("exec", name, "test", "!", "-e", "/workspace/.venv")
+    await call("trust", [true])
+  }
+  docker("exec", name, "rm", "/tmp/envoi-tool-started")
+  const peer = remote.get(1, state.root).peer
+  await assert.rejects(
+    peer.call("language-tool", ["main.cpp", source, "format"], 1000),
+    /timed out/,
+  )
+  const timedOutPid = docker("exec", name, "cat", "/tmp/envoi-tool-started").trim()
+  await waitFor(() => {
+    try {
+      docker("exec", name, "sh", "-c", 'test ! -e "/proc/$1"', "sh", timedOutPid)
+      return true
+    } catch {
+      return false
+    }
+  })
+  assert.equal(await call("ping"), true)
+  console.log(
+    "PASS remote cancellation: trust revocation, Python cleanup, RPC timeout and process termination",
+  )
   await remote.disconnect(1)
   await assert.rejects(call("fs-read", ["main.cpp"]), /disconnected/)
   execFileSync(process.execPath, ["scripts/test-remote-ui.mjs"], {

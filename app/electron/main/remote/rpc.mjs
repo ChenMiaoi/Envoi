@@ -7,6 +7,7 @@ export class RpcPeer extends EventEmitter {
     super()
     this.output = output
     this.pending = new Map()
+    this.incoming = new Map()
     this.serial = 0
     this.closed = false
     let buffer = ""
@@ -20,14 +21,19 @@ export class RpcPeer extends EventEmitter {
         buffer = buffer.slice(end + 1)
         try {
           const message = JSON.parse(line)
-          if (message.method && dispatch) {
+          if (message.cancel !== undefined) {
+            this.incoming.get(message.cancel)?.abort(Error("Remote operation cancelled"))
+          } else if (message.method && dispatch) {
+            const controller = new AbortController()
+            this.incoming.set(message.id, controller)
             Promise.resolve()
-              .then(() => dispatch(message.method, message.args ?? []))
+              .then(() => dispatch(message.method, message.args ?? [], controller.signal))
               .then(
                 (result) => this.send({ id: message.id, result }),
                 (error) => this.send({ id: message.id, error: String(error.message ?? error) }),
               )
               .catch(() => {})
+              .finally(() => this.incoming.delete(message.id))
           } else if (message.event) this.emit("event", message.event)
           else {
             const pending = this.pending.get(message.id)
@@ -59,6 +65,11 @@ export class RpcPeer extends EventEmitter {
       const id = ++this.serial
       const timer = setTimeout(() => {
         this.pending.delete(id)
+        try {
+          this.send({ cancel: id })
+        } catch {
+          // The connection may have closed at the same time as the deadline.
+        }
         reject(
           Error(
             `Remote operation timed out: ${method}. Check remote state before retrying a write.`,

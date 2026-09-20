@@ -4,6 +4,31 @@ import { tmpdir } from "node:os"
 import path from "node:path"
 import test from "node:test"
 import { runLanguageTool } from "../electron/main/language-tools.mjs"
+import { runToolProcess } from "../electron/main/tool-process.mjs"
+
+test("cancelled tools do not start and running tools terminate before rejection", async () => {
+  const controller = new AbortController()
+  controller.abort(Error("revoked"))
+  await assert.rejects(
+    async () =>
+      runToolProcess(process.execPath, ["-e", "process.exit(99)"], { signal: controller.signal }),
+    /revoked/,
+  )
+  const running = new AbortController()
+  const job = runToolProcess(process.execPath, ["-e", "setInterval(() => {}, 1000)"], {
+    signal: running.signal,
+  })
+  const rejection = assert.rejects(job, /closed workspace/)
+  running.abort(Error("closed workspace"))
+  await rejection
+  await assert.rejects(
+    runToolProcess(process.execPath, ["-e", "setInterval(() => {}, 1000)"], { timeout: 50 }),
+    /timed out/,
+  )
+  const result = await runToolProcess(process.execPath, ["-e", "process.stdout.write('ok')"])
+  assert.equal(result.stdout, "ok")
+  assert.equal(result.code, 0)
+})
 
 test("language tools format unsaved text and return lint diagnostics", async (context) => {
   if (process.platform === "win32") return context.skip("Executable fixture uses POSIX scripts")

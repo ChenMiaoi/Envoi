@@ -432,7 +432,13 @@ export class RemoteWorkspaces {
     return entry
   }
   async call(owner, root, method, args = []) {
-    return this.get(owner, root).peer.call(method, args, method === "compile" ? 600000 : 60000)
+    const timeout =
+      method === "compile"
+        ? 600000
+        : ["python-environment", "language-tool"].includes(method)
+          ? 180000
+          : 60000
+    return this.get(owner, root).peer.call(method, args, timeout)
   }
   disconnect(owner, root) {
     const closing = []

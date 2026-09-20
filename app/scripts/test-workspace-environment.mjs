@@ -104,3 +104,38 @@ test("Python environments create once, preserve existing paths and allow retry a
     await rm(root, { recursive: true, force: true })
   }
 })
+
+test("cancelled Python creation removes its partial environment and permits retry", async () => {
+  const { createPythonEnvironment } = await import("../electron/main/python-environment.mjs")
+  const root = await mkdtemp(path.join(tmpdir(), "envoi-python-cancel-"))
+  const controller = new AbortController()
+  const resolve = () => "/tools/python3"
+  try {
+    await assert.rejects(
+      createPythonEnvironment(
+        root,
+        "venv",
+        async (_command, args, options) => {
+          assert.equal(options.signal, controller.signal)
+          await writeFile(path.join(args.at(-1), "pyvenv.cfg"), "partial")
+          controller.abort(Error("workspace restricted"))
+        },
+        resolve,
+        { signal: controller.signal },
+      ),
+      /workspace restricted/,
+    )
+    await assert.rejects(readFile(path.join(root, ".venv", "pyvenv.cfg")), /ENOENT/)
+    await createPythonEnvironment(
+      root,
+      "venv",
+      async (_command, args) => {
+        await writeFile(path.join(args.at(-1), "pyvenv.cfg"), "complete")
+      },
+      resolve,
+    )
+    assert.equal(await readFile(path.join(root, ".venv", "pyvenv.cfg"), "utf8"), "complete")
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})

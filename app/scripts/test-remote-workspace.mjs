@@ -134,6 +134,54 @@ test("policy changes and cancellation during the handshake cannot publish stale 
   assert.equal(entry.state, "connecting")
 })
 
+test("slow environment creation and language tools have room for their execution and cleanup", async () => {
+  const remote = remoteFixture([
+    {
+      owner: 1,
+      root: "wsl://fixture/",
+      state: "connected",
+      peer: {
+        call: async (_method, _args, timeout) => timeout,
+      },
+    },
+  ])
+  for (const method of ["python-environment", "language-tool"])
+    assert.equal(await remote.call(1, "wsl://fixture/", method), 180000)
+})
+
+test("RPC timeout cancels its remote operation without closing other requests", async () => {
+  const requests = new PassThrough(),
+    replies = new PassThrough()
+  let cancelled
+  const cancellation = new Promise((resolve) => {
+    cancelled = resolve
+  })
+  const server = new RpcPeer(requests, replies, (method, _args, signal) => {
+    if (method === "ping") return true
+    return new Promise((_resolve, reject) =>
+      signal.addEventListener(
+        "abort",
+        () => {
+          cancelled()
+          reject(signal.reason)
+        },
+        { once: true },
+      ),
+    )
+  })
+  const client = new RpcPeer(replies, requests)
+  try {
+    await assert.rejects(client.call("slow", [], 20), /timed out/)
+    await cancellation
+    assert.equal(await client.call("ping"), true)
+  } finally {
+    client.close()
+    server.close()
+    requests.destroy()
+    replies.destroy()
+  }
+})
+
 test("SSH destinations reject option and shell injection; identities include host and path", () => {
   for (const host of [
     "-oProxyCommand=x",

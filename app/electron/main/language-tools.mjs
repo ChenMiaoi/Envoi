@@ -1,4 +1,4 @@
-import { spawn } from "node:child_process"
+import { runToolProcess } from "./tool-process.mjs"
 import { cp, lstat, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
@@ -20,13 +20,14 @@ const ignoredSnapshotDirectories = new Set([
   "dist",
 ])
 
-async function snapshotWorkspace(root, file, text, directory) {
+async function snapshotWorkspace(root, file, text, directory, signal) {
   const workspace = path.join(directory, "workspace")
   let bytes = 0
   let files = 0
   await cp(root, workspace, {
     recursive: true,
     filter: async (source) => {
+      signal?.throwIfAborted()
       if (source === root) return true
       const info = await lstat(source)
       if (info.isSymbolicLink()) return false
@@ -70,45 +71,6 @@ function inside(root, file) {
     !relative.startsWith(`..${path.sep}`) &&
     !path.isAbsolute(relative)
   )
-}
-
-async function execute(command, args, input, cwd, timeout = 30_000) {
-  return new Promise((resolve, reject) => {
-    const child = spawn(command, args, { cwd, windowsHide: true, stdio: ["pipe", "pipe", "pipe"] })
-    let stdout = ""
-    let stderr = ""
-    let settled = false
-    const timer = setTimeout(() => fail(Error("Language tool timed out")), timeout)
-    const fail = (error) => {
-      if (settled) return
-      settled = true
-      clearTimeout(timer)
-      child.kill()
-      reject(error)
-    }
-    const collect = (target) => (chunk) => {
-      if (
-        Buffer.byteLength(stdout) + Buffer.byteLength(stderr) + Buffer.byteLength(chunk) >
-        maxOutputBytes
-      )
-        return fail(Error("Language tool output is too large"))
-      if (target === "stdout") stdout += chunk
-      else stderr += chunk
-    }
-    child.stdout.setEncoding("utf8")
-    child.stderr.setEncoding("utf8")
-    child.stdout.on("data", collect("stdout"))
-    child.stderr.on("data", collect("stderr"))
-    child.on("error", fail)
-    child.on("close", (code) => {
-      if (settled) return
-      settled = true
-      clearTimeout(timer)
-      resolve({ code, stdout, stderr })
-    })
-    child.stdin.on("error", () => {})
-    child.stdin.end(input)
-  })
 }
 
 function ruffDiagnostics(output) {
@@ -168,7 +130,8 @@ function clippyDiagnostics(output, root, file) {
   })
 }
 
-export async function runLanguageTool(root, file, text, kind, selectedPath) {
+export async function runLanguageTool(root, file, text, kind, selectedPath, { signal } = {}) {
+  signal?.throwIfAborted()
   root = await realpath(root)
   const language = pluginLanguageForPath(file)
   if (
@@ -186,6 +149,7 @@ export async function runLanguageTool(root, file, text, kind, selectedPath) {
   const command = selectedPath
     ? validateToolPath(tool.id, selectedPath)
     : (await probeCandidates(tool.binary, group === "python" ? root : undefined))[0]?.path
+  signal?.throwIfAborted()
   if (!command) throw Error(`${tool.label} is not installed`)
   let args
   let input = text
@@ -211,7 +175,7 @@ export async function runLanguageTool(root, file, text, kind, selectedPath) {
       if (!cargo) throw Error("Cargo.toml was not found for this Rust file")
       temporary = await mkdtemp(path.join(tmpdir(), "envoi-live-lint-"))
       try {
-        const copy = await snapshotWorkspace(root, absolute, text, temporary)
+        const copy = await snapshotWorkspace(root, absolute, text, temporary, signal)
         cwd = path.join(copy.workspace, path.relative(root, cargo.directory))
         file = copy.snapshot
       } catch (error) {
@@ -242,7 +206,13 @@ export async function runLanguageTool(root, file, text, kind, selectedPath) {
   }
   let result
   try {
-    result = await execute(command, args, input, cwd, tool.id === "clippy" ? 120_000 : 30_000)
+    result = await runToolProcess(command, args, {
+      input,
+      cwd,
+      timeout: tool.id === "clippy" ? 120_000 : 30_000,
+      maxBuffer: maxOutputBytes,
+      signal,
+    })
   } finally {
     if (temporary) await rm(temporary, { recursive: true, force: true })
   }
