@@ -164,6 +164,7 @@ export function mergeSearchResults(batches, query = "", options = {}) {
           pdfUrl: String(item.pdfUrl ?? ""),
           openAccess: item.openAccess === true ? true : item.openAccess === false ? false : null,
           sources: [],
+          metadataSources: [],
           sourceWeights: [],
           citations: [],
           versions: [],
@@ -172,6 +173,17 @@ export function mergeSearchResults(batches, query = "", options = {}) {
         merged.push(target)
       }
       if (!target.sources.includes(item.source)) target.sources.push(item.source)
+      if (
+        !target.metadataSources.some(
+          (entry) => entry.source === item.source && entry.id === item.sourceId,
+        )
+      )
+        target.metadataSources.push({
+          source: item.source,
+          id: String(item.sourceId ?? ""),
+          year: String(item.year ?? ""),
+          url: String(item.url ?? ""),
+        })
       if (!target.sourceWeights.some((entry) => entry.source === item.source))
         target.sourceWeights.push({
           source: item.source,

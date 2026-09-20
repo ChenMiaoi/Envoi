@@ -6,6 +6,34 @@ import { mkdtemp, rm } from "node:fs/promises"
 import path from "node:path"
 import { tmpdir } from "node:os"
 import { mergeSearchResults, applySearchFilters } from "../src/lib/paperSearch.mjs"
+
+test("conflicting source years survive deduplication without DOI year guesses", () => {
+  const [result] = mergeSearchResults([
+    [
+      {
+        title: "Cache-oblivious algorithms",
+        doi: "10.1109/SFFCS.1999.814600",
+        year: "2003",
+        source: "openalex",
+        sourceId: "oa",
+      },
+    ],
+    [
+      {
+        title: "Cache-oblivious algorithms",
+        doi: "10.1109/SFFCS.1999.814600",
+        year: "1999",
+        source: "crossref",
+        sourceId: "cr",
+      },
+    ],
+  ])
+  assert.deepEqual(
+    result.metadataSources.map((entry) => entry.year),
+    ["2003", "1999"],
+  )
+  assert.equal(result.year, "2003")
+})
 const json = (data, status = 200) =>
   new Response(JSON.stringify(data), { status, headers: { "content-type": "application/json" } })
 const failing = (status) => async () => new Response(null, { status })

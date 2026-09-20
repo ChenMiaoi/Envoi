@@ -126,7 +126,12 @@ export function PaperSearchPanel({
         tags: paper.versions.includes("预印本") ? ["预印本"] : [],
         collection: "",
         status: "待读",
-        notes: "",
+        notes:
+          paper.metadataSources
+            ?.map(
+              (entry) => `${sourceName(entry.source)} · ${entry.year || "年份未知"}\n${entry.url}`,
+            )
+            .join("\n\n") ?? "",
         created: Date.now(),
       }
       record.citationKey = citationKeyFor(record as never)
@@ -349,6 +354,12 @@ export function PaperSearchPanel({
                 </p>
                 <p className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-muted-foreground">
                   <span className="font-medium text-foreground/80">{paper.year || "年份未知"}</span>
+                  {new Set(paper.metadataSources?.map((entry) => entry.year).filter(Boolean)).size >
+                    1 && (
+                    <span role="status" className="text-warning">
+                      年份存在来源差异，请核对原文
+                    </span>
+                  )}
                   {paper.venue && <span>· {paper.venue}</span>}
                   {paper.publisher && <span>· {paper.publisher}</span>}
                   {paper.versions.map((version) => (
@@ -388,6 +399,15 @@ export function PaperSearchPanel({
                 <footer className="mt-3 flex flex-wrap items-center gap-2 border-t border-border/40 pt-2.5">
                   <span className="text-[10px] text-muted-foreground/70">
                     来源：{paper.sources.map(sourceName).join(" · ")}
+                    {!!paper.metadataSources?.length && (
+                      <span className="block">
+                        {paper.metadataSources
+                          .map(
+                            (entry) => `${sourceName(entry.source)}: ${entry.year || "年份未知"}`,
+                          )
+                          .join(" · ")}
+                      </span>
+                    )}
                   </span>
                   <span className="ml-auto flex gap-1.5">
                     {paper.url && (

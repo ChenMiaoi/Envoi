@@ -12,6 +12,7 @@ export interface PaperSearchResult {
   /** true 确认开放；false 确认非开放；null 未知（不能展示为“无开放全文”） */
   openAccess: boolean | null
   sources: string[]
+  metadataSources?: { source: string; id: string; year: string; url: string }[]
   sourceWeights: { source: string; weight: number }[]
   citations: { source: string; count: number }[]
   versions: string[]
