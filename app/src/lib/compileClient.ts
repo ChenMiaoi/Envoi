@@ -1,17 +1,11 @@
 import { translate } from "@/i18n/runtime"
 import { envoi, ipcError } from "@/lib/desktop"
 import type { PaperProject } from "@/project/model"
+import { paperDependencies } from "./paperDependencies"
 export function projectSignature(project: PaperProject) {
   return JSON.stringify([
     project.rootId,
-    project.files
-      .filter(
-        (file) =>
-          !file.path
-            .split("/")
-            .some((part) => part.startsWith(".") || ["build", "output"].includes(part)) &&
-          /\.(tex|bib|sty|cls|bst|png|jpe?g|pdf|eps|csv|txt|dat|otf|ttf)$/i.test(file.path),
-      )
+    paperDependencies(project)
       .sort((a, b) => a.path.localeCompare(b.path))
       .map((file) => [file.path, file.text ?? file.version ?? file.url ?? 0]),
   ])

@@ -16,6 +16,7 @@ export function parseBibliography(text: string) {
         .replace(/\s+/g, " ")
         .trim()
     return {
+      inline: false,
       key: entry.key,
       title: plain(entry.fields.title) || translate("bib.noTitle"),
       author:
@@ -42,4 +43,28 @@ export function bibliographyNames(source: string) {
   ].flatMap((match) =>
     match[1].split(",").map((name) => name.trim().replace(/\.bib$/i, "") + ".bib"),
   )
+}
+
+/** Inline references are valid LaTeX bibliography entries, without structured BibTeX fields. */
+export function inlineBibliography(source: string): ReturnType<typeof parseBibliography> {
+  const masked = maskLatex(source)
+  return [
+    ...masked.matchAll(/\\begin\{thebibliography\}[\s\S]*?\\end\{thebibliography\}/g),
+  ].flatMap((environment) => {
+    const items = [...environment[0].matchAll(/\\bibitem(?:\s*\[[^\]]*\])?\s*\{([^}]+)\}/g)]
+    return items.map((item, index) => {
+      const start = environment.index + item.index
+      const end =
+        environment.index + (items[index + 1]?.index ?? environment[0].lastIndexOf("\\end"))
+      const raw = source.slice(start, end).trim()
+      const title = maskLatex(source.slice(start + item[0].length, end))
+        .replace(/\\(?:newblock|newline|par)\b/g, " ")
+        .replace(/\\href\s*\{[^}]*\}\s*\{([^}]*)\}/g, "$1")
+        .replace(/\\(?:emph|textit|textbf|url)\s*\{([^}]*)\}/g, "$1")
+        .replace(/[{}]/g, "")
+        .replace(/\s+/g, " ")
+        .trim()
+      return { inline: true, key: item[1].trim(), title, author: "", year: "", venue: "", raw }
+    })
+  })
 }

@@ -18,13 +18,27 @@ export function findAssetUses(files: SourceFile[]): AssetUse[] {
     })),
   )
 }
-export function assetMatches(path: string, use: AssetUse) {
+export function assetMatches(path: string, use: AssetUse, available?: string[]) {
+  if (available) {
+    const names = /\.[^/.]+$/.test(use.target)
+      ? [use.target]
+      : [
+          use.target,
+          ...[".pdf", ".png", ".jpg", ".jpeg", ".eps"].map((extension) => use.target + extension),
+        ]
+    for (const directory of ["", use.path.replace(/[^/]+$/, "")]) {
+      for (const name of names) {
+        const candidate = normalizePath(directory + name)
+        if (available.includes(candidate)) return normalizePath(path) === candidate
+      }
+    }
+    return false
+  }
   const removeExtension = (value: string) => value.replace(/\.(png|jpe?g|pdf|gif|webp|csv)$/i, "")
-  const target = removeExtension(normalizePath(use.target))
-  const asset = removeExtension(normalizePath(path))
-  return (
-    (!target.includes("/") && asset.endsWith("/" + target)) ||
-    asset === target ||
-    asset === removeExtension(normalizePath(use.path.replace(/[^/]+$/, "") + use.target))
-  )
+  const explicit = /\.[^/.]+$/.test(use.target)
+  const comparable = (value: string) =>
+    explicit ? normalizePath(value) : removeExtension(normalizePath(value))
+  const target = comparable(use.target)
+  const asset = comparable(path)
+  return asset === target || asset === comparable(use.path.replace(/[^/]+$/, "") + use.target)
 }

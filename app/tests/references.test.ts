@@ -1,9 +1,77 @@
 import assert from "node:assert/strict"
 import { test } from "node:test"
-import { parseBibliography } from "../src/lib/bibliography"
+import { parseBibliography, inlineBibliography } from "../src/lib/bibliography"
 import { findCitations, replaceSelection } from "../src/lib/citations"
 import { collectPaper } from "../src/lib/paperSources"
 import { findAssetUses, assetMatches } from "../src/lib/assets"
+import { paperDependencies } from "../src/lib/paperDependencies"
+import { mergeDiskProject } from "../src/lib/projectFiles"
+
+test("adding the first paper to a code project activates its dependency graph", () => {
+  const code = { id: "p", name: "p", rootPath: "/p", rootId: "", files: [], directories: [] }
+  const disk = {
+    ...code,
+    rootId: "main.tex",
+    files: [
+      {
+        id: "main.tex",
+        path: "main.tex",
+        kind: "latex" as const,
+        text: "\\section{Idea}",
+        saved: "\\section{Idea}",
+      },
+    ],
+  }
+  assert.equal(mergeDiskProject(code, disk).rootId, "main.tex")
+})
+
+test("inline bibliography supports labels and ignores commented entries", () => {
+  const entries = inlineBibliography(String.raw`\begin{thebibliography}{9}
+\bibitem[Frigo et al.]{frigo} Frigo. \emph{Cache-oblivious algorithms}. 1999.
+% \bibitem{fake} ignored
+\bibitem{other} Another reference.
+\end{thebibliography}`)
+  assert.deepEqual(
+    entries.map((entry) => entry.key),
+    ["frigo", "other"],
+  )
+  assert.match(entries[0].title, /Cache-oblivious algorithms/)
+  assert(!entries[0].title.includes("ignored"))
+})
+test("explicit asset extensions distinguish same-stem files and directories", () => {
+  const use = findAssetUses([
+    { id: "main", path: "main.tex", text: String.raw`\includegraphics{overview.pdf}` },
+  ])[0]
+  assert(assetMatches("overview.pdf", use))
+  assert(!assetMatches("overview.png", use))
+  assert(!assetMatches("other/overview.pdf", use))
+})
+test("paper dependency graph excludes unrelated experiment output and follows sources and assets", () => {
+  const files = [
+    ["main.tex", String.raw`\input{method}\includegraphics{overview.pdf}\bibliography{refs}`],
+    ["method.tex", String.raw`\input{main}\pgfplotstableread{results.csv}`],
+    ["refs.bib", ""],
+    ["overview.pdf", ""],
+    ["overview.png", ""],
+    ["results.csv", ""],
+    ["experiment.csv", ""],
+    ["log.txt", ""],
+  ].map(([path, text]) => ({ id: path, path, text, kind: "text" as const }))
+  const dependencies = paperDependencies({
+    id: "p",
+    name: "p",
+    rootId: "main.tex",
+    files,
+    directories: [],
+  })
+  assert.deepEqual(dependencies.map((file) => file.path).sort(), [
+    "main.tex",
+    "method.tex",
+    "overview.pdf",
+    "refs.bib",
+    "results.csv",
+  ])
+})
 
 test("Bib nested braces, string macros, author lists, malformed and duplicate keys", () => {
   const entries = parseBibliography(

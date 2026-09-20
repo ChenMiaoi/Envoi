@@ -371,6 +371,9 @@ export function mergeDiskProject(current: PaperProject, disk: PaperProject): Pap
   })
   files.push(...drafts.values())
   files.sort((a, b) => a.path.localeCompare(b.path))
+  const rootId = files.some((file) => file.id === current.rootId && file.kind === "latex")
+    ? current.rootId
+    : disk.rootId
   const same =
     files.length === current.files.length &&
     files.every((file, index) => {
@@ -385,9 +388,10 @@ export function mergeDiskProject(current: PaperProject, disk: PaperProject): Pap
     })
   if (
     same &&
+    rootId === current.rootId &&
     JSON.stringify(disk.directories) === JSON.stringify(current.directories) &&
     JSON.stringify(disk.settings) === JSON.stringify(current.settings)
   )
     return current
-  return { ...current, files, directories: disk.directories, settings: disk.settings }
+  return { ...current, rootId, files, directories: disk.directories, settings: disk.settings }
 }

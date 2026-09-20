@@ -9,7 +9,7 @@ import { Notification } from "@/components/Notification"
 import { useT } from "@/i18n/useT"
 import { useMemo, useRef, useState } from "react"
 import { useProject } from "@/project/context"
-import { bibliographyNames, parseBibliography } from "@/lib/bibliography"
+import { bibliographyNames, parseBibliography, inlineBibliography } from "@/lib/bibliography"
 import { normalizePath, type collectPaper, type SourceLocation } from "@/lib/paperSources"
 import type { LatexEditorHandle } from "./LatexEditor"
 
@@ -57,7 +57,8 @@ export function ReferencesPanel({
       const declarations = paper.files.flatMap((file) =>
         bibliographyNames(file.text).map((name) => ({ name, from: file.path })),
       )
-      if (!declarations.length) throw new Error(t("refs.noBibDeclared"))
+      const inline = paper.files.flatMap((file) => inlineBibliography(file.text))
+      if (!declarations.length && !inline.length) throw new Error(t("refs.noBibDeclared"))
       const resolved = declarations.map(({ name, from }) => {
         const candidates = [
           normalizePath(from.replace(/[^/]+$/, "") + name),
@@ -72,9 +73,22 @@ export function ReferencesPanel({
         return match
       })
       const unique = [...new Map(resolved.map((file) => [file.id, file])).values()]
+      const entries = [...parseBibliography(unique.map((file) => file.text).join("\n")), ...inline]
+      const keys = new Set<string>()
+      for (const entry of entries) {
+        if (keys.has(entry.key)) throw new Error(t("bib.duplicateKey", { key: entry.key }))
+        keys.add(entry.key)
+      }
       return {
-        entries: parseBibliography(unique.map((file) => file.text).join("\n")),
-        label: t("refs.projectFilesLabel", { files: unique.map((file) => file.path).join("、") }),
+        entries,
+        label: t("refs.projectFilesLabel", {
+          files: [
+            ...unique.map((file) => file.path),
+            ...paper.files
+              .filter((file) => inlineBibliography(file.text).length)
+              .map((file) => file.path),
+          ].join("、"),
+        }),
         error: "",
       }
     } catch (error) {
@@ -236,10 +250,12 @@ export function ReferencesPanel({
                     onClick={() => setDetail(detail === entry.key ? null : entry.key)}
                     aria-expanded={detail === entry.key}
                   >
-                    <div className="text-[11.5px] text-foreground">{entry.title}</div>
-                    <div className="mt-1 break-words text-muted-foreground">
-                      {entry.author} {entry.year || t("refs.missingYear")}
-                    </div>
+                    <div className="break-words text-[11.5px] text-foreground">{entry.title}</div>
+                    {!entry.inline && (
+                      <div className="mt-1 break-words text-muted-foreground">
+                        {entry.author} {entry.year || t("refs.missingYear")}
+                      </div>
+                    )}
                     <div className="mt-1 break-all font-editor text-primary">{entry.key}</div>
                   </button>
                   {detail === entry.key && (

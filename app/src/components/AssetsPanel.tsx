@@ -43,7 +43,14 @@ export function AssetsPanel({
   const next = useRef<Record<string, number>>({})
   useEffect(() => () => urls.current.forEach((url) => URL.revokeObjectURL(url)), [])
   const uses = useMemo(() => findAssetUses(paper.files), [paper])
-  const positions = (asset: Asset) => uses.filter((use) => assetMatches(asset.path, use))
+  const positions = (asset: Asset) =>
+    uses.filter((use) =>
+      assetMatches(
+        asset.path,
+        use,
+        assets.map((candidate) => candidate.path),
+      ),
+    )
   const open = (asset: Asset) => {
     const found = positions(asset)
     if (found.length) {
