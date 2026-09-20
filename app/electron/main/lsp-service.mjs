@@ -10,6 +10,7 @@ import { lspServersByLanguage, toolCatalog } from "../../server/tool-registry.mj
 import { pluginForLanguage, pluginLanguageForPath } from "../../server/plugin-registry.mjs"
 import { PluginHost } from "../../server/plugin-host.mjs"
 import { createLocalWorkspaceEnvironment } from "./workspace-environment.mjs"
+import { leanProjectRoot, leanServerSpec } from "./lean-project.mjs"
 import { installedServer } from "./lsp-installer.mjs"
 
 // 服务器回退链由 tool-registry.mjs 的目录派生：kind 为 lsp 的条目按目录顺序排优先级。
@@ -122,14 +123,16 @@ export class LspService {
     this.plugins = new PluginHost()
     this.publish = publish
     this.publishStatus = publishStatus
-    this.resolve = (root, language, preferredServer, preferredPath) =>
-      resolve(
+    this.resolve = async (root, language, preferredServer, preferredPath, file) => {
+      const spec = await resolve(
         root,
         language,
         preferredServer,
         preferredPath,
         typeof managedDirectory === "function" ? managedDirectory() : managedDirectory,
       )
+      return spec && language === "lean" ? leanServerSpec(spec, root, file) : spec
+    }
   }
   enabled(root, language) {
     const id = pluginForLanguage(language)?.id
@@ -154,8 +157,9 @@ export class LspService {
       if (id) void this.plugins.deactivate(id, key)
     }
   }
-  key(owner, root, language) {
-    return `${owner}\0${root}\0${language}`
+  key(owner, root, language, file) {
+    const project = language === "lean" ? `\0${leanProjectRoot(root, file)}` : ""
+    return `${owner}\0${root}\0${language}${project}`
   }
   async open(owner, root, file, text, token, preferredServer, preferredPath) {
     const language = lspLanguage(file)
@@ -174,11 +178,11 @@ export class LspService {
     const request = { owner, root, file, token, language, cancelled: false }
     this.opening.add(request)
     try {
-      const spec = await this.resolve(root, language, preferredServer, preferredPath)
+      const spec = await this.resolve(root, language, preferredServer, preferredPath, file)
       if (request.cancelled)
         return { available: false, error: "Language server activation cancelled" }
       if (!spec) return { available: false, error: `No ${language} language server found` }
-      const key = this.key(owner, root, language)
+      const key = this.key(owner, root, language, file)
       const pluginId = pluginForLanguage(language)?.id
       let session = this.sessions.get(key)
       if (session && (session.spec.name !== spec.name || session.spec.command !== spec.command)) {
@@ -269,8 +273,15 @@ export class LspService {
     }
   }
 
+  documentSession(owner, root, file) {
+    // Project markers may change while documents are open; retain their original session.
+    const prefix = `${owner}\0${root}\0`
+    return [...this.sessions].find(
+      ([key, session]) => key.startsWith(prefix) && session.docs.has(file),
+    )
+  }
   change(owner, root, file, text) {
-    const session = this.sessions.get(this.key(owner, root, lspLanguage(file)))
+    const session = this.documentSession(owner, root, file)?.[1]
     const doc = session?.docs.get(file)
     if (!doc || typeof text !== "string" || Buffer.byteLength(text) > 5_000_000) return
     doc.text = text
@@ -285,7 +296,7 @@ export class LspService {
       !["textDocument/completion", "textDocument/hover", "textDocument/definition"].includes(method)
     )
       return null
-    const session = this.sessions.get(this.key(owner, root, lspLanguage(file)))
+    const session = this.documentSession(owner, root, file)?.[1]
     const doc = session?.docs.get(file)
     if (!doc || typeof text !== "string" || Buffer.byteLength(text) > 5_000_000) return null
     // Editor updates and feature requests travel over separate IPC calls. A request can
@@ -309,8 +320,7 @@ export class LspService {
         pending.token === token
       )
         pending.cancelled = true
-    const key = this.key(owner, root, lspLanguage(file))
-    const session = this.sessions.get(key)
+    const [key, session] = this.documentSession(owner, root, file) ?? []
     const doc = session?.docs.get(file)
     if (!doc || doc.token !== token) return
     session.notify("textDocument/didClose", { textDocument: { uri: doc.uri } })
@@ -351,7 +361,7 @@ class Session {
   async start() {
     const venv = this.language === "python" ? pythonEnvironment(this.root) : undefined
     this.process = this.environment.process.spawn(this.spec.command, this.spec.args, {
-      cwd: this.root,
+      cwd: this.spec.cwd ?? this.root,
       windowsHide: true,
       stdio: ["pipe", "pipe", "ignore"],
       env: {
@@ -374,7 +384,7 @@ class Session {
     this.process.on("exit", () => this.fail(Error(`${this.spec.name} stopped`)))
     await this.request("initialize", {
       processId: process.pid,
-      rootUri: pathToFileURL(this.root).href,
+      rootUri: pathToFileURL(this.spec.cwd ?? this.root).href,
       capabilities: {
         textDocument: {
           synchronization: { dynamicRegistration: false },
@@ -385,7 +395,9 @@ class Session {
           publishDiagnostics: {},
         },
       },
-      workspaceFolders: [{ uri: pathToFileURL(this.root).href, name: path.basename(this.root) }],
+      workspaceFolders: [
+        { uri: pathToFileURL(this.spec.cwd ?? this.root).href, name: path.basename(this.root) },
+      ],
     })
     this.notify("initialized", {})
   }
@@ -449,7 +461,9 @@ class Session {
       else if (value.method === "workspace/workspaceFolders")
         this.send({
           id: value.id,
-          result: [{ uri: pathToFileURL(this.root).href, name: path.basename(this.root) }],
+          result: [
+            { uri: pathToFileURL(this.spec.cwd ?? this.root).href, name: path.basename(this.root) },
+          ],
         })
       else if (
         [

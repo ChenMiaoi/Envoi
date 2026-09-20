@@ -1,3 +1,4 @@
+import { leanProjectRoot } from "./lean-project.mjs"
 import { runToolProcess } from "./tool-process.mjs"
 import { cp, lstat, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
@@ -157,7 +158,10 @@ export async function runLanguageTool(root, file, text, kind, selectedPath, { si
   let temporary
   if (kind === "format") {
     if (tool.id === "clangFormat") args = [`--assume-filename=${absolute}`]
-    else if (tool.id === "ruffFormat") args = ["format", "--stdin-filename", absolute, "-"]
+    else if (tool.id === "leanFmt") {
+      args = ["format", "-"]
+      cwd = leanProjectRoot(root, file)
+    } else if (tool.id === "ruffFormat") args = ["format", "--stdin-filename", absolute, "-"]
     else {
       let edition = "2021"
       const cargo = await nearestProjectFile(root, absolute, "Cargo.toml")

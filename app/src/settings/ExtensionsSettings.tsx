@@ -24,6 +24,7 @@ import { useExtensionTools } from "./useExtensionTools"
 const appearance: Record<string, { mark: string; color: string }> = {
   cpp: { mark: "C++", color: "bg-sky-500/10 text-sky-400 ring-sky-400/20" },
   python: { mark: "Py", color: "bg-amber-500/10 text-amber-400 ring-amber-400/20" },
+  lean: { mark: "∀", color: "bg-violet-500/10 text-violet-400 ring-violet-400/20" },
   rust: { mark: "Rs", color: "bg-orange-500/10 text-orange-400 ring-orange-400/20" },
 }
 
@@ -212,7 +213,8 @@ function LocalExtensionsSettings({ scope }: { scope: "global" | "project" }) {
               : pathsOf(tool)[0],
           }))
         const formatReady = formatChoices.some((choice) => !!choice.selected)
-        const lintReady = lintChoices.some((choice) => !!choice.selected)
+        const lintReady =
+          group === "lean" ? lspReady : lintChoices.some((choice) => !!choice.selected)
         const capabilities = [lspReady, formatReady, lintReady]
         const partial = capabilities.some(Boolean) && !capabilities.every(Boolean)
         const open = !!expanded[id]
@@ -441,6 +443,9 @@ function LocalExtensionsSettings({ scope }: { scope: "global" | "project" }) {
               hidden={!open}
               className="space-y-4 border-t border-border/60 bg-background/30 px-4 py-4"
             >
+              {group === "lean" && (
+                <p className="text-xs text-muted-foreground">{t("extensions.lean.hint")}</p>
+              )}
               <section className="space-y-2">
                 <SectionTitle
                   icon={Server}

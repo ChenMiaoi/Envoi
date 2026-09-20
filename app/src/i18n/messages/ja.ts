@@ -184,6 +184,11 @@ const ja: Messages = {
   "extensions.cpp.description": "C/C++ の補完、診断、移動",
   "extensions.python.name": "Python",
   "extensions.python.description": "Python の補完、診断、移動",
+  "extensions.lean.name": "Lean 4",
+  "extensions.lean.description": "Lean 4 の補完、証明の診断、移動",
+  "extensions.lean.hint":
+    "Elan と Lake を含む Lean 4 をインストールします。Lint 警告は Lean 言語サーバーが提供します。整形にはプロジェクトの Lean バージョンに対応する lean-fmt のパスを指定してください。",
+  "settings.tools.group.lean": "Lean 4",
   "extensions.rust.name": "Rust",
   "extensions.rust.description": "Rust の補完、診断、移動",
   "extensions.localEnvironment": "ローカルツール環境",

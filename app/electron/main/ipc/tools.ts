@@ -119,7 +119,7 @@ export function registerToolsIpc(
           installMethod: plan?.method ?? null,
         })
       }
-    for (const language of ["cpp", "python", "rust"]) {
+    for (const language of ["cpp", "python", "rust", "lean"]) {
       const installed = await installedServer(managedLspDirectory(), language)
       const group = info.groups?.[language]
       const row = group?.find((entry) => entry.id === installed?.id)

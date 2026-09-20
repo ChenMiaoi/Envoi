@@ -128,3 +128,28 @@ test("Clippy diagnostics map back to the selected Rust file", async (context) =>
     await rm(root, { recursive: true, force: true })
   }
 })
+
+test("Lean formatting uses the unsaved buffer and nearest Lake project", async (context) => {
+  if (process.platform === "win32") return context.skip("Executable fixture uses POSIX scripts")
+  const root = await mkdtemp(path.join(tmpdir(), "envoi-lean-format-"))
+  try {
+    const nested = path.join(root, "nested")
+    await mkdir(nested)
+    await writeFile(path.join(nested, "lakefile.toml"), 'name = "test"')
+    await writeFile(path.join(nested, "Main.lean"), "saved buffer")
+    const formatter = path.join(root, "lean-fmt")
+    await writeFile(
+      formatter,
+      '#!/bin/sh\n[ "$1" = format ] && [ "$2" = - ] && [ -f lakefile.toml ] || exit 2\ncat\n',
+      { mode: 0o755 },
+    )
+    const draft = "def value := 1\n"
+    assert.equal(
+      (await runLanguageTool(root, "nested/Main.lean", draft, "format", formatter)).text,
+      draft,
+    )
+    assert.equal(await readFile(path.join(nested, "Main.lean"), "utf8"), "saved buffer")
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})

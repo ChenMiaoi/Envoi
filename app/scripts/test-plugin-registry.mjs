@@ -11,7 +11,7 @@ import { toolCatalog, lspServersByLanguage } from "../server/tool-registry.mjs"
 test("official language plugins preserve existing tools and fallback order", () => {
   assert.deepEqual(
     builtinPlugins.map((plugin) => plugin.id),
-    ["envoi.cpp", "envoi.python", "envoi.rust", "envoi.remote-ssh", "envoi.wsl"],
+    ["envoi.cpp", "envoi.python", "envoi.rust", "envoi.remote-ssh", "envoi.wsl", "envoi.lean"],
   )
   assert.equal(pluginForLanguage("cpp")?.id, "envoi.cpp")
   assert.equal(pluginLanguageForPath("main.cpp"), "cpp")

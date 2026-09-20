@@ -7,6 +7,8 @@ import { createGunzip } from "node:zlib"
 import * as tar from "tar"
 import { download, findBinary, json, unzip, verify } from "./installer-utils.mjs"
 
+import { elanAsset, installedLean, installLean } from "./lean-installer.mjs"
+
 const serverIds = { c: "clangd", cpp: "clangd", python: "pyright", rust: "rustAnalyzer" }
 const binaries = { clangd: "clangd", rustAnalyzer: "rust-analyzer", pyright: "langserver.index.js" }
 const installs = new Map()
@@ -76,6 +78,7 @@ async function release(id) {
 
 // 是否有针对当前平台的官方可验证安装来源（Pyright 基于 Node，全平台可用）。
 export function lspInstallable(id, platform = process.platform, arch = process.arch) {
+  if (id === "lean") return !!elanAsset(platform, arch)
   if (id === "pyright") return true
   return (id === "clangd" || id === "rustAnalyzer") && !!installAsset(id, platform, arch)
 }
@@ -103,6 +106,8 @@ async function extract(archive, directory, id, format) {
 }
 
 export async function installedServer(directory, language, preferredServer) {
+  if (language === "lean" && (!preferredServer || preferredServer === "lean"))
+    return installedLean(directory)
   const id = serverIds[language]
   if (!id || (preferredServer && preferredServer !== id)) return null
   try {
@@ -126,6 +131,7 @@ export async function installedServer(directory, language, preferredServer) {
 }
 
 export function installLanguageServer(directory, language) {
+  if (language === "lean") return installLean(directory)
   const id = serverIds[language]
   if (!id) return Promise.reject(Error("Unsupported language server"))
   if (installs.has(id)) return installs.get(id)

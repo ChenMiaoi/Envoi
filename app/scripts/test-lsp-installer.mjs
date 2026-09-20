@@ -97,3 +97,83 @@ test("Pyright installation requests npm metadata as JSON and verifies its archiv
     await rm(directory, { recursive: true, force: true })
   }
 })
+
+test("Lean selects Elan assets and isolates nested Lake projects", async () => {
+  const { elanAsset, installedLean } = await import("../electron/main/lean-installer.mjs")
+  const { leanProjectRoot, leanServerSpec } = await import("../electron/main/lean-project.mjs")
+  assert.equal(elanAsset("win32", "arm64"), null)
+  assert.equal(elanAsset("linux", "arm64"), "elan-aarch64-unknown-linux-gnu.tar.gz")
+  assert.equal(lspInstallable("lean", "win32", "x64"), true)
+  const root = await mkdtemp(path.join(tmpdir(), "envoi-lean-project-"))
+  try {
+    const nested = path.join(root, "nested")
+    await mkdir(path.join(nested, "src"), { recursive: true })
+    await writeFile(path.join(nested, "lean-toolchain"), "leanprover/lean4:v4.19.0")
+    await writeFile(path.join(nested, "lakefile.toml"), 'name = "demo"')
+    const command = path.join(root, process.platform === "win32" ? "lean.exe" : "lean")
+    assert.equal(leanProjectRoot(root, "nested/src/Main.lean"), nested)
+    assert.equal(leanProjectRoot(root, "Main.lean"), root)
+    assert.throws(
+      () => leanServerSpec({ command }, root, "nested/src/Main.lean"),
+      /Lake is missing/,
+    )
+    const lake = path.join(root, process.platform === "win32" ? "lake.exe" : "lake")
+    await writeFile(lake, "")
+    const spec = leanServerSpec(
+      { command, env: { ELAN_HOME: "managed" } },
+      root,
+      "nested/src/Main.lean",
+    )
+    assert.equal(spec.cwd, nested)
+    assert.equal(spec.command, lake)
+    assert.deepEqual(spec.args, ["serve", "--"])
+    assert.equal(spec.env.ELAN_HOME, "managed")
+    assert.equal(await installedLean(root), null)
+    const home = path.join(root, "lean", "elan")
+    await mkdir(path.join(home, "bin"), { recursive: true })
+    for (const name of ["lean", "lake", "elan"])
+      await writeFile(
+        path.join(home, "bin", process.platform === "win32" ? name + ".exe" : name),
+        "",
+      )
+    await writeFile(
+      path.join(home, "envoi.json"),
+      JSON.stringify({ version: "Lean (version 4.19.0, test)" }),
+    )
+    const managed = await installedServer(root, "lean")
+    assert.equal(managed.env.ELAN_HOME, home)
+    assert.deepEqual(managed.args, ["--server"])
+    assert.equal(await installedServer(root, "lean", "pyright"), null)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test("Lean installation rejects unverified downloads and permits retry", async () => {
+  const { installLean, elanAsset } = await import("../electron/main/lean-installer.mjs")
+  if (!elanAsset()) return
+  const root = await mkdtemp(path.join(tmpdir(), "envoi-elan-integrity-"))
+  const fetch = globalThis.fetch
+  try {
+    let calls = 0
+    globalThis.fetch = async () => {
+      calls++
+      return Response.json({
+        assets: [
+          {
+            name: elanAsset(),
+            browser_download_url:
+              "https://github.com/leanprover/elan/releases/download/v1/elan.zip",
+          },
+        ],
+      })
+    }
+    await assert.rejects(installLean(root), /Verified Elan archive is unavailable/)
+    await assert.rejects(installLean(root), /Verified Elan archive is unavailable/)
+    assert.equal(calls, 2)
+    assert.equal(await installedServer(root, "lean"), null)
+  } finally {
+    globalThis.fetch = fetch
+    await rm(root, { recursive: true, force: true })
+  }
+})

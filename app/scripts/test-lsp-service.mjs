@@ -247,3 +247,36 @@ test("unexpected server exit clears diagnostics and publishes token-scoped failu
     await cleanup(service, root, 1, 2, 3)
   }
 })
+
+test("Lean documents use the editor protocol and respect extension disablement", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "envoi-lean-lsp-"))
+  const fixture = fileURLToPath(new URL("./fixtures/lsp-fixture.mjs", import.meta.url))
+  const service = new LspService(
+    () => {},
+    () => ({ command: process.execPath, args: [fixture], name: "Lean fixture" }),
+  )
+  try {
+    await writeFile(path.join(root, "Main.lean"), "def value := 1")
+    assert.equal(lspLanguage("Main.lean"), "lean")
+    assert.equal(
+      (await service.open(4, root, "Main.lean", "def value := 1", "lean-editor")).available,
+      true,
+    )
+    assert.deepEqual(
+      await service.query(4, root, "Main.lean", "textDocument/completion", 3, "def value := 2"),
+      [{ label: "0:3" }],
+    )
+    assert.deepEqual(
+      await service.query(4, root, "Main.lean", "textDocument/definition", 3, "def value := 2"),
+      [{ path: "Main.lean", position: { line: 0, character: 0 } }],
+    )
+    const child = service.sessions.values().next().value.process
+    service.close(4, root, "Main.lean", "lean-editor")
+    await waitForExit(child)
+    assert.equal(service.sessions.size, 0)
+    service.configurePreferences({ pluginStates: { "envoi.lean": false } }, 1)
+    assert.equal((await service.open(4, root, "Main.lean", "", "disabled")).available, false)
+  } finally {
+    await cleanup(service, root, 4)
+  }
+})

@@ -5,7 +5,7 @@ export function isTextPath(value) {
     /\.(tex|bib|md|markdown|txt|csv|tsv|json|sty|cls|bst|log|yaml|yml|toml|ini|cfg|py|pyi|pyw|r|js|ts|jsx|tsx|css|html|xml|sh|sql|c|h|cc|cpp|cxx|c\+\+|hh|hpp|hxx|h\+\+|inl|tpp|rs|go|jl|cmake|mk|mak|meson)$/i.test(
       value,
     ) ||
-    /(^|\/)(README|LICENSE|GNUmakefile|Makefile|makefile|CMakeLists\.txt|meson\.build|meson\.options|meson_options\.txt|Cargo\.lock|uv\.lock|Dockerfile|\.gitignore|\.clangd|\.clang-format|\.python-version)$/i.test(
+    /(^|\/)(README|LICENSE|GNUmakefile|Makefile|makefile|CMakeLists\.txt|meson\.build|meson\.options|meson_options\.txt|Cargo\.lock|uv\.lock|lean-toolchain|Dockerfile|\.gitignore|\.clangd|\.clang-format|\.python-version)$/i.test(
       value,
     )
   )

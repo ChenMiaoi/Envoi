@@ -20,6 +20,7 @@ const formatters: Record<string, string> = {
   cpp: "clangFormat",
   python: "ruffFormat",
   rust: "rustfmt",
+  lean: "leanFmt",
 }
 
 export function ProjectProvider({ children }: { children: ReactNode }) {

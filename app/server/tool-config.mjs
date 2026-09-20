@@ -103,6 +103,8 @@ function subDirectories(parent, child, pattern) {
 // - Homebrew keg-only LLVM 与 Linux 版本化 LLVM（clangd/clang-format/clang-tidy 不链入 PATH）
 // - nvm 管理的 Node 全局 bin（pyright 等 npm 安装的语言服务器）
 export function extraDirectories(name) {
+  if (["lean", "lake", "elan"].includes(name))
+    return [path.join(process.env.ELAN_HOME || path.join(homedir(), ".elan"), "bin")]
   const directories = []
   if (
     ["rust-analyzer", "rustfmt", "cargo-clippy", "clippy-driver", "rustc", "cargo"].includes(name)

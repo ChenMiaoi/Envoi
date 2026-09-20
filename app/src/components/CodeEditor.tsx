@@ -35,6 +35,7 @@ import {
   publishLspStatus,
   publishToolDiagnostics,
 } from "@/lib/lspStatus"
+import { leanLanguage } from "@/lib/leanLanguage"
 import { codeHighlight } from "@/lib/codeHighlight"
 import { editorChrome } from "@/lib/editorTheme"
 import { fontCss } from "@/settings/fonts"
@@ -64,6 +65,7 @@ const lspDownloads: Record<string, { name: string; url: string }> = {
   c: { name: "clangd", url: "https://clangd.llvm.org/installation" },
   cpp: { name: "clangd", url: "https://clangd.llvm.org/installation" },
   python: { name: "Pyright", url: "https://github.com/microsoft/pyright#command-line" },
+  lean: { name: "Lean 4", url: "https://lean-lang.org/install/" },
   rust: { name: "rust-analyzer", url: "https://rust-analyzer.github.io/book/vs_code.html" },
 }
 const promptedLsp = new Set<string>()
@@ -500,7 +502,9 @@ export function CodeEditor({
         })
     }
     const language = LanguageDescription.matchFilename(languages, path)
-    if (language)
+    if (lspLanguage === "lean")
+      editor.dispatch({ effects: editorLanguage.reconfigure(leanLanguage) })
+    else if (language)
       void language
         .load()
         .then((support) => {

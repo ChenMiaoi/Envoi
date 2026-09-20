@@ -182,6 +182,11 @@ const en: Messages = {
   "extensions.cpp.description": "Completion, diagnostics and navigation for C and C++",
   "extensions.python.name": "Python",
   "extensions.python.description": "Completion, diagnostics and navigation for Python",
+  "extensions.lean.name": "Lean 4",
+  "extensions.lean.description": "Lean 4 completion, proof diagnostics and navigation",
+  "extensions.lean.hint":
+    "Install Lean 4 with Elan and Lake. Lean reports lint warnings through its language server. Optional formatting requires a toolchain-compatible lean-fmt executable.",
+  "settings.tools.group.lean": "Lean 4",
   "extensions.rust.name": "Rust",
   "extensions.rust.description": "Completion, diagnostics and navigation for Rust",
   "extensions.localEnvironment": "Local tool environment",

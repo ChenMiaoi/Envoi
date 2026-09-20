@@ -47,6 +47,7 @@ try {
   await writeFile(path.join(root, "hello.py"), "value = 1\n")
   await writeFile(path.join(root, "main.cpp"), "int main() { return 0; }\n")
   await writeFile(path.join(root, "Cargo.toml"), "[package]\nname = 'demo'\n")
+  await writeFile(path.join(root, "Main.lean"), "theorem demo : True := by trivial\n")
   await seedFixtureTrust(path.join(temp, "data"), temp)
   const managed = path.join(temp, "profile/language-servers/pyright")
   await mkdir(path.join(managed, "1.0.0"), { recursive: true })
@@ -71,7 +72,7 @@ try {
     (root) => window.dispatchEvent(new CustomEvent("envoi:open-recent", { detail: root })),
     root,
   )
-  for (const file of ["hello.py", "main.cpp", "Cargo.toml"]) {
+  for (const file of ["hello.py", "main.cpp", "Main.lean", "Cargo.toml"]) {
     await page.getByRole("button", { name: file, exact: true }).click()
     await page.getByRole("textbox", { name: "文本源码编辑器" }).waitFor()
   }
@@ -139,6 +140,11 @@ try {
   assert.equal(await page.getByRole("button", { name: "代码检查", exact: true }).count(), 0)
   await page.getByRole("link", { name: "设置", exact: true }).first().click()
   await page.getByRole("link", { name: "扩展", exact: true }).click()
+  const lean = page.getByTestId("extension-lean")
+  await lean.locator("button[aria-expanded]").click()
+  await lean.getByText("Lean 4 (Elan / Lake)", { exact: true }).waitFor()
+  await lean.getByText("lean-fmt (optional)", { exact: true }).waitFor()
+  await lean.getByText("Lint 警告由 Lean 语言服务提供", { exact: false }).waitFor()
   const python = page.getByTestId("extension-python")
   await python.locator("button[aria-expanded]").click()
   for (let index = 0; index < 2; index++) {

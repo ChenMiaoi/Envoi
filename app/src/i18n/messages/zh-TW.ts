@@ -172,6 +172,11 @@ const zhTW: Messages = {
   "extensions.cpp.description": "C 與 C++ 補全、診斷與跳轉",
   "extensions.python.name": "Python",
   "extensions.python.description": "Python 補全、診斷與跳轉",
+  "extensions.lean.name": "Lean 4",
+  "extensions.lean.description": "Lean 4 補全、證明診斷與跳轉",
+  "extensions.lean.hint":
+    "安裝 Lean 4（包含 Elan 和 Lake）。Lint 警告由 Lean 語言服務提供；可選格式化需要安裝與專案 Lean 版本匹配的 lean-fmt，並指定其路徑。",
+  "settings.tools.group.lean": "Lean 4",
   "extensions.rust.name": "Rust",
   "extensions.rust.description": "Rust 補全、診斷與跳轉",
   "extensions.localEnvironment": "本機工具環境",

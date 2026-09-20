@@ -175,6 +175,11 @@ export const zhCN = {
   "extensions.cpp.description": "C 和 C++ 补全、诊断与跳转",
   "extensions.python.name": "Python",
   "extensions.python.description": "Python 补全、诊断与跳转",
+  "extensions.lean.name": "Lean 4",
+  "extensions.lean.description": "Lean 4 补全、证明诊断与跳转",
+  "extensions.lean.hint":
+    "安装 Lean 4（包含 Elan 和 Lake）。Lint 警告由 Lean 语言服务提供；可选格式化需要安装与项目 Lean 版本匹配的 lean-fmt，并指定其路径。",
+  "settings.tools.group.lean": "Lean 4",
   "extensions.rust.name": "Rust",
   "extensions.rust.description": "Rust 补全、诊断与跳转",
   "extensions.localEnvironment": "本机工具环境",

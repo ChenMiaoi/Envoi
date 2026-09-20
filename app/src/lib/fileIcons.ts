@@ -31,6 +31,7 @@ const byExtension: Record<string, string> = {
   pyi: "python",
   pyw: "python",
   rs: "rust",
+  lean: "lean",
   cmake: "cmake",
   mk: "makefile",
   mak: "makefile",

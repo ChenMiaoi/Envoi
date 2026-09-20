@@ -1,0 +1,32 @@
+{
+  "id": "envoi.lean",
+  "version": "0.1.0",
+  "apiVersion": 1,
+  "displayNameKey": "extensions.lean.name",
+  "descriptionKey": "extensions.lean.description",
+  "activationEvents": ["onLanguage:lean"],
+  "capabilities": ["process", "files"],
+  "contributes": {
+    "languages": [{ "id": "lean", "extensions": [".lean"] }],
+    "tools": [
+      {
+        "id": "lean",
+        "binary": "lean",
+        "label": "Lean 4 (Elan / Lake)",
+        "group": "lean",
+        "kind": "lsp",
+        "languages": ["lean"],
+        "args": ["--server"],
+        "probe": "presence"
+      },
+      {
+        "id": "leanFmt",
+        "binary": "lean-fmt",
+        "label": "lean-fmt (optional)",
+        "group": "lean",
+        "kind": "format",
+        "probe": "version"
+      }
+    ]
+  }
+}
