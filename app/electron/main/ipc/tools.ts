@@ -1,3 +1,5 @@
+import { rtlProjectRequest } from "../rtl-project.mjs"
+import type { RtlRequest, RtlResult } from "../../../shared/rtl"
 import type { CompileInput } from "../../../server/compiler.mjs"
 import {
   configurePaperSearch,
@@ -125,6 +127,11 @@ export function registerToolsIpc(
       const row = group?.find((entry) => entry.id === installed?.id)
       if (row && installed) mergeInstalled(row, installed)
     }
+    for (const id of ["slangServer", "veribleLsp"]) {
+      const installed = await installedServer(managedLspDirectory(), "systemverilog", id)
+      const row = info.groups?.rtl?.find((entry) => entry.id === id)
+      if (row && installed) mergeInstalled(row, installed)
+    }
     return info
   })
   handle("envoi:python-environment", async (event, root: string, manager?: string) => {
@@ -134,12 +141,34 @@ export function registerToolsIpc(
     await requireToolContext(event)
     return createPythonEnvironment(root, manager)
   })
-  handle("envoi:install-lsp", async (event, language: string) => {
+  handle("envoi:install-lsp", async (event, language: string, server?: string) => {
     await requireToolContext(event)
-    const installed = await installLanguageServer(managedLspDirectory(), language)
+    const installed = await installLanguageServer(managedLspDirectory(), language, server)
     if (!installed) throw Error("Language server installation failed")
     return { id: installed.id, path: installed.path, version: installed.version }
   })
+  handle(
+    "envoi:rtl-project",
+    async (event, directory: string, input: RtlRequest): Promise<RtlResult> => {
+      const { request, finish } = sessions.trackOperation(event.sender.id, directory, "lint")
+      const controller = new AbortController()
+      const cancelled = () =>
+        request.cancelled ||
+        event.sender.isDestroyed() ||
+        sessions.activeRoot(event.sender.id) !== directory
+      const timer = setInterval(() => {
+        if (cancelled()) controller.abort(Error("RTL project operation cancelled"))
+      }, 100)
+      try {
+        const root = await requireBoundRoot(directory)
+        if (cancelled()) throw Error("Project is not active")
+        return await rtlProjectRequest(root, input, { signal: controller.signal })
+      } finally {
+        clearInterval(timer)
+        finish()
+      }
+    },
+  )
   handle("envoi:install-tool", async (event, id: string) => {
     await requireToolContext(event)
     return installTool(managedToolsDirectory(), id)

@@ -21,6 +21,8 @@ const formatters: Record<string, string> = {
   python: "ruffFormat",
   rust: "rustfmt",
   lean: "leanFmt",
+  verilog: "veribleFormat",
+  systemverilog: "veribleFormat",
 }
 
 export function ProjectProvider({ children }: { children: ReactNode }) {

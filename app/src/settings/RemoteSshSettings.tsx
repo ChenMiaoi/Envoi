@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import type { RemoteState } from "../../shared/remote"
 import type { ToolInfo } from "./extensionTools"
 import { remoteStatusDot, remoteStatusPill } from "@/project/remoteStatus"
+import { RtlProjectSettings } from "./RtlProjectSettings"
 import { languagePlugins } from "./pluginCatalog"
 import { pluginEnabled } from "./model"
 const visuals = {
@@ -204,6 +205,7 @@ export function RemoteExtensionTools({
           />
         </label>
       ))}
+      <RtlProjectSettings />
       <p className="text-xs text-muted-foreground">{t("remote.toolsHint")}</p>
       <button className="text-xs text-primary" onClick={load}>
         {t("settings.tools.refresh")}

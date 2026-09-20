@@ -119,7 +119,11 @@ export interface EnvoiBridge {
   ): Promise<unknown>
   lspClose(root: string, path: string, token: string): Promise<void>
   pythonEnvironment(root: string, manager?: "venv" | "uv"): Promise<{ path: string | null }>
-  installLsp(language: string): Promise<{ id: string; path: string; version: string }>
+  rtlProject(root: string, input: import("./rtl").RtlRequest): Promise<import("./rtl").RtlResult>
+  installLsp(
+    language: string,
+    server?: string,
+  ): Promise<{ id: string; path: string; version: string }>
   installTool(id: string): Promise<{ id: string; path: string; version?: string }>
   languageTool(
     root: string,

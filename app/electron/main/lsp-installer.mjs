@@ -7,6 +7,7 @@ import { createGunzip } from "node:zlib"
 import * as tar from "tar"
 import { download, findBinary, json, unzip, verify } from "./installer-utils.mjs"
 
+import { rtlInstallPlan, installedRtlTool, installRtlTool } from "./rtl-installer.mjs"
 import { elanAsset, installedLean, installLean } from "./lean-installer.mjs"
 
 const serverIds = { c: "clangd", cpp: "clangd", python: "pyright", rust: "rustAnalyzer" }
@@ -78,6 +79,7 @@ async function release(id) {
 
 // 是否有针对当前平台的官方可验证安装来源（Pyright 基于 Node，全平台可用）。
 export function lspInstallable(id, platform = process.platform, arch = process.arch) {
+  if (["slangServer", "veribleLsp"].includes(id)) return !!rtlInstallPlan(id, platform, arch)
   if (id === "lean") return !!elanAsset(platform, arch)
   if (id === "pyright") return true
   return (id === "clangd" || id === "rustAnalyzer") && !!installAsset(id, platform, arch)
@@ -106,6 +108,15 @@ async function extract(archive, directory, id, format) {
 }
 
 export async function installedServer(directory, language, preferredServer) {
+  if (["verilog", "systemverilog"].includes(language)) {
+    const ids = preferredServer ? [preferredServer] : ["slangServer", "veribleLsp"]
+    for (const id of ids) {
+      if (!["slangServer", "veribleLsp"].includes(id)) continue
+      const installed = await installedRtlTool(directory, id)
+      if (installed) return installed
+    }
+    return null
+  }
   if (language === "lean" && (!preferredServer || preferredServer === "lean"))
     return installedLean(directory)
   const id = serverIds[language]
@@ -130,7 +141,13 @@ export async function installedServer(directory, language, preferredServer) {
   }
 }
 
-export function installLanguageServer(directory, language) {
+export function installLanguageServer(directory, language, preferredServer) {
+  if (["verilog", "systemverilog"].includes(language)) {
+    const id = preferredServer ?? "slangServer"
+    if (!["slangServer", "veribleLsp"].includes(id))
+      return Promise.reject(Error("Unsupported RTL language server"))
+    return installRtlTool(directory, id)
+  }
   if (language === "lean") return installLean(directory)
   const id = serverIds[language]
   if (!id) return Promise.reject(Error("Unsupported language server"))

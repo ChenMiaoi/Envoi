@@ -217,12 +217,16 @@ export function useExtensionTools(scope: "global" | "project") {
     }
   }
 
-  async function installLspFor(language: string) {
+  async function installLspFor(language: string, server?: string) {
     setInstalling((previous) => ({ ...previous, [language]: true }))
     try {
-      const result = await envoi().installLsp(language)
+      const result = await envoi().installLsp(language, server)
       const servers = { ...preferences.lspServers, [language]: result.id }
       if (language === "cpp") servers.c = result.id
+      if (["verilog", "systemverilog"].includes(language)) {
+        servers.verilog = result.id
+        servers.systemverilog = result.id
+      }
       update({
         lspServers: servers,
         lspPaths: { ...preferences.lspPaths, [result.id]: result.path },

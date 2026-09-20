@@ -1,3 +1,4 @@
+import { RtlProjectSettings } from "./RtlProjectSettings"
 import { useProject } from "@/project/context"
 import { RemoteSshSettings, RemoteExtensionTools } from "./RemoteSshSettings"
 import type { MessageKey } from "@/i18n/runtime"
@@ -24,6 +25,7 @@ import { useExtensionTools } from "./useExtensionTools"
 const appearance: Record<string, { mark: string; color: string }> = {
   cpp: { mark: "C++", color: "bg-sky-500/10 text-sky-400 ring-sky-400/20" },
   python: { mark: "Py", color: "bg-amber-500/10 text-amber-400 ring-amber-400/20" },
+  rtl: { mark: "RTL", color: "bg-emerald-500/10 text-emerald-400 ring-emerald-400/20" },
   lean: { mark: "∀", color: "bg-violet-500/10 text-violet-400 ring-violet-400/20" },
   rust: { mark: "Rs", color: "bg-orange-500/10 text-orange-400 ring-orange-400/20" },
 }
@@ -443,6 +445,27 @@ function LocalExtensionsSettings({ scope }: { scope: "global" | "project" }) {
               hidden={!open}
               className="space-y-4 border-t border-border/60 bg-background/30 px-4 py-4"
             >
+              {group === "rtl" && (
+                <div className="space-y-2">
+                  <p className="text-xs text-muted-foreground">{t("extensions.rtl.hint")}</p>
+                  <div className="flex gap-2">
+                    {candidates
+                      .filter((tool) => tool.installable)
+                      .map((tool) => (
+                        <button
+                          key={tool.id}
+                          type="button"
+                          className="rounded-md border px-2 py-1 text-xs"
+                          disabled={!!installing.systemverilog}
+                          onClick={() => void installLspFor("systemverilog", tool.id)}
+                        >
+                          {t("extensions.installAction")} · {tool.label}
+                        </button>
+                      ))}
+                  </div>
+                </div>
+              )}
+              {group === "rtl" && <RtlProjectSettings />}
               {group === "lean" && (
                 <p className="text-xs text-muted-foreground">{t("extensions.lean.hint")}</p>
               )}

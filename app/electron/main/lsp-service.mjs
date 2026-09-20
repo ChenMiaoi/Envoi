@@ -131,6 +131,14 @@ export class LspService {
         preferredPath,
         typeof managedDirectory === "function" ? managedDirectory() : managedDirectory,
       )
+      if (
+        spec?.name === "verible-verilog-ls" &&
+        existsSync(path.join(root, ".envoi/verible.filelist"))
+      )
+        return {
+          ...spec,
+          args: [...spec.args, "--file_list_path", path.join(root, ".envoi/verible.filelist")],
+        }
       return spec && language === "lean" ? leanServerSpec(spec, root, file) : spec
     }
   }

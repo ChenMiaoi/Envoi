@@ -1,0 +1,73 @@
+{
+  "id": "envoi.rtl",
+  "version": "0.1.0",
+  "apiVersion": 1,
+  "displayNameKey": "extensions.rtl.name",
+  "descriptionKey": "extensions.rtl.description",
+  "activationEvents": ["onLanguage:verilog", "onLanguage:systemverilog"],
+  "capabilities": ["process", "files"],
+  "contributes": {
+    "languages": [
+      { "id": "verilog", "extensions": [".v", ".vh"] },
+      { "id": "systemverilog", "extensions": [".sv", ".svh"] }
+    ],
+    "tools": [
+      {
+        "id": "slangServer",
+        "binary": "slang-server",
+        "label": "slang-server",
+        "group": "rtl",
+        "kind": "lsp",
+        "languages": ["verilog", "systemverilog"],
+        "probe": "presence"
+      },
+      {
+        "id": "veribleLsp",
+        "binary": "verible-verilog-ls",
+        "label": "Verible LSP",
+        "group": "rtl",
+        "kind": "lsp",
+        "languages": ["verilog", "systemverilog"],
+        "args": ["--rules_config_search"],
+        "probe": "presence"
+      },
+      {
+        "id": "veribleFormat",
+        "binary": "verible-verilog-format",
+        "label": "Verible",
+        "group": "rtl",
+        "kind": "format",
+        "probe": "version"
+      },
+      {
+        "id": "veribleLint",
+        "binary": "verible-verilog-lint",
+        "label": "Verible",
+        "group": "rtl",
+        "kind": "lint",
+        "probe": "version"
+      },
+      {
+        "id": "verilator",
+        "binary": "verilator",
+        "label": "Verilator",
+        "group": "rtl",
+        "probe": "version"
+      },
+      {
+        "id": "vivado",
+        "binary": "vivado",
+        "label": "Vivado",
+        "group": "rtl",
+        "probe": "presence"
+      },
+      {
+        "id": "xvlog",
+        "binary": "xvlog",
+        "label": "Vivado xvlog",
+        "group": "rtl",
+        "probe": "presence"
+      }
+    ]
+  }
+}

@@ -7,6 +7,7 @@ import { RpcPeer } from "./rpc.mjs"
 import { createLocalWorkspaceEnvironment } from "../workspace-environment.mjs"
 import { watchProjectDirectory } from "../project-watch.mjs"
 import { LspService } from "../lsp-service.mjs"
+import { rtlProjectRequest } from "../rtl-project.mjs"
 import { runLanguageTool } from "../language-tools.mjs"
 import { pythonEnvironmentStatus, createPythonEnvironment } from "../python-environment.mjs"
 import { gitInitAt, gitStatusAt, gitLogAt, gitShowAt, gitRuntime } from "../../../server/git.mjs"
@@ -142,6 +143,8 @@ export function createAgent(publish) {
         return null
       }
       if (method === "lsp-query") return lsp.query(1, root, ...args)
+      if (method === "rtl-project")
+        return rtlProjectRequest(root, { ...args[0], toolPath: undefined }, { signal })
       if (method === "language-tool") {
         await restrictedPath(root, args[0])
         signal.throwIfAborted()

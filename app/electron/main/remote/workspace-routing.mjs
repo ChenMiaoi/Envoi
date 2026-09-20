@@ -168,6 +168,7 @@ export async function routeRemoteWorkspace(remote, sessions, owner, channel, arg
       "lsp-change",
       "lsp-query",
       "language-tool",
+      "rtl-project",
       "python-environment",
       "git-init",
       "git-status",
@@ -186,6 +187,7 @@ export async function routeRemoteWorkspace(remote, sessions, owner, channel, arg
       // Local executable paths must never be sent to a remote host.
       callArgs.length = 4
     }
+    if (method === "rtl-project") callArgs[0] = { ...callArgs[0], toolPath: undefined }
     if (method === "language-tool") callArgs.length = 3
     return { value: await remote.call(owner, root, method, callArgs) }
   }

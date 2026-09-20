@@ -9,6 +9,8 @@ import { download, findBinary, json, unzip, verify } from "./installer-utils.mjs
 import { detectTool, executableName, probeToolPath } from "../../server/tool-config.mjs"
 import { toolCatalog } from "../../server/tool-registry.mjs"
 
+import { rtlInstallPlan, installedRtlTool, installRtlTool } from "./rtl-installer.mjs"
+
 const executeFile = promisify(execFile)
 const installs = new Map()
 const label = "Tool"
@@ -68,6 +70,10 @@ export function toolInstallPlan(
     rustup = !!detectTool("rustup"),
   } = {},
 ) {
+  if (["veribleFormat", "veribleLint"].includes(id)) {
+    const plan = rtlInstallPlan(id, platform, arch)
+    return plan ? { ...plan, method: "rtl" } : null
+  }
   const binary = toolOf(id)?.binary
   if (!binary) return null
   if (rustupTools[binary])
@@ -98,6 +104,7 @@ export function toolInstallPlan(
 }
 
 export async function installedTool(directory, id) {
+  if (["veribleFormat", "veribleLint"].includes(id)) return installedRtlTool(directory, id)
   const binary = toolOf(id)?.binary
   if (!binary) return null
   try {
@@ -262,6 +269,7 @@ async function installArchive(directory, id, plan) {
 }
 
 export function installTool(directory, id, env) {
+  if (["veribleFormat", "veribleLint"].includes(id)) return installRtlTool(directory, id)
   const plan = toolInstallPlan(id, env)
   if (!plan) return Promise.reject(Error("No installation source is available for this tool"))
   if (installs.has(id)) return installs.get(id)

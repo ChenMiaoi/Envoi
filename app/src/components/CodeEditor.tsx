@@ -65,6 +65,8 @@ const lspDownloads: Record<string, { name: string; url: string }> = {
   c: { name: "clangd", url: "https://clangd.llvm.org/installation" },
   cpp: { name: "clangd", url: "https://clangd.llvm.org/installation" },
   python: { name: "Pyright", url: "https://github.com/microsoft/pyright#command-line" },
+  verilog: { name: "slang-server", url: "https://hudson-trading.github.io/slang-server/" },
+  systemverilog: { name: "slang-server", url: "https://hudson-trading.github.io/slang-server/" },
   lean: { name: "Lean 4", url: "https://lean-lang.org/install/" },
   rust: { name: "rust-analyzer", url: "https://rust-analyzer.github.io/book/vs_code.html" },
 }
@@ -74,10 +76,13 @@ const linters: Record<string, string> = {
   cpp: "clangTidy",
   python: "ruffLint",
   rust: "clippy",
+  verilog: "veribleLint",
+  systemverilog: "veribleLint",
 }
 const toolDownloads: Record<string, { name: string; url: string }> = {
   clangTidy: { name: "clang-tidy", url: "https://github.com/llvm/llvm-project/releases" },
   ruffLint: { name: "Ruff", url: "https://docs.astral.sh/ruff/installation/" },
+  veribleLint: { name: "Verible", url: "https://github.com/chipsalliance/verible/releases" },
   clippy: { name: "Clippy", url: "https://rust-lang.github.io/rust-clippy/" },
 }
 const promptedTools = new Set<string>()
@@ -428,6 +433,11 @@ export function CodeEditor({
           if (terminated) return
           server.current = result.server ?? "LSP"
           ready.current = result.available
+          if (result.available && result.server === "verible-verilog-ls") {
+            toolIssues.current = []
+            clearToolDiagnostics(path)
+            showIssues(editor)
+          }
           publishLspStatus(
             result.available
               ? { state: "ready", server: result.server ?? "LSP", pluginId, root }
@@ -501,7 +511,9 @@ export function CodeEditor({
           }
         })
     }
-    const language = LanguageDescription.matchFilename(languages, path)
+    const language = ["verilog", "systemverilog"].includes(lspLanguage ?? "")
+      ? languages.find((entry) => entry.name === "SystemVerilog")
+      : LanguageDescription.matchFilename(languages, path)
     if (lspLanguage === "lean")
       editor.dispatch({ effects: editorLanguage.reconfigure(leanLanguage) })
     else if (language)
@@ -574,6 +586,9 @@ export function CodeEditor({
       () => {
         queuedLint.current = async () => {
           try {
+            const providedByLsp = () =>
+              id === "veribleLint" && ready.current && server.current === "verible-verilog-ls"
+            if (providedByLsp()) return
             const result = await envoi().languageTool(
               root,
               path,
@@ -581,7 +596,12 @@ export function CodeEditor({
               "lint",
               preferences.toolPaths[id],
             )
-            if (cancelled || view.current !== editor || editor.state.doc.toString() !== source)
+            if (
+              cancelled ||
+              providedByLsp() ||
+              view.current !== editor ||
+              editor.state.doc.toString() !== source
+            )
               return
             const issues = result.diagnostics ?? []
             toolIssues.current = issues.flatMap((issue): Diagnostic[] => {

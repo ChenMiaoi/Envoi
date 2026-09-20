@@ -21,6 +21,8 @@ Remote SSH 首版实现已加入：通过系统 SSH 部署 Linux 远端服务，
 
 WSL 内置连接插件已加入：直接通过 Windows 的 `wsl.exe` 启动发行版内的工作区服务，共享远程文件、语言服务、Git、编译和终端能力，使用独立的 `wsl://` 工作区身份。使用方法见 [WSL](WSL.md)。
 
+RTL 内置语言插件已加入：Verilog/SystemVerilog 编辑支持可选择 slang-server 或 Verible LSP；Verible 提供格式化与实时风格检查，工程配置支持 Verilator 检查及 Vivado 导入、编译与展开检查。安装方式、工程文件与限制见 [RTL](RTL.md)。
+
 仍待开发：远端工具安装与路径选择、AI/研究资料库/实验工作区的远端接入、统一任务与实验结果接入、通用工具自动安装、六套主题的资源包迁移，以及语言插件更完整的配置。
 
 ## 1. 目标与决策

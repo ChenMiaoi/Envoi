@@ -25,6 +25,8 @@ function config() {
   return {}
 }
 export function executableName(name) {
+  if (process.platform === "win32" && ["vivado", "xvlog", "xelab"].includes(name))
+    return `${name}.bat`
   return process.platform === "win32" && !path.extname(name) ? `${name}.exe` : name
 }
 export function toolDirectories() {
@@ -106,6 +108,8 @@ export function extraDirectories(name) {
   if (["lean", "lake", "elan"].includes(name))
     return [path.join(process.env.ELAN_HOME || path.join(homedir(), ".elan"), "bin")]
   const directories = []
+  if (["vivado", "xvlog", "xelab"].includes(name) && process.env.XILINX_VIVADO)
+    directories.push(path.join(process.env.XILINX_VIVADO, "bin"))
   if (
     ["rust-analyzer", "rustfmt", "cargo-clippy", "clippy-driver", "rustc", "cargo"].includes(name)
   )
@@ -191,7 +195,7 @@ export function validateToolPath(id, value) {
   const expected = executableName(tool.binary ?? tool.binaries?.[0])
   const base = process.platform === "win32" ? expected.slice(0, -4) : expected
   const pattern = new RegExp(
-    `^${base.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?:-\\d+(?:\\.\\d+)*${base === "python" ? "|3(?:\\.\\d+)?" : ""})?${process.platform === "win32" ? "\\.exe" : ""}$`,
+    `^${base.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?:-\\d+(?:\\.\\d+)*${base === "python" ? "|3(?:\\.\\d+)?" : ""})?${process.platform === "win32" ? "\\" + path.extname(expected) : ""}$`,
   )
   if (!pattern.test(actual)) throw Error("Selected executable does not match the tool")
   accessSync(value, constants.X_OK)

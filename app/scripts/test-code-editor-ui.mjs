@@ -48,6 +48,8 @@ try {
   await writeFile(path.join(root, "main.cpp"), "int main() { return 0; }\n")
   await writeFile(path.join(root, "Cargo.toml"), "[package]\nname = 'demo'\n")
   await writeFile(path.join(root, "Main.lean"), "theorem demo : True := by trivial\n")
+  await writeFile(path.join(root, "top.sv"), "module top; endmodule\n")
+  await writeFile(path.join(root, "defs.vh"), "`define WIDTH 32\n")
   await seedFixtureTrust(path.join(temp, "data"), temp)
   const managed = path.join(temp, "profile/language-servers/pyright")
   await mkdir(path.join(managed, "1.0.0"), { recursive: true })
@@ -72,7 +74,7 @@ try {
     (root) => window.dispatchEvent(new CustomEvent("envoi:open-recent", { detail: root })),
     root,
   )
-  for (const file of ["hello.py", "main.cpp", "Main.lean", "Cargo.toml"]) {
+  for (const file of ["hello.py", "main.cpp", "Main.lean", "top.sv", "defs.vh", "Cargo.toml"]) {
     await page.getByRole("button", { name: file, exact: true }).click()
     await page.getByRole("textbox", { name: "文本源码编辑器" }).waitFor()
   }
@@ -145,6 +147,25 @@ try {
   await lean.getByText("Lean 4 (Elan / Lake)", { exact: true }).waitFor()
   await lean.getByText("lean-fmt (optional)", { exact: true }).waitFor()
   await lean.getByText("Lint 警告由 Lean 语言服务提供", { exact: false }).waitFor()
+  const rtl = page.getByTestId("extension-rtl")
+  await rtl.locator("button[aria-expanded]").click()
+  const rtlProject = rtl.getByTestId("rtl-project-settings")
+  await rtlProject.getByRole("textbox", { name: "顶层模块", exact: true }).fill("top")
+  await rtlProject
+    .getByRole("textbox", { name: "源文件（按编译顺序）", exact: true })
+    .fill("top.sv")
+  await rtlProject.getByRole("button", { name: "保存 RTL 配置", exact: true }).click()
+  await rtlProject.getByText("RTL 工程配置已保存", { exact: false }).waitFor()
+  const rtlConfig = JSON.parse(await readFile(path.join(root, ".envoi/rtl.json"), "utf8"))
+  assert.equal(rtlConfig.top, "top")
+  assert.deepEqual(rtlConfig.files, ["top.sv"])
+  assert.match(await readFile(path.join(root, ".envoi/rtl.f"), "utf8"), /--top top/)
+  assert.match(await rtl.textContent(), /slang-server/)
+  assert.match(await rtl.textContent(), /Verible LSP/)
+  await rtl.locator("button[aria-expanded]").click()
+  console.log(
+    "PASS: RTL sources and headers open, both servers appear and project settings persist",
+  )
   const python = page.getByTestId("extension-python")
   await python.locator("button[aria-expanded]").click()
   for (let index = 0; index < 2; index++) {

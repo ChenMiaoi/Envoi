@@ -5,13 +5,21 @@ import { killProcessTree } from "../../server/process-tree.mjs"
 export function runToolProcess(
   command,
   args,
-  { input = "", cwd, timeout = 30000, maxBuffer = 3000000, signal } = {},
+  {
+    input = "",
+    cwd,
+    timeout = 30000,
+    maxBuffer = 3000000,
+    signal,
+    windowsVerbatimArguments = false,
+  } = {},
 ) {
   signal?.throwIfAborted()
   return new Promise((resolve, reject) => {
     const child = spawn(command, args, {
       cwd,
       windowsHide: true,
+      windowsVerbatimArguments,
       detached: process.platform !== "win32",
       stdio: "pipe",
     })

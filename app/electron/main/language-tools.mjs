@@ -1,3 +1,4 @@
+import { runVeribleTool } from "./rtl-tools.mjs"
 import { leanProjectRoot } from "./lean-project.mjs"
 import { runToolProcess } from "./tool-process.mjs"
 import { cp, lstat, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises"
@@ -142,6 +143,8 @@ export async function runLanguageTool(root, file, text, kind, selectedPath, { si
     Buffer.byteLength(text) > maxSourceBytes
   )
     throw Error("Unsupported language tool request")
+  if (["verilog", "systemverilog"].includes(language))
+    return runVeribleTool(root, file, text, kind, selectedPath, { signal })
   const group = language === "c" ? "cpp" : language
   const tool = toolCatalog.find((entry) => entry.group === group && entry.kind === kind)
   if (!tool) throw Error("Language tool is unavailable")

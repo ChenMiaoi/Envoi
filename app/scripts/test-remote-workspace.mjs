@@ -147,6 +147,36 @@ test("slow environment creation and language tools have room for their execution
   ])
   for (const method of ["python-environment", "language-tool"])
     assert.equal(await remote.call(1, "wsl://fixture/", method), 180000)
+  assert.equal(await remote.call(1, "wsl://fixture/", "rtl-project"), 600000)
+})
+
+test("remote RTL requests require trust and never forward desktop executable paths", async () => {
+  const { routeRemoteWorkspace } = await import("../electron/main/remote/workspace-routing.mjs")
+  const root = "wsl://rtl/"
+  const sessions = new ProjectSessionManager(() => {})
+  sessions.bindProject(1, "rtl", root)
+  const entry = { trusted: true, target: { directory: "/project" } }
+  let delivered
+  const remote = {
+    ready: Promise.resolve(),
+    profiles: {},
+    entries: new Map([[`1:${root}`, entry]]),
+    call: async (_owner, _root, method, args) => {
+      delivered = { method, args }
+      return { ok: true }
+    },
+  }
+  await routeRemoteWorkspace(remote, sessions, 1, "envoi:rtl-project", [
+    root,
+    { action: "check", tool: "vivado", toolPath: "C:\\Vivado\\xvlog.bat" },
+  ])
+  assert.equal(delivered.method, "rtl-project")
+  assert.equal(delivered.args[0].toolPath, undefined)
+  entry.trusted = false
+  await assert.rejects(
+    routeRemoteWorkspace(remote, sessions, 1, "envoi:rtl-project", [root, { action: "load" }]),
+    /Trust this remote workspace/,
+  )
 })
 
 test("RPC timeout cancels its remote operation without closing other requests", async () => {
@@ -385,7 +415,14 @@ test("prepared remote projects allow reads but cannot run tools or replace the a
     /24 MB/,
   )
   assert.equal(sessions.activeRoot(1), "ssh://old/")
-  for (const method of ["fs-save", "terminal-open", "git-log", "library", "paper-browse"])
+  for (const method of [
+    "fs-save",
+    "terminal-open",
+    "git-log",
+    "library",
+    "paper-browse",
+    "rtl-project",
+  ])
     await assert.rejects(
       routeRemoteWorkspace(remote, sessions, 1, `envoi:${method}`, ["wsl://new/"]),
       /not active/,
