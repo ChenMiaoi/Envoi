@@ -2,6 +2,7 @@ import { tests, quickTests } from "./desktop-test-plan.mjs"
 import { selectShard } from "../../scripts/test-shard.mjs"
 import { execFileSync, spawn, spawnSync } from "node:child_process"
 import process from "node:process"
+import { createRequire } from "node:module"
 
 const visible = process.argv.includes("--visible")
 const quick = process.argv.includes("--quick")
@@ -97,6 +98,9 @@ async function worker() {
 
 // Sweep only after every worker finishes: a mid-run global sweep would kill
 // sibling tests' Electron processes when running concurrently.
+// Resolve Electron once before workers start: a cold install downloads and unpacks
+// shared binaries, which must finish before any test launches or resolves them.
+createRequire(import.meta.url)("electron")
 const baseline = electronPids()
 await Promise.all(Array.from({ length: Math.min(concurrency, selected.length) }, worker))
 cleanupNewElectronProcesses(baseline)

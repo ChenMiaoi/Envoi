@@ -1,6 +1,6 @@
 import { _electron } from "playwright"
 import { createRequire } from "node:module"
-import { mkdtemp, mkdir, writeFile, rm } from "node:fs/promises"
+import { mkdtemp, mkdir, writeFile, rm, realpath } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import assert from "node:assert/strict"
@@ -128,7 +128,7 @@ try {
   await page.getByTestId("project-notification").filter({ hasText: "5 MB" }).waitFor()
   assert.equal(
     (await page.evaluate(() => window.envoi.dataGet("session", "current"))).value.rootPath,
-    root,
+    await realpath(root),
   )
   await page.getByRole("button", { name: /项目：.*切换项目/ }).click()
   await page.getByRole("menuitem", { name: /research-project-with-a-long-name/ }).waitFor()
