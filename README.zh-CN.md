@@ -39,6 +39,7 @@ Envoi 希望把这些过程放回论文身边：**主工作区保留论文，独
 - **LaTeX 工作台**：章节大纲、参考文献与素材面板，配合 PDFLaTeX / XeLaTeX 编译及 PDF 预览。
 - **多格式阅读与编辑**：PDF、图片、Markdown、CSV / TSV 和源代码，沿用项目原本的目录结构。
 - **代码编辑**：C/C++、Python 和 Rust 的补全、定义跳转、格式化与诊断；支持的语言工具可在「设置 → 扩展」中按需安装。
+- **证明与硬件语言**：[Lean 4](docs/LEAN.md)、[Verilog/SystemVerilog](docs/RTL.md) 和 [RISC-V 汇编](docs/riscv/README.md) 扩展，提供对应语言的编辑、诊断与工具配置。
 - **项目文献库**：导入 PDF / BibTeX，整理文献与笔记，保留笔记历史和阅读位置。
 - **可选 AI 助手**：在项目与文献上下文中讨论、阅读和协助修改。使用前配置自己的模型服务；调用外部模型时，相关上下文会发送给所选服务商。
 
@@ -54,7 +55,7 @@ Envoi 希望把这些过程放回论文身边：**主工作区保留论文，独
 
 从欢迎页、项目切换菜单或「设置 → 扩展」打开 **远程 SSH 工作区**，或在 Windows 上选择已安装的 **WSL 发行版**。连接后可编辑文件、使用语言服务、查看 Git 历史、编译和打开终端。
 
-SSH 需要本机 OpenSSH 和 Linux 远端的 Node.js 22+；WSL 会自动准备经过校验的 Node.js 运行时。语言工具、Git 和编译器需安装在目标环境中。远端 AI、文献库与实验工作区管理尚未支持，安装要求与当前边界见 [SSH 指南](docs/REMOTE_SSH.md) 和 [WSL 指南](docs/WSL.md)。
+SSH 需要本机 OpenSSH 和 Linux 远端的 Node.js 22+；WSL 会自动准备经过校验的 Node.js 运行时。语言工具、Git 和编译器需安装在目标环境中。远程文献库支持搜索、导入、笔记与引用，资料保存在远程项目内，需要提供 `node:sqlite` 的 Node.js。远端 AI 与实验工作区管理尚未支持，安装要求与当前边界见 [SSH 指南](docs/REMOTE_SSH.md) 和 [WSL 指南](docs/WSL.md)。
 
 ## 熟悉的文件，自己的节奏
 

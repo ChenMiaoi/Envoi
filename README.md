@@ -39,6 +39,7 @@ Envoi keeps that work close to the paper: **the main workspace holds the paper, 
 - **LaTeX workbench**: chapter outline, references, and assets alongside PDFLaTeX / XeLaTeX compilation and PDF preview.
 - **Multi-format reading and editing**: PDF, images, Markdown, CSV / TSV, and source code in the project's existing directory structure.
 - **Code editing**: C/C++, Python, and Rust completion, definition navigation, formatting, and diagnostics, with supported language tools installable from Settings → Extensions.
+- **Proof and hardware languages**: [Lean 4](docs/LEAN.md), [Verilog/SystemVerilog](docs/RTL.md), and [RISC-V assembly](docs/riscv/README.md) extensions with language-specific editing, diagnostics, and tool configuration.
 - **Project literature library**: import PDFs / BibTeX, organize papers and notes, and preserve note history and reading positions.
 - **Optional AI assistant**: discuss, read, and revise within project and paper context. Configure your own model service first; context is sent to the selected provider when an external model is called.
 
@@ -54,7 +55,7 @@ The file tree shows Git status with colors and badges; the version and experimen
 
 Open a Linux project through **Remote SSH**, or choose an installed **WSL** distribution on Windows, from the welcome page, project switcher, or Settings → Extensions. Edit files, use language services, inspect Git history, compile, and open a terminal in the connected environment.
 
-SSH requires OpenSSH locally and Node.js 22+ on the Linux host; WSL prepares its own verified Node.js runtime. Install language tools, Git, and compilers in the target environment. Remote AI, the literature library, and experiment workspace management are not yet supported. See the [SSH guide](docs/REMOTE_SSH.md) and [WSL guide](docs/WSL.md) for setup and current limits.
+SSH requires OpenSSH locally and Node.js 22+ on the Linux host; WSL prepares its own verified Node.js runtime. Install language tools, Git, and compilers in the target environment. The remote literature library supports search, imports, notes, and citations, with data stored in the remote project; it requires Node.js with `node:sqlite`. Remote AI and experiment workspace management are not yet supported. See the [SSH guide](docs/REMOTE_SSH.md) and [WSL guide](docs/WSL.md) for setup and current limits.
 
 ## Familiar files, your own pace
 
