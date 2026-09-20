@@ -14,6 +14,8 @@ import { LanguageDescription, syntaxHighlighting, bracketMatching } from "@codem
 import { languages } from "@codemirror/language-data"
 import {
   autocompletion,
+  closeBrackets,
+  closeBracketsKeymap,
   acceptCompletion,
   completionKeymap,
   snippet,
@@ -278,10 +280,12 @@ export function CodeEditor({
             { key: "Tab", run: acceptCompletion },
             indentWithTab,
             ...completionKeymap,
+            ...closeBracketsKeymap,
             ...defaultKeymap,
             ...historyKeymap,
           ]),
           autocompletion({ override: [complete] }),
+          closeBrackets(),
           lintGutter(),
           highlightActiveLine(),
           highlightActiveLineGutter(),
