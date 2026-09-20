@@ -62,7 +62,7 @@ try {
     root,
   )
   await page.getByRole("button", { name: "main.tex", exact: true, includeHidden: true }).waitFor()
-  const dialog = page.getByRole("dialog")
+  const dialog = page.getByRole("dialog", { name: "项目安全模式", exact: true })
   await dialog.getByRole("heading", { name: "项目安全模式", exact: true }).waitFor()
   assert.equal(
     await page.getByRole("button", { name: "README.md", exact: true, includeHidden: true }).count(),
@@ -118,12 +118,15 @@ try {
   )
   assert.equal(await readFile(path.join(outside, "secret.txt"), "utf8"), "outside")
   await page.getByRole("button", { name: "限制模式", exact: true }).click()
-  await page.getByRole("dialog").getByRole("button", { name: "信任项目", exact: true }).click()
+  await page
+    .getByRole("dialog", { name: "项目安全模式", exact: true })
+    .getByRole("button", { name: "信任项目", exact: true })
+    .click()
   await page.waitForFunction(
     async (root) => (await window.envoi.projectTrust(root)).trusted === true,
     root,
   )
-  await page.getByRole("dialog").waitFor({ state: "hidden" })
+  await page.getByRole("dialog", { name: "项目安全模式", exact: true }).waitFor({ state: "hidden" })
   await page.evaluate((root) => window.envoi.grantProjectTrust(root), root)
   const trusted = await page.evaluate(async (root) => {
     let lastError
@@ -191,12 +194,12 @@ try {
   const lspPid = Number(await readFile(path.join(temp, "lsp.pid"), "utf8"))
   assert.doesNotThrow(() => process.kill(lspPid, 0))
   await page.evaluate(() => window.dispatchEvent(new Event("envoi:show-trust")))
-  await page.getByRole("dialog").waitFor()
+  await page.getByRole("dialog", { name: "项目安全模式", exact: true }).waitFor()
   await page
-    .getByRole("dialog")
+    .getByRole("dialog", { name: "项目安全模式", exact: true })
     .getByRole("button", { name: "以限制模式继续", exact: true })
     .click()
-  await page.getByRole("dialog").waitFor({ state: "hidden" })
+  await page.getByRole("dialog", { name: "项目安全模式", exact: true }).waitFor({ state: "hidden" })
   await assert.rejects(
     page.evaluate((root) => window.envoi.gitStatus(root), root),
     /限制模式/,
@@ -215,7 +218,7 @@ try {
   await stop()
   page = await launch()
   await page.getByRole("button", { name: "限制模式", exact: true }).waitFor()
-  assert.equal(await page.getByRole("dialog").count(), 0)
+  assert.equal(await page.getByRole("dialog", { name: "项目安全模式", exact: true }).count(), 0)
   await page.evaluate(() => (location.hash = "/writer"))
   await page.getByRole("textbox", { name: "LaTeX 正文编辑器", exact: true }).waitFor()
   await page.waitForFunction(
@@ -241,7 +244,10 @@ try {
     async (root) => (await window.envoi.dataGet("session", "current"))?.value?.rootPath === root,
     created,
   )
-  await page.getByRole("dialog").getByRole("button", { name: "信任项目", exact: true }).click()
+  await page
+    .getByRole("dialog", { name: "项目安全模式", exact: true })
+    .getByRole("button", { name: "信任项目", exact: true })
+    .click()
   await page.waitForFunction(async (root) => {
     try {
       return (await window.envoi.gitStatus(root)).state === "ready"

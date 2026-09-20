@@ -39,6 +39,11 @@ jobs:
           node-version: 24
           cache: npm
           cache-dependency-path: app/package-lock.json
+      - name: Prepare LLVM with RISC-V support
+        if: runner.os == 'macOS'
+        run: |
+          brew list llvm >/dev/null 2>&1 || brew install llvm
+          echo "$(brew --prefix llvm)/bin" >> "$GITHUB_PATH"
       - run: npm run ci:check
         env:
           ENVOI_DESKTOP_TEST_SHARD: ${{ matrix.shard }}
