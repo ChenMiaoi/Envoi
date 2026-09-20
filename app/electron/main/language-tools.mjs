@@ -1,3 +1,4 @@
+import { runAsmTool } from "./asm-tools.mjs"
 import { runVeribleTool } from "./rtl-tools.mjs"
 import { leanProjectRoot } from "./lean-project.mjs"
 import { runToolProcess } from "./tool-process.mjs"
@@ -143,6 +144,7 @@ export async function runLanguageTool(root, file, text, kind, selectedPath, { si
     Buffer.byteLength(text) > maxSourceBytes
   )
     throw Error("Unsupported language tool request")
+  if (language === "asm") return runAsmTool(root, file, text, kind, selectedPath, { signal })
   if (["verilog", "systemverilog"].includes(language))
     return runVeribleTool(root, file, text, kind, selectedPath, { signal })
   const group = language === "c" ? "cpp" : language

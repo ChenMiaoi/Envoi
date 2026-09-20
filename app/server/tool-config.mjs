@@ -111,7 +111,15 @@ export function extraDirectories(name) {
   if (["vivado", "xvlog", "xelab"].includes(name) && process.env.XILINX_VIVADO)
     directories.push(path.join(process.env.XILINX_VIVADO, "bin"))
   if (
-    ["rust-analyzer", "rustfmt", "cargo-clippy", "clippy-driver", "rustc", "cargo"].includes(name)
+    [
+      "asm-lsp",
+      "rust-analyzer",
+      "rustfmt",
+      "cargo-clippy",
+      "clippy-driver",
+      "rustc",
+      "cargo",
+    ].includes(name)
   )
     directories.push(...subDirectories(path.join(homedir(), ".rustup", "toolchains"), "bin"))
   if (name === "rust-analyzer")

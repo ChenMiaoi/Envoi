@@ -1,6 +1,6 @@
 import { builtinPlugins } from "./plugin-registry.mjs"
 
-export const toolGroups = ["core", "latex", "cpp", "python", "rust", "lean", "rtl", "build"]
+export const toolGroups = ["core", "latex", "cpp", "python", "rust", "lean", "rtl", "asm", "build"]
 
 // Unmigrated tools retain their existing discovery and LSP behavior.
 const compatibilityTools = [

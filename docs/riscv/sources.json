@@ -1,0 +1,68 @@
+{
+  "retrievedAt": "2026-09-20T19:59:04.235Z",
+  "release": "https://github.com/riscv/riscv-isa-manual/releases/tag/riscv-isa-release-b84f402-2026-09-17",
+  "assets": [
+    {
+      "name": "riscv-spec.pdf",
+      "bytes": 5529652,
+      "sha256": "2f50c67d4904c10edb60fab3da433d7f27265348b7c97d6ec95813f0910c11a2",
+      "url": "https://github.com/riscv/riscv-isa-manual/releases/download/riscv-isa-release-b84f402-2026-09-17/riscv-spec.pdf",
+      "version": "20260917: Intermediate Release",
+      "verification": "Matches GitHub release SHA-256 digest"
+    },
+    {
+      "name": "riscv-spec.html",
+      "bytes": 9704256,
+      "sha256": "f8d206af948978158adeeb6f634d5bba01a465c01510af9729d107bbc660a7d5",
+      "url": "https://github.com/riscv/riscv-isa-manual/releases/download/riscv-isa-release-b84f402-2026-09-17/riscv-spec.html",
+      "version": "20260917: Intermediate Release",
+      "verification": "Matches GitHub release SHA-256 digest"
+    },
+    {
+      "name": "norm-rules.json",
+      "bytes": 2354532,
+      "sha256": "942773db8b8481b47addcef91cf39738b7b6d7c8851a47b83b957b1d55f60725",
+      "url": "https://github.com/riscv/riscv-isa-manual/releases/download/riscv-isa-release-b84f402-2026-09-17/norm-rules.json",
+      "version": "20260917: Intermediate Release",
+      "verification": "Matches GitHub release SHA-256 digest"
+    },
+    {
+      "name": "riscv-unprivileged-ratified.pdf",
+      "bytes": 4580174,
+      "sha256": "06bb3c23074f72060a0ec061a80933af948cae7ceafdcd9d1fe177b05fd150bc",
+      "url": "https://docs.riscv.org/reference/isa/_attachments/riscv-unprivileged.pdf",
+      "version": "20260120: Official Release",
+      "verification": "Locally computed SHA-256; HTTPS origin and PDF title verified"
+    },
+    {
+      "name": "riscv-privileged-ratified.pdf",
+      "bytes": 1578278,
+      "sha256": "2556d93a23cf8e1a476acc5208c505423866bb11753e850e0e1851935eeb3354",
+      "url": "https://docs.riscv.org/reference/isa/_attachments/riscv-privileged.pdf",
+      "version": "20260120: Official Release",
+      "verification": "Locally computed SHA-256; HTTPS origin and PDF title verified"
+    }
+  ],
+  "repositories": [
+    {
+      "path": "vendor/riscv-isa-manual",
+      "revision": "b84f402bd6c436d984ca9ee85e2d4024293d5fe5",
+      "url": "https://github.com/riscv/riscv-isa-manual.git"
+    },
+    {
+      "path": "vendor/riscv-opcodes",
+      "revision": "5783cf3bea312a48d28e3e2c8a2fcb55603e4bed",
+      "url": "https://github.com/riscv/riscv-opcodes.git"
+    },
+    {
+      "path": "vendor/riscv-asm-manual",
+      "revision": "f187223242e08f2e88d55d3d8717aed033e03147",
+      "url": "https://github.com/riscv-non-isa/riscv-asm-manual.git"
+    },
+    {
+      "path": "vendor/riscv-elf-psabi-doc",
+      "revision": "01017c343cd6d89ed4d1d568b1c75fac79d2a689",
+      "url": "https://github.com/riscv-non-isa/riscv-elf-psabi-doc.git"
+    }
+  ]
+}

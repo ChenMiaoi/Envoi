@@ -1,5 +1,8 @@
 .git/
 node_modules/
+vendor/
+docs/riscv/riscv-spec.html
+docs/riscv/norm-rules.json
 
 # Generated application output and caches
 app/dist/

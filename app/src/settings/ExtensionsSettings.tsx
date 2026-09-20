@@ -1,3 +1,4 @@
+import { AsmProjectSettings } from "./AsmProjectSettings"
 import { RtlProjectSettings } from "./RtlProjectSettings"
 import { useProject } from "@/project/context"
 import { RemoteSshSettings, RemoteExtensionTools } from "./RemoteSshSettings"
@@ -23,6 +24,7 @@ import { languagePlugins, pluginLoadErrors } from "./pluginCatalog"
 import { useExtensionTools } from "./useExtensionTools"
 
 const appearance: Record<string, { mark: string; color: string }> = {
+  asm: { mark: "ASM", color: "bg-orange-500/10 text-orange-400 ring-orange-400/20" },
   cpp: { mark: "C++", color: "bg-sky-500/10 text-sky-400 ring-sky-400/20" },
   python: { mark: "Py", color: "bg-amber-500/10 text-amber-400 ring-amber-400/20" },
   rtl: { mark: "RTL", color: "bg-emerald-500/10 text-emerald-400 ring-emerald-400/20" },
@@ -192,7 +194,7 @@ function LocalExtensionsSettings({ scope }: { scope: "global" | "project" }) {
             : (available.find((choice) => choice.tool.id === server) ?? available[0])
           return { language: entry.id, available, selected }
         })
-        const lspReady = choices.every((choice) => !!choice.selected)
+        const lspReady = group === "asm" || choices.every((choice) => !!choice.selected)
         const someLspReady = choices.some((choice) => !!choice.selected)
         const formatChoices = groupTools
           .filter((tool) => tool.kind === "format")
@@ -214,7 +216,7 @@ function LocalExtensionsSettings({ scope }: { scope: "global" | "project" }) {
                 ) ?? verifiedTools[tool.id])
               : pathsOf(tool)[0],
           }))
-        const formatReady = formatChoices.some((choice) => !!choice.selected)
+        const formatReady = group === "asm" || formatChoices.some((choice) => !!choice.selected)
         const lintReady =
           group === "lean" ? lspReady : lintChoices.some((choice) => !!choice.selected)
         const capabilities = [lspReady, formatReady, lintReady]
@@ -466,6 +468,7 @@ function LocalExtensionsSettings({ scope }: { scope: "global" | "project" }) {
                 </div>
               )}
               {group === "rtl" && <RtlProjectSettings />}
+              {group === "asm" && <AsmProjectSettings />}
               {group === "lean" && (
                 <p className="text-xs text-muted-foreground">{t("extensions.lean.hint")}</p>
               )}

@@ -43,6 +43,7 @@ function uriKey(uri) {
 }
 const discovered = new Map()
 async function executable(root, language, preferredServer, preferredPath, managedDirectory) {
+  if (language === "asm" && !existsSync(path.join(root, ".asm-lsp.toml"))) return undefined
   if (managedDirectory) {
     const managed = await installedServer(managedDirectory, language, preferredServer)
     // 面板会把托管安装的路径写回偏好;该路径指向托管目录时仍按托管安装启动

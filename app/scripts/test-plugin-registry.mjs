@@ -19,6 +19,7 @@ test("official language plugins preserve existing tools and fallback order", () 
       "envoi.wsl",
       "envoi.lean",
       "envoi.rtl",
+      "envoi.asm",
     ],
   )
   assert.equal(pluginForLanguage("cpp")?.id, "envoi.cpp")

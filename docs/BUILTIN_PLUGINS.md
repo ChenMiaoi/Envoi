@@ -23,6 +23,8 @@ WSL 内置连接插件已加入：直接通过 Windows 的 `wsl.exe` 启动发�
 
 RTL 内置语言插件已加入：Verilog/SystemVerilog 编辑支持可选择 slang-server 或 Verible LSP；Verible 提供格式化与实时风格检查，工程配置支持 Verilator 检查及 Vivado 导入、编译与展开检查。安装方式、工程文件与限制见 [RTL](RTL.md)。
 
+ASM 内置插件已加入，以 RISC-V 为首个目标，内置官方指令/CSR 索引、高亮、补全、悬停、本文件跳转及保守格式化；Clang 提供按目标 ISA 配置的草稿汇编检查，可选 asm-lsp 提供外部语言服务。正式规范、开发快照与源码固定版本的说明见 [RISC-V 资料与 ASM 支持](riscv/README.md)。
+
 仍待开发：远端工具安装与路径选择、AI/研究资料库/实验工作区的远端接入、统一任务与实验结果接入、通用工具自动安装、六套主题的资源包迁移，以及语言插件更完整的配置。
 
 ## 1. 目标与决策

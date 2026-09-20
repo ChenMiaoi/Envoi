@@ -175,6 +175,19 @@ export const zhCN = {
   "extensions.cpp.description": "C 和 C++ 补全、诊断与跳转",
   "extensions.python.name": "Python",
   "extensions.python.description": "Python 补全、诊断与跳转",
+  "extensions.asm.name": "ASM（RISC-V）",
+  "extensions.asm.description": "RISC-V 指令、CSR、跳转与汇编检查",
+  "extensions.asm.builtin":
+    "内置 RISC-V 高亮、补全、悬停说明、本文件定义跳转及保守的指令格式化，无需安装。",
+  "extensions.asm.reference":
+    "官方索引：{instructions} 个指令名称、{csrs} 个 CSR。未批准条目单独标记；是否可用以目标 ISA 为准。",
+  "extensions.asm.hint":
+    "Clang 按下方 ISA/ABI 检查草稿；.S 会经过 C 预处理。可选 asm-lsp 需要工程配置，创建时保留已有文件。修改配置后请重新打开编辑器。",
+  "extensions.asm.isa": "目标 ISA（-march）",
+  "extensions.asm.save": "保存 ASM 配置",
+  "extensions.asm.setupLsp": "创建可选 asm-lsp 配置",
+  "extensions.asm.saved": "ASM 配置已保存，请重新打开编辑器使配置生效。",
+  "settings.tools.group.asm": "ASM",
   "extensions.rtl.name": "RTL（Verilog / SystemVerilog）",
   "extensions.rtl.description": "HDL 补全、工程诊断、格式化与风格检查",
   "extensions.rtl.hint":

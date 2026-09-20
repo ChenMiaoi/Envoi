@@ -172,6 +172,19 @@ const zhHK: Messages = {
   "extensions.cpp.description": "C 與 C++ 補全、診斷與跳轉",
   "extensions.python.name": "Python",
   "extensions.python.description": "Python 補全、診斷與跳轉",
+  "extensions.asm.name": "ASM（RISC-V）",
+  "extensions.asm.description": "RISC-V 指令、CSR、跳轉與彙編檢查",
+  "extensions.asm.builtin":
+    "內置 RISC-V 高亮、補全、懸停説明、本文件定義跳轉及保守的指令格式化，無需安裝。",
+  "extensions.asm.reference":
+    "官方索引：{instructions} 個指令名稱、{csrs} 個 CSR。未批准條目單獨標記；是否可用以目標 ISA 為準。",
+  "extensions.asm.hint":
+    "Clang 按下方 ISA/ABI 檢查草稿；.S 會經過 C 預處理。可選 asm-lsp 需要工程配置，創建時保留已有文件。修改配置後請重新打開編輯器。",
+  "extensions.asm.isa": "目標 ISA（-march）",
+  "extensions.asm.save": "保存 ASM 配置",
+  "extensions.asm.setupLsp": "創建可選 asm-lsp 配置",
+  "extensions.asm.saved": "ASM 配置已保存，請重新打開編輯器使配置生效。",
+  "settings.tools.group.asm": "ASM",
   "extensions.rtl.name": "RTL（Verilog / SystemVerilog）",
   "extensions.rtl.description": "HDL 補全、工程診斷、格式化與風格檢查",
   "extensions.rtl.hint":

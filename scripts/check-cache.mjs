@@ -30,8 +30,21 @@ export async function sourceSnapshot(root) {
     },
   )
   if (result.status !== 0) throw new Error("Cannot enumerate validation inputs with git")
+  const staged = spawnSync("git", ["ls-files", "--stage", "-z"], {
+    cwd: root,
+    encoding: "utf8",
+    maxBuffer: 32 * 1024 * 1024,
+  })
+  if (staged.status !== 0) throw new Error("Cannot enumerate Git submodules")
+  const submodules = new Map(
+    staged.stdout.split("\0").flatMap((entry) => {
+      const match = entry.match(/^160000 ([a-f0-9]+) 0\t(.+)$/s)
+      return match ? [[match[2], match[1]]] : []
+    }),
+  )
   return Promise.all(
     [...new Set(result.stdout.split("\0").filter(Boolean))].sort().map(async (file) => {
+      if (submodules.has(file)) return [file, `gitlink:${submodules.get(file)}`]
       try {
         return [file, digest(await readFile(path.join(root, file)))]
       } catch (error) {

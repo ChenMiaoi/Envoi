@@ -50,6 +50,7 @@ try {
   await writeFile(path.join(root, "Main.lean"), "theorem demo : True := by trivial\n")
   await writeFile(path.join(root, "top.sv"), "module top; endmodule\n")
   await writeFile(path.join(root, "defs.vh"), "`define WIDTH 32\n")
+  await writeFile(path.join(root, "boot.S"), ".text\nentry:\n  csrr a0,mstatus\n  mret\n")
   await seedFixtureTrust(path.join(temp, "data"), temp)
   const managed = path.join(temp, "profile/language-servers/pyright")
   await mkdir(path.join(managed, "1.0.0"), { recursive: true })
@@ -79,6 +80,24 @@ try {
     await page.getByRole("textbox", { name: "文本源码编辑器" }).waitFor()
   }
   const editor = page.getByRole("textbox", { name: "文本源码编辑器" })
+  await page.getByRole("button", { name: "boot.S", exact: true }).click()
+  await editor.fill("csrr a0, msta")
+  await editor.press("Control+End")
+  await editor.press("Control+Space")
+  await page
+    .getByRole("option", { name: /mstatus/ })
+    .first()
+    .waitFor()
+  await editor.press("Escape")
+  await editor.fill(".text\nentry:\n  csrr a0,mstatus\n  mret\n")
+  await editor.press("Control+s")
+  await page.waitForFunction(
+    async (root) => (await window.envoi.fsRead(root, "boot.S")).text.includes("    mret"),
+    root,
+  )
+  console.log(
+    "PASS: built-in RISC-V CSR completion and format-on-save work without an external LSP",
+  )
   await page.getByRole("button", { name: "hello.py", exact: true }).click()
   await page.getByRole("button", { name: "创建 Python 环境", exact: true }).click()
   const environmentPrompt = page
@@ -142,6 +161,17 @@ try {
   assert.equal(await page.getByRole("button", { name: "代码检查", exact: true }).count(), 0)
   await page.getByRole("link", { name: "设置", exact: true }).first().click()
   await page.getByRole("link", { name: "扩展", exact: true }).click()
+  const asm = page.getByTestId("extension-asm")
+  await asm.locator("button[aria-expanded]").click()
+  const asmProject = asm.getByTestId("asm-project-settings")
+  await asmProject.getByRole("textbox", { name: "目标 ISA（-march）", exact: true }).fill("rv64gcv")
+  await asmProject.getByRole("button", { name: "保存 ASM 配置", exact: true }).click()
+  await asmProject.getByText("ASM 配置已保存", { exact: false }).waitFor()
+  assert.equal(
+    JSON.parse(await readFile(path.join(root, ".envoi/asm.json"), "utf8")).march,
+    "rv64gcv",
+  )
+  await asm.locator("button[aria-expanded]").click()
   const lean = page.getByTestId("extension-lean")
   await lean.locator("button[aria-expanded]").click()
   await lean.getByText("Lean 4 (Elan / Lake)", { exact: true }).waitFor()

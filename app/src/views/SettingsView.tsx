@@ -125,7 +125,7 @@ function Rules({
   )
 }
 // 与 server/tool-registry.mjs 的分组保持一致；行数据由后端按注册表生成。
-type ToolGroupId = "core" | "latex" | "cpp" | "python" | "rust" | "lean" | "rtl" | "build"
+type ToolGroupId = "core" | "latex" | "cpp" | "python" | "rust" | "lean" | "rtl" | "asm" | "build"
 interface ToolRow {
   id: string
   binary: string
@@ -151,6 +151,7 @@ const toolGroupOrder: ToolGroupId[] = [
   "rust",
   "lean",
   "rtl",
+  "asm",
   "build",
 ]
 const toolGroupLabels: Record<ToolGroupId, MessageKey> = {
@@ -161,6 +162,7 @@ const toolGroupLabels: Record<ToolGroupId, MessageKey> = {
   rust: "settings.tools.group.rust",
   lean: "settings.tools.group.lean",
   rtl: "settings.tools.group.rtl",
+  asm: "settings.tools.group.asm",
   build: "settings.tools.group.build",
 }
 const chktexOf = (tools: Tools) => tools.groups?.latex?.find((tool) => tool.id === "chktex")

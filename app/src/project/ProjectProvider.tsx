@@ -21,6 +21,7 @@ const formatters: Record<string, string> = {
   python: "ruffFormat",
   rust: "rustfmt",
   lean: "leanFmt",
+  asm: "riscvBuiltin",
   verilog: "veribleFormat",
   systemverilog: "veribleFormat",
 }

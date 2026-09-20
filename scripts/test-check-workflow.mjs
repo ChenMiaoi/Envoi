@@ -83,6 +83,19 @@ test("only documented safe paths narrow validation; unknown inputs invalidate al
   }
 })
 
+test("source fingerprints record pinned Git submodules without reading directories", async (t) => {
+  const root = await fixture(t)
+  git(root, ["init"])
+  const first = "1".repeat(40),
+    second = "2".repeat(40)
+  git(root, ["update-index", "--add", "--cacheinfo", `160000,${first},vendor/spec`])
+  assert.deepEqual(await sourceSnapshot(root), [["vendor/spec", `gitlink:${first}`]])
+  await mkdir(path.join(root, "vendor/spec"), { recursive: true })
+  assert.deepEqual(await sourceSnapshot(root), [["vendor/spec", `gitlink:${first}`]])
+  git(root, ["update-index", "--cacheinfo", `160000,${second},vendor/spec`])
+  assert.deepEqual(await sourceSnapshot(root), [["vendor/spec", `gitlink:${second}`]])
+})
+
 test("cache requires a matching key and a recent success; reuse does not renew its age", () => {
   const entry = { key: "a", passedAt: 100 }
   assert.equal(canReuse(entry, "a", 101), true)

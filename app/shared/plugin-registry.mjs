@@ -1,3 +1,4 @@
+import asm from "../plugins/asm/manifest.json" with { type: "json" }
 import rtl from "../plugins/rtl/manifest.json" with { type: "json" }
 import cpp from "../plugins/cpp/manifest.json" with { type: "json" }
 import python from "../plugins/python/manifest.json" with { type: "json" }
@@ -102,7 +103,7 @@ export function loadPlugins(manifests) {
   return { plugins, errors }
 }
 // Fixed official list. No arbitrary directory is scanned or executed.
-const loaded = loadPlugins([cpp, python, rust, remoteSsh, wsl, lean, rtl])
+const loaded = loadPlugins([cpp, python, rust, remoteSsh, wsl, lean, rtl, asm])
 export const builtinPlugins = loaded.plugins
 export const pluginLoadErrors = loaded.errors
 

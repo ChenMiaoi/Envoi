@@ -1,0 +1,12 @@
+[submodule "vendor/riscv-isa-manual"]
+	path = vendor/riscv-isa-manual
+	url = https://github.com/riscv/riscv-isa-manual.git
+[submodule "vendor/riscv-opcodes"]
+	path = vendor/riscv-opcodes
+	url = https://github.com/riscv/riscv-opcodes.git
+[submodule "vendor/riscv-asm-manual"]
+	path = vendor/riscv-asm-manual
+	url = https://github.com/riscv-non-isa/riscv-asm-manual.git
+[submodule "vendor/riscv-elf-psabi-doc"]
+	path = vendor/riscv-elf-psabi-doc
+	url = https://github.com/riscv-non-isa/riscv-elf-psabi-doc.git

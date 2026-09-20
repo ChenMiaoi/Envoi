@@ -184,6 +184,19 @@ const ja: Messages = {
   "extensions.cpp.description": "C/C++ の補完、診断、移動",
   "extensions.python.name": "Python",
   "extensions.python.description": "Python の補完、診断、移動",
+  "extensions.asm.name": "ASM（RISC-V）",
+  "extensions.asm.description": "RISC-V 命令、CSR、定義への移動、アセンブリ検査",
+  "extensions.asm.builtin":
+    "RISC-V の強調表示、補完、ホバー、同一ファイル内の定義移動と保守的な命令整形を内蔵しています。",
+  "extensions.asm.reference":
+    "公式索引：命令名 {instructions} 件、CSR {csrs} 件。未批准項目は明示し、利用可否は対象 ISA に依存します。",
+  "extensions.asm.hint":
+    "Clang は以下の ISA/ABI で編集中の内容を検査します。.S は C プリプロセッサーを使用します。任意の asm-lsp 設定の作成では既存ファイルを保持します。変更後はエディターを開き直してください。",
+  "extensions.asm.isa": "対象 ISA（-march）",
+  "extensions.asm.save": "ASM 設定を保存",
+  "extensions.asm.setupLsp": "任意の asm-lsp 設定を作成",
+  "extensions.asm.saved": "ASM 設定を保存しました。エディターを開き直してください。",
+  "settings.tools.group.asm": "ASM",
   "extensions.rtl.name": "RTL（Verilog / SystemVerilog）",
   "extensions.rtl.description": "HDL 補完、プロジェクト診断、整形、スタイルチェック",
   "extensions.rtl.hint":

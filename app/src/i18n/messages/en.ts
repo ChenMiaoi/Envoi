@@ -182,6 +182,19 @@ const en: Messages = {
   "extensions.cpp.description": "Completion, diagnostics and navigation for C and C++",
   "extensions.python.name": "Python",
   "extensions.python.description": "Completion, diagnostics and navigation for Python",
+  "extensions.asm.name": "ASM (RISC-V)",
+  "extensions.asm.description": "RISC-V instructions, CSRs, navigation and assembly checks",
+  "extensions.asm.builtin":
+    "Built in: RISC-V highlighting, completion, hover, local definitions and conservative instruction formatting.",
+  "extensions.asm.reference":
+    "Official reference index: {instructions} instruction names and {csrs} CSRs. Unratified entries are marked; availability depends on the target ISA.",
+  "extensions.asm.hint":
+    "Clang checks drafts using the ISA and ABI below; .S also runs the C preprocessor. Optional asm-lsp requires a project configuration. Creation preserves existing files. Reopen the editor after changing configuration.",
+  "extensions.asm.isa": "Target ISA (-march)",
+  "extensions.asm.save": "Save ASM configuration",
+  "extensions.asm.setupLsp": "Create optional asm-lsp configuration",
+  "extensions.asm.saved": "ASM configuration saved. Reopen the editor to apply the changes.",
+  "settings.tools.group.asm": "ASM",
   "extensions.rtl.name": "RTL (Verilog / SystemVerilog)",
   "extensions.rtl.description": "HDL completion, project diagnostics, formatting and style checks",
   "extensions.rtl.hint":

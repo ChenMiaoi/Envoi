@@ -10,11 +10,34 @@ import { download, findBinary, json, unzip, verify } from "./installer-utils.mjs
 import { rtlInstallPlan, installedRtlTool, installRtlTool } from "./rtl-installer.mjs"
 import { elanAsset, installedLean, installLean } from "./lean-installer.mjs"
 
-const serverIds = { c: "clangd", cpp: "clangd", python: "pyright", rust: "rustAnalyzer" }
-const binaries = { clangd: "clangd", rustAnalyzer: "rust-analyzer", pyright: "langserver.index.js" }
+const serverIds = {
+  c: "clangd",
+  cpp: "clangd",
+  python: "pyright",
+  rust: "rustAnalyzer",
+  asm: "asmLsp",
+}
+const binaries = {
+  clangd: "clangd",
+  rustAnalyzer: "rust-analyzer",
+  pyright: "langserver.index.js",
+  asmLsp: "asm-lsp",
+}
 const installs = new Map()
 
 export function installAsset(id, platform = process.platform, arch = process.arch) {
+  if (id === "asmLsp") {
+    const target = {
+      linux: { x64: "x86_64-unknown-linux-gnu" },
+      darwin: { x64: "x86_64-apple-darwin", arm64: "aarch64-apple-darwin" },
+    }[platform]?.[arch]
+    return target
+      ? {
+          repository: "bergercookie/asm-lsp",
+          matches: (name) => name === `asm-lsp-${target}.tar.gz`,
+        }
+      : null
+  }
   if (id === "clangd") {
     if (
       !["darwin", "win32", "linux"].includes(platform) ||
@@ -73,7 +96,7 @@ async function release(id) {
     version: metadata.tag_name,
     url: asset.browser_download_url,
     digest: asset.digest,
-    format: asset.name.endsWith(".zip") ? "zip" : "gzip",
+    format: asset.name.endsWith(".zip") ? "zip" : asset.name.endsWith(".tar.gz") ? "tar" : "gzip",
   }
 }
 
@@ -82,7 +105,7 @@ export function lspInstallable(id, platform = process.platform, arch = process.a
   if (["slangServer", "veribleLsp"].includes(id)) return !!rtlInstallPlan(id, platform, arch)
   if (id === "lean") return !!elanAsset(platform, arch)
   if (id === "pyright") return true
-  return (id === "clangd" || id === "rustAnalyzer") && !!installAsset(id, platform, arch)
+  return ["clangd", "rustAnalyzer", "asmLsp"].includes(id) && !!installAsset(id, platform, arch)
 }
 
 async function extract(archive, directory, id, format) {
@@ -91,7 +114,7 @@ async function extract(archive, directory, id, format) {
     await tar.x({
       file: archive,
       cwd: directory,
-      strip: 1,
+      strip: id === "pyright" ? 1 : 0,
       filter: (_name, entry) => entry.type === "File" || entry.type === "Directory",
     })
   else {
@@ -129,7 +152,12 @@ export async function installedServer(directory, language, preferredServer) {
     if (!binary.startsWith(`${base}${path.sep}`) || !(await stat(binary)).isFile()) return null
     return {
       id,
-      name: { clangd: "clangd", rustAnalyzer: "rust-analyzer", pyright: "Pyright" }[id],
+      name: {
+        clangd: "clangd",
+        rustAnalyzer: "rust-analyzer",
+        pyright: "Pyright",
+        asmLsp: "asm-lsp",
+      }[id],
       path: binary,
       version: metadata.version,
       command: id === "pyright" ? process.execPath : binary,

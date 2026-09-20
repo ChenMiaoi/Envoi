@@ -1,0 +1,31 @@
+{
+  "id": "envoi.asm",
+  "version": "0.1.0",
+  "apiVersion": 1,
+  "displayNameKey": "extensions.asm.name",
+  "descriptionKey": "extensions.asm.description",
+  "activationEvents": ["onLanguage:asm"],
+  "capabilities": ["files", "process"],
+  "contributes": {
+    "languages": [{ "id": "asm", "extensions": [".s", ".asm", ".riscv"] }],
+    "tools": [
+      {
+        "id": "asmLsp",
+        "binary": "asm-lsp",
+        "label": "asm-lsp (optional)",
+        "group": "asm",
+        "kind": "lsp",
+        "languages": ["asm"],
+        "probe": "presence"
+      },
+      {
+        "id": "asmClang",
+        "binary": "clang",
+        "label": "Clang RISC-V assembler",
+        "group": "asm",
+        "kind": "lint",
+        "probe": "presence"
+      }
+    ]
+  }
+}

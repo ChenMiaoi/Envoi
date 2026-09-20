@@ -1,3 +1,4 @@
+import { AsmProjectSettings } from "./AsmProjectSettings"
 import { Network, SquareTerminal } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useT } from "@/i18n/useT"
@@ -206,6 +207,7 @@ export function RemoteExtensionTools({
         </label>
       ))}
       <RtlProjectSettings />
+      <AsmProjectSettings />
       <p className="text-xs text-muted-foreground">{t("remote.toolsHint")}</p>
       <button className="text-xs text-primary" onClick={load}>
         {t("settings.tools.refresh")}

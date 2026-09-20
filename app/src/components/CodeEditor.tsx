@@ -1,3 +1,5 @@
+import { riscvLanguage } from "@/lib/riscvLanguage"
+import { queryRiscv } from "../../shared/riscv/features.mjs"
 import { PythonEnvironment } from "./PythonEnvironment"
 import { useLayoutEffect, useRef, useState } from "react"
 import { EditorState, Compartment } from "@codemirror/state"
@@ -76,6 +78,7 @@ const linters: Record<string, string> = {
   cpp: "clangTidy",
   python: "ruffLint",
   rust: "clippy",
+  asm: "asmClang",
   verilog: "veribleLint",
   systemverilog: "veribleLint",
 }
@@ -200,14 +203,31 @@ export function CodeEditor({
     let alive = true
     let terminated = false
     const token = crypto.randomUUID()
-    const query = (method: string, at: number, text: string) =>
-      root && ready.current
-        ? envoi()
-            .lspQuery(root, path, method, at, text)
-            .catch(() => null)
-        : Promise.resolve(null)
+    const query = async (method: string, at: number, text: string) => {
+      const builtin = enabled && lspLanguage === "asm" ? queryRiscv(path, text, method, at) : null
+      const external =
+        root && ready.current
+          ? await envoi()
+              .lspQuery(root, path, method, at, text)
+              .catch(() => null)
+          : null
+      if (method === "textDocument/completion" && Array.isArray(builtin)) {
+        const received = Array.isArray(external)
+          ? external
+          : (external as { items?: unknown })?.items
+        return [
+          ...new Map(
+            [...(Array.isArray(received) ? received : []), ...builtin].map((item) => [
+              item.label,
+              item,
+            ]),
+          ).values(),
+        ]
+      }
+      return builtin ?? external
+    }
     const goToDefinition = (editor: EditorView, at: number) => {
-      if (!ready.current) return false
+      if (!ready.current && !(enabled && lspLanguage === "asm")) return false
       void query("textDocument/definition", at, editor.state.doc.toString()).then((result) => {
         const location = Array.isArray(result) ? result[0] : null
         if (location?.path && location?.position)
@@ -216,7 +236,7 @@ export function CodeEditor({
       return true
     }
     const complete = async (context: CompletionContext) => {
-      const word = context.matchBefore(/[\w]*/)
+      const word = context.matchBefore(lspLanguage === "asm" ? /[\w.$]*/ : /[\w]*/)
       if (
         !context.explicit &&
         !word?.text &&
@@ -327,7 +347,11 @@ export function CodeEditor({
           }),
           EditorView.domEventHandlers({
             mousedown(event, editor) {
-              if ((!event.ctrlKey && !event.metaKey) || !ready.current) return false
+              if (
+                (!event.ctrlKey && !event.metaKey) ||
+                (!ready.current && !(enabled && lspLanguage === "asm"))
+              )
+                return false
               const at = editor.posAtCoords({ x: event.clientX, y: event.clientY })
               if (at === null) return false
               event.preventDefault()
@@ -441,9 +465,11 @@ export function CodeEditor({
           publishLspStatus(
             result.available
               ? { state: "ready", server: result.server ?? "LSP", pluginId, root }
-              : result.error === "No language server for this file"
-                ? null
-                : { state: "unavailable", reason: "missing", pluginId, root },
+              : lspLanguage === "asm"
+                ? { state: "ready", server: "RISC-V reference", pluginId, root }
+                : result.error === "No language server for this file"
+                  ? null
+                  : { state: "unavailable", reason: "missing", pluginId, root },
           )
           if (
             !result.available &&
@@ -514,7 +540,9 @@ export function CodeEditor({
     const language = ["verilog", "systemverilog"].includes(lspLanguage ?? "")
       ? languages.find((entry) => entry.name === "SystemVerilog")
       : LanguageDescription.matchFilename(languages, path)
-    if (lspLanguage === "lean")
+    if (lspLanguage === "asm")
+      editor.dispatch({ effects: editorLanguage.reconfigure(riscvLanguage) })
+    else if (lspLanguage === "lean")
       editor.dispatch({ effects: editorLanguage.reconfigure(leanLanguage) })
     else if (language)
       void language
