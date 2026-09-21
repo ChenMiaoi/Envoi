@@ -3,6 +3,7 @@ import { mkdir, readFile, writeFile, rm } from "node:fs/promises"
 import { fileURLToPath } from "node:url"
 import path from "node:path"
 import { selectShard } from "./test-shard.mjs"
+import { checkProfile } from "./check-profile.mjs"
 import { ensureAppDeps } from "./ensure-app-deps.mjs"
 import { artifactKey, canReuse, digest, sourceSnapshot, stepKey } from "./check-cache.mjs"
 
@@ -10,11 +11,16 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
 const npm = process.platform === "win32" ? "npm.cmd" : "npm"
 const local = process.argv.includes("--local") && !process.env.CI
 const force = process.argv.includes("--force")
+const profile = checkProfile({
+  local,
+  desktopConcurrency: process.env.ENVOI_DESKTOP_TEST_CONCURRENCY,
+})
 const started = Date.now()
 const cachePath = path.join(root, "app/tmp/check-results.json")
 const env = {
   ...process.env,
   CI: "1",
+  ENVOI_DESKTOP_TEST_CONCURRENCY: profile.desktopConcurrency,
   npm_config_registry: "https://registry.npmjs.org",
   npm_config_replace_registry_host: "always",
 }
@@ -28,11 +34,7 @@ const steps = [
   ["local", "Run local integration tests", ["run", "test:local"]],
 ]
 if (["darwin", "win32"].includes(process.platform)) {
-  steps.push([
-    "desktop",
-    "Run desktop tests",
-    ["run", process.env.ENVOI_DESKTOP_TEST_FULL === "1" ? "test:desktop" : "test:desktop:quick"],
-  ])
+  steps.push(["desktop", "Run desktop tests", ["run", profile.desktopScript]])
 }
 
 try {

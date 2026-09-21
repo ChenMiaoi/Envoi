@@ -1,4 +1,5 @@
 import { tests, quickTests } from "../app/scripts/desktop-test-plan.mjs"
+import { checkProfile } from "./check-profile.mjs"
 import { selectShard } from "./test-shard.mjs"
 import assert from "node:assert/strict"
 import { test } from "node:test"
@@ -180,4 +181,25 @@ test("desktop shards preserve complete coverage without overlap in quick and ful
   for (const invalid of ["", "0/2", "3/2", "1/0", "1/3", "1.5/2", "garbage"]) {
     assert.throws(() => selectShard([1, 2], invalid), /Invalid desktop shard/)
   }
+})
+
+test("local commit checks stay quick while local and hosted CI use the same full profile", () => {
+  assert.deepEqual(checkProfile({ local: true }), {
+    desktopScript: "test:desktop:quick",
+    desktopConcurrency: "2",
+  })
+  assert.deepEqual(checkProfile({ local: false }), {
+    desktopScript: "test:desktop",
+    desktopConcurrency: "1",
+  })
+  assert.equal(checkProfile({ local: false, desktopConcurrency: "3" }).desktopConcurrency, "3")
+})
+
+test("hosted CI runs for repository changes or manual dispatch, not on a timer", async () => {
+  const workflow = await readFile(new URL("../.github/workflows/ci.yml", import.meta.url), "utf8")
+  assert.match(workflow, /^  push:/m)
+  assert.match(workflow, /^  pull_request:/m)
+  assert.match(workflow, /^  workflow_dispatch:/m)
+  assert.doesNotMatch(workflow, /^  schedule:/m)
+  assert.doesNotMatch(workflow, /\bcron:/)
 })

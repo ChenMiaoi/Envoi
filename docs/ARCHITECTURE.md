@@ -45,6 +45,6 @@ To add an operation, update its contract, domain handler and transport adapter t
 - `npm run lint`: lint plus dependency/contract checks. ESLint also checks the extracted AI, HTTP and shared JavaScript modules.
 - `npm run test:local`: includes lifecycle, malformed-request and shared-file-rule regression tests.
 - `npm run test:ai`: exercises native SDK streaming, authentication, isolation, cancellation and data migration, including the explicit HTTP test adapters.
-- `ENVOI_DESKTOP_TEST_FULL=1 npm run ci:check`: runs the full validation pipeline and all desktop scenarios, including library, workspaces, background AI, settings, editing and compilation.
+- `npm run ci:check`: runs the full validation pipeline and all desktop scenarios, including library, workspaces, background AI, settings, editing and compilation.
 
 The architecture refactor preserves on-disk formats, IPC channel names and public user flows. Future directory moves should follow feature ownership rather than file-size targets.

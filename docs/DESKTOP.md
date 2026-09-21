@@ -18,7 +18,7 @@ npm run package:win # Windows
 For CI-equivalent validation from the repository root, run `npm run ci:check`.
 This is the single authoritative entry point used by both local Windows
 validation and the GitHub Windows job: it runs the same commands in the same
-order and includes `test:desktop:quick` on Windows. Node.js versions (Node 24 or
+order and includes the full `test:desktop` suite on Windows. Node.js versions (Node 24 or
 newer) and npm registry selection are intentionally not part of this parity
 contract. macOS uses the same entry point and also runs desktop tests.
 
@@ -52,7 +52,7 @@ Local data remains in `~/.envoi/`; the renderer retains IndexedDB recovery copie
 
 Packaged navigation uses hash routes. Local assets use the `envoi:` protocol, including PDF fetches. External web links open in the default browser.
 
-`test:desktop:quick` runs key backend, trust, project, compiler and diagnostics checks on every commit. `test:desktop` runs the complete suite against temporary data and project directories; CI runs it nightly and on manual dispatch. Both commands hide test windows. Use `test:desktop:visible` for screenshots and PDF scrolling checks, which need a visible window for normal animation timing. The runner reports the duration of each test. Backend unit tests also cover concurrent saves, permissions/symlinks, task isolation, and watcher cleanup. Native dialogs are answered by the test only for its temporary fixtures. `ENVOI_DESKTOP_EXECUTABLE` can point at a packaged application executable for the same checks. It does not spend model API credits.
+`test:desktop:quick` runs the key backend, trust, project, compiler and diagnostics checks used by the cached `check:local` commit gate. `test:desktop` runs the complete suite against temporary data and project directories; both local and GitHub `ci:check` use this full suite with serial desktop execution. Both commands hide test windows. Use `test:desktop:visible` for screenshots and PDF scrolling checks, which need a visible window for normal animation timing. The runner reports the duration of each test. Backend unit tests also cover concurrent saves, permissions/symlinks, task isolation, and watcher cleanup. Native dialogs are answered by the test only for its temporary fixtures. `ENVOI_DESKTOP_EXECUTABLE` can point at a packaged application executable for the same checks. It does not spend model API credits.
 
 ## Closing and removing projects
 

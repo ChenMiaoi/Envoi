@@ -4,14 +4,12 @@ on:
   push:
     branches: [main]
   pull_request:
-  schedule:
-    - cron: "0 20 * * *"
   workflow_dispatch:
 
 permissions:
   contents: read
 
-# Quick and full runs must not cancel each other.
+# Push, pull-request and manual runs must not cancel each other.
 concurrency:
   group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true
@@ -47,7 +45,6 @@ jobs:
       - run: npm run ci:check
         env:
           ENVOI_DESKTOP_TEST_SHARD: ${{ matrix.shard }}
-          ENVOI_DESKTOP_TEST_FULL: ${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && '1' || '0' }}
   # Preserve the existing required-check names. Any failed or cancelled shard
   # keeps both gates red; a partial desktop run cannot satisfy branch protection.
   check:
