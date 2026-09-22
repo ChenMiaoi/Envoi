@@ -4,6 +4,30 @@ import { mkdtemp, mkdir, rm, symlink } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { createWorkspaceTrust } from "../electron/main/workspace-trust.mjs"
+import { replaceFile } from "../server/local-data.mjs"
+
+test("atomic replacement retries transient file locks and rejects permanent failures", async () => {
+  let attempts = 0
+  const delays = []
+  await replaceFile("temporary", "target", {
+    move: async () => {
+      attempts++
+      if (attempts < 3) throw Object.assign(Error("locked"), { code: "EPERM" })
+    },
+    pause: async (delay) => delays.push(delay),
+  })
+  assert.equal(attempts, 3)
+  assert.deepEqual(delays, [20, 50])
+  await assert.rejects(
+    replaceFile("temporary", "target", {
+      move: async () => {
+        throw Object.assign(Error("invalid"), { code: "EINVAL" })
+      },
+    }),
+    /invalid/,
+  )
+})
+
 test("trust persists, coalesces prompts, covers descendants and canonical aliases only", async () => {
   const temp = await mkdtemp(path.join(tmpdir(), "envoi-trust-"))
   try {

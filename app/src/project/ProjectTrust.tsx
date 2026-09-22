@@ -86,9 +86,10 @@ export function ProjectTrust() {
       if (trusted) {
         await envoi().grantProjectTrust(root)
         if (!current()) return
+        setLocalTrusted(true)
+        setOpen(false)
         await state?.refresh()
         if (!current()) return
-        setLocalTrusted(true)
         const config = await envoi()
           .fsRead(root, ".envoi/project.json")
           .then((file) => {
@@ -108,13 +109,16 @@ export function ProjectTrust() {
       } else {
         await envoi().restrictProject(root)
         if (!current()) return
+        setLocalTrusted(false)
+        setOpen(false)
         await state?.refresh()
         if (!current()) return
-        setLocalTrusted(false)
       }
-      if (current()) setOpen(false)
     } catch (reason) {
-      if (current()) setError(ipcError(reason).message)
+      if (current()) {
+        setError(ipcError(reason).message)
+        setOpen(true)
+      }
     } finally {
       if (current()) setWorking(false)
     }

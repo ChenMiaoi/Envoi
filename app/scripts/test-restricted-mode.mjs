@@ -126,7 +126,16 @@ try {
     async (root) => (await window.envoi.projectTrust(root)).trusted === true,
     root,
   )
-  await page.getByRole("dialog", { name: "项目安全模式", exact: true }).waitFor({ state: "hidden" })
+  await page
+    .getByRole("dialog", { name: "项目安全模式", exact: true })
+    .waitFor({ state: "hidden" })
+    .catch(async (error) => {
+      console.error("Trust dialog remained open", {
+        trust: await page.evaluate((root) => window.envoi.projectTrust(root), root),
+        text: await page.getByRole("dialog", { name: "项目安全模式", exact: true }).innerText(),
+      })
+      throw error
+    })
   await page.evaluate((root) => window.envoi.grantProjectTrust(root), root)
   const trusted = await page.evaluate(async (root) => {
     let lastError

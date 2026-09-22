@@ -7,6 +7,7 @@ import {
   readFile,
   realpath,
   rename,
+  rm,
   stat,
   writeFile,
 } from "node:fs/promises"
@@ -26,6 +27,26 @@ function defaultDataDir() {
 export const dataDir = path.resolve(
   process.env.ENVOI_DATA_DIR ?? process.env.PAPERDESK_DATA_DIR ?? defaultDataDir(),
 )
+const replaceDelays = [20, 50, 100, 200, 400, 800]
+export async function replaceFile(
+  source,
+  target,
+  {
+    move = rename,
+    pause = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds)),
+  } = {},
+) {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      await move(source, target)
+      return
+    } catch (error) {
+      if (!["EACCES", "EBUSY", "EPERM"].includes(error.code) || attempt === replaceDelays.length)
+        throw error
+      await pause(replaceDelays[attempt])
+    }
+  }
+}
 export async function readProjectConfig(root) {
   root = await realpath(root)
   for (const name of [".envoi", ".paperdesk"]) {
@@ -45,7 +66,12 @@ export async function atomicJson(file, value) {
   await mkdir(path.dirname(file), { recursive: true, mode: 0o700 })
   const temporary = file + "." + randomUUID() + ".tmp"
   await writeFile(temporary, JSON.stringify(value, null, 2) + "\n", { mode: 0o600 })
-  await rename(temporary, file)
+  try {
+    await replaceFile(temporary, file)
+  } catch (error) {
+    await rm(temporary, { force: true }).catch(() => {})
+    throw error
+  }
 }
 export async function jsonFile(file, fallback) {
   try {
