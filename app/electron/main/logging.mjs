@@ -4,6 +4,7 @@ import { mkdir, readFile, writeFile, lstat } from "node:fs/promises"
 import { statSync } from "node:fs"
 import path from "node:path"
 import { safeError } from "../../shared/log-record.ts"
+import { formatLogLine } from "../../shared/log-format.mjs"
 
 export const LOG_MAX_SIZE = 5 * 1024 * 1024
 // The library's shared file registry reports creation errors through its default logger.
@@ -50,16 +51,18 @@ export function createDiagnostics(directory, version, maxSize = LOG_MAX_SIZE) {
         if (typeof context[key] === "number" && Number.isFinite(context[key]))
           details[key] = context[key]
       }
+      const scope = module === "main" || module === "renderer" ? module : "main." + module
       log[level](
-        JSON.stringify({
-          time: new Date().toISOString(),
-          session,
-          version,
-          level,
-          module,
+        formatLogLine({
+          scope,
+          status: level,
           event,
-          ...details,
-          ...(error ? { error: safeError(error) } : {}),
+          fields: {
+            session,
+            version,
+            ...details,
+            ...(error ? { error: safeError(error) } : {}),
+          },
         }),
       )
     } catch {
@@ -95,7 +98,7 @@ export function createDiagnostics(directory, version, maxSize = LOG_MAX_SIZE) {
         destination,
         JSON.stringify(
           {
-            format: 1,
+            format: 2,
             version,
             platform: process.platform,
             arch: process.arch,

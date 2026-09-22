@@ -1,4 +1,5 @@
 import { tests, quickTests } from "../app/scripts/desktop-test-plan.mjs"
+import { formatLogLine, isFormattedLogLine, logColorEnabled } from "../app/shared/log-format.mjs"
 import { checkProfile } from "./check-profile.mjs"
 import { selectShard } from "./test-shard.mjs"
 import assert from "node:assert/strict"
@@ -7,6 +8,7 @@ import { mkdtemp, mkdir, readFile, writeFile, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { spawnSync } from "node:child_process"
+import { stripVTControlCharacters } from "node:util"
 import {
   affectsStep,
   artifactKey,
@@ -202,4 +204,32 @@ test("hosted CI runs for repository changes or manual dispatch, not on a timer",
   assert.match(workflow, /^  workflow_dispatch:/m)
   assert.doesNotMatch(workflow, /^  schedule:/m)
   assert.doesNotMatch(workflow, /\bcron:/)
+})
+
+test("log lines use compact structured prefixes and semantic terminal colors", () => {
+  const record = {
+    time: "2026-09-22T15:42:18.321Z",
+    scope: "ci",
+    status: "PASS",
+    event: "format",
+    message: "Check formatting",
+    fields: { durationMs: 6203, command: "npm run format:check" },
+  }
+  const plain = formatLogLine(record)
+  assert.equal(
+    plain,
+    '[2026-09-22T15:42:18.321Z][ci][PASS][format] Check formatting durationMs=6203 command="npm run format:check"',
+  )
+  const colored = formatLogLine(record, { color: true })
+  assert.notEqual(colored, plain)
+  assert.equal(stripVTControlCharacters(colored), plain)
+  assert.equal(isFormattedLogLine(plain), true)
+  assert.equal(isFormattedLogLine(colored), true)
+  assert.equal(logColorEnabled({ env: { ENVOI_COLOR: "always" }, stream: {} }), true)
+  assert.equal(
+    logColorEnabled({ env: { ENVOI_COLOR: "always", NO_COLOR: "1" }, stream: {} }),
+    false,
+  )
+  assert.equal(logColorEnabled({ env: { GITHUB_ACTIONS: "true" }, stream: {} }), true)
+  assert.throws(() => logColorEnabled({ env: { ENVOI_COLOR: "sometimes" } }), /ENVOI_COLOR/)
 })

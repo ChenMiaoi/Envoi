@@ -7,7 +7,12 @@ import { digest } from "./check-cache.mjs"
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
 
-export async function ensureAppDeps({ repository = root, force = false, run = spawnSync } = {}) {
+export async function ensureAppDeps({
+  repository = root,
+  force = false,
+  run = spawnSync,
+  log = console.log,
+} = {}) {
   const app = path.join(repository, "app")
   const modules = path.join(app, "node_modules")
   const stampPath = path.join(modules, ".envoi-deps.json")
@@ -32,7 +37,7 @@ export async function ensureAppDeps({ repository = root, force = false, run = sp
         ),
       )
       if (stamp.input === input && stamp.installed === digest(await hiddenLock())) {
-        console.log("Locked dependencies unchanged; reusing installation.")
+        log("Locked dependencies unchanged; reusing installation.")
         return stamp.generation
       }
     } catch {
@@ -41,9 +46,12 @@ export async function ensureAppDeps({ repository = root, force = false, run = sp
   }
   await rm(stampPath, { force: true })
   const npm = process.platform === "win32" ? "npm.cmd" : "npm"
-  const result = run(npm, ["--prefix", app, "ci", "--no-audit", "--no-fund"], {
+  const npmExecPath = process.env.npm_execpath
+  const command = npmExecPath ? process.execPath : npm
+  const args = ["--prefix", app, "ci", "--no-audit", "--no-fund"]
+  const result = run(command, npmExecPath ? [npmExecPath, ...args] : args, {
     stdio: "inherit",
-    shell: process.platform === "win32",
+    shell: !npmExecPath && process.platform === "win32",
   })
   if (result.error) throw result.error
   if (result.status !== 0)

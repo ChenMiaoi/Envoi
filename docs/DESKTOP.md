@@ -52,6 +52,8 @@ Local data remains in `~/.envoi/`; the renderer retains IndexedDB recovery copie
 
 Packaged navigation uses hash routes. Local assets use the `envoi:` protocol, including PDF fetches. External web links open in the default browser.
 
+Diagnostic records use compact `[time][scope][level][event]` prefixes followed by allowlisted `key=value` context. Log files and exported diagnostics never contain terminal escape sequences. CI and interactive terminal output use semantic colors for levels and states when supported, while preserving the status text for accessibility. `NO_COLOR=1` or `ENVOI_COLOR=never` disables color; `ENVOI_COLOR=always` forces it.
+
 `test:desktop:quick` runs the key backend, trust, project, compiler and diagnostics checks used by the cached `check:local` commit gate. `test:desktop` runs the complete suite against temporary data and project directories; both local and GitHub `ci:check` use this full suite with two isolated desktop workers. Both commands hide test windows. Use `test:desktop:visible` for screenshots and PDF scrolling checks, which need a visible window for normal animation timing. The runner reports the duration of each test. Backend unit tests also cover concurrent saves, permissions/symlinks, task isolation, and watcher cleanup. Native dialogs are answered by the test only for its temporary fixtures. `ENVOI_DESKTOP_EXECUTABLE` can point at a packaged application executable for the same checks. It does not spend model API credits.
 
 ## Closing and removing projects

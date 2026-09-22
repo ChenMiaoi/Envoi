@@ -34,6 +34,8 @@ test("diagnostics omit content and credentials, preserve error codes and source 
       error,
     )
     const initial = await readFile(path.join(root, "logs/main.log"), "utf8")
+    assert.match(initial, /^\[[^\]]+\]\[main\.ipc\]\[ERROR\]\[operation\.failed\] /m)
+    assert.doesNotMatch(initial, /\u001b\[/)
     assert.ok(initial.includes("EACCES"))
     assert.ok(initial.includes("lib/save.ts:12:3"))
     assert.doesNotMatch(initial, /SECRET|manuscript|CHAT|Private|Bearer/)
@@ -43,6 +45,7 @@ test("diagnostics omit content and credentials, preserve error codes and source 
     const destination = path.join(root, "diagnostics.json")
     await logger.export(destination)
     const exported = JSON.parse(await readFile(destination, "utf8"))
+    assert.equal(exported.format, 2)
     assert.equal(exported.logs.length, 2)
     assert.equal(exported.version, "0.1.0")
     assert.doesNotMatch(JSON.stringify(exported), /SECRET|manuscript|CHAT|Private/)

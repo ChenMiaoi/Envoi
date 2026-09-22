@@ -3,20 +3,36 @@ import { selectShard } from "../../scripts/test-shard.mjs"
 import { execFileSync, spawn, spawnSync } from "node:child_process"
 import process from "node:process"
 import { createRequire } from "node:module"
+import { stripVTControlCharacters } from "node:util"
+import { formatLogLine, logColorEnabled } from "../shared/log-format.mjs"
 
 const visible = process.argv.includes("--visible")
 const quick = process.argv.includes("--quick")
+const verbose = process.env.ENVOI_CI_VERBOSE === "1"
 const started = performance.now()
 const concurrency = Number(process.env.ENVOI_DESKTOP_TEST_CONCURRENCY || (process.env.CI ? 2 : 4))
+const shard = process.env.ENVOI_DESKTOP_TEST_SHARD
+const scope = "desktop:" + (shard ?? "local")
+const color = logColorEnabled({ env: process.env, stream: process.stdout })
+function emit(status, event, fields = {}, message = "", stderr = false) {
+  const line = formatLogLine({ scope, status, event, message, fields }, { color })
+  ;(stderr ? process.stderr : process.stdout).write(line + "\n")
+}
+function emitOutput(name, output, status) {
+  for (const line of stripVTControlCharacters(output.toString()).split(/\r?\n/))
+    if (line) emit(status, "test.output", { test: name }, line, status === "ERROR")
+}
 if (!Number.isInteger(concurrency) || concurrency < 1) {
-  console.error(
-    `Invalid ENVOI_DESKTOP_TEST_CONCURRENCY: ${process.env.ENVOI_DESKTOP_TEST_CONCURRENCY}`,
-  )
+  emit("FAIL", "suite.configuration", {
+    concurrency: process.env.ENVOI_DESKTOP_TEST_CONCURRENCY,
+  })
   process.exit(1)
 }
-console.log(
-  `Desktop tests: ${quick ? "quick" : "full"}, ${visible ? "visible" : "hidden"} windows, concurrency ${concurrency}`,
-)
+emit("INFO", "suite.started", {
+  mode: quick ? "quick" : "full",
+  windows: visible ? "visible" : "hidden",
+  concurrency,
+})
 
 function cleanupTree(pid) {
   if (process.platform !== "win32" || !pid) return
@@ -50,11 +66,11 @@ function cleanupNewElectronProcesses(before) {
 
 const selected = selectShard(
   tests.filter(([name]) => !quick || quickTests.has(name)),
-  process.env.ENVOI_DESKTOP_TEST_SHARD || undefined,
+  shard || undefined,
 )
 
-// Buffer each test's output and release it when the test finishes, so parallel
-// runs never interleave logs. A failure dumps everything the test printed.
+// Buffer each test's output so parallel runs never interleave raw tool output.
+// Successful details are opt-in; failures always replay their captured context.
 async function runTest(name, args) {
   const testStarted = performance.now()
   let output = Buffer.alloc(0)
@@ -71,18 +87,20 @@ async function runTest(name, args) {
       child.on("close", (code) => resolve(code ?? 1))
     })
     cleanupTree(child.pid)
-    const elapsed = Math.round((performance.now() - testStarted) / 1000)
+    const durationMs = Math.round(performance.now() - testStarted)
     if (status === 0) {
-      process.stdout.write(output)
-      console.log(`Desktop test ${name}: passed in ${elapsed}s`)
+      if (verbose) emitOutput(name, output, "INFO")
+      emit("PASS", "test.complete", { test: name, attempt, durationMs })
       return true
     }
-    process.stdout.write(output)
-    if (attempt === 1) console.log(`Retrying desktop test: ${name}`)
+    emitOutput(name, output, "ERROR")
+    if (attempt === 1) emit("RETRY", "test.retry", { test: name, attempt: 2 })
   }
-  console.log(
-    `Desktop test ${name}: failed in ${Math.round((performance.now() - testStarted) / 1000)}s`,
-  )
+  emit("FAIL", "test.complete", {
+    test: name,
+    attempts: 2,
+    durationMs: Math.round(performance.now() - testStarted),
+  })
   return false
 }
 
@@ -91,7 +109,7 @@ const failed = []
 async function worker() {
   while (cursor < selected.length && !failed.length) {
     const [name, args] = selected[cursor++]
-    console.log(`\n==> Desktop test: ${name}`)
+    emit("START", "test.start", { test: name })
     if (!(await runTest(name, args))) failed.push(name)
   }
 }
@@ -106,7 +124,10 @@ await Promise.all(Array.from({ length: Math.min(concurrency, selected.length) },
 cleanupNewElectronProcesses(baseline)
 
 if (failed.length) {
-  console.error(`\nDesktop tests failed: ${failed.join(", ")}`)
+  emit("FAIL", "suite.complete", { failed }, "", true)
   process.exit(1)
 }
-console.log(`\nDesktop tests passed in ${Math.round((performance.now() - started) / 1000)}s.`)
+emit("PASS", "suite.complete", {
+  tests: selected.length,
+  durationMs: Math.round(performance.now() - started),
+})

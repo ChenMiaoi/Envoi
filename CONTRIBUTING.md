@@ -38,3 +38,5 @@ Each desktop test launches an isolated Electron instance with its own data direc
 The existing `check (macos-latest)` and `check (windows-latest)` gates succeed only after every validation job succeeds. Failed, cancelled or skipped validation cannot produce a green gate. A new run cancels older runs only for the same workflow, event and ref; push, pull-request and manual runs remain independent. Validation jobs have a 30-minute timeout.
 
 Local commands remain unsharded. CI shards never publish reusable local check results, and `check:local` rejects a shard setting. `npm run ci:check` without a shard still runs all checks normally.
+
+CI-owned output uses `[time][scope][status][event]` prefixes. Terminal colors are automatic locally and in GitHub Actions; `NO_COLOR=1` or `ENVOI_COLOR=never` disables them, while `ENVOI_COLOR=always` forces them. Successful third-party output is summarized by default. Set `ENVOI_CI_VERBOSE=1` to show every captured tool line with a structured prefix; failed steps always replay their captured output.

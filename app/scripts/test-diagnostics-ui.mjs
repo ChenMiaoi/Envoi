@@ -49,19 +49,18 @@ try {
   await page.getByRole("button", { name: "导出诊断日志", exact: true }).click()
   await page.getByText("诊断日志已导出。", { exact: true }).waitFor()
   const bundle = JSON.parse(await readFile(destination, "utf8"))
-  const lines = bundle.logs.flatMap((file) => file.content.trim().split("\n").map(JSON.parse))
-  assert.ok(lines.some((line) => line.event === "app.started"))
-  assert.ok(lines.some((line) => line.event === "renderer.error" && line.error.code === "EACCES"))
-  const backend = lines.find(
-    (line) => line.module === "backend" && line.event === "operation.failed",
+  assert.equal(bundle.format, 2)
+  const logs = bundle.logs.map((file) => file.content).join("\n")
+  assert.match(logs, /\[main\]\[INFO\]\[app\.started\]/)
+  assert.match(logs, /\[renderer\]\[ERROR\]\[renderer\.error\][^\r\n]*"code":"EACCES"/)
+  const backend = logs.match(
+    /\[main\.backend\]\[ERROR\]\[operation\.failed\][^\r\n]*operationId=([a-zA-Z0-9:._-]+)/,
   )
   assert.ok(backend)
-  assert.ok(
-    lines.some(
-      (line) =>
-        line.module === "ipc" &&
-        line.event === "operation.failed" &&
-        line.operationId === backend.operationId,
+  assert.match(
+    logs,
+    new RegExp(
+      "\\[main\\.ipc\\]\\[ERROR\\]\\[operation\\.failed\\][^\\r\\n]*operationId=" + backend[1],
     ),
   )
   assert.doesNotMatch(JSON.stringify(bundle), /SECRET|manuscript|CHAT/)
