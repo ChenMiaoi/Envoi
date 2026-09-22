@@ -1,9 +1,12 @@
 // Order matters twice: the runner's parallel workers pick tests in list order,
-// and CI shards alternate items (offset % total). Keep the slowest tests first
-// so workers start them early and round-robin shards stay duration-balanced.
+// and CI shards alternate items (offset % total). Adjacent entries pair the
+// measured Windows slow groups so both shards have a comparable critical path.
 export const tests = [
-  ["desktop smoke", ["scripts/test-desktop-smoke.mjs"]],
   ["code editor", ["scripts/test-code-editor-ui.mjs"]],
+  ["workspace UI", ["scripts/test-workspace-ui.mjs"]],
+  ["research library UI", ["scripts/test-research-library-ui.mjs"]],
+  ["desktop smoke", ["scripts/test-desktop-smoke.mjs"]],
+  ["background agent UI", ["scripts/test-background-agent-ui.mjs"]],
   ["project navigation UI", ["scripts/test-project-navigation-ui.mjs"]],
   ["file actions", ["scripts/test-file-actions-ui.mjs"]],
   [
@@ -24,21 +27,18 @@ export const tests = [
       "scripts/test-updates.mjs",
     ],
   ],
+  ["update settings", ["scripts/test-settings-display.mjs"]],
   ["restricted mode", ["scripts/test-restricted-mode.mjs"]],
   ["status bar settings", ["scripts/test-status-bar-settings.mjs"]],
-  ["remote SSH UI", ["scripts/test-remote-ui.mjs"]],
-  ["workspace UI", ["scripts/test-workspace-ui.mjs"]],
-  ["background agent UI", ["scripts/test-background-agent-ui.mjs"]],
-  ["research library UI", ["scripts/test-research-library-ui.mjs"]],
+  ["system fonts", ["scripts/test-system-fonts.mjs"]],
   ["research start UI", ["scripts/test-research-start-ui.mjs"]],
   ["model menu", ["scripts/test-model-menu.mjs"]],
-  ["paper search settings", ["scripts/test-paper-search-settings-ui.mjs"]],
-  ["update settings", ["scripts/test-settings-display.mjs"]],
-  ["system fonts", ["scripts/test-system-fonts.mjs"]],
   ["save and compile", ["scripts/test-save-compile.mjs"]],
-  ["diagnostics UI", ["scripts/test-diagnostics-ui.mjs"]],
+  ["remote SSH UI", ["scripts/test-remote-ui.mjs"]],
   ["numeric settings", ["scripts/test-number-settings.mjs"]],
   ["Git tree", ["scripts/test-git-tree.mjs"]],
+  ["diagnostics UI", ["scripts/test-diagnostics-ui.mjs"]],
+  ["paper search settings", ["scripts/test-paper-search-settings-ui.mjs"]],
   ["component performance", ["scripts/test-performance-ui.mjs"]],
   ["PDF scheduler", ["scripts/test-pdf-scheduler.mjs"]],
 ]

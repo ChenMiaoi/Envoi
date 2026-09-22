@@ -93,6 +93,12 @@ try {
   await page.getByRole("heading", { name: "带宽敏感性 · 待探索", exact: true }).waitFor()
   await page.locator("aside button").filter({ hasText: "主工作区" }).click()
   await page.getByRole("button", { name: "打开工作区", exact: true }).click()
+  await page.waitForFunction(
+    async (root) => (await window.envoi.dataGet("session", "current"))?.value?.rootPath === root,
+    main,
+    { timeout: 60000 },
+  )
+  await page.getByRole("button", { name: "切换工作区：主工作区", exact: true }).waitFor()
   await waitForReader()
   await page.evaluate(() => (location.hash = "/history"))
   await page.getByRole("button", { name: "已保存结果", exact: true }).click()

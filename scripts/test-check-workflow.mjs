@@ -190,7 +190,7 @@ test("local commit checks stay quick while local and hosted CI use the same full
   })
   assert.deepEqual(checkProfile({ local: false }), {
     desktopScript: "test:desktop",
-    desktopConcurrency: "1",
+    desktopConcurrency: "2",
   })
   assert.equal(checkProfile({ local: false, desktopConcurrency: "3" }).desktopConcurrency, "3")
 })
